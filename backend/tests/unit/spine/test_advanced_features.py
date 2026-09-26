@@ -2534,15 +2534,20 @@ def test_p4_5_anonymized_stat_suppresses_small_cohort():
     assert stat.value == 0.0  # suppressed
 
 
-def test_p4_5_anonymized_stat_large_cohort():
+def test_p4_5_anonymized_stat_large_cohort(monkeypatch):
     from app.signals.privacy_community_intelligence import PrivacyPreservingCommunityEngine
     engine = PrivacyPreservingCommunityEngine()
     raw = [0.7, 0.8, 0.75, 0.9, 0.65, 0.85, 0.7, 0.8, 0.9, 0.72]
+    # 生产噪声为逆 CDF 拉普拉斯（无界）——对无界统计量断言硬边界是按构造
+    # flaky（CI run 36232558655 实测抽中 -1.026）。此处把采样钉为确定性
+    # u=0.5（noise=0），断言语义改为"无噪声基线值 + 解析 noise_std>0"。
+    monkeypatch.setattr(
+        "app.signals.privacy_community_intelligence.random.random", lambda: 0.5
+    )
     stat = engine.compute_anonymized_stat("task_completion_rate", raw, epsilon=1.0)
     assert stat.is_reliable is True
     assert stat.cohort_size == 10
-    # Value is noised with Laplace(scale=1) — wide plausible range
-    assert -1.0 <= stat.value <= 3.0
+    assert stat.value == pytest.approx(0.777, abs=1e-9)
     d = stat.to_dict()
     assert "noise_std" in d
     assert d["noise_std"] > 0
