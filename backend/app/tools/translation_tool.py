@@ -4,7 +4,7 @@ Provides text translation with segmentation, caching, and glossary support
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -108,10 +108,11 @@ class TranslateTextTool(BaseTool):
 
     async def execute(
         self,
-        params: TranslateTextParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
-        tool_call_id: str | None = None
+        tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
         """
         Execute translation with segmentation and caching
@@ -125,6 +126,7 @@ class TranslateTextTool(BaseTool):
         Returns:
             ToolResult with translation data and widget configuration
         """
+        params = cast(TranslateTextParams, params)
         try:
             # Normalize language codes (support natural language and ISO codes)
             source_lang = _normalize_language_code(params.source_lang)

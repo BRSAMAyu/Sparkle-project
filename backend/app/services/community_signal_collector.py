@@ -15,6 +15,7 @@ from app.core.datetime_utils import _utcnow
 from app.db.session import AsyncSessionLocal
 from app.services.profile_write_service import ProfileWriteService
 from app.services.signal_adaptation import classify_band_with_hysteresis, recency_weight
+from app.core.redis_utils import ensure_awaitable
 
 
 class CommunitySignalCollector:
@@ -76,8 +77,8 @@ class CommunitySignalCollector:
         if redis_client is None:
             return
         try:
-            await redis_client.lpush(key, json.dumps(entry, ensure_ascii=False))
-            await redis_client.ltrim(key, 0, self.WINDOW_SIZE - 1)
+            await ensure_awaitable(redis_client.lpush(key, json.dumps(entry, ensure_ascii=False)))
+            await ensure_awaitable(redis_client.ltrim(key, 0, self.WINDOW_SIZE - 1))
             await redis_client.expire(key, self.WINDOW_TTL_SECONDS)
         except Exception as exc:
             logger.warning("Failed to cache community signal entry: {}", exc)
@@ -101,7 +102,7 @@ class CommunitySignalCollector:
         if redis_client is None:
             return []
         try:
-            raw_entries = await redis_client.lrange(key, 0, self.WINDOW_SIZE - 1)
+            raw_entries = await ensure_awaitable(redis_client.lrange(key, 0, self.WINDOW_SIZE - 1))
         except Exception as exc:
             logger.warning("Failed to load community signal entries: {}", exc)
             return []

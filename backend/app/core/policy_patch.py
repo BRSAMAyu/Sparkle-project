@@ -175,7 +175,7 @@ POLICY_PATCH_REASONS: frozenset[str] = frozenset(
 )
 
 #: 每面 payload schema：键集（恰一键）与值域（封闭）。
-SURFACE_PAYLOAD_SCHEMAS: Mapping[str, frozenset[str]] = {
+SURFACE_PAYLOAD_SCHEMAS: Mapping[str, frozenset[str] | None] = {
     "granularity": frozenset({"finer", "coarser"}),
     "clarification": frozenset({"ask_more", "ask_less"}),
     "explanation": frozenset({"examples_first", "definitions_first", "step_by_step", "analogy"}),

@@ -28,6 +28,7 @@ from app.orchestration.schemas import (
     ExecutablePlan,
     StateSnapshot,
 )
+from app.core.redis_utils import ensure_awaitable
 
 
 @dataclass
@@ -549,8 +550,8 @@ class VersionConflictService:
         try:
             import json
 
-            await self.redis.lpush(key, json.dumps(history_entry))
-            await self.redis.ltrim(key, 0, 99)  # Keep last 100 entries
+            await ensure_awaitable(self.redis.lpush(key, json.dumps(history_entry)))
+            await ensure_awaitable(self.redis.ltrim(key, 0, 99))  # Keep last 100 entries
             await self.redis.expire(key, 86400 * 30)  # 30 days TTL
         except Exception as e:
             logger.error(f"Failed to record conflict history: {e}")

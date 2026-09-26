@@ -114,7 +114,7 @@ class MemoryJobsService:
             missing_totals = {"preferences": 0, "goals": 0, "episodic": 0}
             service = EvidenceHealthService(self.db)
             for user in users:
-                summary = await service.run_health_check(user.id, limit=limit_per_type)
+                summary: dict[str, Any] = await service.run_health_check(user.id, limit=limit_per_type)
                 checked = summary.get("checked", {})
                 missing = summary.get("missing", {})
                 checked_total = sum(checked.values())

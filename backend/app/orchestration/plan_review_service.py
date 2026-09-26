@@ -1175,7 +1175,7 @@ class PlanReviewService:
         has_safe_only = all(any(safe in name.lower() for safe in self.SAFE_TOOL_CATEGORIES) for name in tool_names)
         has_mixed = not has_high_risk and not has_safe_only
 
-        comments = []
+        comments: list[dict[str, Any]] = []
         decision = ReviewDecision.REQUIRES_CONFIRMATION.value
         confidence = 0.5
 

@@ -35,7 +35,7 @@ class ExplorationRouter:
                 prob = await self.learner.get_probability(source, target)
                 scores[target] = prob
 
-            selected = max(scores, key=scores.get)
+            selected = max(scores, key=lambda k: scores[k])
             logger.debug(f"🎯 Exploitation: selected {selected} (score={scores[selected]:.2f})")
             return selected
 
@@ -82,7 +82,7 @@ class ThompsonSamplingRouter:
                 # Prior
                 samples[target] = random.betavariate(1, 1)
 
-        selected = max(samples, key=samples.get)
+        selected = max(samples, key=lambda k: samples[k])
         logger.debug(f"🎲 Thompson Sampling: selected {selected}")
         return selected
 
@@ -115,7 +115,7 @@ class UCBRouter:
             else:
                 scores[target] = float('inf')
 
-        selected = max(scores, key=scores.get)
+        selected = max(scores, key=lambda k: scores[k])
         logger.debug(f"📊 UCB: selected {selected}")
         return selected
 

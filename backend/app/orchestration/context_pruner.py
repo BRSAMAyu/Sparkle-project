@@ -27,6 +27,7 @@ from app.orchestration.conversation_compaction import (
     classify_message,
     compact_history,
 )
+from app.core.redis_utils import ensure_awaitable
 
 
 class ContextPruner:
@@ -371,7 +372,7 @@ class ContextPruner:
     async def _load_chat_history(self, session_id: str) -> list[dict]:
         cache_key = f"chat:history:{session_id}"
         try:
-            messages = await self.redis.lrange(cache_key, 0, -1)
+            messages = await ensure_awaitable(self.redis.lrange(cache_key, 0, -1))
             history = []
             for msg in messages:
                 try:

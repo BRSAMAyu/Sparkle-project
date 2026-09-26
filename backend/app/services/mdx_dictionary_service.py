@@ -25,22 +25,25 @@ ENABLE_MDX_DICTIONARY = _is_truthy(
     default=True,
 )
 
+# 可选依赖缺省占位：运行期按导入结果回填（Any 占位以通过类型检查，不使用 ignore）
+MDX: Any = None
+MDD: Any = None
+BeautifulSoup: Any = None
+
 if ENABLE_MDX_DICTIONARY:
     try:
-        from bs4 import BeautifulSoup
-        from readmdict import MDD, MDX
+        from bs4 import BeautifulSoup as _BeautifulSoup
+        from readmdict import MDD as _MDD, MDX as _MDX
+
+        MDX = _MDX
+        MDD = _MDD
+        BeautifulSoup = _BeautifulSoup
         MDX_AVAILABLE = True
     except BaseException as e:
         MDX_AVAILABLE = False
-        MDX = None
-        MDD = None
-        BeautifulSoup = None
         logger.warning("MDX dictionary dependencies unavailable, feature disabled: %s", e)
 else:
     MDX_AVAILABLE = False
-    MDX = None
-    MDD = None
-    BeautifulSoup = None
     logger.info("MDX dictionary disabled by config (ENABLE_MDX_DICTIONARY=false)")
 
 

@@ -82,7 +82,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Callable, Iterable, Sequence
+from typing import Any, Callable, Coroutine, Iterable, Sequence
 
 from app.core.memory_constants import PREFERENCE_KEYS
 
@@ -855,7 +855,7 @@ def evaluate_memory_use_gate(
 # Fast-model hook (default OFF at every wiring; tighten-only)
 # ---------------------------------------------------------------------------
 
-FastModelHook = Callable[[MemoryUseCandidate, SelfCheckContext], "object"]
+FastModelHook = Callable[[MemoryUseCandidate, SelfCheckContext], Coroutine[Any, Any, str | None]]
 
 
 async def run_memory_use_selfcheck(

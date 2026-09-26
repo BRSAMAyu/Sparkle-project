@@ -5,13 +5,18 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+# jinja2 为可选依赖：缺省时以 None 占位（Any 声明的模块级变量承载，不对导入类型赋值）
+Environment: Any
+FileSystemLoader: Any
 try:
-    from jinja2 import Environment, FileSystemLoader
+    from jinja2 import Environment as _Environment, FileSystemLoader as _FileSystemLoader
+
     HAS_JINJA2 = True
+    Environment, FileSystemLoader = _Environment, _FileSystemLoader
 except ImportError:
+    HAS_JINJA2 = False
     Environment = None
     FileSystemLoader = None
-    HAS_JINJA2 = False
 
 try:
     import weasyprint

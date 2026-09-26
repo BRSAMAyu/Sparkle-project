@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import re
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -70,12 +70,13 @@ class CreatePlanTool(BaseTool):
 
     async def execute(
         self,
-        params: CreatePlanParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
         locale: str = "en",
     ) -> ToolResult:
+        params = cast(CreatePlanParams, params)
         try:
             user_uuid = UUID(user_id)
             plan_type = ModelPlanType(params.plan_type.value)
@@ -178,12 +179,13 @@ class GenerateTasksForPlanTool(BaseTool):
 
     async def execute(
         self,
-        params: GenerateTasksForPlanParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
         locale: str = "en"
     ) -> ToolResult:
+        params = cast(GenerateTasksForPlanParams, params)
         try:
             user_uuid = UUID(user_id)
             plan_uuid = UUID(params.plan_id)

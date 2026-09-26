@@ -26,6 +26,7 @@ from app.services.aurora_calibration_card_service import AuroraCalibrationCardSe
 from app.services.aurora_control_surface_service import (
     AuroraControlSurfaceService,  # noqa: F401 (used in predicted-options)
 )
+from app.core.redis_utils import ensure_awaitable
 
 logger = logging.getLogger(__name__)
 
@@ -565,8 +566,8 @@ async def record_chip_selected(
             "ts": time.time(),
         }
         try:
-            await redis.lpush(telemetry_key, _json.dumps(record, ensure_ascii=False))
-            await redis.ltrim(telemetry_key, 0, 199)
+            await ensure_awaitable(redis.lpush(telemetry_key, _json.dumps(record, ensure_ascii=False)))
+            await ensure_awaitable(redis.ltrim(telemetry_key, 0, 199))
             await redis.expire(telemetry_key, 7 * 24 * 3600)
         except Exception as exc:
             logger.warning("Failed to persist Aurora chip telemetry: %s", exc, exc_info=True)
@@ -636,11 +637,11 @@ async def record_aurora_correction(
 
         telemetry_key = f"aurora:correction_telemetry:{current_user.id}"
         try:
-            await redis.lpush(
+            await ensure_awaitable(redis.lpush(
                 telemetry_key,
                 _json.dumps({**correction_payload.to_dict(), "ts": time.time()}, ensure_ascii=False),
-            )
-            await redis.ltrim(telemetry_key, 0, 199)
+            ))
+            await ensure_awaitable(redis.ltrim(telemetry_key, 0, 199))
             await redis.expire(telemetry_key, 7 * 24 * 3600)
         except Exception:
             logger.debug("Failed to persist Aurora correction telemetry", exc_info=True)

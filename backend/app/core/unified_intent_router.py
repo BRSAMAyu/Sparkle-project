@@ -382,7 +382,7 @@ class UnifiedIntentRouter:
             )
 
         # 返回得分最高的意图
-        best_intent = max(scores, key=scores.get)
+        best_intent = max(scores, key=lambda k: scores[k])
         confidence = scores[best_intent]
 
         if best_intent == UnifiedIntentType.PLAN and self._is_advisory_plan_query(message):

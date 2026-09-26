@@ -13,6 +13,7 @@ from typing import Any
 
 import redis.asyncio as redis
 from loguru import logger
+from app.core.redis_utils import ensure_awaitable
 
 
 class SummarizationWorker:
@@ -319,11 +320,11 @@ class SummarizationWorker:
 
         # 写入 Redis 日志队列（可选）
         try:
-            await self.redis.rpush(
+            await ensure_awaitable(self.redis.rpush(
                 "logs:summarization",
                 json.dumps(log_entry),
                 ex=86400  # 24小时过期
-            )
+            ))
         except (TypeError, redis.RedisError):
             pass  # 日志失败不影响主流程
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
+
+from pydantic import BaseModel
 from uuid import UUID
 
 from app.core.i18n import I18n
@@ -52,11 +54,13 @@ class RecordErrorTool(BaseTool):
 
     async def execute(
         self,
-        params: RecordErrorParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(RecordErrorParams, params)
         try:
             service = ErrorBookService(db_session)
             payload = ErrorRecordCreate(
@@ -101,11 +105,13 @@ class QueryErrorHistoryTool(BaseTool):
 
     async def execute(
         self,
-        params: QueryErrorHistoryParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(QueryErrorHistoryParams, params)
         try:
             service = ErrorBookService(db_session)
             query = ErrorQueryParams(

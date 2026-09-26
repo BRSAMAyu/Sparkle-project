@@ -22,6 +22,7 @@ from app.config import settings
 from app.core.redis_utils import resolve_redis_password
 from app.db.url import to_async_database_url
 from app.models.chat import TokenUsage
+from app.core.redis_utils import ensure_awaitable
 
 
 def _utcnow() -> datetime:
@@ -239,7 +240,7 @@ class BillingWorker:
             # blpop 从队头弹出，lpush 逆序回推以保持原顺序
             for record in reversed(retry_batch):
                 try:
-                    await self.redis.lpush(self.BILLING_QUEUE, json.dumps(record, ensure_ascii=False))
+                    await ensure_awaitable(self.redis.lpush(self.BILLING_QUEUE, json.dumps(record, ensure_ascii=False)))
                 except Exception as push_exc:
                     logger.error(
                         "Failed to requeue billing record request_id={}: {}",
@@ -263,7 +264,7 @@ class BillingWorker:
             "error": error,
             "failed_at": _utcnow().isoformat(),
         }
-        await self.redis.rpush(self._dead_letter_queue, json.dumps(payload, ensure_ascii=False))
+        await ensure_awaitable(self.redis.rpush(self._dead_letter_queue, json.dumps(payload, ensure_ascii=False)))
         logger.warning(
             "Moved billing record to dead letter queue: request_id={} queue={}",
             record.get("request_id"),

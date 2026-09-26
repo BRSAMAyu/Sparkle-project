@@ -164,7 +164,7 @@ class GraphSchema:
         return [e.value for e in EdgeType]
 
     @staticmethod
-    def get_sector_mapping() -> dict[str, dict[str, str]]:
+    def get_sector_mapping() -> dict[str, dict[str, str | list[str]]]:
         """6+1 星域映射"""
         return {
             "COSMOS": {

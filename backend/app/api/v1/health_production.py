@@ -25,6 +25,7 @@ from app.config import settings
 from app.core.cache import cache_service
 from app.db.session import get_db
 from app.models.user import User
+from app.core.redis_utils import ensure_awaitable
 
 # Prometheus metrics
 try:
@@ -86,7 +87,7 @@ async def health_check(
         redis_client = cache_service.redis
         if redis_client:
             start = time.time()
-            await redis_client.ping()
+            await ensure_awaitable(redis_client.ping())
             latency = (time.time() - start) * 1000
             checks["redis"] = {"status": "ok", "latency_ms": round(latency, 2)}
         else:
@@ -157,7 +158,7 @@ async def health_detailed(
         # 获取队列长度（如果 Redis 可用）
         redis_client = cache_service.redis
         if redis_client:
-            queue_length = await redis_client.llen("queue:summarization")
+            queue_length = await ensure_awaitable(redis_client.llen("queue:summarization"))
             base_health["metrics"] = {
                 "summarization_queue_length": queue_length,
                 "max_queue_length": 1000,  # 熔断阈值
@@ -182,7 +183,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
 
         redis_client = cache_service.redis
         if redis_client:
-            await redis_client.ping()
+            await ensure_awaitable(redis_client.ping())
 
         return {
             "status": "ready",
@@ -255,7 +256,7 @@ async def queue_status(
         total_pending = 0
 
         for name, key in queues.items():
-            length = await redis_client.llen(key)
+            length = await ensure_awaitable(redis_client.llen(key))
             queue_status[name] = {
                 "length": length,
                 "healthy": length < 100,  # 阈值
@@ -328,7 +329,7 @@ async def _build_capacity_response(db: AsyncSession) -> dict[str, Any]:
                 "billing": "queue:billing",
                 "expansion": "queue:expansion",
             }.items():
-                queue_lengths[name] = await redis_client.llen(key)
+                queue_lengths[name] = await ensure_awaitable(redis_client.llen(key))
         except Exception as exc:
             redis_info = {"status": "error", "error": str(exc)}
 
@@ -393,7 +394,7 @@ async def _build_alerts_response() -> dict[str, Any]:
     try:
         redis_client = cache_service.redis
         if redis_client:
-            queue_length = await redis_client.llen("queue:summarization")
+            queue_length = await ensure_awaitable(redis_client.llen("queue:summarization"))
             if queue_length > 500:
                 alerts.append({
                     "severity": "warning",

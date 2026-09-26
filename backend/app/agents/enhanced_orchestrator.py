@@ -216,7 +216,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
                 scores[workflow] = matches * weight
 
             # 选择最高分
-            best_workflow = max(scores, key=scores.get)
+            best_workflow = max(scores, key=lambda k: scores[k])
             best_score = scores[best_workflow]
 
             # 如果最高分太低（< 1），降级为默认模式

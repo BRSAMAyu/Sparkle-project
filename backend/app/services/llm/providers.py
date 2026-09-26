@@ -1,21 +1,26 @@
 import time
 from collections.abc import AsyncGenerator
-from typing import cast
+from typing import Any, cast
 
 from fastapi import HTTPException
 from loguru import logger
 
+# openai 为可选依赖：缺省时以 None/Exception 占位（Any 声明的模块级变量承载，不对导入类型赋值）
+AsyncOpenAI: Any
+APIError: Any
+OpenAITimeout: Any
 try:
-    from openai import APIError, AsyncOpenAI
-    from openai import Timeout as OpenAITimeout
+    from openai import APIError as _APIError, AsyncOpenAI as _AsyncOpenAI
+    from openai import Timeout as _OpenAITimeout
     from openai.types.chat import ChatCompletionChunk
 
     HAS_OPENAI = True
+    AsyncOpenAI, APIError, OpenAITimeout = _AsyncOpenAI, _APIError, _OpenAITimeout
 except ImportError:
+    HAS_OPENAI = False
     AsyncOpenAI = None
     APIError = Exception
     OpenAITimeout = None
-    HAS_OPENAI = False
 
 import httpx
 

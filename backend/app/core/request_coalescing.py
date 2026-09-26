@@ -136,7 +136,7 @@ class EndpointShield:
         finally:
             self._semaphore.release()
 
-    def snapshot(self) -> dict[str, int]:
+    def snapshot(self) -> dict[str, str | int]:
         """观测用：缓存/在飞/命中/去重/雪崩计数。"""
         return {
             "name": self.name,

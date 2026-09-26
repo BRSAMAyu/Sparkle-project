@@ -23,6 +23,7 @@ from app.config import settings
 from app.core.cache import cache_service
 from app.middleware.admin_audit import audit_admin_action
 from app.models.user import User
+from app.core.redis_utils import ensure_awaitable
 
 router = APIRouter(
     prefix="/admin",
@@ -42,7 +43,7 @@ async def _redis_health() -> dict[str, Any]:
         return {"status": "disabled"}
     try:
         start = time.time()
-        await cache_service.redis.ping()
+        await ensure_awaitable(cache_service.redis.ping())
         latency_ms = round((time.time() - start) * 1000, 2)
         info = await cache_service.redis.info(section="memory")
         return {
@@ -134,7 +135,7 @@ async def _recent_telemetry_errors() -> dict[str, Any]:
     if not cache_service.redis:
         return {"available": False}
     try:
-        raw_events = await cache_service.redis.lrange("client_telemetry:recent", 0, 49)
+        raw_events = await ensure_awaitable(cache_service.redis.lrange("client_telemetry:recent", 0, 49))
         import json
 
         errors: list[dict[str, Any]] = []
@@ -165,7 +166,7 @@ async def _queue_health() -> dict[str, Any]:
         result: dict[str, dict[str, Any]] = {}
         total = 0
         for name, key in queues.items():
-            length = await cache_service.redis.llen(key)
+            length = await ensure_awaitable(cache_service.redis.llen(key))
             result[name] = {"length": length, "healthy": length < 500}
             total += length
         return {"available": True, "queues": result, "total_pending": total}
@@ -318,7 +319,7 @@ async def admin_inspect_aurora_user(
     corrections = []
     if redis:
         try:
-            raw = await redis.lrange(f"aurora:correction_telemetry:{user_id}", 0, 9)
+            raw = await ensure_awaitable(redis.lrange(f"aurora:correction_telemetry:{user_id}", 0, 9))
             import json
 
             for item in raw:

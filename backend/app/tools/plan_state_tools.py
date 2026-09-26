@@ -12,7 +12,7 @@ Usage:
     These tools are registered in the ToolRegistry and can be invoked by the LLM
     through function calling.
 """
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -86,11 +86,13 @@ class GetPlanStateTool(BaseTool):
 
     async def execute(
         self,
-        params: GetPlanStateParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetPlanStateParams, params)
         try:
             user_uuid = UUID(user_id)
             resolved = await resolve_user_plan_reference(
@@ -196,11 +198,13 @@ class GetTaskSummaryTool(BaseTool):
 
     async def execute(
         self,
-        params: GetTaskSummaryParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetTaskSummaryParams, params)
         try:
             user_uuid = UUID(user_id)
             resolved = await resolve_user_plan_reference(
@@ -289,11 +293,13 @@ class GetTaskDetailTool(BaseTool):
 
     async def execute(
         self,
-        params: GetTaskDetailParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetTaskDetailParams, params)
         try:
             task_id = UUID(params.task_id)
             user_uuid = UUID(user_id)

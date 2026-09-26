@@ -35,6 +35,7 @@ from app.db.session import AsyncSessionLocal
 from app.schemas.notification import NotificationCreate
 from app.services.notification_service import NotificationService
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.core.redis_utils import ensure_awaitable
 
 # 延迟导入设备服务（避免循环依赖）
 _device_service = None
@@ -240,7 +241,7 @@ class ConnectionManager:
         delivered = 0
 
         while True:
-            raw_item = await self.redis.lpop(queue_key)
+            raw_item = cast("str | None", await ensure_awaitable(self.redis.lpop(queue_key)))
             if raw_item is None:
                 break
 
@@ -252,7 +253,7 @@ class ConnectionManager:
                 await websocket.send_text(json.dumps(message, default=str))
                 delivered += 1
             except Exception as exc:
-                await self.redis.lpush(queue_key, raw_item)
+                await ensure_awaitable(self.redis.lpush(queue_key, raw_item))
                 logger.warning(f"Failed to deliver queued websocket message to user {user_id}: {exc}")
                 break
 
@@ -513,10 +514,10 @@ class ConnectionManager:
             "queued_at": time.time(),
             "retry_count": 0
         }
-        await self.redis.rpush(
+        await ensure_awaitable(self.redis.rpush(
             f"ws:offline_queue:{user_id}",
             json.dumps(queue_item)
-        )
+        ))
         logger.info(f"Stored message {message_id} to offline queue for user {user_id}")
 
     async def record_ack(self, user_id: str, message_id: str):

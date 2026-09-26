@@ -8,6 +8,7 @@ import re
 from collections import deque
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -129,7 +130,7 @@ class InferredEpisodicCandidate:
     decay_policy: str
     source_lane: str
     semantic_key: str
-    evidence_refs: list[dict[str, str]]
+    evidence_refs: list[dict[str, Any]]
     occurred_at: datetime
     due_at: datetime | None
     mentioned_entity_hash: str | None

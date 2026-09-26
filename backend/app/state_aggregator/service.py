@@ -197,10 +197,7 @@ class StateAggregatorService:
 
         fetcher: dict[
             UserStateFieldName,
-            Callable[
-                [UUID, datetime, CurrentTurnParseResult | None],
-                Awaitable[StateFieldEnvelope[Any] | None],
-            ],
+            Callable[..., Awaitable[StateFieldEnvelope[Any] | None]],
         ] = {
             "commitment_summary": self._build_commitment_summary,
             "pending_policies": self._build_pending_policies_summary,
@@ -588,7 +585,7 @@ class StateAggregatorService:
         for s, count in chat_sentiments.items():
             distribution[s] = distribution.get(s, 0) + count
 
-        dominant = max(distribution, key=distribution.get) if distribution else None
+        dominant = max(distribution, key=lambda k: distribution[k]) if distribution else None
         # V3-FIX-11 T3: trigger set comes from the shared boundary module so
         # the worker's intercept set can never drift below it.
         emotional_block = dominant in EMOTIONAL_BLOCK_SENTIMENTS if dominant else False

@@ -237,7 +237,7 @@ class GoalWorldGraphService:
         if not blocked_by:
             return None
 
-        bottleneck_id = max(blocked_by, key=blocked_by.get)
+        bottleneck_id = max(blocked_by, key=lambda k: blocked_by[k])
         return node_map.get(bottleneck_id)
 
     def suggest_focus_nodes(self, graph: GoalWorldGraph, limit: int = 3) -> list[dict[str, Any]]:

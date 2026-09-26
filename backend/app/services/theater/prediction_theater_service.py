@@ -39,6 +39,7 @@ from app.services.llm_fallback_utils import analysis_llm
 from app.services.plan_service import PlanService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.task_service import TaskService
+from app.core.redis_utils import ensure_awaitable
 
 logger = logging.getLogger(__name__)
 
@@ -251,8 +252,8 @@ class PredictionAccuracyTracker:
         redis_client = cache_service.redis
         user_id = str(payload.get("user_id") or "").strip()
         if redis_client is not None and user_id:
-            await redis_client.sadd(self.USER_INDEX_KEY, user_id)
-            await redis_client.sadd(f"{self.USER_PREDICTION_INDEX_PREFIX}{user_id}", prediction_id)
+            await ensure_awaitable(redis_client.sadd(self.USER_INDEX_KEY, user_id))
+            await ensure_awaitable(redis_client.sadd(f"{self.USER_PREDICTION_INDEX_PREFIX}{user_id}", prediction_id))
             await redis_client.expire(f"{self.USER_PREDICTION_INDEX_PREFIX}{user_id}", self.TTL_SECONDS)
 
     async def record_actual(
@@ -1678,9 +1679,9 @@ class PredictionTheaterService:
         redis_ids: set[str] = set()
         results: list[dict[str, Any]] = []
         if redis_client is not None:
-            indexed_prediction_ids = await redis_client.smembers(
+            indexed_prediction_ids = await ensure_awaitable(redis_client.smembers(
                 f"{self.accuracy.USER_PREDICTION_INDEX_PREFIX}{user_id}"
-            )
+            ))
             prediction_keys = [
                 f"{self.accuracy.PREDICTION_KEY_PREFIX}{raw_id.decode() if isinstance(raw_id, bytes) else str(raw_id)}"
                 for raw_id in indexed_prediction_ids

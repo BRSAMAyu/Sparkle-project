@@ -13,6 +13,7 @@ from app.api.deps import (
 )
 from app.core.cache import cache_service
 from app.models.user import User
+from app.core.redis_utils import ensure_awaitable
 
 router = APIRouter(prefix="/client-telemetry", tags=["client-telemetry"])
 
@@ -205,7 +206,7 @@ async def get_client_telemetry_summary(
             if len(parts) < 4:
                 continue
             event_type = ":".join(parts[3:])
-            values = await redis_client.hgetall(key)
+            values = await ensure_awaitable(redis_client.hgetall(key))
             item = aggregates.setdefault(
                 event_type,
                 {
@@ -283,7 +284,7 @@ async def get_client_telemetry_summary(
             )
 
     recent_events = []
-    for value in await redis_client.lrange(_RECENT_EVENTS_KEY, 0, 19):
+    for value in await ensure_awaitable(redis_client.lrange(_RECENT_EVENTS_KEY, 0, 19)):
         try:
             recent_events.append(json.loads(value))
         except json.JSONDecodeError:

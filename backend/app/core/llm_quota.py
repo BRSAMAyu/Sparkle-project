@@ -32,6 +32,7 @@ import redis.asyncio as redis
 
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
+from app.core.redis_utils import ensure_awaitable
 
 logger = logging.getLogger(__name__)
 
@@ -393,13 +394,16 @@ class LLMCostGuard:
             )
 
         try:
-            allowed, current_after = await self.redis.evalsha(
-                script_sha,
-                1,
-                daily_key,
-                limit,
-                estimated_tokens,
-                86400,
+            allowed, current_after = cast(
+                "list[int]",
+                await ensure_awaitable(self.redis.evalsha(
+                    script_sha,
+                    1,
+                    daily_key,
+                    limit,
+                    estimated_tokens,
+                    86400,
+                )),
             )
         except Exception as exc:
             logger.warning(f"Quota evalsha failed: {exc}")

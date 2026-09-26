@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field, ValidationError
@@ -60,11 +60,13 @@ class CreateTaskTool(BaseTool):
 
     async def execute(
         self,
-        params: CreateTaskParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
-        tool_call_id: str | None = None
+        tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(CreateTaskParams, params)
         try:
             # Convert string user_id to UUID
             user_uuid = UUID(user_id)
@@ -148,11 +150,13 @@ class UpdateTaskStatusTool(BaseTool):
 
     async def execute(
         self,
-        params: UpdateTaskStatusParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
-        tool_call_id: str | None = None
+        tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(UpdateTaskStatusParams, params)
         try:
             user_uuid = UUID(user_id)
             task_uuid = UUID(params.task_id)
@@ -237,11 +241,13 @@ class BatchCreateTasksTool(BaseTool):
 
     async def execute(
         self,
-        params: BatchCreateTasksParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
-        tool_call_id: str | None = None
+        tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(BatchCreateTasksParams, params)
         try:
             user_uuid = UUID(user_id)
             created_tasks: list[dict[str, Any]] = []
@@ -346,11 +352,13 @@ class SuggestQuickTaskTool(BaseTool):
 
     async def execute(
         self,
-        params: SuggestQuickTaskParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
-        tool_call_id: str | None = None
+        tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(SuggestQuickTaskParams, params)
         try:
             user_uuid = UUID(user_id)
             query = select(Task).where(
@@ -448,11 +456,13 @@ class BreakdownTaskTool(BaseTool):
 
     async def execute(
         self,
-        params: BreakdownTaskParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
-        tool_call_id: str | None = None
+        tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(BreakdownTaskParams, params)
         try:
             user_uuid = UUID(user_id)
             persona_constraints = await PersonaAwarePlanner(db_session).build_constraints(

@@ -18,6 +18,7 @@ from app.db.session import AsyncSessionLocal
 from app.services.cognitive_service import CognitiveService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.signal_adaptation import recency_weight, weighted_average
+from app.core.redis_utils import ensure_awaitable
 
 
 def _utcnow() -> datetime:
@@ -422,8 +423,8 @@ class ChatSignalCollector:
         if redis_client is None:
             return
         try:
-            await redis_client.lpush(key, json.dumps(entry, ensure_ascii=False))
-            await redis_client.ltrim(key, 0, self.WINDOW_SIZE - 1)
+            await ensure_awaitable(redis_client.lpush(key, json.dumps(entry, ensure_ascii=False)))
+            await ensure_awaitable(redis_client.ltrim(key, 0, self.WINDOW_SIZE - 1))
             await redis_client.expire(key, self.WINDOW_TTL_SECONDS)
         except Exception as exc:
             logger.warning("Failed to cache chat signal entry: {}", exc)
@@ -434,7 +435,7 @@ class ChatSignalCollector:
         if redis_client is None:
             return None
         try:
-            raw = await redis_client.lindex(key, 0)
+            raw = await ensure_awaitable(redis_client.lindex(key, 0))
         except Exception:
             return None
         if not raw:
@@ -464,7 +465,7 @@ class ChatSignalCollector:
         if redis_client is None:
             return []
         try:
-            raw_entries = await redis_client.lrange(key, 0, self.WINDOW_SIZE - 1)
+            raw_entries = await ensure_awaitable(redis_client.lrange(key, 0, self.WINDOW_SIZE - 1))
         except Exception as exc:
             logger.warning("Failed to load chat signal entries: {}", exc)
             return []

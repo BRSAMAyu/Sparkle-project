@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_active_superuser
 from app.core.cache import cache_service
 from app.db.session import get_db
+from app.core.redis_utils import ensure_awaitable
 
 try:
     from app.services.graph_knowledge_service import GraphKnowledgeService
@@ -586,7 +587,7 @@ async def detailed_health_check(
             redis_client = cache_service.redis
             if redis_client:
                 redis_start = time.time()
-                await redis_client.ping()
+                await ensure_awaitable(redis_client.ping())
                 redis_duration = time.time() - redis_start
 
                 health_report["components"]["redis"] = {
@@ -595,7 +596,7 @@ async def detailed_health_check(
                 }
 
                 # 检查同步队列
-                sync_queue = await redis_client.llen("queue:graph_sync")
+                sync_queue = await ensure_awaitable(redis_client.llen("queue:graph_sync"))
                 health_report["metrics"]["sync_queue"] = sync_queue
 
                 if sync_queue > 500:

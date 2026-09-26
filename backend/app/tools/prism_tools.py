@@ -46,7 +46,8 @@ class GetUserBehaviorPatternsTool(BaseTool):
         params: Any,
         user_id: str,
         db_session: Any,
-        tool_call_id: str | None = None
+        tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)

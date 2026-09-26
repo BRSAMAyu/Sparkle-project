@@ -44,7 +44,7 @@ class ExecutionValidationResult:
     validation_status: str  # passed, failed, partial
     quality_score: float  # 0-1
     criteria_results: dict[str, Any] = field(default_factory=dict)
-    tool_summary: dict[str, int] = field(default_factory=dict)
+    tool_summary: dict[str, float] = field(default_factory=dict)
     issues: list[str] = field(default_factory=list)
     step_validations: list[StepValidation] = field(default_factory=list)
     aborted: bool = False
@@ -190,7 +190,7 @@ class PlanExecutionValidator:
 
     def _analyze_tool_results(
         self, tool_results: list[ToolResult]
-    ) -> dict[str, int]:
+    ) -> dict[str, float]:
         """分析工具执行结果"""
         total = len(tool_results)
         successful = sum(1 for r in tool_results if r.success)
@@ -278,7 +278,7 @@ class PlanExecutionValidator:
 
     def _calculate_quality_score(
         self,
-        tool_summary: dict[str, int],
+        tool_summary: dict[str, float],
         criteria_results: dict[str, Any],
     ) -> float:
         """
@@ -518,7 +518,7 @@ class PlanExecutionValidator:
 
     @staticmethod
     def _calculate_dag_quality_score(
-        tool_summary: dict[str, int],
+        tool_summary: dict[str, float],
         criteria_results: dict[str, Any],
         step_pass_rate: float,
         aborted: bool,

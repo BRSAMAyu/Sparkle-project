@@ -28,15 +28,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cost_controller import is_llm_within_budget
 
+# openai/redis 为可选依赖：缺省以 None/ConnectionError 占位（Any 声明的模块级变量承载）
+OpenAIAPIError: Any
+RedisError: Any
 try:
-    from openai import APIError as OpenAIAPIError
+    from openai import APIError as _OpenAIAPIError
+
+    OpenAIAPIError = _OpenAIAPIError
 except ImportError:  # pragma: no cover - openai is optional in unit tests
-    OpenAIAPIError = None  # type: ignore[assignment]
+    OpenAIAPIError = None
 
 try:
-    from redis.exceptions import RedisError
+    from redis.exceptions import RedisError as _RedisError
+
+    RedisError = _RedisError
 except ImportError:  # pragma: no cover - redis is optional in unit tests
-    RedisError = ConnectionError  # type: ignore[assignment]
+    RedisError = ConnectionError
 
 from app.aurora.privacy import redact_pii
 from app.config import settings
@@ -444,8 +451,8 @@ class PredictiveService:
     ) -> datetime:
         """根据模式调整预测时间"""
         # 找到最常见的星期和时间
-        most_common_weekday = max(weekday_pattern, key=weekday_pattern.get)
-        most_common_hour = max(hour_pattern, key=hour_pattern.get)
+        most_common_weekday = max(weekday_pattern, key=lambda k: weekday_pattern[k])
+        most_common_hour = max(hour_pattern, key=lambda k: hour_pattern[k])
 
         # 调整到最常见的星期
         current_weekday = predicted_time.weekday()

@@ -267,10 +267,10 @@ class CustomExpertService:
         }
 
     @staticmethod
-    def build_model_options() -> list[dict[str, str]]:
+    def build_model_options() -> list[dict[str, Any]]:
         from app.core.llm_router import llm_router
 
-        options: list[dict[str, str]] = []
+        options: list[dict[str, Any]] = []
         for key, config in llm_router._available_models.items():
             if key == "default":
                 continue

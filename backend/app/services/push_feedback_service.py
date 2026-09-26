@@ -16,6 +16,7 @@ from app.core.cache import cache_service
 from app.models.notification import PushHistory
 from app.models.user import PushPreference
 from app.services.profile_write_service import ProfileWriteService
+from app.core.redis_utils import ensure_awaitable
 
 
 def _utcnow() -> datetime:
@@ -145,7 +146,7 @@ class PushFeedbackService:
             "trigger_type": trigger_type,
         }
         try:
-            await self.redis.rpush(key, json.dumps(entry, ensure_ascii=False))
+            await ensure_awaitable(self.redis.rpush(key, json.dumps(entry, ensure_ascii=False)))
             await self.redis.expire(key, self.WINDOW_DAYS * 24 * 3600)
         except Exception as exc:
             logger.warning("Failed to cache push interaction: {}", exc)
@@ -159,7 +160,7 @@ class PushFeedbackService:
             day = now - timedelta(days=day_offset)
             key = f"user:push:interaction:{user_id}:{day.strftime('%Y%m%d')}"
             try:
-                values = await self.redis.lrange(key, 0, -1)
+                values = await ensure_awaitable(self.redis.lrange(key, 0, -1))
             except Exception as exc:
                 logger.warning("Failed to load push interactions: {}", exc)
                 continue

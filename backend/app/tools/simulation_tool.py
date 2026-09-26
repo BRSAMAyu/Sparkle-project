@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import cast
 from urllib.parse import urlencode
 from uuid import UUID
 
@@ -34,11 +35,13 @@ class QuickSimulationTool(BaseTool):
 
     async def execute(
         self,
-        params: QuickSimulationParams,
+        params: BaseModel,
         user_id: str,
         db_session,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(QuickSimulationParams, params)
         try:
             scenario_key = normalize_scenario_key(params.scenario_key)
             topic = await self._resolve_topic(

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -13,10 +14,14 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# redis 为可选依赖：缺省以 ConnectionError 占位（Any 声明的模块级变量承载）
+RedisError: Any
 try:
-    from redis.exceptions import RedisError
+    from redis.exceptions import RedisError as _RedisError
+
+    RedisError = _RedisError
 except ImportError:  # pragma: no cover - redis is optional in unit tests
-    RedisError = ConnectionError  # type: ignore[assignment]
+    RedisError = ConnectionError
 
 from app.core.event_bus import EventBus
 from app.models.curiosity_capsule import CuriosityCapsule

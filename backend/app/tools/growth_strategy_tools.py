@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -152,11 +152,13 @@ class GetSituationBriefTool(BaseTool):
 
     async def execute(
         self,
-        params: GetSituationBriefParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetSituationBriefParams, params)
         runtime_context = get_tool_runtime_context(db_session)
 
         direct_brief = runtime_context.get("situation_brief")
@@ -250,11 +252,13 @@ class GetUserStrategyStateTool(BaseTool):
 
     async def execute(
         self,
-        params: GetUserStrategyStateParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetUserStrategyStateParams, params)
         user_uuid = UUID(user_id)
         identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
         service = UserStrategyStateService(db_session, redis=_runtime_redis(db_session))
@@ -292,11 +296,13 @@ class AdjustUserStrategyStateTool(BaseTool):
 
     async def execute(
         self,
-        params: AdjustUserStrategyStateParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(AdjustUserStrategyStateParams, params)
         try:
             identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
             normalized_layer = str(params.layer or "").strip().lower()
@@ -359,11 +365,13 @@ class WriteEpisodeNoteTool(BaseTool):
 
     async def execute(
         self,
-        params: WriteEpisodeNoteParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(WriteEpisodeNoteParams, params)
         try:
             identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
             if identifiers["invalid_plan_id"]:
@@ -421,11 +429,13 @@ class GetProfileFrontDoorTool(BaseTool):
 
     async def execute(
         self,
-        params: GetProfileFrontDoorParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetProfileFrontDoorParams, params)
         runtime_context = get_tool_runtime_context(db_session)
         service = ProfileFrontDoorService(db_session, redis=_runtime_redis(db_session))
         profile_context = await service.load_profile_context(
@@ -465,11 +475,13 @@ class ApplyProfileCorrectionTool(BaseTool):
 
     async def execute(
         self,
-        params: ApplyProfileCorrectionParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(ApplyProfileCorrectionParams, params)
         runtime_context = get_tool_runtime_context(db_session)
         front_door_service = ProfileFrontDoorService(db_session, redis=_runtime_redis(db_session))
         before_context = await front_door_service.load_profile_context(
@@ -561,11 +573,13 @@ class GetGraphDiagnosticSurfaceTool(BaseTool):
 
     async def execute(
         self,
-        params: GetGraphDiagnosticSurfaceParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetGraphDiagnosticSurfaceParams, params)
         snapshot = await GraphReasoningService(db_session).build_diagnostic_snapshot(
             UUID(user_id),
             limit=params.limit,

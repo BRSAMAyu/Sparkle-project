@@ -151,7 +151,7 @@ async def router_node(state: SparkleState, config: dict | None = None):
             needs_clarification=decision.needs_clarification,
         )
 
-    state_updates = {
+    state_updates: dict[str, Any] = {
         "next_step": resolved_target,
         "active_agent": "router",
         "planning_status": planning_status,

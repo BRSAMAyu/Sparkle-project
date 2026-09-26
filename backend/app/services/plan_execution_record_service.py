@@ -34,7 +34,7 @@ class PlanExecutionRecordService:
         validation_status: str,
         quality_score: float,
         criteria_results: dict[str, Any],
-        tool_summary: dict[str, int],
+        tool_summary: dict[str, float],
         issues: list[str],
         execution_intent_id: UUID | None = None,
     ) -> PlanExecutionRecord:

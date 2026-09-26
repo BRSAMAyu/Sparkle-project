@@ -224,7 +224,7 @@ class SignalsLearningWorker:
 
         return metrics
 
-    async def _calculate_confidence_calibration(self) -> dict[str, float]:
+    async def _calculate_confidence_calibration(self) -> dict[str, Any]:
         """
         Calculate confidence calibration error.
 

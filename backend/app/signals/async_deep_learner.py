@@ -398,7 +398,7 @@ class AsyncDeepLearner:
             context_counts: dict[str, Any] = {}
             for ctx in stats["contexts"]:
                 context_counts[ctx] = context_counts.get(ctx, 0) + 1
-            best_context = max(context_counts, key=context_counts.get) if context_counts else "general"
+            best_context = max(context_counts, key=lambda k: context_counts[k]) if context_counts else "general"
 
             tag = "effective" if rate >= 0.6 else ("neutral" if rate >= 0.3 else "ineffective")
             effectiveness.append({

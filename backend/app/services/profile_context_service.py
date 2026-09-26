@@ -726,7 +726,7 @@ class ProfileContextService:
                 type_scores[pattern_type] = type_scores.get(pattern_type, 0.0) + confidence_val
 
         if type_scores:
-            dominant_pattern_type = max(type_scores, key=type_scores.get)
+            dominant_pattern_type = max(type_scores, key=lambda k: type_scores[k])
 
         risk_signals = list(dict.fromkeys(risk_signals))
 

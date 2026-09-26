@@ -24,10 +24,14 @@ from app.aurora.runtime_v1.aurora_spine_confluence import (
 from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
 from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider
 
+# L1LightAurora 为可选组件（GAP-P1-1 落地前）：缺省以 None 占位（Any 声明的模块级变量承载）
+L1LightAurora: Any
 try:
-    from app.aurora.runtime_v1.l1_light_aurora import L1LightAurora
+    from app.aurora.runtime_v1.l1_light_aurora import L1LightAurora as _L1LightAurora
+
+    L1LightAurora = _L1LightAurora
 except ImportError:
-    L1LightAurora = None  # optional until GAP-P1-1 lands
+    L1LightAurora = None
 from app.aurora.runtime_v1.l0_rules import L0RuleEngine
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
 from app.causal.episode_logger import CandidatePolicy, episode_logger

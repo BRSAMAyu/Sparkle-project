@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -25,7 +26,8 @@ class PersonaTool(BaseTool):
     required_permission = "llm.use"
     cost_usd = 0.002
 
-    async def execute(self, params: PersonaRequest, user_id: str, db_session, tool_call_id: str | None = None) -> ToolResult:
+    async def execute(self, params: BaseModel, user_id: str, db_session, tool_call_id: str | None = None, locale: str = "en") -> ToolResult:
+        params = cast(PersonaRequest, params)
         service = ProfileSnapshotService(db_session)
         snapshot = await service.get_snapshot(UUID(user_id), params.purpose)
         return ToolResult(

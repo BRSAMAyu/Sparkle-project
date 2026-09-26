@@ -8,7 +8,9 @@ Tools:
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
+
+from pydantic import BaseModel
 from uuid import UUID
 
 from sqlalchemy import and_, select
@@ -56,12 +58,13 @@ class QueryPlanTasksTool(BaseTool):
 
     async def execute(
         self,
-        params: QueryPlanTasksParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
         locale: str = "en",
     ) -> ToolResult:
+        params = cast(QueryPlanTasksParams, params)
         try:
             user_uuid = UUID(user_id)
             resolved = await resolve_user_plan_reference(
@@ -229,12 +232,13 @@ class ModifyPlanTaskTool(BaseTool):
 
     async def execute(
         self,
-        params: ModifyPlanTaskParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
         locale: str = "en",
     ) -> ToolResult:
+        params = cast(ModifyPlanTaskParams, params)
         try:
             user_uuid = UUID(user_id)
             task_uuid = UUID(params.task_id)
@@ -364,12 +368,13 @@ class GetTaskDetailsTool(BaseTool):
 
     async def execute(
         self,
-        params: GetTaskDetailsParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
         locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetTaskDetailsParams, params)
         try:
             user_uuid = UUID(user_id)
             task_uuid = UUID(params.task_id)
@@ -666,12 +671,13 @@ class QueryAllTasksTool(BaseTool):
 
     async def execute(
         self,
-        params: QueryAllTasksParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
         locale: str = "en",
     ) -> ToolResult:
+        params = cast(QueryAllTasksParams, params)
         try:
             user_uuid = UUID(user_id)
 

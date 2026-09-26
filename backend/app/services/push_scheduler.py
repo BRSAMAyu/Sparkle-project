@@ -27,6 +27,7 @@ from app.services.personalization import get_personalization_engine
 from app.services.push_service import PushService
 from app.signals.recall_notification import RecallNotificationBuilder
 from app.signals.recall_opportunity import RecallOpportunityDetector
+from app.core.redis_utils import ensure_awaitable
 
 _RECALL_QUEUE_PREFIX = "push_scheduler:recall_queue:"
 _MAX_QUEUE_SIZE = 10
@@ -135,7 +136,7 @@ class PushScheduler:
             try:
                 user_id = key.decode() if isinstance(key, bytes) else key
                 user_id = user_id.replace(_RECALL_QUEUE_PREFIX, "")
-                raw_triggers = await self.redis.lrange(key, 0, -1)
+                raw_triggers = await ensure_awaitable(self.redis.lrange(key, 0, -1))
                 if not raw_triggers:
                     continue
 

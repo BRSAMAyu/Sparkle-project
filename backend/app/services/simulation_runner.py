@@ -17,10 +17,16 @@ from sqlalchemy import desc, select
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
+# prometheus 为可选依赖：缺省时以 None 占位（Any 声明的模块级变量承载，不对导入类型赋值）
+Counter: Any
+Gauge: Any
+Histogram: Any
 try:
-    from prometheus_client import Counter, Gauge, Histogram
+    from prometheus_client import Counter as _Counter, Gauge as _Gauge, Histogram as _Histogram
+
+    Counter, Gauge, Histogram = _Counter, _Gauge, _Histogram
 except Exception:  # pragma: no cover - prometheus is optional in local scripts
-    Counter = Gauge = Histogram = None  # type: ignore[assignment]
+    Counter = Gauge = Histogram = None
 
 
 SYSTEM_BENCHMARK_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000b03")

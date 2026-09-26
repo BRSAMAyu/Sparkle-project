@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import cast
 from urllib.parse import urlencode
 from uuid import UUID
 
@@ -34,11 +35,13 @@ class LaunchPredictionTool(BaseTool):
 
     async def execute(
         self,
-        params: LaunchPredictionParams,
+        params: BaseModel,
         user_id: str,
         db_session,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(LaunchPredictionParams, params)
         try:
             target_node_uuid = None
             if params.target_node_id:

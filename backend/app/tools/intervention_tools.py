@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -84,11 +84,13 @@ class GetInterventionTrackRecordTool(BaseTool):
 
     async def execute(
         self,
-        params: GetInterventionTrackRecordParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetInterventionTrackRecordParams, params)
         user_uuid = UUID(user_id)
         record_service = InterventionRecordService(db_session)
         learner = InterventionStrategyLearner(db_session)
@@ -150,11 +152,13 @@ class RecordInterventionFeedbackTool(BaseTool):
 
     async def execute(
         self,
-        params: RecordInterventionFeedbackParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(RecordInterventionFeedbackParams, params)
         runtime_context = get_tool_runtime_context(db_session)
         binding_service = InterventionFeedbackBindingService(
             db_session,

@@ -122,7 +122,7 @@ import math
 import re
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 from loguru import logger
 
@@ -702,7 +702,9 @@ DEFAULT_SESSION_QUESTION_LIMIT = 2
 DEFAULT_DAY_QUESTION_LIMIT = 5
 #: ask_less → 收紧；ask_more → 放宽（值域 = A-05 ``SURFACE_PAYLOAD_SCHEMAS``
 #: clarification 面的结构派生，零抄写；漂移即 import 期 fail-fast）。
-CLARIFICATION_PREFERENCE_VALUES: frozenset[str] = frozenset(SURFACE_PAYLOAD_SCHEMAS["clarification"])
+CLARIFICATION_PREFERENCE_VALUES: frozenset[str] = frozenset(
+    cast("frozenset[str]", SURFACE_PAYLOAD_SCHEMAS["clarification"])
+)
 CLARIFICATION_PREFERENCE_BUDGETS: Mapping[str, tuple[int, int]] = MappingProxyType(
     {
         "ask_less": (1, 3),

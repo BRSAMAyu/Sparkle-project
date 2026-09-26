@@ -33,8 +33,12 @@ from app.services.context_retrieval_pipeline import (
 from app.services.embedding_service import EmbeddingNotConfiguredError, embedding_service
 from app.services.rerank_service import rerank_service
 
+# GroupFileService 可选导入：缺省以 None 占位（Any 声明的模块级变量承载）
+GroupFileService: Any
 try:
-    from app.services.group_file_service import GroupFileService
+    from app.services.group_file_service import GroupFileService as _GroupFileService
+
+    GroupFileService = _GroupFileService
 except ImportError:
     GroupFileService = None
 

@@ -637,7 +637,7 @@ class FocusService:
         avg_duration = int(total_minutes / session_count) if session_count > 0 else 0
 
         # Find best day
-        best_day = max(daily_breakdown, key=daily_breakdown.get) if daily_breakdown else None
+        best_day = max(daily_breakdown, key=lambda k: daily_breakdown[k]) if daily_breakdown else None
 
         # Calculate streaks
         current_streak = await FocusService._calculate_current_streak(db, user_id)
@@ -697,7 +697,7 @@ class FocusService:
         avg_duration = int(total_minutes / session_count) if session_count > 0 else 0
 
         # Find best day
-        best_day = max(daily_breakdown, key=daily_breakdown.get) if daily_breakdown else None
+        best_day = max(daily_breakdown, key=lambda k: daily_breakdown[k]) if daily_breakdown else None
 
         # Weekly breakdown
         weekly_breakdown: dict[str, Any] = {}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -95,11 +95,13 @@ class RetrieveUserMaterialTool(BaseTool):
 
     async def execute(
         self,
-        params: RetrieveUserMaterialParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(RetrieveUserMaterialParams, params)
         user_uuid = UUID(user_id)
         runtime_context = get_tool_runtime_context(db_session)
         include_group_documents = (

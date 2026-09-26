@@ -429,7 +429,7 @@ class ModelFallbackService:
     # 性能分析
     # ============================================
 
-    def get_model_stats(self, model_name: str | None = None) -> dict[str, ModelUsageStats]:
+    def get_model_stats(self, model_name: str | None = None) -> dict[str, ModelUsageStats | None]:
         """获取模型使用统计"""
         if model_name:
             return {model_name: self._model_stats.get(model_name)}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -120,11 +120,13 @@ class GetCompanionStateTool(BaseTool):
 
     async def execute(
         self,
-        params: GetCompanionStateParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetCompanionStateParams, params)
         user_uuid = UUID(user_id)
         identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
         service = CompanionStateService(db_session, redis=_runtime_redis(db_session))
@@ -162,11 +164,13 @@ class AdjustCompanionStateTool(BaseTool):
 
     async def execute(
         self,
-        params: AdjustCompanionStateParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(AdjustCompanionStateParams, params)
         if params.field not in COMPANION_SESSION_WRITE_FIELDS:
             return ToolResult(
                 success=False,
@@ -228,11 +232,13 @@ class WriteCompanionGrowthNoteTool(BaseTool):
 
     async def execute(
         self,
-        params: WriteCompanionGrowthNoteParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(WriteCompanionGrowthNoteParams, params)
         try:
             identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
             if not identifiers["session_id"]:
@@ -285,11 +291,13 @@ class WriteRelationshipNoteTool(BaseTool):
 
     async def execute(
         self,
-        params: WriteRelationshipNoteParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(WriteRelationshipNoteParams, params)
         try:
             identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
             if not identifiers["session_id"]:
@@ -343,11 +351,13 @@ class GetSelfRevisionHistoryTool(BaseTool):
 
     async def execute(
         self,
-        params: GetSelfRevisionHistoryParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GetSelfRevisionHistoryParams, params)
         identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
         service = CompanionStateService(db_session, redis=_runtime_redis(db_session))
         data = {

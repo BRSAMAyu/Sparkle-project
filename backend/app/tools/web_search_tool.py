@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from pydantic import BaseModel, Field
@@ -62,11 +62,13 @@ class WebSearchProTool(BaseTool):
 
     async def execute(
         self,
-        params: WebSearchProParams,
+        params: BaseModel,
         user_id: str,
         db_session: Any,
-        tool_call_id: str | None = None
+        tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(WebSearchProParams, params)
         if not settings.ZHIPU_API_KEY:
             return ToolResult(
                 success=False,

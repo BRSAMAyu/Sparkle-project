@@ -18,6 +18,7 @@ from app.config import settings
 from app.core.redis_utils import resolve_redis_password
 from app.db.session import AsyncSessionLocal
 from app.models.idempotency_key import IdempotencyKey
+from app.core.redis_utils import ensure_awaitable
 
 
 def _utcnow() -> datetime:
@@ -153,7 +154,7 @@ class RedisIdempotencyStore(IdempotencyStore):
         return 0
         """
         try:
-            await self._redis.eval(script, 1, self._lock_key(key), token)
+            await ensure_awaitable(self._redis.eval(script, 1, self._lock_key(key), token))
         except Exception as exc:
             logger.warning(f"Redis idempotency unlock failed: {exc}")
 

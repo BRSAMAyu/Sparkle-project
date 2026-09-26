@@ -59,6 +59,7 @@ from app.services.self_evolution_service import (
     MetricBaselineService,
     StrategyCalibrationService,
 )
+from app.core.redis_utils import ensure_awaitable
 
 router = APIRouter(
     prefix="/admin/memory",
@@ -666,7 +667,7 @@ async def ai_phases_status(user_id: str | None = Query(default=None)):
         redis_status = {"status": "unavailable"}
     else:
         try:
-            await cache_service.redis.ping()
+            await ensure_awaitable(cache_service.redis.ping())
             redis_status = {"status": "healthy"}
         except Exception as exc:
             redis_status = {"status": "unhealthy", "error": str(exc)}

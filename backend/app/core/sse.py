@@ -14,6 +14,7 @@ from loguru import logger
 
 from app.config.phase5_config import phase5_config
 from app.core.cache import cache_service
+from app.core.redis_utils import ensure_awaitable
 
 
 class SSEManager:
@@ -69,7 +70,7 @@ class SSEManager:
                 history_key = f"sse:history:{user_id}"
                 # Get last N events (simple approach: get all and filter)
                 # In production with large lists, use LRANGE carefully or Redis Stream
-                events = await cache_service.redis.lrange(history_key, 0, -1)
+                events = await ensure_awaitable(cache_service.redis.lrange(history_key, 0, -1))
 
                 last_seq_int = int(last_event_id)
                 replayed_count = 0
@@ -139,13 +140,13 @@ class SSEManager:
             try:
                 history_key = f"sse:history:{user_id_str}"
                 raw = json.dumps(event_data, ensure_ascii=False)
-                await cache_service.redis.rpush(history_key, raw)
+                await ensure_awaitable(cache_service.redis.rpush(history_key, raw))
                 # 保留最近 N 条事件
-                await cache_service.redis.ltrim(
+                await ensure_awaitable(cache_service.redis.ltrim(
                     history_key,
                     -phase5_config.SSE_BUFFER_SIZE,
                     -1
-                )
+                ))
                 # 设置 TTL
                 await cache_service.redis.expire(history_key, phase5_config.SSE_BUFFER_TTL)
             except Exception as e:

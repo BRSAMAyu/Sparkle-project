@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import cast
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from uuid import UUID
 
@@ -31,11 +32,13 @@ class GenerateLearningReportTool(BaseTool):
 
     async def execute(
         self,
-        params: GenerateLearningReportParams,
+        params: BaseModel,
         user_id: str,
         db_session,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
+        params = cast(GenerateLearningReportParams, params)
         try:
             agent = LearningReportAgent(db_session)
             report = await agent.generate_report(

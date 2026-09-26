@@ -9,6 +9,7 @@ from prometheus_client import Counter as PrometheusCounter
 
 from app.core.cache import cache_service
 from app.core.metrics import get_or_create_metric
+from app.core.redis_utils import ensure_awaitable
 
 
 def _utcnow() -> datetime:
@@ -62,8 +63,8 @@ class AchievementRewardObservability:
         ).inc()
 
         if cache_service.redis:
-            await cache_service.redis.lpush(cls.AUDIT_KEY, json.dumps(event, ensure_ascii=True))
-            await cache_service.redis.ltrim(cls.AUDIT_KEY, 0, cls.MAX_EVENTS - 1)
+            await ensure_awaitable(cache_service.redis.lpush(cls.AUDIT_KEY, json.dumps(event, ensure_ascii=True)))
+            await ensure_awaitable(cache_service.redis.ltrim(cls.AUDIT_KEY, 0, cls.MAX_EVENTS - 1))
             return event
 
         events = await cache_service.get(cls.AUDIT_KEY) or []
@@ -83,7 +84,7 @@ class AchievementRewardObservability:
     ) -> list[dict[str, Any]]:
         limit = max(1, min(limit, cls.MAX_EVENTS))
         if cache_service.redis:
-            raw_events = await cache_service.redis.lrange(cls.AUDIT_KEY, 0, limit - 1)
+            raw_events = await ensure_awaitable(cache_service.redis.lrange(cls.AUDIT_KEY, 0, limit - 1))
             return [json.loads(item) for item in raw_events]
 
         events = await cache_service.get(cls.AUDIT_KEY) or []

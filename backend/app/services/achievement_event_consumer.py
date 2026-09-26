@@ -815,11 +815,11 @@ class AchievementEventConsumer:
         if top_hours:
             updates["achievement_peak_hours"] = [hour for hour, _score in top_hours[:3]]
 
-        pace_style = max(pace_scores, key=pace_scores.get)
+        pace_style = max(pace_scores, key=lambda k: pace_scores[k])
         if pace_scores[pace_style] > 0:
             updates["achievement_pace_style"] = pace_style
 
-        motivation_response = max(motivation_scores, key=motivation_scores.get)
+        motivation_response = max(motivation_scores, key=lambda k: motivation_scores[k])
         if motivation_scores[motivation_response] > 0:
             updates["achievement_motivation_response"] = motivation_response
 

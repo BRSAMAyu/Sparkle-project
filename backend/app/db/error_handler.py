@@ -6,7 +6,7 @@ Database Error Handler
 import functools
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any, Coroutine, TypeVar, cast
+from typing import Any, Coroutine, TypeVar
 
 from sqlalchemy.exc import (
     DataError,
@@ -154,7 +154,7 @@ def async_db_error_handler(func: Callable[P, Awaitable[T]]) -> Callable[P, Corou
     @functools.wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         try:
-            return cast("T", (await func(*args, **kwargs)))
+            return await func(*args, **kwargs)
         except Exception as e:
             if isinstance(
                 e,
@@ -175,7 +175,7 @@ def async_db_error_handler(func: Callable[P, Awaitable[T]]) -> Callable[P, Corou
     return wrapper
 
 
-async def retry_on_deadlock(func: Callable[P, T], *args: P.args, max_retries: int = 3, **kwargs: P.kwargs) -> T:
+async def retry_on_deadlock(func: Callable[P, Awaitable[T]], *args: P.args, max_retries: int = 3, **kwargs: P.kwargs) -> T:
     """
     死锁重试机制
 
@@ -203,7 +203,7 @@ async def retry_on_deadlock(func: Callable[P, T], *args: P.args, max_retries: in
     last_error = None
     for attempt in range(max_retries):
         try:
-            return cast("T", (await func(*args, **kwargs)))
+            return await func(*args, **kwargs)
         except DeadlockError as e:
             last_error = e
             if attempt < max_retries - 1:

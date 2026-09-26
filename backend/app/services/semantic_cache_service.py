@@ -276,7 +276,7 @@ class SemanticCacheService:
             "updated_at": _utcnow().isoformat(),
         }
         await self.redis.setex(emb_key, ttl, json.dumps(payload))
-        await self.redis.sadd(self.KEY_SET, cache_key)
+        await ensure_awaitable(self.redis.sadd(self.KEY_SET, cache_key))
 
     def _cosine_similarity(self, a: list[float], b: list[float]) -> float:
         if not a or not b:
@@ -299,14 +299,15 @@ class SemanticCacheService:
         if not self.redis:
             return None
 
-        total_keys = await self.redis.scard(self.KEY_SET)
+        total_keys = await ensure_awaitable(self.redis.scard(self.KEY_SET))
         if total_keys == 0:
             return None
 
+        candidate_keys: list[Any] | set[Any] | str | None
         if total_keys > self.max_candidates:
-            candidate_keys = await self.redis.srandmember(self.KEY_SET, number=self.max_candidates)
+            candidate_keys = await ensure_awaitable(self.redis.srandmember(self.KEY_SET, number=self.max_candidates))
         else:
-            candidate_keys = await self.redis.smembers(self.KEY_SET)
+            candidate_keys = await ensure_awaitable(self.redis.smembers(self.KEY_SET))
 
         if not candidate_keys:
             return None
@@ -373,7 +374,7 @@ class SemanticCacheService:
 
             if cached_data:
                 # 命中
-                await self.redis.hincrby(self.STATS_KEY, "total_hits", 1)
+                await ensure_awaitable(self.redis.hincrby(self.STATS_KEY, "total_hits", 1))
                 SEMANTIC_CACHE_HIT_TOTAL.inc()
                 result = json.loads(cached_data)
 
@@ -397,15 +398,15 @@ class SemanticCacheService:
                     similar_key, score = similar
                     cached_similar = await self.redis.get(similar_key)
                     if cached_similar:
-                        await self.redis.hincrby(self.STATS_KEY, "total_hits", 1)
-                        await self.redis.hincrby(self.STATS_KEY, "semantic_hits", 1)
+                        await ensure_awaitable(self.redis.hincrby(self.STATS_KEY, "total_hits", 1))
+                        await ensure_awaitable(self.redis.hincrby(self.STATS_KEY, "semantic_hits", 1))
                         SEMANTIC_CACHE_HIT_TOTAL.inc()
                         result = json.loads(cached_similar)
                         logger.debug(f"Cache SEMANTIC HIT: query='{query[:30]}...', score={score:.3f}")
                         return self._payload_data(result)
 
             # 未命中
-            await self.redis.hincrby(self.STATS_KEY, "total_misses", 1)
+            await ensure_awaitable(self.redis.hincrby(self.STATS_KEY, "total_misses", 1))
             SEMANTIC_CACHE_MISS_TOTAL.inc()
             logger.debug(f"Cache MISS: query='{query[:30]}...'")
             return None
@@ -636,7 +637,7 @@ class SemanticCacheService:
                     logger.debug(f"Semantic cache embedding payload skipped: {emb_exc}")
 
             # 更新统计
-            await self.redis.hincrby(self.STATS_KEY, "total_sets", 1)
+            await ensure_awaitable(self.redis.hincrby(self.STATS_KEY, "total_sets", 1))
 
             logger.debug(f"Cache SET: query='{query[:30]}...', ttl={ttl_value}s")
 
@@ -717,7 +718,7 @@ class SemanticCacheService:
             return {"error": "Redis not available"}
 
         try:
-            stats_raw = await self.redis.hgetall(self.STATS_KEY)
+            stats_raw = await ensure_awaitable(self.redis.hgetall(self.STATS_KEY))
             stats = {k.decode(): json.loads(v.decode()) for k, v in stats_raw.items()}
 
             # 计算命中率
@@ -813,5 +814,6 @@ def create_semantic_cache(redis_client: Redis) -> SemanticCacheService:
 
 # 全局实例，使用核心缓存模块的 Redis 客户端
 from app.core.cache import cache_service
+from app.core.redis_utils import ensure_awaitable
 
 semantic_cache_service = SemanticCacheService(redis_client=cache_service.redis)

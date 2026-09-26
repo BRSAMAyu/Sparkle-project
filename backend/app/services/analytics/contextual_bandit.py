@@ -166,7 +166,7 @@ class ContextualThompsonBandit:
             arm: 0.72 * posteriors[arm].sample(self.rng) + 0.28 * self.global_posteriors[arm].sample(self.rng)
             for arm in self.arms
         }
-        return max(samples, key=samples.get)
+        return max(samples, key=lambda k: samples[k])
 
     def update(self, context: BeliefContext, arm: str, reward: float) -> None:
         if arm not in self.arms:

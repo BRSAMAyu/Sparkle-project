@@ -335,7 +335,7 @@ class BERTIntentClassifier:
         """
         if not self.model_loaded:
             # Fallback to keyword-only
-            max_intent = max(keyword_scores, key=keyword_scores.get)
+            max_intent = max(keyword_scores, key=lambda k: keyword_scores[k])
             return max_intent, keyword_scores[max_intent]
 
         try:
@@ -352,7 +352,7 @@ class BERTIntentClassifier:
                 adjusted_scores[intent] = combined
 
             # Get best intent
-            max_intent = max(adjusted_scores, key=adjusted_scores.get)
+            max_intent = max(adjusted_scores, key=lambda k: adjusted_scores[k])
             max_confidence = adjusted_scores[max_intent]
 
             logger.debug(f"BERT-adjusted: {max_intent} (conf={max_confidence:.2f})")
@@ -360,7 +360,7 @@ class BERTIntentClassifier:
 
         except Exception as e:
             logger.warning(f"BERT adjustment failed: {e}, using keyword-only")
-            max_intent = max(keyword_scores, key=keyword_scores.get)
+            max_intent = max(keyword_scores, key=lambda k: keyword_scores[k])
             return max_intent, keyword_scores[max_intent]
 
     def get_model_info(self) -> dict:

@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 from app.config import settings
 from app.core.redis_utils import format_redis_url_for_log, resolve_redis_password
+from app.core.redis_utils import ensure_awaitable
 
 # AUTH-DEEP A-2 专项（P1）：安全键前缀。Redis 缺席（init_redis 失败 → redis=None）
 # 时这些键绝不允许落进程内 dict——多 worker/多实例互不可见（实例 A 拉黑的 token
@@ -136,7 +137,7 @@ end
         finally:
             # Atomically release only if we still own the lock
             try:
-                await self.redis.eval(self._RELEASE_LOCK_SCRIPT, 1, key, token)
+                await ensure_awaitable(self.redis.eval(self._RELEASE_LOCK_SCRIPT, 1, key, token))
             except Exception as e:
                 logger.warning(f"Failed to release lock for {lock_key}: {e}")
 
