@@ -45,7 +45,7 @@ void main() {
   test('ensureLoaded fails closed and retries after failure', () async {
     final container = ProviderContainer(overrides: [
       apiClientProvider.overrideWithValue(_ThrowingApiClient()),
-    ]);
+    ],);
     addTearDown(container.dispose);
 
     final notifier = container.read(releaseFlagsProvider.notifier);
