@@ -719,7 +719,7 @@ class ContextOrchestrator:
 
         return {"preferences": preferences, "metrics": analytics}
 
-    async def _get_user_metrics(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
+    async def _get_user_metrics(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any] | None:
         """Fetch analytics metrics only."""
         return await self._get_user_service(db_session).get_analytics_summary(user_id)
 

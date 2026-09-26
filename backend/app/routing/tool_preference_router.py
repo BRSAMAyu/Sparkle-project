@@ -285,7 +285,7 @@ class ToolPreferenceRouter:
         self,
         intent: str,
         available_tools: list[str]
-    ) -> str:
+    ) -> str | None:
         """
         基于意图和用户历史，推荐最合适的工具
 

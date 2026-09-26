@@ -858,7 +858,7 @@ class LLMService:
             if key not in {"api_key", "base_url", "model", "temperature"}
         }
 
-        if self._selection_matches_current(selection):
+        if self._selection_matches_current(selection) and self.provider is not None:
             current_provider = self.provider
         else:
             current_provider = OpenAICompatibleProvider(

@@ -377,7 +377,7 @@ class NotificationService:
 
         stmt = stmt.order_by(desc(Notification.created_at)).offset(skip).limit(limit)
         result = await db.execute(stmt)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     @staticmethod
     async def mark_as_read(

@@ -592,7 +592,11 @@ class ShareCardService:
         self, start: tuple[int, int, int], end: tuple[int, int, int], ratio: float
     ) -> tuple[int, int, int]:
         ratio = max(0.0, min(1.0, ratio))
-        return tuple(int(start[i] + (end[i] - start[i]) * ratio) for i in range(3))
+        return (
+            int(start[0] + (end[0] - start[0]) * ratio),
+            int(start[1] + (end[1] - start[1]) * ratio),
+            int(start[2] + (end[2] - start[2]) * ratio),
+        )
 
     def _rarity_label(self, rarity: str) -> str:
         labels = {

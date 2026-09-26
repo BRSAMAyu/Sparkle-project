@@ -443,7 +443,7 @@ class IdiographicAssociationService:
         user_id: UUID,
         start_day: date,
         end_day: date,
-    ) -> tuple[dict[date, float], dict[date, float | None], dict[date, int], dict[date, int]]:
+    ) -> tuple[dict[date, float], dict[date, float], dict[date, int], dict[date, int]]:
         db = self._require_db()
         start_at = _day_start(start_day)
         end_at = _day_start(end_day + timedelta(days=1))

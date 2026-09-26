@@ -14,7 +14,7 @@ import re
 import time
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 
 from google.protobuf import struct_pb2
 from loguru import logger
@@ -2839,7 +2839,7 @@ def detect_exam_urgency(text: str) -> int | None:
         return None
 
     exam_pattern = r"(?:考|考试|考研|期末|测验|quiz|midterm|final|exam|test)"
-    patterns = [
+    patterns: list[tuple[str, int | Callable[[re.Match[str]], int]]] = [
         (rf"(?:明天|明日).{{0,6}}{exam_pattern}", 1),
         (rf"{exam_pattern}.{{0,6}}(?:明天|明日)", 1),
         (rf"(?:tomorrow).{{0,6}}{exam_pattern}", 1),
@@ -3516,6 +3516,8 @@ Return only valid JSON array, no markdown.
 
                 action_cards = [
                     ToolResult(
+                        success=True,
+                        tool_name="collaboration_fallback",
                         widget_type="task_list",
                         widget_data=wrap_widget_payload(
                             widget_type="task_list",

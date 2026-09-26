@@ -41,7 +41,7 @@ class VisualElementResponse(VisualElementBase):
 
     # 用户相关状态
     is_unlocked: bool = Field(False, description="是否已解锁")
-    unlocked_at: datetime | None = Field(None, description="解锁时间")
+    unlocked_at: datetime | None = Field(default=None, description="解锁时间")
     is_equipped: bool = Field(False, description="是否已装备")
 
     model_config = {"from_attributes": True}
@@ -58,9 +58,9 @@ class UserVisualConfigResponse(BaseModel):
     equipped_background: VisualElementResponse | None = Field(None, description="装备的背景")
     equipped_particle: VisualElementResponse | None = Field(None, description="装备的粒子")
     equipped_effect: VisualElementResponse | None = Field(None, description="装备的特效")
-    background_equipped_at: datetime | None = Field(None)
-    particle_equipped_at: datetime | None = Field(None)
-    effect_equipped_at: datetime | None = Field(None)
+    background_equipped_at: datetime | None = Field(default=None)
+    particle_equipped_at: datetime | None = Field(default=None)
+    effect_equipped_at: datetime | None = Field(default=None)
 
 
 class EquipElementRequest(BaseModel):

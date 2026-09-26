@@ -6,10 +6,10 @@ Curiosity Capsules API
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Annotated, Any, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -245,8 +245,8 @@ async def toggle_favorite(
 
 @router.post("/{id}/feedback", response_model=CapsuleFeedbackSchema)
 async def submit_feedback(
+    feedback_data: Annotated[CapsuleFeedbackCreate, Body()],
     id: UUID = Path(...),
-    feedback_data: CapsuleFeedbackCreate = ...,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -270,8 +270,8 @@ async def submit_feedback(
 
 @router.post("/{id}/share")
 async def share_capsule(
+    share_data: Annotated[CapsuleShareRequest, Body()],
     id: UUID = Path(...),
-    share_data: CapsuleShareRequest = ...,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -323,7 +323,7 @@ async def get_generation_jobs(
 
 @router.post("/generate/batch")
 async def request_batch_generation(
-    request: CapsuleGenerationRequest = ...,
+    request: Annotated[CapsuleGenerationRequest, Body()],
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

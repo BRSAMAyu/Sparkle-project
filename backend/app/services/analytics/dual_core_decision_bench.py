@@ -527,7 +527,7 @@ class DualCoreDecisionBench:
         grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for item in analyses:
             grouped[item["context_group"]].append(item)
-        rows = []
+        rows: list[dict[str, Any]] = []
         for group, items in grouped.items():
             if len(items) < cfg.min_group_size:
                 continue

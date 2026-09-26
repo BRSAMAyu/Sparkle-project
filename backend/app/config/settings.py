@@ -148,7 +148,7 @@ class Settings(BaseSettings):
 
     # Security
     # Prefer JWT_SECRET to keep Python-issued JWT fully compatible with Gateway verification.
-    SECRET_KEY: str = Field("", validation_alias=AliasChoices("JWT_SECRET", "SECRET_KEY"))
+    SECRET_KEY: str = Field(default="", validation_alias=AliasChoices("JWT_SECRET", "SECRET_KEY"))
     JWT_ISSUER: str = "sparkle-gateway"
     JWT_AUDIENCE: str = "sparkle-app"
 
@@ -224,11 +224,11 @@ class Settings(BaseSettings):
 
     # Database (canonical envs: POSTGRES_*)
     DATABASE_URL: str = ""
-    POSTGRES_HOST: str = Field("sparkle_db", validation_alias=AliasChoices("POSTGRES_HOST", "DB_HOST"))
-    POSTGRES_PORT: int = Field(5432, validation_alias=AliasChoices("POSTGRES_PORT", "DB_PORT"))
-    POSTGRES_USER: str = Field("postgres", validation_alias=AliasChoices("POSTGRES_USER", "DB_USER"))
-    POSTGRES_PASSWORD: str = Field("", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
-    POSTGRES_DB: str = Field("sparkle", validation_alias=AliasChoices("POSTGRES_DB", "DB_NAME"))
+    POSTGRES_HOST: str = Field(default="sparkle_db", validation_alias=AliasChoices("POSTGRES_HOST", "DB_HOST"))
+    POSTGRES_PORT: int = Field(default=5432, validation_alias=AliasChoices("POSTGRES_PORT", "DB_PORT"))
+    POSTGRES_USER: str = Field(default="postgres", validation_alias=AliasChoices("POSTGRES_USER", "DB_USER"))
+    POSTGRES_PASSWORD: str = Field(default="", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
+    POSTGRES_DB: str = Field(default="sparkle", validation_alias=AliasChoices("POSTGRES_DB", "DB_NAME"))
     SPARKLE_RBAC_ENABLED: bool = False
     SPARKLE_JWT_KEY_VERSION: str = "v1"  # P1-8: active JWT key version for rotation
     SPARKLE_JWT_PREVIOUS_KEY: str = ""  # P1-8: previous key for grace-period validation
@@ -237,8 +237,8 @@ class Settings(BaseSettings):
 
     # Redis (canonical envs: REDIS_*)
     REDIS_URL: str = ""
-    REDIS_HOST: str = Field("sparkle_redis", validation_alias=AliasChoices("REDIS_HOST", "REDIS_HOSTNAME"))
-    REDIS_PORT: int = Field(6379, validation_alias=AliasChoices("REDIS_PORT", "REDIS_PORT_NUMBER"))
+    REDIS_HOST: str = Field(default="sparkle_redis", validation_alias=AliasChoices("REDIS_HOST", "REDIS_HOSTNAME"))
+    REDIS_PORT: int = Field(default=6379, validation_alias=AliasChoices("REDIS_PORT", "REDIS_PORT_NUMBER"))
     REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0
 

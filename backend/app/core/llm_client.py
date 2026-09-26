@@ -220,10 +220,15 @@ class LLMClient:
             response.raise_for_status()
             data = response.json()
 
-            # 按索引排序返回
-            embeddings = [None] * len(safe_texts)
+            # 按索引回填；缺失索引显式报错而非静默返回 None 向量
+            raw: list[list[float] | None] = [None] * len(safe_texts)
             for item in data["data"]:
-                embeddings[item["index"]] = item["embedding"]
+                raw[item["index"]] = item["embedding"]
+            embeddings: list[list[float]] = []
+            for index, embedding in enumerate(raw):
+                if embedding is None:
+                    raise ValueError(f"embedding response missing index {index}")
+                embeddings.append(embedding)
 
             return embeddings
 

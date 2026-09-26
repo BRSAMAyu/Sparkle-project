@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
+from typing import Any, Coroutine
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -27,7 +28,7 @@ def create_specialist_node(
     system_prompt: str | None = None,
     task_prompt_prefix: str | None = None,
     toolset: list | None = None,
-) -> Callable[[SparkleState, dict | None], dict]:
+) -> Callable[[SparkleState, dict | None], Coroutine[Any, Any, dict]]:
     """Create reusable graph node for specialists not hardcoded in workflow."""
 
     async def _node(state: SparkleState, config: dict | None = None) -> dict:

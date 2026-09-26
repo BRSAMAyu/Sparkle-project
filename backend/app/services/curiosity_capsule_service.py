@@ -163,7 +163,7 @@ class CuriosityCapsuleService:
             )
             .order_by(desc(CuriosityCapsule.created_at))
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def has_generated_today(self, user_id: UUID, db: AsyncSession) -> bool:
         """Whether any capsule (read or unread) was already created today.
@@ -198,7 +198,7 @@ class CuriosityCapsuleService:
             .limit(limit)
             .offset(offset)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def mark_as_read(self, user_id: UUID, capsule_id: UUID, db: AsyncSession) -> bool:
         result = await db.execute(

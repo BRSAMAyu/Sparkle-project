@@ -166,10 +166,10 @@ class NotificationPreferencesResponse(BaseModel):
 class NotificationHistoryFilters(BaseModel):
     """Filters for notification history query"""
 
-    type: str | None = Field(None, description="all, system, intervention")
+    type: str | None = Field(default=None, description="all, system, intervention")
     start_date: datetime | None = None
     end_date: datetime | None = None
-    search: str | None = Field(None, min_length=1, max_length=100)
+    search: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 # Analytics Schemas

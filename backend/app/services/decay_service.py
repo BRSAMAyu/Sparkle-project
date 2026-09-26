@@ -59,7 +59,7 @@ class DecayService:
         result = await self.db.execute(query)
         rows = result.all()
         if rows:
-            return rows
+            return [(status, node) for status, node in rows]
 
         fallback_query = (
             select(KnowledgeNode)

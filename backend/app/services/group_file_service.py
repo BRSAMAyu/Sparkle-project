@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Sequence, cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import Row, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -616,7 +616,7 @@ class GroupFileService:
         db: AsyncSession,
         group_id: UUID,
         user_id: UUID,
-    ) -> list[tuple[str | None, int]]:
+    ) -> Sequence[Row[tuple[str | None, int]]]:
         member = await GroupFileService._require_member(db, group_id, user_id)
         allowed_roles = GroupFileService._allowed_roles(member.role)
 

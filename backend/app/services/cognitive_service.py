@@ -709,7 +709,7 @@ class CognitiveService:
             .offset(offset)
         )
         result = await self.db.execute(stmt)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def get_user_patterns(self, user_id: UUID, min_confidence: float = 0.5) -> list[BehaviorPattern]:
         """
@@ -724,4 +724,4 @@ class CognitiveService:
             .order_by(desc(BehaviorPattern.confidence_score))
         )
         result = await self.db.execute(stmt)
-        return result.scalars().all()
+        return list(result.scalars().all())

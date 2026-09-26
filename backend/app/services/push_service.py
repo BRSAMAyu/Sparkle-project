@@ -66,26 +66,27 @@ class PushService:
         result = await self.db.execute(query)
         users = result.scalars().all()
 
-        summary = {
-            "mode": normalized_mode,
-            "evaluated_users": len(users),
-            "triggered": 0,
-            "sent": 0,
-            "shadowed": 0,
-            "errors": 0,
-        }
+        triggered_count = sent_count = shadowed_count = error_count = 0
         for user in users:
             try:
                 outcome = await self.process_user_push(user, delivery_mode=normalized_mode)
                 if outcome["triggered"]:
-                    summary["triggered"] += 1
+                    triggered_count += 1
                 if outcome["sent"]:
-                    summary["sent"] += 1
+                    sent_count += 1
                 if outcome["shadowed"]:
-                    summary["shadowed"] += 1
+                    shadowed_count += 1
             except Exception as e:
-                summary["errors"] += 1
+                error_count += 1
                 logger.error(f"Error processing push for user {user.id}: {e}")
+        summary: dict[str, int | str] = {
+            "mode": normalized_mode,
+            "evaluated_users": len(users),
+            "triggered": triggered_count,
+            "sent": sent_count,
+            "shadowed": shadowed_count,
+            "errors": error_count,
+        }
         return summary
 
     async def process_user_push(self, user: User, *, delivery_mode: str = "live") -> dict[str, bool | str]:

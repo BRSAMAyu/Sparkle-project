@@ -232,4 +232,4 @@ class SubjectService:
             .where(Subject.is_active)
             .order_by(Subject.sort_order, Subject.name)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())

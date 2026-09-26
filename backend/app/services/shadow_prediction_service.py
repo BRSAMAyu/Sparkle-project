@@ -271,7 +271,7 @@ class ShadowPredictionService:
 
         # Agents prediction correct (at least one match)
         agents_correct = (
-            set(prediction.predicted_agents) & set(prediction.actual_agents)
+            bool(set(prediction.predicted_agents) & set(prediction.actual_agents))
         ) if prediction.actual_agents else True
 
         return mode_correct and agents_correct

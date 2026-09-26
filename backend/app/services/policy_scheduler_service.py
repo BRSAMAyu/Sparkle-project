@@ -157,7 +157,7 @@ class PolicySchedulerService:
             rule = PolicyRule.model_validate(row.ir_payload)
             row.next_trigger_at = self._next_trigger_at(rule)
         await self.db.commit()
-        return rows
+        return list(rows)
 
     def _next_trigger_at(self, rule: PolicyRule) -> datetime | None:
         due_at = rule.context.commitment_due_at

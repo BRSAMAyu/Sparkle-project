@@ -173,7 +173,7 @@ class PlanService:
             .limit(limit)
         )
         result = await db.execute(query)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     @staticmethod
     async def update_progress(

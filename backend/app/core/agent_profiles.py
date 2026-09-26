@@ -175,7 +175,8 @@ class AgentProfile:
             ModelTier.GLM_BATCH: available_models.get("glm_batch_model"),
             ModelTier.SPECIALIST: available_models.get("specialist_model"),
         }
-        return tier_defaults.get(self.model_tier, {})
+        tier_config = tier_defaults.get(self.model_tier)
+        return tier_config if isinstance(tier_config, dict) else {}
 
     def get_system_prompt(self, **kwargs) -> str:
         """渲染系统Prompt模板"""
@@ -746,7 +747,7 @@ class AgentProfileRegistry:
 
     def get_profile(self, role: AgentRole) -> AgentProfile:
         """获取Agent配置"""
-        return self._profiles.get(role, DEFAULT_AGENT_PROFILES.get(AgentRole.GENERATION))
+        return self._profiles.get(role) or DEFAULT_AGENT_PROFILES[AgentRole.GENERATION]
 
     def get_profile_for_task(self, task_type: TaskType) -> AgentProfile:
         """根据任务类型获取推荐的Agent配置"""

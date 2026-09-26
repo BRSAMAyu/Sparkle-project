@@ -597,7 +597,7 @@ class ErrorBookService:
                 )
 
                 result = await self.db.execute(stmt)
-                return result.scalars().all()
+                return list(result.scalars().all())
         except Exception as exc:
             logger.warning(f"Knowledge node vector search failed, falling back to keyword search: {exc}")
             return await self._keyword_search_knowledge_nodes(user_id, text, limit=limit)
@@ -641,7 +641,7 @@ class ErrorBookService:
         )
 
         result = await self.db.execute(stmt)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     @staticmethod
     def _normalize_analysis_result(analysis_result: object) -> dict:
@@ -950,7 +950,7 @@ class ErrorBookService:
 
         await self._attach_knowledge_links(items)
 
-        return items, total
+        return list(items), total
 
     async def get_review_cards(
         self,

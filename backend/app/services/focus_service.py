@@ -384,7 +384,7 @@ class FocusService:
 
         subject_lower = subject.lower()
         subject_like = f"%{subject_lower}%"
-        return (
+        return list(
             (
                 await db.execute(
                     select(KnowledgeNode)

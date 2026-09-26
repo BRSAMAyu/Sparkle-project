@@ -5,8 +5,8 @@ Database Error Handler
 
 import functools
 import logging
-from collections.abc import Callable
-from typing import TypeVar, cast
+from collections.abc import Awaitable, Callable
+from typing import Any, Coroutine, TypeVar, cast
 
 from sqlalchemy.exc import (
     DataError,
@@ -141,7 +141,7 @@ def db_error_handler(func: Callable[P, T]) -> Callable[P, T]:
     return wrapper
 
 
-def async_db_error_handler(func: Callable[P, T]) -> Callable[P, T]:
+def async_db_error_handler(func: Callable[P, Awaitable[T]]) -> Callable[P, Coroutine[Any, Any, T]]:
     """
     数据库错误处理装饰器 (异步函数)
 

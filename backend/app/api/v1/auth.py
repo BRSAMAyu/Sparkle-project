@@ -929,7 +929,7 @@ async def verify_email(
 @limiter.limit(GUEST_RATE_LIMIT)
 async def guest_login(
     request: Request,
-    guest_id: str = None,
+    guest_id: str | None = None,
     db: AsyncSession = Depends(get_db)
 ):
     """

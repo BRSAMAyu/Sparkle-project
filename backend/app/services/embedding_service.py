@@ -385,9 +385,14 @@ class EmbeddingService:
             response.raise_for_status()
             data = response.json()
 
-        embeddings = [None] * len(texts)
+        raw: list[list[float] | None] = [None] * len(texts)
         for item in data["data"]:
-            embeddings[item["index"]] = item["embedding"]
+            raw[item["index"]] = item["embedding"]
+        embeddings: list[list[float]] = []
+        for index, embedding in enumerate(raw):
+            if embedding is None:
+                raise ValueError(f"embedding response missing index {index}")
+            embeddings.append(embedding)
         return embeddings
 
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 import math
 from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Sequence, cast
 from uuid import UUID
 
 if TYPE_CHECKING:
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 from loguru import logger
-from sqlalchemy import ColumnElement, and_, case, desc, func, or_, select, update
+from sqlalchemy import ColumnElement, Row, and_, case, desc, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -317,7 +317,7 @@ class FriendshipService:
         status: FriendshipStatus = FriendshipStatus.ACCEPTED,
         limit: int = 50,
         offset: int = 0
-    ) -> list[tuple[Friendship, User]]:
+    ) -> Sequence[Row[tuple[Friendship, User]]]:
         """获取好友列表（分页）"""
         query = select(Friendship, User).join(
             User, or_(

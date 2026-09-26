@@ -1002,11 +1002,11 @@ async def create_or_refresh_task_guidance(
 # route-tier: authed
 @router.post("/{task_id}/snooze", response_model=dict[str, Any])
 async def snooze_task(
+    req: Request,  # injected by FastAPI for locale detection
     request: TaskSnoozeRequest | None = None,
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    req: Request = None,  # injected by FastAPI for locale detection
 ):
     """Push one task to a later date without changing the plan structure."""
     task = await _get_user_task_or_404(db, task_id, current_user.id)
@@ -1073,11 +1073,11 @@ async def mark_task_stuck(
     include_in_schema=False,
 )
 async def mark_task_too_hard(
+    req: Request,  # injected by FastAPI for locale detection
     request: TaskQuickActionRequest | None = None,
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    req: Request = None,  # injected by FastAPI for locale detection
 ):
     """Break a task into smaller subtasks when the current card feels too hard."""
     task = await _get_user_task_or_404(db, task_id, current_user.id)
@@ -1117,11 +1117,11 @@ async def mark_task_too_hard(
 # route-tier: authed
 @router.post("/{task_id}/skip", response_model=dict[str, Any])
 async def skip_task(
+    req: Request,  # injected by FastAPI for locale detection
     request: TaskQuickActionRequest | None = None,
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    req: Request = None,  # injected by FastAPI for locale detection
 ):
     """Hide a task from active surfaces by marking it abandoned as a quick skip."""
     reason = (request.reason if request else None) or "quick_action_skip"

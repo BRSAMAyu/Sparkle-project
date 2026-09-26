@@ -1247,7 +1247,7 @@ async def regenerate_phase_schedule(
 @router.patch("/{plan_id:uuid}", response_model=PlanDetail)
 async def update_plan(
     plan_id: UUID = Path(..., description="Plan ID"),
-    plan_in: PlanUpdate = None,
+    plan_in: PlanUpdate = PlanUpdate(),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1904,7 +1904,7 @@ async def set_primary_plan(
 @router.patch("/{plan_id:uuid}/priority", response_model=dict[str, Any])
 async def update_plan_priority(
     plan_id: UUID = Path(..., description="Plan ID"),
-    request: PlanPriorityUpdate = None,
+    request: PlanPriorityUpdate | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1913,6 +1913,10 @@ async def update_plan_priority(
 
     Priority affects automatic primary plan selection.
     """
+    if request is None:
+        # PlanPriorityUpdate.priority 为必填体字段：缺体时显式 422，
+        # 而非下游 request.priority AttributeError 500。
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="request body is required")
     plan = await PlanService.update_priority(db=db, plan_id=plan_id, user_id=current_user.id, priority=request.priority)
 
     if not plan:

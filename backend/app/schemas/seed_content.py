@@ -205,7 +205,7 @@ class ItemListParams(BaseModel):
 class SubscriptionCreate(BaseModel):
     """创建订阅请求"""
     priority: int = Field(default=0, ge=0, le=1000, description="优先级")
-    notes: str | None = Field(None, description="备注")
+    notes: str | None = Field(default=None, description="备注")
 
 
 class SubscriptionUpdate(BaseModel):
@@ -330,7 +330,7 @@ class LibraryListResponse(BaseModel):
     success: bool = Field(default=True)
     message: str = Field(default="Success")
     data: list[LibraryInfo] = Field(default_factory=list)
-    meta: PaginationMeta | None = Field(None)
+    meta: PaginationMeta | None = Field(default=None)
 
 
 class LibraryResponse(BaseModel):

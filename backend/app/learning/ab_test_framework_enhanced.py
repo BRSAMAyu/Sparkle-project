@@ -438,7 +438,7 @@ class ABTestFrameworkEnhanced:
         query = query.limit(limit).offset(offset)
 
         result = await self.db.execute(query)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def _cache_experiment_config(self, experiment: ABExperiment, variants: list[dict]):
         """Cache experiment config in Redis for fast access."""

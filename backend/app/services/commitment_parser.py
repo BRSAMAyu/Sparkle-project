@@ -78,7 +78,10 @@ def resolve_weekday_anchor(
     else:
         hour = 18
     target = target.replace(hour=hour, minute=0, second=0, microsecond=0)
-    return ensure_naive_utc(target), kind
+    naive_target = ensure_naive_utc(target)
+    if naive_target is None:
+        return None
+    return naive_target, kind
 
 
 def parse_commitment_due_at(text: str, *, reference_time: datetime | None = None) -> datetime | None:

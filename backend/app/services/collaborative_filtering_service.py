@@ -540,15 +540,15 @@ class CollaborativeFilteringService:
 
         return "unknown"
 
-    async def _get_item_subject(self, item_id: UUID) -> UUID | None:
-        """获取物品所属学科"""
+    async def _get_item_subject(self, item_id: UUID) -> int | UUID | None:
+        """获取物品所属学科（KnowledgeNode 用 Integer Subject ID，Task 用 UUID）"""
         node = await self.db.get(KnowledgeNode, item_id)
         if node:
-            return node.subject_id
+            return cast("int | None", node.subject_id)
 
         task = await self.db.get(Task, item_id)
         if task:
-            return cast("UUID | None", (task.subject_id))
+            return cast("UUID | None", task.subject_id)
 
         return None
 

@@ -62,7 +62,7 @@ class CapsuleGenerationJob(BaseModel):
         return f"<CapsuleGenerationJob(id={self.id}, status={self.status}, type={self.generation_type})>"
 
     @property
-    def status_enum(self) -> JobStatus:
+    def status_enum(self) -> JobStatus | None:
         """获取状态枚举"""
         return JobStatus(self.status) if self.status else None
 

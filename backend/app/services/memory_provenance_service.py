@@ -506,7 +506,7 @@ class MemoryProvenanceService:
                     continue
                 items.append(payload)
 
-        items.sort(key=lambda item: (item.get("updated_at") or item.get("created_at")), reverse=True)
+        items.sort(key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""), reverse=True)
         total_in_scope = len(items)
         window = items[safe_offset : safe_offset + safe_limit]
         return {

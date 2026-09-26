@@ -555,7 +555,7 @@ class CorrelationIds:
     node_id: str | None = None
     memory_id: str | None = None
 
-    def as_dict(self, drop_nones: bool = True) -> dict[str, str]:
+    def as_dict(self, drop_nones: bool = True) -> dict[str, str | None]:
         raw = {
             "intervention_id": self.intervention_id,
             "action_id": self.action_id,

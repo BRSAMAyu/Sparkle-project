@@ -163,7 +163,9 @@ class DualCoreRouter:
 
     def _param(self, key: str, default: float | int) -> float | int:
         if self._parameter_snapshot is not None:
-            return self._parameter_snapshot.get(key, default)
+            value = self._parameter_snapshot.get(key)
+            if value is not None:
+                return value
         return default
 
     NEGATIVE_SENTIMENTS = {

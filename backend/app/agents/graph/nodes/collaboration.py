@@ -162,7 +162,7 @@ def _get_latest_human_message(messages: list[BaseMessage]) -> str:
     for message in reversed(messages):
         if isinstance(message, HumanMessage):
             return str(message.content)
-    return messages[-1].content if messages else ""
+    return str(messages[-1].content) if messages else ""
 
 
 def _normalize_order(order: list[Any], default_task: str) -> list[dict[str, str]]:
@@ -844,7 +844,7 @@ async def _execute_delegation(
     }
 
 
-async def collaboration_node(state: SparkleState, config: dict | None = None) -> SparkleState:
+async def collaboration_node(state: SparkleState, config: dict | None = None) -> dict[str, Any]:
     stream_cb = get_stream_callback(config)
     messages = state["messages"]
     user_message = _get_latest_human_message(messages)
@@ -868,8 +868,10 @@ async def collaboration_node(state: SparkleState, config: dict | None = None) ->
         mode = "sequential"
 
     if mode == "single":
+        raw_primary = collaboration_plan.get("primary_agent")
         return {
-            "next_step": _normalize_agent_identifier(collaboration_plan.get("primary_agent")) or "study_buddy",
+            "next_step": _normalize_agent_identifier(str(raw_primary) if raw_primary is not None else None)
+            or "study_buddy",
             "active_agent": "router",
             "collaboration_mode": "single",
         }

@@ -819,7 +819,7 @@ class ReviewHistoryService:
         Returns:
             可能误判的记录列表
         """
-        misclassified = []
+        misclassified: list[dict[str, Any]] = []
 
         review_result = await self._db.execute(select(ReviewHistoryModel))
         for model in review_result.scalars().all():

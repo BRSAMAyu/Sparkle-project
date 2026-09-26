@@ -121,7 +121,7 @@ class BlindspotAnalyzer:
         query_nodes = query_nodes.limit(500)
 
         result_nodes = await self.db.execute(query_nodes)
-        nodes = result_nodes.scalars().all()
+        nodes = list(result_nodes.scalars().all())
         node_ids = [n.id for n in nodes]
 
         if not node_ids:
@@ -133,7 +133,7 @@ class BlindspotAnalyzer:
             NodeRelation.target_node_id.in_(node_ids)
         )
         result_edges = await self.db.execute(query_edges)
-        edges = result_edges.scalars().all()
+        edges = list(result_edges.scalars().all())
 
         # Statuses
         query_statuses = select(UserNodeStatus).where(
@@ -141,6 +141,6 @@ class BlindspotAnalyzer:
             UserNodeStatus.node_id.in_(node_ids)
         )
         result_statuses = await self.db.execute(query_statuses)
-        statuses = result_statuses.scalars().all()
+        statuses = list(result_statuses.scalars().all())
 
         return nodes, edges, statuses

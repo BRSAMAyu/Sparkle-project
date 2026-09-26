@@ -284,7 +284,7 @@ class TaskService:
             )
             .order_by(Task.order_index.asc(), desc(Task.created_at))
         )
-        return refreshed.scalars().all()
+        return list(refreshed.scalars().all())
 
     @staticmethod
     async def update(db: AsyncSession, db_obj: Task, obj_in: TaskUpdate) -> Task:
@@ -1711,7 +1711,7 @@ class TaskService:
                 metadata={"plan_id": str(task.plan_id) if task.plan_id else None},
             )
 
-        return confirmed_tasks
+        return list(confirmed_tasks)
 
     @staticmethod
     async def get_multi(db: AsyncSession, user_id: UUID, query_params: TaskListQuery) -> tuple[list[Task], int]:
@@ -1740,7 +1740,7 @@ class TaskService:
         result = await db.execute(query)
         tasks = result.scalars().all()
 
-        return tasks, len(tasks)  # This count is wrong for total pages, but for now simple return
+        return list(tasks), len(tasks)  # This count is wrong for total pages, but for now simple return
 
     @staticmethod
     async def _trigger_next_actions(db_obj: Task) -> None:

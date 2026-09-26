@@ -199,7 +199,7 @@ class ErrorRecordCreate(BaseModel):
     """创建错题的请求体"""
 
     question_text: str | None = Field(None, max_length=5000, description="题目内容")
-    question_image_url: str | None = Field(None, max_length=500, description="题目图片URL")
+    question_image_url: str | None = Field(default=None, max_length=500, description="题目图片URL")
 
     user_answer: str | None = Field(None, max_length=2000, description="你的错误答案")
     correct_answer: str | None = Field(None, max_length=2000, description="正确答案")
@@ -530,8 +530,8 @@ class ErrorQueryParams(BaseModel):
     chapter: str | None = None
     node_id: str | None = None
     error_type: ErrorTypeEnum | None = None
-    mastery_min: float | None = Field(None, ge=0, le=1)
-    mastery_max: float | None = Field(None, ge=0, le=1)
+    mastery_min: float | None = Field(default=None, ge=0, le=1)
+    mastery_max: float | None = Field(default=None, ge=0, le=1)
     need_review: bool | None = None
     keyword: str | None = None
     cognitive_dimension: str | None = None

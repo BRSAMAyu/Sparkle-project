@@ -29,8 +29,10 @@ def _sanitize_asyncpg_url(url: str) -> tuple[str, str | None, str | None]:
     if not parsed.drivername.startswith("postgresql+asyncpg"):
         return url, None, None
     query = dict(parsed.query)
-    sslmode = query.pop("sslmode", None)
-    sslrootcert = query.pop("sslrootcert", None)
+    raw_sslmode = query.pop("sslmode", None)
+    sslmode = str(raw_sslmode) if raw_sslmode is not None else None
+    raw_sslrootcert = query.pop("sslrootcert", None)
+    sslrootcert = str(raw_sslrootcert) if raw_sslrootcert is not None else None
     if sslmode is None and sslrootcert is None:
         return url, None, None
     return parsed.set(query=query).render_as_string(hide_password=False), sslmode, sslrootcert

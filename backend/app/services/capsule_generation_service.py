@@ -661,7 +661,7 @@ class CapsuleGenerationService:
             .order_by(desc(CapsuleGenerationJob.created_at))
             .limit(limit)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
 
 capsule_generation_service = CapsuleGenerationService()

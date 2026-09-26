@@ -17,7 +17,7 @@ class AuditService:
         """获取所有待审核头像的用户列表"""
         stmt = select(User).where(User.avatar_status == AvatarStatus.PENDING)
         result = await db.execute(stmt)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     @staticmethod
     async def approve_avatar(db: AsyncSession, user_id: UUID) -> User | None:

@@ -296,7 +296,7 @@ class AgeClient:
             """)
         logger.info(f"边标签已创建: {label_name}")
 
-    async def add_vertex(self, label: str, properties: dict[str, Any]) -> str:
+    async def add_vertex(self, label: str, properties: dict[str, Any]) -> str | None:
         """
         添加顶点
 

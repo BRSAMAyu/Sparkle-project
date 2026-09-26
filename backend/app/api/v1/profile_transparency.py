@@ -433,7 +433,7 @@ def _editability_meta(
     confidence: float,
     risk_level: str,
     field_type: str,
-    source_type: str = None,
+    source_type: str | None = None,
 ) -> dict[str, Any]:
     """
     构建偏好项的可编辑性元数据

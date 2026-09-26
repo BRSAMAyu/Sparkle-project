@@ -671,7 +671,7 @@ def _hex_to_rgb(color: str) -> tuple[int, int, int]:
     normalized = color.strip().lstrip("#")
     if len(normalized) != 6:
         return (112, 121, 139)
-    return tuple(int(normalized[index:index + 2], 16) for index in (0, 2, 4))
+    return int(normalized[0:2], 16), int(normalized[2:4], 16), int(normalized[4:6], 16)
 
 
 def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:

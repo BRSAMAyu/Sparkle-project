@@ -1053,7 +1053,7 @@ class ExamSprintReviewService:
         result = await self.db.execute(
             select(Task).where(Task.plan_id == plan_id, Task.deleted_at.is_(None)).order_by(Task.created_at.asc())
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def _sprint_period_start(self, *, plan: Plan) -> datetime:
         """Sprint 期间起点：与目标计划时间窗重叠的所有 sprint 计划的最早创建时刻。

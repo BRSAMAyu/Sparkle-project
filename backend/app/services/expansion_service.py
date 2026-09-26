@@ -9,11 +9,11 @@ import json
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any, cast
+from typing import Any, Sequence, cast
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import Row, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -209,7 +209,7 @@ class ExpansionService:
 
         return json.dumps(context, ensure_ascii=False)
 
-    async def _get_neighbor_nodes(self, node_id: UUID, limit: int = 10) -> list[tuple[KnowledgeNode, str]]:
+    async def _get_neighbor_nodes(self, node_id: UUID, limit: int = 10) -> Sequence[Row[tuple[KnowledgeNode, str]]]:
         """获取节点的邻居节点"""
 
         query = (
@@ -243,7 +243,7 @@ class ExpansionService:
         )
 
         result = await self.db.execute(query)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def process_expansion(self, queue_id: UUID) -> list[KnowledgeNode]:
         """
@@ -293,7 +293,7 @@ class ExpansionService:
             queue_item.processed_at = _utcnow()
             await self.db.commit()
 
-            return new_nodes
+            return new_nodes.created_nodes
 
         except Exception as e:
             queue_item.status = 'failed'
@@ -928,7 +928,7 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
         ]
         neighbor_names = [item for item in neighbor_names if item]
 
-        templates = [
+        templates: list[dict[str, Any]] = [
             {
                 "candidate_id": f"{trigger}_foundation",
                 "name": neighbor_names[0] if neighbor_names else f"{trigger}基础框架",

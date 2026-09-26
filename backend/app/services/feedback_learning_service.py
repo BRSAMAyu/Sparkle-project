@@ -396,11 +396,13 @@ class FeedbackLearningService:
         # 获取趋势数据
         improving, declining, stable = [], [], []
 
-        # 按指标分组
+        # 按指标分组（无名指标无法构成趋势，跳过）
         metric_scores = defaultdict(list)
         for review in reviews:
             for metric in review.metrics:
                 metric_name = metric.get("metric")
+                if metric_name is None:
+                    continue
                 metric_score = metric.get("score", 0.0)
                 metric_scores[metric_name].append((review.timestamp, metric_score))
 
