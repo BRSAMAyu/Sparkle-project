@@ -148,7 +148,7 @@ class SemanticControlComplianceReport:
         }
 
 
-def _localize_summary(term: str, value: str, *, language: str) -> str:
+def _localize_summary(term: str, value: Any, *, language: str) -> str:
     doctrine = get_value_doctrine(term, value)
     if doctrine is None:
         return ""

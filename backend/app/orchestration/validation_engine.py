@@ -412,11 +412,14 @@ class ValidationEngineMixin:
                 return True, intent_type
 
             if check_result.status == SufficiencyStatus.NEED_CONFIRMATION:
+                # confirmation_message 在 NEED_CONFIRMATION 分支生成，但字段契约允许
+                # None；生成器兜底文案与字段默认值保持一致的降级文本。
+                confirmation_message = check_result.confirmation_message or "请确认是否继续此操作。"
                 interaction_text = await self._compose_fast_interaction_copy(
                     user_message=user_message,
                     interaction_type="confirmation",
-                    fallback_text=check_result.confirmation_message,
-                    prompts=[check_result.confirmation_message],
+                    fallback_text=confirmation_message,
+                    prompts=[confirmation_message],
                 )
                 await self._emit_fast_interaction(
                     stream_callback=stream_callback,
@@ -825,7 +828,9 @@ class ValidationEngineMixin:
             return None
 
         payload = user_context_payload if isinstance(user_context_payload, dict) else {}
-        preferred_file_ids = [str(file_id).strip() for file_id in request.file_ids if str(file_id).strip()]
+        preferred_file_ids: list[uuid.UUID | str] = [
+            str(file_id).strip() for file_id in request.file_ids if str(file_id).strip()
+        ]
         if not preferred_file_ids:
             preferred_file_ids = [
                 str(file_id).strip()

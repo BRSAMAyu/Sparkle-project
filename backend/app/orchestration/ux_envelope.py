@@ -317,7 +317,7 @@ class UXEnvelopeBuilder:
                 completion_state=completion_state,
             )
 
-        ux_turn = {
+        ux_turn: dict[str, Any] = {
             "intent_summary": self._intent_summary(user_message, chat_mode),
             "mode_label": profile.mode_label,
             "companion_frame": (
@@ -342,7 +342,7 @@ class UXEnvelopeBuilder:
         if social_context_presentation:
             ux_turn["social_context_presentation"] = social_context_presentation
 
-        ux_result = {
+        ux_result: dict[str, Any] = {
             "answer_kind": self._answer_kind(profile, executable_plan, chat_mode),
             "confidence_band": confidence_band,
             "completion_state": completion_state,

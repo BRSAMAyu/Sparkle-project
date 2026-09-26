@@ -17,10 +17,11 @@ This module provides:
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 from loguru import logger
 
+torch: ModuleType | None
 try:
     import torch
     TORCH_AVAILABLE = True
@@ -82,6 +83,7 @@ class BERTIntentClassifier:
             if requested == "auto":
                 requested = "cpu"
             return SimpleNamespace(type=requested)
+        assert torch is not None, "torch must be installed when TORCH_AVAILABLE"
         if device == "auto":
             requested = "cuda" if torch.cuda.is_available() else "cpu"
         else:
@@ -104,7 +106,7 @@ class BERTIntentClassifier:
 
     def __init__(
         self,
-        model_name: str = None,
+        model_name: str | None = None,
         device: str = "auto",
         max_length: int = 128,
         batch_size: int = 8
@@ -250,6 +252,7 @@ class BERTIntentClassifier:
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         # Inference
+        assert torch is not None, "torch must be installed when TORCH_AVAILABLE"
         with torch.no_grad():
             outputs = self.model(**inputs)
             logits = outputs.logits[0]  # [num_labels]
@@ -259,7 +262,7 @@ class BERTIntentClassifier:
 
             # Get prediction
             max_prob = torch.max(probs).item()
-            predicted_idx = torch.argmax(probs).item()
+            predicted_idx = int(torch.argmax(probs).item())
             predicted_intent = self.INTENT_LABELS[predicted_idx]
 
         # Build probability dictionary
@@ -280,7 +283,7 @@ class BERTIntentClassifier:
     async def classify_batch(
         self,
         messages: list[str],
-        contexts: list[str] = None
+        contexts: list[str] | None = None
     ) -> list[dict]:
         """Classify multiple messages in batch
 
@@ -390,7 +393,7 @@ _bert_classifier = None
 
 
 def get_bert_classifier(
-    model_name: str = None,
+    model_name: str | None = None,
     force_reload: bool = False
 ) -> BERTIntentClassifier | None:
     """Get singleton BERT classifier instance

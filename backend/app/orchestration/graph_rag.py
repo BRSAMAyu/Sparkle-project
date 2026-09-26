@@ -312,11 +312,14 @@ def _build_filtered_chunk(
     evidence_strength = (
         "weak_evidence" if relevance_score < threshold + max(0.0, weak_evidence_margin) else "strong_evidence"
     )
+    citation_source_file_id: str | None = str(source_file_id) if source_file_id is not None else None
+    citation_chunk_id: str | None = str(chunk_id) if chunk_id is not None else None
+    citation_filename: str | None = str(filename) if filename is not None else None
     citation_metadata = {
-        "source_file_id": str(source_file_id) if source_file_id is not None else None,
-        "chunk_id": str(chunk_id) if chunk_id is not None else None,
+        "source_file_id": citation_source_file_id,
+        "chunk_id": citation_chunk_id,
         "source_node_id": str(source_node_id) if (source_node_id := _extract_source_node_id(item, metadata)) else None,
-        "filename": str(filename) if filename is not None else None,
+        "filename": citation_filename,
         "chunk_index": chunk_index,
         "page_number": page_number,
         "section_title": metadata.get("section_title", getattr(chunk, "section_title", None)),
@@ -330,9 +333,9 @@ def _build_filtered_chunk(
     return FilteredChunk(
         raw=item,
         content=content,
-        source_file_id=citation_metadata["source_file_id"],
-        chunk_id=citation_metadata["chunk_id"],
-        filename=citation_metadata["filename"],
+        source_file_id=citation_source_file_id,
+        chunk_id=citation_chunk_id,
+        filename=citation_filename,
         chunk_index=chunk_index,
         page_number=page_number,
         relevance_score=relevance_score,
@@ -926,8 +929,8 @@ Return ONLY a JSON array of concept strings."""
 
         merged: dict[str, dict[str, Any]] = {}
         ordered_keys: list[str] = []
-        for concept, result in ordered_candidates:
-            item = dict(result)
+        for source_concept, candidate in ordered_candidates:
+            item = dict(candidate)
             item_id = str(item.get("id") or item.get("parent_id") or "")
             if not item_id:
                 continue
@@ -937,8 +940,8 @@ Return ONLY a JSON array of concept strings."""
                 ordered_keys.append(item_id)
 
             concept_list = merged[item_id].setdefault("retrieved_for_concepts", [])
-            if concept and concept not in concept_list:
-                concept_list.append(concept)
+            if source_concept and source_concept not in concept_list:
+                concept_list.append(source_concept)
 
             existing_similarity = _extract_retrieval_score(merged[item_id], merged[item_id])
             incoming_similarity = _extract_retrieval_score(item, item)
@@ -2249,9 +2252,11 @@ Return ONLY a JSON array of entity names."""
         if not await is_rag_within_budget():
             logger.warning(f"RAG budget exhausted, returning empty result for user {user_id}")
             return GraphRAGResult(
-                answer="",
-                sources=[],
-                trace=None,
+                query=query,
+                entities=[],
+                vector_results=[],
+                graph_results=[],
+                fused_context="",
                 metadata={"budget_exhausted": True},
             )
 

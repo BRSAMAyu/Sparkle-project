@@ -344,7 +344,7 @@ class PlanningWorkflowManager:
         pack_id = _strip(pack.get("id")) or _strip(pack.get("name")) or pack_subject
         domain_hints = _sprint_pack_domain_hints(pack)
         prefilled_scope = _format_sprint_pack_scope(pack, pack_subject)
-        collected = {
+        collected: dict[str, Any] = {
             EXAM_SPRINT_FAST_TRACK_FLAG: True,
             "goal_type": "exam",
             "subject": pack_subject,
@@ -3641,6 +3641,7 @@ class PlanningWorkflowManager:
                 "aurora_brief": brief,
             }
         ranges = self._phase_day_ranges(days)
+        templates: list[dict[str, Any]]
         if sprint_policy.get("sprint_mode") == "seven_day_survival":
             templates = [
                 {
@@ -4122,8 +4123,8 @@ class PlanningWorkflowManager:
                     raw.get("label"),
                 )
                 node_id = ""
-                for candidate in candidates:
-                    matched_id = node_lookup.get(self._pack_match_key(candidate))
+                for raw_candidate in candidates:
+                    matched_id = node_lookup.get(self._pack_match_key(raw_candidate))
                     if matched_id:
                         node_id = matched_id
                         break
@@ -4142,9 +4143,11 @@ class PlanningWorkflowManager:
                 mastery_map[node_id] = mastery
                 continue
 
-            node_id = node_lookup.get(self._pack_match_key(raw))
-            if node_id:
-                mastery_map[node_id] = min(mastery_map.get(node_id, weak_default), weak_default)
+            matched_node_id = node_lookup.get(self._pack_match_key(raw))
+            if matched_node_id:
+                mastery_map[matched_node_id] = min(
+                    mastery_map.get(matched_node_id, weak_default), weak_default
+                )
 
         history_summary = _as_dict(session.collected.get("cross_sprint_mastery_summary"))
         if not history_summary:

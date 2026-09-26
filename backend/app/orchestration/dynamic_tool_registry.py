@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from loguru import logger
+from pydantic import BaseModel
 
 from app.tools.base import BaseTool, ToolCategory
 from app.tools.metadata import ToolMetadata, ToolMetadataError, tool_metadata_from_attributes, validate_tool_metadata
@@ -21,7 +22,7 @@ class ToolInfo:
     """工具元数据"""
     name: str
     description: str
-    parameters_schema: dict[str, Any]
+    parameters_schema: type[BaseModel]
     category: ToolCategory
     module_path: str
     class_name: str
@@ -110,6 +111,8 @@ class DynamicToolRegistry:
                     instance = tool_class()
                     self.register_tool(instance)
                     return True
+                logger.warning(f"Class {class_name} in {module_path} is not a registrable BaseTool subclass")
+                return False
             else:
                 # 注册模块中所有工具类
                 registered = 0
@@ -291,7 +294,7 @@ class DynamicToolRegistry:
             tools = list(self._tools.values())
         result = []
         for tool in tools:
-            info = {
+            info: dict[str, Any] = {
                 "name": tool.name,
                 "description": tool.description,
                 "category": tool.category.value,
