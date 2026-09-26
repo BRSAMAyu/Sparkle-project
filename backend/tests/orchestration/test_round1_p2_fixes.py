@@ -437,7 +437,9 @@ def test_rb10_high_cognitive_load_precedence_uses_threshold_key():
         version = "test-snapshot"
         source = "test"
 
-        def get(self, key, default):
+        # 对齐真实契约 RoutingParameterSnapshot.get(key, default=None)：
+        # 生产侧 _param 自 8d38ebae 起单参调用 .get(key)，default 在此为可选。
+        def get(self, key, default=None):
             if key == "high_cognitive_load":
                 return 5.0
             return default
