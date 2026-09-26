@@ -39,7 +39,6 @@
   "enterToSend": "Press Enter to Send",
   "enterToSendDescription": "Press the Enter key in the chat box to send messages directly",
   "refresh": "Refresh",
-  "chatAiSystemSettings": "AI system settings",
   "sensoryFeedbackSectionTitle": "Sensory Feedback",
   "sensoryFeedbackSectionSubtitle": "Control interaction sounds, achievement feedback, and haptics in one place",
   "sensoryFeedbackLoadingSubtitle": "Loading sensory feedback preferences...",
@@ -70,7 +69,6 @@
   "showChatTransparencyCapsuleTitle": "Show AI transparency capsule",
   "showChatTransparencyCapsuleSubtitle": "Control the AI completion and transparency capsule at the bottom of chat",
   "taskCard": "Task Card",
-  "planCard": "Plan Card",
   "startTask": "Start Task",
   "viewDetails": "View Details",
   "finishTask": "Finish Task",
@@ -115,26 +113,16 @@
   "wechat": "WeChat",
   "createGrowthPlan": "Create Growth Plan",
   "createSprintPlan": "Create Sprint Plan",
-  "planCreateTitle": "Create Plan",
   "planCreateSuccess": "Plan created successfully",
-  "planCreateFailed": "Failed to create plan: {error}",
   "planNameLabel": "Plan Name",
-  "planNameHint": "Enter plan name...",
   "planNameRequired": "Please enter plan name",
-  "planDescLabel": "Description",
-  "planDescHint": "Describe your plan goals...",
-  "planSubjectLabel": "Subject",
-  "planSubjectHint": "e.g., Computer Science, English...",
   "planTargetDateLabel": "Target Date",
   "planTargetDateUnset": "No target date set",
-  "planDailyMinutesLabel": "Daily Available Time",
-  "planDailyMinutesHint": "How many minutes per day",
   "planPriorityLabel": "Priority",
   "planPriorityCritical": "Critical",
   "planPriorityHigh": "High",
   "planPriorityNormal": "Normal",
   "planPriorityLow": "Low",
-  "planCreating": "Creating...",
   "planCreateAction": "Create Plan",
   "featureComingSoon": "Exciting features are coming soon",
   "stayTuned": "Stay tuned~",
@@ -175,7 +163,6 @@
   "generationFailedWithDetail": "Generation failed: {error}",
   "version": "Sparkle v2.1.0-stable\n© 2025 Sparkle Team",
   "editPlan": "Edit Plan",
-  "planEditInProgress": "Plan edit feature is in development",
   "planId": "Plan ID",
   "featureInDevelopment": "Coming soon...",
   "sprintHistory": "Sprint History",
@@ -256,9 +243,6 @@
   "toolsCognitivePatternsTitle": "Cognitive Patterns",
   "toolsCognitivePatternsDesc": "View behavior patterns and insights",
   "chatModeStandard": "Standard chat",
-  "chatModeDeep": "Deep Focus",
-  "chatModeCreative": "Creative",
-  "chatModeAnalytical": "Analytical",
   "chatModeStandardDesc": "Standard AI conversation mode",
   "chatModeDeepAnalysis": "Deep Analysis",
   "chatModeDeepAnalysisDesc": "Multi-expert collaborative analysis",
@@ -281,48 +265,20 @@
   "chatConnectionFailed": "Connection failed",
   "aiCollabModeTitle": "AI Collaboration",
   "switchAgentModeSemantics": "Switch agent mode",
-  "chatDagLayerProgress": "Layer {current}/{total}",
-  "chatDagProcessing": "Processing dependencies...",
-  "chatDagCompleted": "Analysis complete",
   "chatInputPlaceholder": "Type a message...",
   "chatInputAttachment": "Attach",
   "chatInputVoice": "Voice",
   "chatInputShare": "Share",
   "chatInputTapToShare": "Tap to select content to share",
-  "chatVoiceInput": "Voice Input",
-  "chatAttachment": "Attach File",
-  "chatEmoji": "Emoji",
-  "chatSend": "Send",
-  "chatTyping": "AI is typing...",
-  "chatOnline": "Online",
-  "chatOffline": "Offline",
-  "chatReconnect": "Reconnect",
-  "chatClearHistory": "Clear History",
-  "chatExportChat": "Export Chat",
   "chatNewChat": "New Chat",
   "chatHistory": "Chat History",
-  "chatNoHistory": "No chat history",
-  "chatDeleteConfirm": "Delete this chat?",
-  "chatDeleted": "Chat deleted",
   "chatCopied": "Copied to clipboard",
-  "chatRegenerate": "Regenerate",
   "chatCopy": "Copy",
   "chatShare": "Share",
   "chatCharacters": "chars",
   "chatWords": "words",
-  "chatFeedback": "Feedback",
-  "chatReportIssue": "Report Issue",
-  "chatMessageTooLong": "Message is too long",
-  "chatEmptyMessage": "Cannot send empty message",
   "chatConnectionLost": "Connection lost, retrying...",
-  "chatConnectionRestored": "Connection restored",
-  "chatWelcome": "Hello! How can I help you today?",
   "chatWelcomeSubtitle": "I keep an eye on your learning — I'll speak up when I'm confident, and ask when I'm not.",
-  "chatSuggestion1": "Help me plan my study",
-  "chatSuggestion2": "Explain a concept",
-  "chatSuggestion3": "Review my progress",
-  "chatSuggestion4": "Suggest learning resources",
-  "chatAgentSwitched": "Switched to {agent}",
   "achievementTitle": "Achievements",
   "achievementUnlocked": "Achievement Unlocked!",
   "achievementLocked": "Locked",
@@ -1709,7 +1665,6 @@
   "communityDurationLabel": "Duration",
   "communityFlameLabel": "Flame",
   "communityStreakLabel": "Streak",
-  "communitySharedTask": "Shared a task",
   "shareResourceTitle": "Share with community",
   "shareResourceTabFriends": "Friends",
   "shareResourceTabGroups": "Groups",
@@ -2145,7 +2100,6 @@
   "chatQuickActionErrorAttribution": "Error attribution",
   "chatQuickActionErrorAttributionPrompt": "I want to analyze recent errors",
   "chatPlanUnbound": "No plan linked",
-  "chatFileProcessing": "File is processing and will be available for chat soon",
   "chatPromptDeepAnalysis1": "Give a summary first, then show the rationale",
   "chatPromptDeepAnalysis2": "Only show key conclusions and risks",
   "chatPromptDeepAnalysis3": "Add a counterpoint to calibrate me",
@@ -2210,6 +2164,7 @@
   "chatMessageSendFailed": "Send failed",
   "chatMessageRetrySend": "Retry",
   "chatAgentNavigator": "Star Map Navigator",
+  "chatAgentNavigator": "Galaxy Navigator",
   "chatAgentExamStrategist": "Exam Strategist",
   "chatAgentTimeCoach": "Time Coach",
   "chatAgentDeepAnalyst": "Deep Analyst",
@@ -2290,7 +2245,6 @@
       }
     }
   },
-  "chatModeCustomTeamLabel": "Custom team",
   "chatModeCustomTeamTitle": "Custom expert team",
   "chatModeCustomTeamSubtitle": "Choose experts and a collaboration mode",
   "chatMetadataContinuity": "Continuity",
@@ -2493,35 +2447,12 @@
   "reviewExit": "Exit",
   "reviewNoMatchingErrors": "No matching errors found",
   "communityTitle": "Community",
-  "communitySearch": "Search",
-  "communitySearchUsers": "Search Users",
-  "communitySearchGroups": "Search Groups",
   "communityDiscoverFriends": "Discover Friends",
-  "communityDiscoverFriendsHint": "View recommended friends",
   "communityCreateGroup": "Create Group",
-  "communityCreateGroupHint": "Create a new study group",
-  "communityActions": "Community Actions",
-  "communityNoFriends": "No friends yet",
-  "communityNoGroups": "No groups joined",
-  "communityStatusOnline": "Online",
-  "communityStatusOffline": "Offline",
-  "communityFocusModeOn": "Focus mode on",
-  "communityFocusModeOff": "Enable focus mode",
-  "communityFocusModeEnabled": "Focus mode enabled. You won't be disturbed",
-  "communityFocusModeDisabled": "Focus mode disabled",
   "communityTabFeed": "Feed",
-  "communityTabFriends": "Friends",
   "communityTabGroups": "Groups",
   "communityTabPartners": "Partners",
   "communityAddFriend": "Add",
-  "communityMembers": "{count} members",
-  "@communityMembers": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "friendsMyFriends": "My Friends",
   "friendsFriendRequests": "Friend Requests",
   "friendsDiscoverFriends": "Discover Friends",
@@ -2593,10 +2524,8 @@
   "taskMonitorStatusPending": "Pending",
   "taskMonitorStatusCancelled": "Cancelled",
   "planHistoryTitle": "Plan History",
-  "planHistoryEmpty": "No plan history",
   "planHistoryRestore": "Restore Plan",
   "planHistoryRestoreSuccess": "Plan restored",
-  "planHistoryDeleteConfirm": "Delete this plan history?",
   "planTypeSprint": "Sprint Plan",
   "planTypeGrowth": "Growth Plan",
   "planProgressPercent": "{percent}% Complete",
@@ -2882,14 +2811,8 @@
   "translationSwapLanguages": "Swap Languages",
   "translationDetectLanguage": "Detect Language",
   "translationHistoryEmpty": "No translation history",
-  "memoryEvidenceChain": "Evidence Chain",
-  "memoryNoEvidence": "No Evidence",
   "memoryCurrentVersion": "Current Version",
   "memoryVersionHistory": "Version History",
-  "memorySortNewest": "Newest",
-  "memorySortOldest": "Oldest",
-  "memorySortImportance": "Importance",
-  "memoryEvidenceResolveFailed": "Evidence resolve failed",
   "memoryStatus": "Status",
   "memoryGoalDate": "Goal Date",
   "memoryDeadline": "Deadline",
@@ -2898,7 +2821,6 @@
   "memoryOccurredAt": "Occurred At",
   "memoryImportanceScore": "Importance",
   "memoryRetractedAt": "Retracted At",
-  "memoryUpdate": "Update",
   "memoryConfidence": "Confidence",
   "memoryDiff": "Diff",
   "memoryRevertToVersion": "Revert to this version",
@@ -2906,13 +2828,10 @@
   "memoryInitialVersion": "Initial version",
   "memoryNoChanges": "No changes",
   "memoryRevertNotEnabled": "Revert feature not enabled",
-  "memoryWhyThisMemory": "Why this memory?",
   "memoryEvidenceCount": "Evidence",
   "memoryVersions": "Versions",
   "memoryBudget": "Budget",
   "memoryViewEvidence": "View Evidence",
-  "memoryAllowedCapture": "Allowed capture",
-  "memoryCaptureLevel": "Capture level",
   "memoryTypeNone": "None",
   "memoryTypePreference": "Preferences",
   "memoryTypeGoal": "Goals",
@@ -2923,9 +2842,6 @@
   "memoryEpisodicDisabledHint": "Episodic capture is currently disabled, such memories will not be recorded.",
   "memorySourceBlockedHint": "This source is blocked, such memories will not be recorded.",
   "memoryKeyBlockedHint": "This preference is blocked, such memories will not be recorded.",
-  "memoryExplanationPreference": "Captured because your preference updated recently.",
-  "memoryExplanationEpisodic": "Captured because this experience was marked important.",
-  "memoryExplanationGoal": "Captured to keep your active goals visible.",
   "memoryCopied": "Memory content copied",
   "memoryExportView": "Export View",
   "memoryCorrectionActions": "Correction Actions",
@@ -2934,14 +2850,8 @@
   "memoryCorrectionLowerConfidence": "Lower confidence",
   "memoryCorrectionMerge": "Merge",
   "memoryMergeComingSoon": "Merge isn't available yet",
-  "memoryCorrectionSubmitted": "Correction submitted",
-  "memoryCorrectionFailed": "Correction failed",
   "memoryHistoryLoadFailed": "Failed to load history",
   "memorySettingsLoadFailed": "Failed to load memory settings",
-  "memoryAddEvidence": "Add Evidence",
-  "memoryEvidenceType": "Evidence Type",
-  "memoryEvidenceSource": "Source",
-  "memoryEvidenceContent": "Content",
   "memoryChatLabel": "Chat ({role})",
   "@memoryChatLabel": {
     "placeholders": {
@@ -3265,7 +3175,6 @@
   "shopItemTypeBoost": "Boost",
   "shopItemTypeVisualElement": "Visual element",
   "taskDueDateUnset": "No due date",
-  "chatAchievementUnlocked": "{arg0}",
   "chatActionErrorSuggestion": "{arg0}",
   "chatActionErrorTitle": "Chat Action Error Title",
   "chatActionIgnore": "Chat Action Ignore",
@@ -3355,10 +3264,8 @@
   "chatFeedbackThanks": "Chat Feedback Thanks",
   "chatFocusSprintDefaultTitle": "Chat Focus Sprint Default Title",
   "chatFocusStart": "Chat Focus Start",
-  "chatInputDocumentClean": "Chat Input Document Clean",
   "chatInterventionViewPlan": "Chat Intervention View Plan",
   "chatInterventionViewSettings": "Chat Intervention View Settings",
-  "chatOpenStudyMaterialsLibrary": "Open study materials library",
   "chatKnowledgeCitationBody": "Chat Knowledge Citation Body",
   "chatKnowledgeCitationTitle": "{arg0}",
   "chatModeCustomTeam": "Chat Mode Custom Team",
@@ -3388,14 +3295,6 @@
   "chatOptionalNotesHint": "Chat Optional Notes Hint",
   "chatOrchestrationTraceStep": "Chat Orchestration Trace Step",
   "chatOrchestrationTraceTitle": "Chat Orchestration Trace Title",
-  "chatPendingMessagesFailed": "{count} pending messages were dropped.",
-  "@chatPendingMessagesFailed": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "chatPendingMessagesAuthExpired": "{count} pending messages were dropped because authentication expired.",
   "@chatPendingMessagesAuthExpired": {
     "placeholders": {
@@ -3471,18 +3370,9 @@
       }
     }
   },
-  "chatStudyMaterialsKnowledgeNodes": "{count} knowledge nodes",
-  "@chatStudyMaterialsKnowledgeNodes": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "chatStudyMaterialsLabel": "Study materials",
   "chatStudyMaterialsPaused": "Study materials paused",
   "chatStudyMaterialsPausedDescription": "Document retrieval is paused for the next turn.",
-  "chatStudyMaterialsReady": "Ready",
   "chatStreakSummary": "{arg0} {arg1}",
   "chatSubmitFeedback": "Chat Submit Feedback",
   "chatSynthesisSuggestions": "Chat Synthesis Suggestions",
@@ -3523,11 +3413,8 @@
   "communityAgentProcessing": "Community Agent Processing",
   "communityAgentPromptHint": "Community Agent Prompt Hint",
   "communityAgentQuickConsensus": "Community Agent Quick Consensus",
-  "communityAgentQuickConsensusPrompt": "Community Agent Quick Consensus Prompt",
   "communityAgentQuickReminder": "Community Agent Quick Reminder",
-  "communityAgentQuickReminderPrompt": "Community Agent Quick Reminder Prompt",
   "communityAgentQuickSummary": "Community Agent Quick Summary",
-  "communityAgentQuickSummaryPrompt": "Community Agent Quick Summary Prompt",
   "communityAgentThinking": "Community Agent Thinking",
   "communityChatEmpty": "Community Chat Empty",
   "communityChatConnectionLost": "Realtime connection rejected by the server. Auto-retry stopped",
@@ -4225,7 +4112,6 @@
   "planOverdueDays": "{arg0}",
   "planProgressLabel": "Plan Progress Label",
   "planRecentFeedback": "Plan Recent Feedback",
-  "planRelatedTasks": "Plan Related Tasks",
   "planRestore": "Plan Restore",
   "planRestoredSuccess": "Plan Restored Success",
   "planReviewAdditionalNotesHint": "Plan Review Additional Notes Hint",
@@ -5008,13 +4894,11 @@
   "chatAccessoryContent": "Additional content",
   "chatContinueExploring": "Continue exploring",
   "chatSwipeToSwitch": "Swipe left/right to switch entries",
-  "chatCurrentLearningTopic": "Current learning topic",
   "chatCollaborationProcess": "Collaboration process",
   "chatPlanContext": "Plan context",
   "chatPlanStatus": "Plan status",
   "chatContinueFromConversation": "Continue from the conversation",
   "chatReviewFirstThenExpand": "Review highlights first, then decide whether to expand",
-  "chatPathLabel": "Path",
   "chatMasteryLabel": "Mastery",
   "chatOpenFullExperience": "Open full experience",
   "chatContinueInChat": "Continue in chat",
@@ -5034,24 +4918,6 @@
   "chatPlanProgressLabel": "Progress: {percent}%",
   "chatPromptPreviewCancel": "Not now",
   "chatPromptPreviewSend": "Send now",
-  "chatParticipantLabel": "Participant",
-  "chatPromptComparePaths": "Compare two paths",
-  "chatPromptComparePathsMessage": "Compare the trade-offs between \"{pathA}\" and \"{pathB}\".",
-  "chatPromptDefaultPathA": "Path A",
-  "chatPromptDefaultPathB": "Path B",
-  "chatPromptPrerequisites": "What prerequisites to cover first",
-  "chatPromptPrerequisitesMessage": "If I start learning \"{topic}\" now, what prerequisites should I cover first?",
-  "chatPromptExamFocus": "What are the exam key points",
-  "chatPromptExamFocusMessage": "Tell me the parts of \"{topic}\" most likely to be exam key points and why.",
-  "chatPromptMakePlan": "Make it a plan",
-  "chatPromptMakePlanMessage": "Rewrite the \"{topic}\" path into a 7-day executable mini-plan.",
-  "chatOneOfTheRoles": "One of the roles",
-  "chatPromptLetMeAnswer": "Let me answer",
-  "chatPromptLetMeAnswerMessage": "Have {speaker} ask me a follow-up question around \"{topic}\", and I'll answer.",
-  "chatPromptPracticeExplain": "Practice explaining to others",
-  "chatPromptPracticeExplainMessage": "Arrange a simulation round around \"{topic}\" where I explain to someone else.",
-  "chatPromptErrorDiagnosis": "Switch to error diagnosis",
-  "chatPromptErrorDiagnosisMessage": "Switch \"{topic}\" to error diagnosis mode and help me identify the real blocker.",
   "chatPromptOrderActions": "Order today's actions",
   "chatPromptOrderActionsMessage": "Based on this learning report, help me create an action order I can start today.",
   "chatPromptExpandKeyIssue": "Expand on key issues",
@@ -5241,14 +5107,6 @@
   "dashboardLoadFailed": "Load failed",
   "dashboardRetry": "Retry",
   "dashboardQuickCalibration": "Quick Calibration",
-  "planEditTypeTitle": "Edit {type}",
-  "@planEditTypeTitle": {
-    "placeholders": {
-      "type": {
-        "type": "Object"
-      }
-    }
-  },
   "planUpdated": "Plan updated",
   "planGuideFillNameAndGoalFirst": "Fill in the plan name and goal first, then generate the AI guide",
   "planGuideGeneratedHuman": "Human execution guide generated",
@@ -5265,109 +5123,7 @@
   "planSuggestedGrowthTask2": "Complete a milestone review",
   "planSuggestedSprintTask1": "Confirm sprint goals and acceptance criteria",
   "planSuggestedSprintTask2": "Complete key sprint milestones",
-  "planSave": "Save plan",
-  "planStepBasics": "Plan setup",
-  "planStepSchedule": "Schedule",
-  "planStepTasks": "Tasks",
-  "planStepGuide": "Boundaries & guide",
-  "planStepReview": "Review",
-  "planAiVersionCopied": "AI version copied",
-  "planBasicsDescription": "Define this as a real plan card, not just a regular task.",
-  "planBasicsNameHint": "e.g., 6-week English speaking improvement / midterm sprint wrap-up",
-  "planBasicsNameRequired": "Please fill in the plan name first",
-  "planBasicsSubjectLabel": "Subject",
-  "planBasicsSubjectHint": "English, Flutter, GRE Math, paper reading...",
-  "planBasicsGoalLabelGrowth": "Long-term goal",
-  "planBasicsGoalLabelSprint": "Sprint goal",
-  "planBasicsGoalHintGrowth": "Describe the ability, habit, or outcome this growth plan aims to achieve.",
-  "planBasicsGoalHintSprint": "Describe the sprint outcome, acceptance criteria, and non-negotiable focus.",
-  "planBasicsGoalRequired": "Please describe the goal of this plan card",
-  "planBasicsPriorityLabel": "Plan priority",
-  "planPriorityNormalValue": "Normal",
-  "planPriorityCriticalValue": "Critical",
-  "planScheduleDescription": "Set your duration, daily effort, and reminder rhythm all at once.",
-  "planScheduleDailyMinutesLabel": "Daily available time",
-  "planScheduleMinutesUnit": "{minutes} min",
-  "@planScheduleMinutesUnit": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      }
-    }
-  },
-  "planScheduleTotalHours": "Total estimated: {hours}h",
-  "@planScheduleTotalHours": {
-    "placeholders": {
-      "hours": {
-        "type": "Object"
-      }
-    }
-  },
-  "planScheduleTargetDateUnset": "Not set",
-  "planScheduleReminderTime": "Daily reminder",
-  "planScheduleStageLabel": "Current plan stage",
-  "planScheduleStageSprint": "Sprint push",
-  "planScheduleStageDaily": "Daily execution",
-  "planScheduleStageReview": "Review & adjust",
-  "planScheduleStagePaused": "Paused",
   "planScheduleChipWeekday": "Weekday push, weekend review",
-  "planScheduleChipMorning": "Morning start, evening wrap-up",
-  "planScheduleChipAfternoon": "Afternoon focus, light evening review",
-  "planScheduleRhythmLabel": "Rhythm notes",
-  "planScheduleRhythmHint": "e.g., Mon-Fri push, Sat review, Sun catch-up",
-  "planTasksDescription": "This step determines what actions the plan will carry. Existing tasks are for reference; new tasks will be linked to the plan.",
-  "planTasksBlueprintLabel": "Task blueprint",
-  "planTasksBlueprintHint": "e.g., build framework first, push daily progress, then review and fill gaps.",
-  "planTasksRefExisting": "Reference existing tasks",
-  "planTasksMinutesDifficulty": "{minutes} min · difficulty {difficulty}",
-  "@planTasksMinutesDifficulty": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      },
-      "difficulty": {
-        "type": "Object"
-      }
-    }
-  },
-  "planTasksCopyToPlan": "Copy to plan",
-  "planTasksNewTaskLabel": "New plan task",
-  "planTasksNewTaskHint": "e.g., Complete a chapter review",
-  "planTasksDurationLabel": "Duration",
-  "planTasksAddToPlan": "Add to plan",
-  "planTasksEmpty": "No plan tasks yet",
-  "planGuideScopeLabel": "Boundaries & notes",
-  "planGuideScopeHint": "e.g., this plan excludes ad-hoc tasks and focuses only on exam prep; push one main action per day.",
-  "planGuidePerspectiveLabel": "Guide perspective",
-  "planGuideForHuman": "For myself",
-  "planGuideForAi": "For AI",
-  "planGuideHumanInfo": "The human version is saved as the default execution guide on the plan card, helping you push forward directly.",
-  "planGuideAiInfo": "The AI version is generated only when needed for Sparkle's internal task assistant and is not persisted by default.",
-  "planGuideHumanTitle": "Human execution guide",
-  "planGuideAiTitle": "AI execution version",
-  "planGuideGenerating": "Generating",
-  "planGuideGenerateHuman": "Generate human version",
-  "planGuideGenerateAi": "Generate AI version",
-  "planGuideHumanHint": "After generation, you'll see the plan's main thread, daily rhythm, risk reminders, and today's starting action.",
-  "planGuideAiEmpty": "No AI version yet. Only generated when explicitly needed to avoid wasting tokens.",
-  "planGuideCopyAi": "Copy AI version",
-  "planReviewSummary": "{planType} · {minutes} min/day · {hours}h",
-  "@planReviewSummary": {
-    "placeholders": {
-      "planType": {
-        "type": "Object"
-      },
-      "minutes": {
-        "type": "Object"
-      },
-      "hours": {
-        "type": "Object"
-      }
-    }
-  },
-  "planReviewEditInfo": "Saving will update the plan description and create new tasks for added drafts.",
-  "planReviewCreateInfo": "Creating will generate a more complete plan card and create plan tasks.",
-  "planReviewFinalDescription": "Final plan description",
   "taskExecutionChatAboutStuckPoint": "Chat with Sparkle about this blocker",
   "taskExecutionSentToAurora": "Sent to Aurora",
   "taskExecutionStuckPromptIntro": "I'm stuck on this task and would like to break down the specific blockers with you.",
@@ -6211,16 +5967,7 @@
   "memoryPanelAdjust": "Adjust",
   "memoryPanelAiAutoMemories": "AI Auto Memories",
   "memoryPanelAiInferredDescription": "AI inferred from chat, for display only, not used in downstream decisions.",
-  "memoryPanelClearFilter": "Clear Filter",
   "memoryPanelCommitmentDismissed": "Commitment dismissed",
-  "memoryPanelConfidenceValue": "Confidence {value}",
-  "@memoryPanelConfidenceValue": {
-    "placeholders": {
-      "value": {
-        "type": "Object"
-      }
-    }
-  },
   "memoryPanelConflictFailed": "Conflict resolution failed: {error}",
   "@memoryPanelConflictFailed": {
     "placeholders": {
@@ -6240,7 +5987,6 @@
       }
     }
   },
-  "memoryPanelDate": "Date",
   "memoryPanelDeviationsDetected": "{count} deviations detected",
   "@memoryPanelDeviationsDetected": {
     "placeholders": {
@@ -6263,22 +6009,8 @@
     }
   },
   "memoryPanelEmptyDescription": "Start by chatting about your goals, preferences, or recent learning activities so the system can organize long-term memories here.",
-  "memoryPanelEmptyFilterDescription": "Try clearing filters to see all organized memories.",
-  "memoryPanelEmptyFilterTitle": "No matching memories",
   "memoryPanelEmptyTitle": "Memory panel is empty",
-  "memoryPanelEvidenceAll": "All Evidence",
-  "memoryPanelEvidenceMissing": "Missing",
-  "memoryPanelEvidenceOk": "OK",
-  "memoryPanelEvidenceRedacted": "Redacted",
   "memoryPanelForesightHint": "Foresight Hint",
-  "memoryPanelImportanceValue": "Importance {value}",
-  "@memoryPanelImportanceValue": {
-    "placeholders": {
-      "value": {
-        "type": "Object"
-      }
-    }
-  },
   "memoryPanelItemCount": "{count} items",
   "@memoryPanelItemCount": {
     "placeholders": {
@@ -6304,10 +6036,8 @@
     }
   },
   "memoryPanelMarkedComplete": "Marked as complete",
-  "memoryPanelMetricsNone": "Metrics: -",
   "memoryPanelNotUpdated": "Not updated",
   "memoryPanelRecentScenes": "Recent Scenes",
-  "memoryPanelRevoke": "Revoke",
   "memoryPanelRevokeFailed": "Revoke failed: {error}",
   "@memoryPanelRevokeFailed": {
     "placeholders": {
@@ -7853,81 +7583,7 @@
   "examSprintTargetPass": "Pass",
   "examSprintTargetHold": "Maintain",
   "examSprintTargetHighScore": "Aim high",
-  "memorySettingsTitle": "Memory Control",
-  "memorySettingsBack": "Back",
-  "memorySettingsDisabled": "Memory controls are not enabled",
-  "memorySettingsLoadError": "Failed to load memory settings: {error}",
-  "@memorySettingsLoadError": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "memorySettingsSaveError": "Save failed: {error}",
-  "@memorySettingsSaveError": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "memorySettingsSaveSuccess": "Memory settings updated",
-  "memorySettingsUnavailable": "Memory control unavailable",
-  "memorySettingsEnabledChip": "Memory enabled",
-  "memorySettingsDisabledChip": "Memory paused",
-  "memorySettingsControllableChip": "Preferences controllable",
-  "memorySettingsDescription": "Control how long-term memory learns your preferences, goals, and experiences. Defaults to conservative — only truly valuable information for future decisions should be retained.",
-  "memorySettingsEnableTitle": "Enable long-term memory",
-  "memorySettingsEnableDesc": "Disabling pauses new memory writes but does not delete history.",
-  "memorySettingsSocialTitle": "Social semantics toggles",
-  "memorySettingsSocialDesc": "Stage 17 only handles memory declarations and front-door reads. Disabling a category hides that social semantic type at the front door.",
-  "memorySettingsSocialSelf": "Self memory",
   "memorySettingsSocialPersonMention": "Person mentions",
-  "memorySettingsSocialRelationship": "Relationship dynamics",
-  "memorySettingsSocialCommitment": "Commitments",
-  "memorySettingsPushTitle": "Proactive Reminders",
-  "memorySettingsPushDesc": "Stage 18 is off by default. Only after you explicitly enable it will the system send commitment follow-ups or engagement recovery reminders.",
-  "memorySettingsPushEnableTitle": "Enable proactive reminders",
-  "memorySettingsPushEnableDesc": "Master switch. When off, all Stage 18 proactive reminders are disabled.",
-  "memorySettingsPushFollowUpTitle": "Commitment follow-up",
-  "memorySettingsPushFollowUpDesc": "Only for commitments you explicitly made and are overdue.",
-  "memorySettingsPushRecoveryTitle": "Engagement recovery",
-  "memorySettingsPushRecoveryDesc": "Only for users who were consistently active and haven't been active for 72 hours.",
-  "memorySettingsQuietHoursTitle": "Quiet hours",
-  "memorySettingsQuietHoursDesc": "You can narrow the system default of 22:00-08:00, but cannot expand reminders into this period.",
-  "memorySettingsStartTime": "Start time",
-  "memorySettingsEndTime": "End time",
-  "memorySettingsCurrentTimezone": "Current timezone: {timezone}",
-  "@memorySettingsCurrentTimezone": {
-    "placeholders": {
-      "timezone": {
-        "type": "Object"
-      }
-    }
-  },
-  "memorySettingsViewInbox": "View reminder inbox",
-  "memorySettingsTypeTitle": "Memory types",
-  "memorySettingsTypeDesc": "Determines which content is stored long-term.",
-  "memorySettingsPreferenceTitle": "Preferences",
-  "memorySettingsPreferenceDesc": "Records response style, learning pace, and common preferences.",
-  "memorySettingsGoalTitle": "Goals",
-  "memorySettingsGoalDesc": "Records confirmed long-term goals and stage intentions.",
-  "memorySettingsEpisodicTitle": "Experiences",
-  "memorySettingsEpisodicDesc": "Records key events and feedback helpful for future decisions.",
-  "memorySettingsInferredTitle": "AI auto memory",
-  "memorySettingsInferredDesc": "Allows the system to infer short-term experiences from chats; each entry must be visible and revocable.",
-  "memorySettingsCaptureTitle": "Capture intensity",
-  "memorySettingsCaptureDesc": "Higher is more aggressive, but also captures more context.",
-  "memorySettingsCaptureLow": "Low",
-  "memorySettingsCaptureMedium": "Medium",
-  "memorySettingsCaptureHigh": "High",
-  "memorySettingsBlockPrefTitle": "Block preferences",
-  "memorySettingsBlockPrefDesc": "Disable preference items you don't want stored long-term.",
-  "memorySettingsBlockSourceTitle": "Block sources",
-  "memorySettingsBlockSourceDesc": "Restrict which entry points won't write to long-term memory.",
-  "memorySettingsSaveButton": "Save settings",
-  "memorySettingsSaving": "Saving...",
   "reportLearningAnalysisReport": "Learning Analysis Report",
   "reportContinuationSubtitle": "Continue viewing the analysis report for this learning journey",
   "reportPartialDataDisclaimer": "Partial data, for reference only",
@@ -9982,28 +9638,11 @@
       }
     }
   },
-  "communityUserFallback": "User",
   "accountabilityUnlockedOn": "Unlocked on {date}",
   "@accountabilityUnlockedOn": {
     "placeholders": {
       "date": {
         "type": "String"
-      }
-    }
-  },
-  "communityWeeksAgo": "{count}w ago",
-  "@communityWeeksAgo": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "communityMonthsAgo": "{count}mo ago",
-  "@communityMonthsAgo": {
-    "placeholders": {
-      "count": {
-        "type": "int"
       }
     }
   },
@@ -10017,21 +9656,6 @@
       }
     }
   },
-  "communityFirstSideBySide": "First Side by Side",
-  "communityFirstSideBySideDesc": "Successfully established your first accountability partnership",
-  "communitySevenDayStreak": "7-Day Streak Together",
-  "communitySevenDayStreakDesc": "Check in for 7 consecutive days in a partnership",
-  "communitySevenDayCheckin": "7-Day Check-in Streak",
-  "communityEnglishSprintPlan": "This Week's English Sprint Plan",
-  "communityShareProgressLabel": "Progress",
-  "communityPointsLabel": "+{points}",
-  "@communityPointsLabel": {
-    "placeholders": {
-      "points": {
-        "type": "String"
-      }
-    }
-  },
   "communityTotalCheckins": "{count} times",
   "@communityTotalCheckins": {
     "placeholders": {
@@ -10040,7 +9664,6 @@
       }
     }
   },
-  "communityTotalCheckinsLabel": "Total check-ins",
   "communityChat": "Chat",
   "communityRemind": "Remind",
   "communityWorkshop": "Workshop",
@@ -10079,7 +9702,6 @@
   "communityMinutesAgo": "{count}m ago",
   "communityHoursAgo": "{count}h ago",
   "communityDaysAgo": "{count}d ago",
-  "communityBadgeUnlockedOn": "Unlocked on {date}",
   "communityQuickShare": "Quick Share",
   "communityTabAchievements": "Achievements",
   "communityTabPlans": "Plans",
@@ -10344,7 +9966,6 @@
       }
     }
   },
-  "communityProgressColon": "Progress: {percent}%",
   "communityKnowledgeNode": "Knowledge node",
   "communityTimeCapsule": "Time capsule",
   "communitySeedLibrary": "Seed Library",
@@ -10358,54 +9979,19 @@
   "communityAchievementUnlocked": "Achievement Unlocked",
   "communityNewAchievement": "New Achievement",
   "communityLinkCopied": "Link copied",
-  "communityUnblockConfirm": "Are you sure you want to unblock {name}?\n\nThey will be able to send friend requests and messages again.",
-  "communityUnblocked": "Unblocked {name}",
-  "communityMuteMember": "Mute {name}",
-  "communityMute24h": "24h",
-  "communityMuteMinutes": "{minutes}m",
-  "communityWarnMember": "Warn {name}",
-  "communityGroupMembers": "{name} - Members",
-  "communityGroupSearchHint": "Search groups...",
-  "communityGroupTasksMinutes": "{minutes} min",
-  "communitySlowModeSeconds": "{seconds}s",
   "communityFriendGoalHint": "e.g. study English 30 minutes daily",
   "communityCreateGroupGoalHint": "e.g. finish 50 LeetCode problems in two weeks",
   "communityPartnerCheckinCadence": "Partner check-in cadence",
   "communityCadenceReminder": "Every {days} days, next reminder at {time}",
-  "communityFeedFilterGlobal": "Global Feed",
-  "communityFeedFilterSquad": "My Squad",
-  "communityFeedFilterGoalMates": "Goal Mates",
-  "communityFeedFilterFollowing": "Following",
   "communityFeedGlobal": "Global Feed",
   "communityFeedMySquad": "My Squad",
-  "communityNoFeedYetTitle": "No community spark yet",
-  "communityNoFeedYetDescription": "Share a plan, insight, or small win to start the first conversation here.",
-  "communitySharePostAction": "Share a post",
-  "communityRefreshFeedAction": "Refresh feed",
-  "communityGroupTypeSprint": "Sprint group",
-  "communityGroupTypeSquad": "Squad",
-  "communitySprintGoalChip": "Sprint goal: {goal}",
   "communityFeedback": "Feedback",
   "communityShareSource": "Source",
-  "communityAdoptFailedWithError": "Adoption failed: {error}",
-  "communityOwnerFullView": "You see the full view",
-  "communityPartnerSummaryView": "Partner sees summary only",
-  "communityHiddenFields": "Hidden: {fields}",
   "communityPartnerObservationPermissions": "{name} observation permissions",
   "communityAllowObservation": "Allow observation",
-  "communityObservationDisabled": "When off, this buddy no longer receives any signals or observations about you",
   "communitySeeStudyTime": "See my study time",
   "communitySeeTaskContent": "See specific task content",
-  "communitySeeEmotionalState": "See my emotional / energy state",
-  "communityShareProgressPercent": "Progress: {percent}%",
-  "communityKnowledgeNodeLabel": "Knowledge Node",
-  "communityTimeCapsuleLabel": "Time Capsule",
-  "communityPartnersLabel": "Partners",
-  "communityFriendsLabel": "Friends",
   "communityBoundMilestone": "Bound milestone: {label}",
-  "communityCommunity": "Community",
-  "communityLoadFailedTitle": "Load failed",
-  "communityRetry": "Retry",
   "communityNoCommunitySpark": "No community spark yet",
   "communityRefreshFeed": "Refresh feed",
   "communityShareFailedRetry": "Share failed, please try again later",
@@ -10429,7 +10015,6 @@
   "communityShareExpired": "Expired",
   "communityShareToday": "Today",
   "communityShareDaysLater": "{days}d later",
-  "communityShareEvaluation": "Evaluation",
   "communityShareTaskComplete": "Task Complete",
   "communityShareDuration": "Duration",
   "communitySharePoints": "Points",
@@ -10456,23 +10041,12 @@
   "communityShareActivePlans": "Active Plans",
   "communityShareAchievements": "Achievements",
   "communityShareBrightness": "Brightness",
-  "communityShareUnlockedAt": "Unlocked at {date}",
-  "communityShareTodayDate": "Today",
-  "communityShareYesterday": "Yesterday",
-  "communityShareDaysAgo": "{days}d ago",
-  "communityShareWeeksAgo": "{weeks}w ago",
-  "communityShareMonthsAgo": "{months}mo ago",
   "communityShareNoAchievements": "No achievements yet",
   "communityShareStartCheckin": "Start checking in to unlock achievements!",
-  "communitySharePointsValue": "+{points} points",
   "communityShareClose": "Close",
   "communityShareTimeCapsule": "Time Capsule",
   "communityShareWordCount": "{count} words",
   "communityShareDepthLevel": "Depth Lv.{level}",
-  "communitySharePosterTitle": "{name}'s Glory Identity",
-  "communityShareGrowthTitle": "{name}'s Weekly Growth",
-  "communityShareGrowthSubtitle": "Level Lv.{level} · Brightness {brightness}%",
-  "communityShareTemplateName": "{name} Template",
   "communityShareCorePosters": "4 Core Posters",
   "userEngagementState": "Engagement State",
   "userSessionCount7d": "7d sessions {count}",
@@ -10942,11 +10516,9 @@
   "planSprintNoUpload": "No materials uploaded yet",
   "planSprintUploadedCount": "{count} materials uploaded",
   "planSprintStep5Title": "5. How much do you know? Which chapters scare you most?",
-  "planSprintScariestChapters": "Which chapters scare you most?",
   "planSprintStep6Title": "6. How long can you realistically study per day?",
   "planSprintDailySliderLabel": "{minutes} min / day",
   "planSprintDailyChipLabel": "{minutes} min",
-  "planSprintRealisticTime": "Use a time you can realistically stick to, not ideal conditions.",
   "planSprintGenerateFirstDay": "Generate My First Day Tasks",
   "planSprintSubmitHint": "After submitting, you will get an initial assessment in 3 seconds, and be taken directly to the plan or first day task.",
   "planSprintNotQuestionnaire": "This is not a questionnaire — it is determining the starting point together",
@@ -10956,7 +10528,6 @@
   "planSprintAssessmentDone": "Initial assessment complete",
   "planSprintPassProbability": "Pass probability {probability}%",
   "planSprintRecommendedMode": "Recommended mode {mode}",
-  "planSprintFirstDayTodo": "What to do first on day one",
   "planSprintStartFirstDay": "Start Day 1 Tasks",
   "planSprintViewPlanAction": "View Plan",
   "planSprintViewWholePlan": "View Full Plan",
@@ -10968,8 +10539,6 @@
   "planSprintTargetPass": "Pass",
   "planSprintTargetHold": "Maintain",
   "planSprintTargetHighScore": "Excel",
-  "planSprintCompletionSubject": "{subject} 7-Day Sprint Results",
-  "planSprintCompletionNoSubject": "7-Day Sprint Results",
   "planSprintStillSummarizing": "Sprint results are still being summarized",
   "planSprintShareOpened": "Share opened",
   "planSprintShareText": "My 7-day exam sprint is done: mastered {masteredNodes} knowledge nodes, repaired {repairedErrors} error patterns, completed {completedTasks} tasks. Strongest area: {strongestArea}. #SparkleExam",
@@ -11053,7 +10622,6 @@
   "planPortfolioNoArchiveTitle": "Your learning archive has no sprint records yet",
   "planPortfolioNoArchiveSubtitle": "Create an exam sprint first. After that, every completed, active, and planned subject will be automatically archived here.",
   "planPortfolioCreateSprint": "Create Exam Sprint",
-  "planPortfolioLoadError": "Failed to load learning archive: {message}",
   "planPortfolioLoadMore": "Load More",
   "planPortfolioCompletedOn": "{mode} (completed, {completedOn})",
   "planPortfolioActiveDay": "{mode} · In progress (Day {currentDay}, {remainingDays} days left)",
@@ -11072,7 +10640,6 @@
   "planDaysMore": "{remaining} more",
   "planCompletedExclaim": "Done!",
   "planLoadFailedError": "Failed to load plan: {error}",
-  "planStageTaskTitle": "{planName} - Stage {number} Task",
   "planTargetNode": "Target Node",
   "planMasteredNode": "Mastered Node",
   "planLearningNode": "Learning Node",
@@ -12821,7 +12388,6 @@
   "chatGroupReportSubmit": "Submit report",
   "chatGroupReportSubmitted": "Report submitted, thank you for your feedback",
   "chatGroupTasks": "Group tasks",
-  "chatGrowthNotNeeded": "Not needed",
   "chatGrowthStreakDays": "{days} d",
   "@chatGrowthStreakDays": {
     "placeholders": {
@@ -12846,11 +12412,11 @@
   "chatMemoryMarkedCorrect": "Marked as correct",
   "chatMemoryMentionCount": "{count} mentions · {type}",
   "chatMemoryOriginalTurn": "Original turn",
-  "chatMemoryReferenceCorrectFailed": "Memory correction failed",
   "chatMemoryReferenceDetailTitle": "Related memories",
   "chatMemoryReferenceNeedsConfirmation": "needs confirmation",
   "chatMemoryReferenceNotRight": "Not right",
   "chatMemoryReferenceUsed": "Used {count} related memories",
+  "chatMemoryReferenceReceiptLabel": "Aurora used {count} related memories",
   "chatMemorySessionCount": "{count} current session memories",
   "chatMemorySyncing": "Syncing current session memory",
   "chatMemoryUnavailable": "Memory drawer temporarily unavailable",
@@ -12871,7 +12437,6 @@
   "chatMoreActions": "More chat actions",
   "chatNextStepsReady": "Next steps are ready for you.",
   "chatNotNeeded": "Not needed",
-  "chatNudgeReviewText": "Let me review",
   "chatNudgeStartReview": "Start review",
   "chatOpenclawHubQueued": "OpenClaw Hub, {count} queued tasks",
   "chatOpenclawSuitable": "Suitable for web research, organizing, and scraping tasks",
@@ -12919,7 +12484,6 @@
   "chatPrivatePutInComposer": "Put in input box",
   "chatPrivatePutInComposerConfirm": "Placed in input box. Please confirm before sending.",
   "chatPrivateQuickSummary": "Quick summary",
-  "chatPrivateQuickSummaryLabel": "Quick summary",
   "chatPrivateRestoreOriginal": "Restore original",
   "chatPrivateSavedOnlyToMe": "Saved as only visible to me.",
   "chatPrivateScheduleDraft": "Schedule time draft",
@@ -12956,33 +12520,28 @@
   "chatReviewStart": "Let me review",
   "chatReviewingNode": "Reviewing: {label}{mastery}",
   "chatRoundtableAboutSeconds": "About {seconds}s",
-  "chatRoundtableCodingExpert": "Coding Expert",
   "chatRoundtableConclusion": "Overall conclusion",
   "chatRoundtableCoordinator": "Coordinator",
-  "chatRoundtableDeepAnalyst": "Deep Analyst",
   "chatRoundtableErrorSpecialist": "Error Specialist",
   "chatRoundtableEstimatedProcessing": "Estimated processing",
   "chatRoundtableExamStrategist": "Exam Strategist",
   "chatRoundtableExpertCollab": "Expert collaboration",
   "chatRoundtableExpertCollabCount": "Expert collaboration ({count})",
   "chatRoundtableGalaxyNavigator": "Star Map Navigator",
+  "chatRoundtableGalaxyNavigator": "Galaxy Navigator",
   "chatRoundtableHiddenTurns": "{count} more viewpoints",
   "chatRoundtableHighComplexity": "High complexity",
   "chatRoundtableLowComplexity": "Low complexity",
-  "chatRoundtableMathExpert": "Math Expert",
   "chatRoundtableMediumComplexity": "Medium complexity",
   "chatRoundtableMoreExperts": "{count}",
   "chatRoundtableScienceExpert": "Science Expert",
-  "chatRoundtableSearchExpert": "Search Expert",
   "chatRoundtableTimeCoach": "Time Coach",
   "chatRoundtableTurnCount": "{count} viewpoints",
-  "chatRoundtableWritingExpert": "Writing Expert",
   "chatSettingsEnableSeedDesc": "Inject enabled seed library content and answer style into current chat.",
   "chatSettingsEnableSeedEnhancement": "Enable Seed Library Enhancement",
   "chatSettingsExperience": "Chat Experience",
   "chatSettingsExperienceDesc": "Adjust chat display, prediction components, and seed library enhancement.",
   "chatSettingsOpenAdvanced": "Open Advanced Settings",
-  "chatSettingsOpenAdvancedDesc": "Enter detailed transparency configuration page.",
   "chatSettingsPureMode": "Pure Mode",
   "chatSettingsPureModeDesc": "Keep only text messages. Hide extra cards and feedback below messages.",
   "chatSettingsSeedLibrary": "Seed Library",
@@ -13051,7 +12610,6 @@
   "chatStrategyContinue": "Continue",
   "chatStreamAdjustStrategy": "Help me adjust strategy",
   "chatStreamCommunityInsight": "Community insight",
-  "chatStreamCompleted": "Completed",
   "chatStreamHoursMins": "{hours}h {mins}min",
   "chatStreamHoursOnly": "{hours}h",
   "chatStreamMinutes": "{minutes} min",
@@ -13101,7 +12659,6 @@
   "chatWidgetKnowledge": "Knowledge card",
   "chatWidgetPlanStatus": "Plan status",
   "chatWidgetPlanSummary": "Plan summary",
-  "chatWidgetTaskList": "Task list",
   "chatWsUnknownError": "Unknown error",
   "@seedLibraryItemCount": {
     "placeholders": {
@@ -13118,7 +12675,6 @@
     }
   },
   "planViewCurrentPlan": "Current Plan",
-  "planViewNoTasksForPlan": "No Tasks",
   "planViewNoPlanTasks": "No Plan Tasks",
   "planViewAllPlanTasks": "View All Plan Tasks",
   "planViewQuotaFull": "All 3 active plan slots are in use. Deactivate or archive an old plan before creating a new one.",
@@ -14031,8 +13587,8 @@
   "galaxySectorInspiration": "Inspiration",
   "planSprintSubmitFailed": "Sprint submission failed, please try again",
   "planPortfolioLoadFailedMsg": "Failed to load learning portfolio",
+  "galaxySectorDarkMatter": "Dark Matter",
   "planPortfolioRetry": "Retry",
-  "planGuideAiNotReturn": "AI did not return a result, please try again",
   "planViewDetails": "View details",
   "toolsPlanLinked": "Planned end time",
   "ebLoadError": "Failed to load errors, please try again",
@@ -15015,6 +14571,7 @@
   "homeAuroraCorrectionSubmit": "Submit",
   "homeWeatherWithSummary": "Great for {hint}, {summary}",
   "homeWeatherOnlyHint": "Great for {hint}",
+  "homeAskAurora": "Ask Aurora",
   "homeNextActionTitle": "Next",
   "homeNextActionAllClear": "All clear",
   "homeNextActionNoPending": "No pending actions",
@@ -15130,6 +14687,7 @@
   "homeOnboardingChatSparkle": "Chat with Sparkle",
   "homeOnboardingChatSubtitle": "Share your thoughts, get personalized guidance",
   "homeOnboardingExploreSubtitle": "Discover your knowledge structure and growth areas",
+  "homeOnboardingExploreGalaxy": "Explore knowledge map",
   "homeOnboardingResumeTitle": "Finish setup so Sparkle knows you better",
   "homeOnboardingResumeSummary": "Your learning profile and modeling chat are still pending. Explore freely first — the AI is ready whenever you are.",
   "homeOnboardingResumeCta": "Continue setup",
@@ -15398,6 +14956,7 @@
       }
     }
   },
+  "homeNoUrgentAction": "No urgent action is queued. Review, add context, or let Aurora reprioritize.",
   "goalIntentTitle": "Tell me what you want to achieve",
   "goalIntentHint": "One sentence works, e.g. \"Computer Networks final in 7 days, barely studied\"",
   "goalIntentTypeHere": "Type here",
@@ -15465,7 +15024,6 @@
   "envelopeDimSupport": "Support",
   "envelopeDimComplexity": "Complexity",
   "taskDetailSemanticsTitle": "Task detail",
-  "chatSemanticsScreen": "Chat screen",
   "streakQualityRecoveryScore": "Recovery",
   "streakQualitySuggestedAction": "Suggested action",
   "envelopeEngagementSummary": "{streak}d streak · {sessions} sessions this week",
@@ -15502,8 +15060,6 @@
   "chatLabelRetry": "Retry",
   "chatLabelRefresh": "Refresh",
   "chatLabelCollapse": "Collapse",
-  "chatLabelExpand": "Expand",
-  "chatLabelAuto": "Auto",
   "chatLabelModel": "Model",
   "chatLabelTier": "Tier",
   "chatLabelFast": "Fast",
@@ -15566,8 +15122,6 @@
   },
   "chatAgendaConfirmCorrectionFeedback": "Confirm chat correction feedback",
   "chatAgendaAdjustReplyStrategy": "Adjust subsequent reply strategy",
-  "chatAgendaConfirmStatusBarJudgment": "Confirm status bar judgment",
-  "chatAgendaDecideAdjustNextSteps": "Decide whether to adjust next steps",
   "chatAgendaConfirmTaskBlockCause": "Identify if the block is time, difficulty, or getting started",
   "chatAgendaAdjustNextTaskEasier": "Adjust the next task card to be easier to start",
   "chatAgendaConfirmStatusBarJudgmentShort": "Confirm status bar judgment",
@@ -15787,7 +15341,6 @@
   "intentKeepGoing": "Keep going",
   "intentDaysLeft": "{days} days left",
   "sprintCompletionLoading": "Loading...",
-  "planEditLoading": "Loading plan...",
   "learningPortfolioLoading": "Loading...",
   "sprintActionLoading": "Loading...",
   "syncCenterLoading": "Loading...",
@@ -15981,8 +15534,6 @@
       }
     }
   },
-  "communityCheckinLike": "Like",
-  "communityEncourageLabel": "Encourage",
   "communitySimilarGoalPursuers": "Similar goal pursuers",
   "communitySimilarGoalPursuersCount": "{count} people pursuing similar goals",
   "@communitySimilarGoalPursuersCount": {
@@ -16000,18 +15551,6 @@
       }
     }
   },
-  "communityGoalProgressFormat": "{title} · {percent}%",
-  "@communityGoalProgressFormat": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      },
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
-  "communityDefaultUserName": "User",
   "communitySimilarGoalConnectMessage": "We are pursuing similar goals. Want to connect?",
   "communityFriendRequestSent": "Friend request sent",
   "communityFriendRequestFailed": "Could not send friend request",
@@ -18193,8 +17732,6 @@
   "@visualElementsFilter": {},
   "communityCheckinGoalLabel": "Link a goal (optional)",
   "@communityCheckinGoalLabel": {},
-  "communityCheckinGoalHint": "Link to revisit your goal trajectory from this check-in",
-  "@communityCheckinGoalHint": {},
   "communityCheckinGoalNone": "No goal",
   "@communityCheckinGoalNone": {},
   "communityHubCheckinGoalSuccess": "Checked in, +{flame} flame",

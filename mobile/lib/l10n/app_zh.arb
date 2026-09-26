@@ -39,7 +39,6 @@
   "enterToSend": "回车发送消息",
   "enterToSendDescription": "在对话框中按回车键直接发送",
   "refresh": "刷新",
-  "chatAiSystemSettings": "AI 系统设置",
   "sensoryFeedbackSectionTitle": "感官反馈",
   "sensoryFeedbackSectionSubtitle": "统一控制操作音效、成就反馈和触觉回馈",
   "sensoryFeedbackLoadingSubtitle": "正在读取感官反馈偏好...",
@@ -70,7 +69,6 @@
   "showChatTransparencyCapsuleTitle": "显示 AI 透明胶囊",
   "showChatTransparencyCapsuleSubtitle": "控制聊天页底部的 AI 系统完成情况与透明化浮层",
   "taskCard": "任务卡片",
-  "planCard": "计划卡片",
   "startTask": "开始任务",
   "viewDetails": "查看详情",
   "finishTask": "完成任务",
@@ -115,26 +113,16 @@
   "wechat": "微信",
   "createGrowthPlan": "创建成长计划",
   "createSprintPlan": "创建冲刺计划",
-  "planCreateTitle": "创建计划",
   "planCreateSuccess": "计划创建成功",
-  "planCreateFailed": "创建计划失败: {error}",
   "planNameLabel": "计划名称",
-  "planNameHint": "输入计划名称...",
   "planNameRequired": "请输入计划名称",
-  "planDescLabel": "计划描述",
-  "planDescHint": "描述你的计划目标...",
-  "planSubjectLabel": "主题/学科",
-  "planSubjectHint": "如：计算机科学、英语...",
   "planTargetDateLabel": "目标日期",
   "planTargetDateUnset": "未设置目标日期",
-  "planDailyMinutesLabel": "每日可用时间",
-  "planDailyMinutesHint": "每天计划投入多少分钟",
   "planPriorityLabel": "优先级",
   "planPriorityCritical": "紧急",
   "planPriorityHigh": "高",
   "planPriorityNormal": "普通",
   "planPriorityLow": "低",
-  "planCreating": "创建中...",
   "planCreateAction": "创建计划",
   "featureComingSoon": "精彩功能即将登场",
   "stayTuned": "敬请期待~",
@@ -175,7 +163,6 @@
   "generationFailedWithDetail": "生成失败: {error}",
   "version": "Sparkle v2.1.0-stable\n© 2025 Sparkle Team",
   "editPlan": "编辑计划",
-  "planEditInProgress": "计划编辑功能开发中",
   "planId": "计划ID",
   "featureInDevelopment": "功能开发中...",
   "sprintHistory": "冲刺历史",
@@ -256,9 +243,6 @@
   "toolsCognitivePatternsTitle": "认知模式",
   "toolsCognitivePatternsDesc": "查看行为定式与认知洞察",
   "chatModeStandard": "标准对话",
-  "chatModeDeep": "深度专注",
-  "chatModeCreative": "创意模式",
-  "chatModeAnalytical": "分析模式",
   "chatModeStandardDesc": "标准 AI 对话模式",
   "chatModeDeepAnalysis": "深度分析",
   "chatModeDeepAnalysisDesc": "多专家协作分析",
@@ -281,48 +265,20 @@
   "chatConnectionFailed": "连接失败",
   "aiCollabModeTitle": "AI 协作",
   "switchAgentModeSemantics": "切换 Agent 模式",
-  "chatDagLayerProgress": "第 {current}/{total} 层",
-  "chatDagProcessing": "处理依赖关系中...",
-  "chatDagCompleted": "分析完成",
   "chatInputPlaceholder": "输入消息...",
   "chatInputAttachment": "附件",
   "chatInputVoice": "语音",
   "chatInputShare": "分享",
   "chatInputTapToShare": "点击选择分享内容",
-  "chatVoiceInput": "语音输入",
-  "chatAttachment": "附件",
-  "chatEmoji": "表情",
-  "chatSend": "发送",
-  "chatTyping": "AI 正在输入...",
-  "chatOnline": "在线",
-  "chatOffline": "离线",
-  "chatReconnect": "重新连接",
-  "chatClearHistory": "清空历史",
-  "chatExportChat": "导出对话",
   "chatNewChat": "新对话",
   "chatHistory": "对话历史",
-  "chatNoHistory": "暂无对话历史",
-  "chatDeleteConfirm": "确定删除此对话？",
-  "chatDeleted": "对话已删除",
   "chatCopied": "已复制到剪贴板",
-  "chatRegenerate": "重新生成",
   "chatCopy": "复制",
   "chatShare": "分享",
   "chatCharacters": "字",
   "chatWords": "词",
-  "chatFeedback": "反馈",
-  "chatReportIssue": "报告问题",
-  "chatMessageTooLong": "消息过长",
-  "chatEmptyMessage": "不能发送空消息",
   "chatConnectionLost": "连接断开，正在重试...",
-  "chatConnectionRestored": "连接已恢复",
-  "chatWelcome": "你好！今天我能帮你什么？",
   "chatWelcomeSubtitle": "你的学习伙伴。我会看着你的进展，有把握时提醒你，拿不准时先问你。",
-  "chatSuggestion1": "帮我规划学习",
-  "chatSuggestion2": "解释一个概念",
-  "chatSuggestion3": "查看我的进度",
-  "chatSuggestion4": "推荐学习资源",
-  "chatAgentSwitched": "已切换到 {agent}",
   "achievementTitle": "成就",
   "achievementUnlocked": "成就解锁！",
   "achievementLocked": "未解锁",
@@ -1709,7 +1665,6 @@
   "communityDurationLabel": "时长",
   "communityFlameLabel": "火花",
   "communityStreakLabel": "连胜",
-  "communitySharedTask": "分享了一个任务",
   "shareResourceTitle": "分享到社群",
   "shareResourceTabFriends": "好友",
   "shareResourceTabGroups": "群组",
@@ -2145,7 +2100,6 @@
   "chatQuickActionErrorAttribution": "错误归因",
   "chatQuickActionErrorAttributionPrompt": "我想分析一下最近的错误原因",
   "chatPlanUnbound": "未绑定计划",
-  "chatFileProcessing": "文件处理中，完成后可用于对话",
   "chatPromptDeepAnalysis1": "先给综合判断，再展开依据",
   "chatPromptDeepAnalysis2": "只看关键结论和风险",
   "chatPromptDeepAnalysis3": "补一个反方观点帮我校准",
@@ -2205,10 +2159,6 @@
     }
   },
   "chatOfflineQueueCompleteSemantic": "排队消息已全部发送",
-  "chatMessageQueued": "等待发送",
-  "chatMessageSending": "正在发送",
-  "chatMessageSendFailed": "发送失败",
-  "chatMessageRetrySend": "重试",
   "chatAgentNavigator": "星图导航",
   "chatAgentExamStrategist": "考试策略师",
   "chatAgentTimeCoach": "时间教练",
@@ -2290,7 +2240,6 @@
       }
     }
   },
-  "chatModeCustomTeamLabel": "自定义团队",
   "chatModeCustomTeamTitle": "自定义专家团队",
   "chatModeCustomTeamSubtitle": "选择参与专家和协作方式",
   "chatMetadataContinuity": "承接上文",
@@ -2493,35 +2442,12 @@
   "reviewExit": "退出",
   "reviewNoMatchingErrors": "没有符合条件的错题",
   "communityTitle": "星火社群",
-  "communitySearch": "搜索",
-  "communitySearchUsers": "搜索用户",
-  "communitySearchGroups": "搜索群组",
   "communityDiscoverFriends": "去发现好友",
-  "communityDiscoverFriendsHint": "查看推荐的好友",
   "communityCreateGroup": "创建社群",
-  "communityCreateGroupHint": "创建一个新的学习群组",
-  "communityActions": "社群操作",
-  "communityNoFriends": "还没有好友",
-  "communityNoGroups": "还没有加入群组",
-  "communityStatusOnline": "在线",
-  "communityStatusOffline": "离线",
-  "communityFocusModeOn": "专注模式开启中",
-  "communityFocusModeOff": "开启专注模式",
-  "communityFocusModeEnabled": "已开启专注模式，消息将不会打扰您",
-  "communityFocusModeDisabled": "已关闭专注模式",
   "communityTabFeed": "动态",
-  "communityTabFriends": "好友",
   "communityTabGroups": "群组",
   "communityTabPartners": "伙伴",
   "communityAddFriend": "加好友",
-  "communityMembers": "{count} 成员",
-  "@communityMembers": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "friendsMyFriends": "我的好友",
   "friendsFriendRequests": "好友请求",
   "friendsDiscoverFriends": "发现好友",
@@ -2593,10 +2519,8 @@
   "taskMonitorStatusPending": "等待中",
   "taskMonitorStatusCancelled": "已取消",
   "planHistoryTitle": "历史计划",
-  "planHistoryEmpty": "暂无历史计划",
   "planHistoryRestore": "恢复计划",
   "planHistoryRestoreSuccess": "计划已恢复",
-  "planHistoryDeleteConfirm": "确定要删除这个历史计划吗？",
   "planTypeSprint": "冲刺计划",
   "planTypeGrowth": "成长计划",
   "planProgressPercent": "{percent}% 完成",
@@ -2896,14 +2820,8 @@
   "translationSwapLanguages": "交换语言",
   "translationDetectLanguage": "检测语言",
   "translationHistoryEmpty": "暂无翻译历史",
-  "memoryEvidenceChain": "证据链",
-  "memoryNoEvidence": "暂无证据",
   "memoryCurrentVersion": "当前版本",
   "memoryVersionHistory": "版本历史",
-  "memorySortNewest": "最新",
-  "memorySortOldest": "最旧",
-  "memorySortImportance": "重要度",
-  "memoryEvidenceResolveFailed": "证据解析失败",
   "memoryStatus": "状态",
   "memoryGoalDate": "目标日期",
   "memoryDeadline": "截止时间",
@@ -2912,7 +2830,6 @@
   "memoryOccurredAt": "发生时间",
   "memoryImportanceScore": "重要度",
   "memoryRetractedAt": "撤回时间",
-  "memoryUpdate": "更新",
   "memoryConfidence": "置信度",
   "memoryDiff": "差异",
   "memoryRevertToVersion": "撤回到此版本",
@@ -2920,13 +2837,10 @@
   "memoryInitialVersion": "初始版本",
   "memoryNoChanges": "无变化",
   "memoryRevertNotEnabled": "Revert 功能尚未启用",
-  "memoryWhyThisMemory": "为什么有这条记忆？",
   "memoryEvidenceCount": "证据数",
   "memoryVersions": "版本数",
   "memoryBudget": "预算",
   "memoryViewEvidence": "查看证据",
-  "memoryAllowedCapture": "已允许捕获",
-  "memoryCaptureLevel": "捕获级别",
   "memoryTypeNone": "无",
   "memoryTypePreference": "偏好",
   "memoryTypeGoal": "目标",
@@ -2937,9 +2851,6 @@
   "memoryEpisodicDisabledHint": "当前设置已关闭经历捕获，后续不会记录此类记忆。",
   "memorySourceBlockedHint": "该来源已被屏蔽，后续不会记录此类记忆。",
   "memoryKeyBlockedHint": "该偏好已被屏蔽，后续不会记录此类记忆。",
-  "memoryExplanationPreference": "已记录，因为您的偏好最近更新了。",
-  "memoryExplanationEpisodic": "已记录，因为这段经历被标记为重要。",
-  "memoryExplanationGoal": "已记录，以保持您的活跃目标可见。",
   "memoryCopied": "已复制记忆内容",
   "memoryExportView": "导出视图",
   "memoryCorrectionActions": "纠错操作",
@@ -2948,14 +2859,8 @@
   "memoryCorrectionLowerConfidence": "置信度较低",
   "memoryCorrectionMerge": "合并",
   "memoryMergeComingSoon": "合并功能暂未开放",
-  "memoryCorrectionSubmitted": "已提交纠错",
-  "memoryCorrectionFailed": "纠错失败",
   "memoryHistoryLoadFailed": "历史记录加载失败",
   "memorySettingsLoadFailed": "加载记忆设置失败",
-  "memoryAddEvidence": "添加证据",
-  "memoryEvidenceType": "证据类型",
-  "memoryEvidenceSource": "来源",
-  "memoryEvidenceContent": "内容",
   "memoryChatLabel": "对话 ({role})",
   "@memoryChatLabel": {
     "placeholders": {
@@ -3258,7 +3163,6 @@
   "shopItemTypeBoost": "增益",
   "shopItemTypeVisualElement": "视觉元素",
   "taskDueDateUnset": "无截止日期",
-  "chatAchievementUnlocked": "{arg0}",
   "chatActionErrorSuggestion": "{arg0}",
   "chatActionErrorTitle": "操作错误",
   "chatActionIgnore": "忽略",
@@ -3348,10 +3252,8 @@
   "chatFeedbackThanks": "感谢您的反馈！",
   "chatFocusSprintDefaultTitle": "专注冲刺",
   "chatFocusStart": "开始专注",
-  "chatInputDocumentClean": "清理文档",
   "chatInterventionViewPlan": "查看计划",
   "chatInterventionViewSettings": "查看设置",
-  "chatOpenStudyMaterialsLibrary": "打开学习资料库",
   "chatKnowledgeCitationBody": "知识引用",
   "chatKnowledgeCitationTitle": "{arg0}",
   "chatModeCustomTeam": "自定义团队",
@@ -3381,14 +3283,6 @@
   "chatOptionalNotesHint": "可选备注...",
   "chatOrchestrationTraceStep": "编排步骤",
   "chatOrchestrationTraceTitle": "编排追踪",
-  "chatPendingMessagesFailed": "{count} 条未发送消息被丢弃。",
-  "@chatPendingMessagesFailed": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "chatPendingMessagesAuthExpired": "有 {count} 条未发送消息因登录失效被丢弃。",
   "@chatPendingMessagesAuthExpired": {
     "placeholders": {
@@ -3464,18 +3358,9 @@
       }
     }
   },
-  "chatStudyMaterialsKnowledgeNodes": "{count} 个知识节点",
-  "@chatStudyMaterialsKnowledgeNodes": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "chatStudyMaterialsLabel": "学习资料",
   "chatStudyMaterialsPaused": "学习资料已暂停",
   "chatStudyMaterialsPausedDescription": "下一轮对话将暂停文档检索。",
-  "chatStudyMaterialsReady": "已就绪",
   "chatStreakSummary": "{arg0} {arg1}",
   "chatSubmitFeedback": "提交反馈",
   "chatSynthesisSuggestions": "综合建议",
@@ -3516,11 +3401,8 @@
   "communityAgentProcessing": "AI 正在处理...",
   "communityAgentPromptHint": "输入提示词...",
   "communityAgentQuickConsensus": "快速共识",
-  "communityAgentQuickConsensusPrompt": "帮我快速总结群内共识",
   "communityAgentQuickReminder": "快速提醒",
-  "communityAgentQuickReminderPrompt": "帮我设置一个提醒",
   "communityAgentQuickSummary": "快速总结",
-  "communityAgentQuickSummaryPrompt": "帮我总结最近的讨论",
   "communityAgentThinking": "AI 思考中...",
   "communityChatEmpty": "暂无消息",
   "communityChatConnectionLost": "实时连接已被服务器拒绝，自动重连已停止",
@@ -4226,7 +4108,6 @@
   "planOverdueDays": "{arg0}",
   "planProgressLabel": "计划进度",
   "planRecentFeedback": "最近反馈",
-  "planRelatedTasks": "相关任务",
   "planRestore": "恢复计划",
   "planRestoredSuccess": "计划已恢复",
   "planReviewAdditionalNotesHint": "添加备注（可选）...",
@@ -5056,13 +4937,11 @@
   "chatAccessoryContent": "附加内容",
   "chatContinueExploring": "继续探索",
   "chatSwipeToSwitch": "左右滑动切换不同入口",
-  "chatCurrentLearningTopic": "当前学习主题",
   "chatCollaborationProcess": "协作过程",
   "chatPlanContext": "计划上下文",
   "chatPlanStatus": "计划状态",
   "chatContinueFromConversation": "承接刚才的对话",
   "chatReviewFirstThenExpand": "先看重点，再决定要不要展开完整体验",
-  "chatPathLabel": "路径",
   "chatMasteryLabel": "掌握度",
   "chatOpenFullExperience": "打开完整体验",
   "chatContinueInChat": "继续在对话里",
@@ -5082,24 +4961,6 @@
   "chatPlanProgressLabel": "进度: {percent}%",
   "chatPromptPreviewCancel": "先不发",
   "chatPromptPreviewSend": "直接发送",
-  "chatParticipantLabel": "参与者",
-  "chatPromptComparePaths": "比较两条路线",
-  "chatPromptComparePathsMessage": "比较一下「{pathA}」和「{pathB}」的取舍。",
-  "chatPromptDefaultPathA": "路线 A",
-  "chatPromptDefaultPathB": "路线 B",
-  "chatPromptPrerequisites": "先补什么前置",
-  "chatPromptPrerequisitesMessage": "如果我现在就开始学「{topic}」，最该先补的前置是什么？",
-  "chatPromptExamFocus": "考试重点是什么",
-  "chatPromptExamFocusMessage": "围绕「{topic}」，告诉我最容易成为考试重点的部分和原因。",
-  "chatPromptMakePlan": "给我排成计划",
-  "chatPromptMakePlanMessage": "把「{topic}」这条路径改写成 7 天可执行的小计划。",
-  "chatOneOfTheRoles": "其中一个角色",
-  "chatPromptLetMeAnswer": "让我来回答",
-  "chatPromptLetMeAnswerMessage": "让 {speaker} 围绕「{topic}」继续追问我一个关键问题，我来回答。",
-  "chatPromptPracticeExplain": "练习讲给别人听",
-  "chatPromptPracticeExplainMessage": "围绕「{topic}」安排一轮需要我讲给别人听的仿真。",
-  "chatPromptErrorDiagnosis": "换成错因诊断",
-  "chatPromptErrorDiagnosisMessage": "把「{topic}」切到错因诊断模式，帮我定位真正的卡点。",
   "chatPromptOrderActions": "排今天行动顺序",
   "chatPromptOrderActionsMessage": "根据这份学习报告，帮我排一个今天就能开始的行动顺序。",
   "chatPromptExpandKeyIssue": "展开重点问题",
@@ -5241,14 +5102,6 @@
   "dashboardLoadFailed": "加载失败",
   "dashboardRetry": "重试",
   "dashboardQuickCalibration": "快速校准",
-  "planEditTypeTitle": "编辑{type}",
-  "@planEditTypeTitle": {
-    "placeholders": {
-      "type": {
-        "type": "Object"
-      }
-    }
-  },
   "planUpdated": "计划已更新",
   "planGuideFillNameAndGoalFirst": "先填写计划名称和计划目标，再生成 AI 指南",
   "planGuideGeneratedHuman": "已生成给用户看的执行指南",
@@ -5265,109 +5118,7 @@
   "planSuggestedGrowthTask2": "完成一次阶段复盘",
   "planSuggestedSprintTask1": "确认冲刺目标与验收标准",
   "planSuggestedSprintTask2": "完成冲刺关键里程碑",
-  "planSave": "保存计划",
-  "planStepBasics": "计划定位",
-  "planStepSchedule": "时间结构",
-  "planStepTasks": "任务编排",
-  "planStepGuide": "计划边界与指南",
-  "planStepReview": "确认预览",
-  "planAiVersionCopied": "AI 版本已复制",
-  "planBasicsDescription": "先定义这是一张真正的计划卡，而不是普通任务。",
-  "planBasicsNameHint": "例如：6 周英语口语提升 / 期中冲刺收束",
-  "planBasicsNameRequired": "请先填写计划名称",
-  "planBasicsSubjectLabel": "主题方向",
-  "planBasicsSubjectHint": "英语、Flutter、考研数学、论文阅读...",
-  "planBasicsGoalLabelGrowth": "长期目标",
-  "planBasicsGoalLabelSprint": "冲刺目标",
-  "planBasicsGoalHintGrowth": "写清楚这个成长计划最终想形成什么能力、习惯或成果。",
-  "planBasicsGoalHintSprint": "写清楚这次冲刺的结果、验收标准和不能偏离的主线。",
-  "planBasicsGoalRequired": "请写出这张计划卡的目标",
-  "planBasicsPriorityLabel": "计划优先级",
-  "planPriorityNormalValue": "正常",
-  "planPriorityCriticalValue": "关键",
-  "planScheduleDescription": "把持续时间、每日投入和提醒节奏一次性定清楚。",
-  "planScheduleDailyMinutesLabel": "每日可投入时长",
-  "planScheduleMinutesUnit": "{minutes} 分钟",
-  "@planScheduleMinutesUnit": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      }
-    }
-  },
-  "planScheduleTotalHours": "总预估工时 {hours} 小时",
-  "@planScheduleTotalHours": {
-    "placeholders": {
-      "hours": {
-        "type": "Object"
-      }
-    }
-  },
-  "planScheduleTargetDateUnset": "暂未设置",
-  "planScheduleReminderTime": "每日提醒时间",
-  "planScheduleStageLabel": "当前计划阶段",
-  "planScheduleStageSprint": "冲刺推进",
-  "planScheduleStageDaily": "日常执行",
-  "planScheduleStageReview": "复盘调优",
-  "planScheduleStagePaused": "暂时暂停",
   "planScheduleChipWeekday": "工作日推进，周末复盘",
-  "planScheduleChipMorning": "早晨启动，晚上收束",
-  "planScheduleChipAfternoon": "午后主攻，夜间轻复盘",
-  "planScheduleRhythmLabel": "节奏说明",
-  "planScheduleRhythmHint": "例如：周一到周五推进，周六复盘，周日补缺",
-  "planTasksDescription": "这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。",
-  "planTasksBlueprintLabel": "任务编排说明",
-  "planTasksBlueprintHint": "例如：先搭框架，再每天推进主线，最后统一复盘补漏。",
-  "planTasksRefExisting": "参考已有任务",
-  "planTasksMinutesDifficulty": "{minutes} 分钟 · 难度 {difficulty}",
-  "@planTasksMinutesDifficulty": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      },
-      "difficulty": {
-        "type": "Object"
-      }
-    }
-  },
-  "planTasksCopyToPlan": "复制进计划",
-  "planTasksNewTaskLabel": "新增计划任务",
-  "planTasksNewTaskHint": "例如：完成一轮章节梳理",
-  "planTasksDurationLabel": "时长",
-  "planTasksAddToPlan": "加入计划任务",
-  "planTasksEmpty": "当前还没有计划任务",
-  "planGuideScopeLabel": "计划边界与注意事项",
-  "planGuideScopeHint": "例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。",
-  "planGuidePerspectiveLabel": "任务指南视角",
-  "planGuideForHuman": "给自己看",
-  "planGuideForAi": "给 AI 用",
-  "planGuideHumanInfo": "用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。",
-  "planGuideAiInfo": "AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。",
-  "planGuideHumanTitle": "用户版执行指南",
-  "planGuideAiTitle": "给 AI 的执行版本",
-  "planGuideGenerating": "生成中",
-  "planGuideGenerateHuman": "生成用户版",
-  "planGuideGenerateAi": "生成 AI 版",
-  "planGuideHumanHint": "生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。",
-  "planGuideAiEmpty": "还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。",
-  "planGuideCopyAi": "复制 AI 版",
-  "planReviewSummary": "{planType} · {minutes} 分钟/天 · {hours} 小时",
-  "@planReviewSummary": {
-    "placeholders": {
-      "planType": {
-        "type": "Object"
-      },
-      "minutes": {
-        "type": "Object"
-      },
-      "hours": {
-        "type": "Object"
-      }
-    }
-  },
-  "planReviewEditInfo": "保存后会更新计划描述，并为新增草案创建新的计划任务。",
-  "planReviewCreateInfo": "创建后会生成一张更完整的计划卡，并同步创建计划任务。",
-  "planReviewFinalDescription": "最终写入的计划描述",
   "taskExecutionChatAboutStuckPoint": "和 Sparkle 聊聊这个卡点",
   "taskExecutionSentToAurora": "已发送给 Aurora",
   "taskExecutionStuckPromptIntro": "我在做这个任务时卡住了，想和你一起拆一下具体卡点。",
@@ -6211,16 +5962,7 @@
   "memoryPanelAdjust": "调整",
   "memoryPanelAiAutoMemories": "AI 自动记忆",
   "memoryPanelAiInferredDescription": "AI 推断自聊天，默认仅作记忆展示，不参与下游决策。",
-  "memoryPanelClearFilter": "清空筛选",
   "memoryPanelCommitmentDismissed": "已忽略该承诺",
-  "memoryPanelConfidenceValue": "置信度 {value}",
-  "@memoryPanelConfidenceValue": {
-    "placeholders": {
-      "value": {
-        "type": "Object"
-      }
-    }
-  },
   "memoryPanelConflictFailed": "处理冲突失败: {error}",
   "@memoryPanelConflictFailed": {
     "placeholders": {
@@ -6240,7 +5982,6 @@
       }
     }
   },
-  "memoryPanelDate": "日期",
   "memoryPanelDeviationsDetected": "检测到 {count} 个偏离",
   "@memoryPanelDeviationsDetected": {
     "placeholders": {
@@ -6263,22 +6004,8 @@
     }
   },
   "memoryPanelEmptyDescription": "先聊一聊你的目标、偏好或刚完成的学习动作，系统才会开始在这里整理长期记忆。",
-  "memoryPanelEmptyFilterDescription": "试试清空筛选条件，重新查看所有已整理的记忆。",
-  "memoryPanelEmptyFilterTitle": "暂无符合条件的记忆",
   "memoryPanelEmptyTitle": "记忆面板还没有内容",
-  "memoryPanelEvidenceAll": "证据全部",
-  "memoryPanelEvidenceMissing": "缺失",
-  "memoryPanelEvidenceOk": "OK",
-  "memoryPanelEvidenceRedacted": "已隐藏",
   "memoryPanelForesightHint": "前瞻提示",
-  "memoryPanelImportanceValue": "重要度 {value}",
-  "@memoryPanelImportanceValue": {
-    "placeholders": {
-      "value": {
-        "type": "Object"
-      }
-    }
-  },
   "memoryPanelItemCount": "{count} 条",
   "@memoryPanelItemCount": {
     "placeholders": {
@@ -6304,10 +6031,8 @@
     }
   },
   "memoryPanelMarkedComplete": "已标记为完成",
-  "memoryPanelMetricsNone": "指标: -",
   "memoryPanelNotUpdated": "未更新",
   "memoryPanelRecentScenes": "最近场景",
-  "memoryPanelRevoke": "撤销",
   "memoryPanelRevokeFailed": "撤销失败: {error}",
   "@memoryPanelRevokeFailed": {
     "placeholders": {
@@ -7853,81 +7578,7 @@
   "examSprintTargetPass": "通过",
   "examSprintTargetHold": "保分",
   "examSprintTargetHighScore": "冲高分",
-  "memorySettingsTitle": "记忆控制",
-  "memorySettingsBack": "返回",
-  "memorySettingsDisabled": "记忆控制未启用",
-  "memorySettingsLoadError": "加载记忆设置失败: {error}",
-  "@memorySettingsLoadError": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "memorySettingsSaveError": "保存失败: {error}",
-  "@memorySettingsSaveError": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "memorySettingsSaveSuccess": "记忆设置已更新",
-  "memorySettingsUnavailable": "记忆控制不可用",
-  "memorySettingsEnabledChip": "记忆已启用",
-  "memorySettingsDisabledChip": "记忆已暂停",
-  "memorySettingsControllableChip": "偏好可控",
-  "memorySettingsDescription": "控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。",
-  "memorySettingsEnableTitle": "启用长期记忆",
-  "memorySettingsEnableDesc": "关闭后会暂停新的记忆写入，但不会删除历史记录。",
-  "memorySettingsSocialTitle": "社交语义子开关",
-  "memorySettingsSocialDesc": "Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。",
-  "memorySettingsSocialSelf": "自我记忆",
   "memorySettingsSocialPersonMention": "人物提及",
-  "memorySettingsSocialRelationship": "关系动态",
-  "memorySettingsSocialCommitment": "承诺事项",
-  "memorySettingsPushTitle": "主动提醒",
-  "memorySettingsPushDesc": "Stage 18 默认关闭。只有你显式开启后，系统才会发送承诺跟进或活跃恢复提醒。",
-  "memorySettingsPushEnableTitle": "启用主动提醒",
-  "memorySettingsPushEnableDesc": "总开关。关闭后 Stage 18 主动提醒会全部停用。",
-  "memorySettingsPushFollowUpTitle": "承诺跟进",
-  "memorySettingsPushFollowUpDesc": "只针对你明确表达过、且已经逾期的承诺事项。",
-  "memorySettingsPushRecoveryTitle": "活跃恢复",
-  "memorySettingsPushRecoveryDesc": "只针对曾经连续活跃、且 72 小时未活跃的情况。",
-  "memorySettingsQuietHoursTitle": "静默时段",
-  "memorySettingsQuietHoursDesc": "你可以收窄系统默认的 22:00-08:00，但不能把提醒扩张到这段时间里。",
-  "memorySettingsStartTime": "开始时间",
-  "memorySettingsEndTime": "结束时间",
-  "memorySettingsCurrentTimezone": "当前时区：{timezone}",
-  "@memorySettingsCurrentTimezone": {
-    "placeholders": {
-      "timezone": {
-        "type": "Object"
-      }
-    }
-  },
-  "memorySettingsViewInbox": "查看提醒收件箱",
-  "memorySettingsTypeTitle": "记忆类型",
-  "memorySettingsTypeDesc": "决定哪些内容会被长期记住。",
-  "memorySettingsPreferenceTitle": "偏好",
-  "memorySettingsPreferenceDesc": "记录回答风格、学习节奏和常见偏好。",
-  "memorySettingsGoalTitle": "目标",
-  "memorySettingsGoalDesc": "记录已确认的长期目标和阶段意图。",
-  "memorySettingsEpisodicTitle": "经历",
-  "memorySettingsEpisodicDesc": "记录对后续决策有帮助的关键事件与反馈。",
-  "memorySettingsInferredTitle": "AI 自动记忆",
-  "memorySettingsInferredDesc": "允许系统从聊天中推断短期经历；每条都必须可见、可撤销。",
-  "memorySettingsCaptureTitle": "捕获强度",
-  "memorySettingsCaptureDesc": "越高越积极，但也会记录更多上下文。",
-  "memorySettingsCaptureLow": "低",
-  "memorySettingsCaptureMedium": "中",
-  "memorySettingsCaptureHigh": "高",
-  "memorySettingsBlockPrefTitle": "屏蔽偏好",
-  "memorySettingsBlockPrefDesc": "不希望长期存储的偏好项可以在这里关闭。",
-  "memorySettingsBlockSourceTitle": "屏蔽来源",
-  "memorySettingsBlockSourceDesc": "限制哪些入口不会写入长期记忆。",
-  "memorySettingsSaveButton": "保存设置",
-  "memorySettingsSaving": "保存中...",
   "reportLearningAnalysisReport": "学习分析报告",
   "reportContinuationSubtitle": "继续查看本次学习旅程的分析报告",
   "reportPartialDataDisclaimer": "部分数据，仅供参考",
@@ -9955,7 +9606,6 @@
   "chatGroupReportSubmit": "提交举报",
   "chatGroupReportSubmitted": "举报已提交，感谢反馈",
   "chatGroupTasks": "群组任务",
-  "chatGrowthNotNeeded": "不需要",
   "chatGrowthStreakDays": "{days} 天",
   "@chatGrowthStreakDays": {
     "placeholders": {
@@ -9980,11 +9630,11 @@
   "chatMemoryMarkedCorrect": "已标记为正确",
   "chatMemoryMentionCount": "提及 {count} 次 · {type}",
   "chatMemoryOriginalTurn": "原 turn",
-  "chatMemoryReferenceCorrectFailed": "记忆纠正失败",
   "chatMemoryReferenceDetailTitle": "相关记忆",
   "chatMemoryReferenceNeedsConfirmation": "待确认",
   "chatMemoryReferenceNotRight": "不对",
   "chatMemoryReferenceUsed": "引用了 {count} 条相关记忆",
+  "chatMemoryReferenceReceiptLabel": "Aurora 引用了 {count} 条相关记忆",
   "chatMemorySessionCount": "{count} 条当前 session 记忆",
   "chatMemorySyncing": "正在同步当前 session 记忆",
   "chatMemoryUnavailable": "记忆抽屉暂时不可用",
@@ -10005,7 +9655,6 @@
   "chatMoreActions": "更多对话操作",
   "chatNextStepsReady": "已为你整理好下一步操作。",
   "chatNotNeeded": "不需要",
-  "chatNudgeReviewText": "我来复盘一下",
   "chatNudgeStartReview": "开始复盘",
   "chatOpenclawHubQueued": "OpenClaw Hub，有 {count} 个排队任务",
   "chatOpenclawSuitable": "适合网页调研、整理、抓取类任务",
@@ -10053,7 +9702,6 @@
   "chatPrivatePutInComposer": "放入输入框",
   "chatPrivatePutInComposerConfirm": "已放入输入框，请确认后发送。",
   "chatPrivateQuickSummary": "快速总结",
-  "chatPrivateQuickSummaryLabel": "快速总结",
   "chatPrivateRestoreOriginal": "恢复原文",
   "chatPrivateSavedOnlyToMe": "已保存为仅自己可见。",
   "chatPrivateScheduleDraft": "协调时间草稿",
@@ -10090,33 +9738,26 @@
   "chatReviewStart": "我来复盘一下",
   "chatReviewingNode": "正在复习: {label}{mastery}",
   "chatRoundtableAboutSeconds": "约 {seconds}s",
-  "chatRoundtableCodingExpert": "编程专家",
   "chatRoundtableConclusion": "综合结论",
   "chatRoundtableCoordinator": "协调器",
-  "chatRoundtableDeepAnalyst": "深度分析师",
   "chatRoundtableErrorSpecialist": "纠错专家",
   "chatRoundtableEstimatedProcessing": "预计处理中",
   "chatRoundtableExamStrategist": "考试策略师",
   "chatRoundtableExpertCollab": "专家协作",
-  "chatRoundtableExpertCollabCount": "专家协作 {count}位",
   "chatRoundtableGalaxyNavigator": "星图导航",
   "chatRoundtableHiddenTurns": "还有 {count} 条观点",
   "chatRoundtableHighComplexity": "高复杂度",
   "chatRoundtableLowComplexity": "低复杂度",
-  "chatRoundtableMathExpert": "数学专家",
   "chatRoundtableMediumComplexity": "中等复杂度",
   "chatRoundtableMoreExperts": "{count} 位",
   "chatRoundtableScienceExpert": "理科专家",
-  "chatRoundtableSearchExpert": "搜索专家",
   "chatRoundtableTimeCoach": "时间教练",
   "chatRoundtableTurnCount": "{count} 条观点",
-  "chatRoundtableWritingExpert": "写作专家",
   "chatSettingsEnableSeedDesc": "为当前聊天注入已启用的种子库内容与回答风格。",
   "chatSettingsEnableSeedEnhancement": "开启种子库增强",
   "chatSettingsExperience": "对话体验",
   "chatSettingsExperienceDesc": "集中调整聊天页的展示方式、预测组件和种子库增强能力。",
   "chatSettingsOpenAdvanced": "打开高级设置",
-  "chatSettingsOpenAdvancedDesc": "进入透明模式的详细配置页面。",
   "chatSettingsPureMode": "纯净模式",
   "chatSettingsPureModeDesc": "聊天中只保留文字消息，隐藏消息下方的附加卡片与反馈组件。",
   "chatSettingsSeedLibrary": "种子库",
@@ -10185,7 +9826,6 @@
   "chatStrategyContinue": "继续",
   "chatStreamAdjustStrategy": "帮我调整策略",
   "chatStreamCommunityInsight": "社群洞察",
-  "chatStreamCompleted": "已完成",
   "chatStreamHoursMins": "{hours} 小时 {mins} 分钟",
   "chatStreamHoursOnly": "{hours} 小时",
   "chatStreamMinutes": "{minutes} 分钟",
@@ -10235,7 +9875,6 @@
   "chatWidgetKnowledge": "知识卡",
   "chatWidgetPlanStatus": "计划状态",
   "chatWidgetPlanSummary": "计划摘要",
-  "chatWidgetTaskList": "任务列表",
   "chatWsUnknownError": "未知错误",
   "toolsFocusPomodoroComplete": "番茄完成",
   "toolsFocusComplete": "专注完成",
@@ -11996,11 +11635,9 @@
   "planSprintNoUpload": "还没上传资料",
   "planSprintUploadedCount": "已上传 {count} 份资料",
   "planSprintStep5Title": "5. 你现在大概会多少？最怕哪几章？",
-  "planSprintScariestChapters": "最怕哪几章？",
   "planSprintStep6Title": "6. 每天真实能学多久？",
   "planSprintDailySliderLabel": "{minutes} 分钟 / 天",
   "planSprintDailyChipLabel": "{minutes} 分钟",
-  "planSprintRealisticTime": "用你大概率能坚持的时间，不用理想状态。",
   "planSprintGenerateFirstDay": "生成我的第一天任务",
   "planSprintSubmitHint": "提交后会在 3 秒内给出初评，并直接带你进入计划或第一天任务。",
   "planSprintNotQuestionnaire": "不是填问卷，是一起确定起点",
@@ -12010,7 +11647,6 @@
   "planSprintAssessmentDone": "初步评估已完成",
   "planSprintPassProbability": "通过概率 {probability}％",
   "planSprintRecommendedMode": "建议模式 {mode}",
-  "planSprintFirstDayTodo": "第一天先做什么",
   "planSprintStartFirstDay": "开始第一天任务",
   "planSprintViewPlanAction": "查看计划",
   "planSprintViewWholePlan": "查看整个计划",
@@ -12022,8 +11658,6 @@
   "planSprintTargetPass": "通过",
   "planSprintTargetHold": "保分",
   "planSprintTargetHighScore": "冲高分",
-  "planSprintCompletionSubject": "{subject} 7 天备考成果",
-  "planSprintCompletionNoSubject": "7 天备考成果",
   "planSprintStillSummarizing": "冲刺成果还在汇总中",
   "planSprintShareOpened": "分享已打开",
   "planSprintShareText": "我的 7 天备考冲刺完成：掌握 {masteredNodes} 个知识节点，修复 {repairedErrors} 个错误模式，完成 {completedTasks} 个任务。最强项：{strongestArea}。#Sparkle备考",
@@ -12107,7 +11741,6 @@
   "planPortfolioNoArchiveTitle": "你的学习档案还没有任何冲刺记录",
   "planPortfolioNoArchiveSubtitle": "先创建一门考试冲刺吧。之后每次完成、进行中和计划中的科目，都会在这里自动归档。",
   "planPortfolioCreateSprint": "去创建考试冲刺",
-  "planPortfolioLoadError": "学习档案加载失败：{message}",
   "planPortfolioLoadMore": "加载更多",
   "planPortfolioCompletedOn": "{mode}（已完成，{completedOn}）",
   "planPortfolioActiveDay": "{mode} · 进行中（第 {currentDay} 天，还剩 {remainingDays} 天）",
@@ -12126,7 +11759,6 @@
   "planDaysMore": "再{remaining}",
   "planCompletedExclaim": "完成!",
   "planLoadFailedError": "计划加载失败：{error}",
-  "planStageTaskTitle": "{planName} - 第{number}阶段任务",
   "planTargetNode": "目标节点",
   "planMasteredNode": "已掌握节点",
   "planLearningNode": "学习中节点",
@@ -12224,28 +11856,11 @@
       }
     }
   },
-  "communityUserFallback": "用户",
   "accountabilityUnlockedOn": "在 {date} 解锁",
   "@accountabilityUnlockedOn": {
     "placeholders": {
       "date": {
         "type": "String"
-      }
-    }
-  },
-  "communityWeeksAgo": "{count}周前",
-  "@communityWeeksAgo": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "communityMonthsAgo": "{count}个月前",
-  "@communityMonthsAgo": {
-    "placeholders": {
-      "count": {
-        "type": "int"
       }
     }
   },
@@ -12259,21 +11874,6 @@
       }
     }
   },
-  "communityFirstSideBySide": "第一次并肩前进",
-  "communityFirstSideBySideDesc": "成功建立第一个责任伙伴关系",
-  "communitySevenDayStreak": "七日共进",
-  "communitySevenDayStreakDesc": "在责任伙伴关系中连续7天打卡",
-  "communitySevenDayCheckin": "7 天连续打卡成就",
-  "communityEnglishSprintPlan": "本周英语冲刺计划",
-  "communityShareProgressLabel": "进度",
-  "communityPointsLabel": "+{points}",
-  "@communityPointsLabel": {
-    "placeholders": {
-      "points": {
-        "type": "String"
-      }
-    }
-  },
   "communityTotalCheckins": "{count} 次",
   "@communityTotalCheckins": {
     "placeholders": {
@@ -12282,7 +11882,6 @@
       }
     }
   },
-  "communityTotalCheckinsLabel": "总打卡",
   "communityChat": "聊天",
   "communityRemind": "提醒",
   "communityWorkshop": "工作台",
@@ -12321,7 +11920,6 @@
   "communityMinutesAgo": "{count}分钟前",
   "communityHoursAgo": "{count}小时前",
   "communityDaysAgo": "{count}天前",
-  "communityBadgeUnlockedOn": "解锁于 {date}",
   "communityQuickShare": "快捷分享",
   "communityTabAchievements": "成就",
   "communityTabPlans": "计划",
@@ -12586,7 +12184,6 @@
       }
     }
   },
-  "communityProgressColon": "进度: {percent}%",
   "communityKnowledgeNode": "知识节点",
   "communityTimeCapsule": "时光胶囊",
   "communitySeedLibrary": "种子库",
@@ -12600,54 +12197,19 @@
   "communityAchievementUnlocked": "成就解锁",
   "communityNewAchievement": "新成就",
   "communityLinkCopied": "链接已复制",
-  "communityUnblockConfirm": "确定要解除对 {name} 的拉黑吗？\n\n解除后对方可以重新发送好友请求和消息给您。",
-  "communityUnblocked": "已解除对 {name} 的拉黑",
-  "communityMuteMember": "禁言 {name}",
-  "communityMute24h": "24小时",
-  "communityMuteMinutes": "{minutes} 分钟",
-  "communityWarnMember": "警告 {name}",
-  "communityGroupMembers": "{name} - 成员",
-  "communityGroupSearchHint": "搜索社群...",
-  "communityGroupTasksMinutes": "{minutes} 分钟",
-  "communitySlowModeSeconds": "{seconds} 秒",
   "communityFriendGoalHint": "例如：每天学习英语 30 分钟",
   "communityCreateGroupGoalHint": "例如：两周内完成 50 道 LeetCode",
   "communityPartnerCheckinCadence": "伙伴打卡节奏",
   "communityCadenceReminder": "{days} 天一次，下一次提醒是 {time}",
-  "communityFeedFilterGlobal": "全局动态",
-  "communityFeedFilterSquad": "我的小队",
-  "communityFeedFilterGoalMates": "目标伙伴",
-  "communityFeedFilterFollowing": "我的关注",
   "communityFeedGlobal": "全局动态",
   "communityFeedMySquad": "我的小队",
-  "communityNoFeedYetTitle": "社区还没有火花",
-  "communityNoFeedYetDescription": "分享一个计划、洞察或小胜利，开始这里的第一次对话。",
-  "communitySharePostAction": "发一条动态",
-  "communityRefreshFeedAction": "刷新动态",
-  "communityGroupTypeSprint": "冲刺群组",
-  "communityGroupTypeSquad": "小队",
-  "communitySprintGoalChip": "冲刺目标: {goal}",
   "communityFeedback": "评价",
   "communityShareSource": "来源",
-  "communityAdoptFailedWithError": "采纳失败: {error}",
-  "communityOwnerFullView": "你看到完整视图",
-  "communityPartnerSummaryView": "伙伴只看到摘要",
-  "communityHiddenFields": "已隐藏: {fields}",
   "communityPartnerObservationPermissions": "{name} 的观察权限",
   "communityAllowObservation": "允许观察我",
-  "communityObservationDisabled": "关闭后，对方不再收到任何关于你的信号或观察提醒",
   "communitySeeStudyTime": "看到我的学习时间",
   "communitySeeTaskContent": "看到我的具体任务内容",
-  "communitySeeEmotionalState": "看到我的情绪/能量状态",
-  "communityShareProgressPercent": "进度: {percent}%",
-  "communityKnowledgeNodeLabel": "知识节点",
-  "communityTimeCapsuleLabel": "时光胶囊",
-  "communityPartnersLabel": "伙伴",
-  "communityFriendsLabel": "好友",
   "communityBoundMilestone": "绑定里程碑：{label}",
-  "communityCommunity": "社群",
-  "communityLoadFailedTitle": "加载失败",
-  "communityRetry": "重试",
   "communityNoCommunitySpark": "还没有社区火花",
   "communityRefreshFeed": "刷新动态",
   "communityShareFailedRetry": "分享失败，请稍后再试",
@@ -12671,7 +12233,6 @@
   "communityShareExpired": "已过期",
   "communityShareToday": "今天",
   "communityShareDaysLater": "{days}天后",
-  "communityShareEvaluation": "评价",
   "communityShareTaskComplete": "任务完成",
   "communityShareDuration": "时长",
   "communitySharePoints": "积分",
@@ -12698,23 +12259,12 @@
   "communityShareActivePlans": "活跃计划",
   "communityShareAchievements": "成就",
   "communityShareBrightness": "亮度",
-  "communityShareUnlockedAt": "解锁于 {date}",
-  "communityShareTodayDate": "今天",
-  "communityShareYesterday": "昨天",
-  "communityShareDaysAgo": "{days}天前",
-  "communityShareWeeksAgo": "{weeks}周前",
-  "communityShareMonthsAgo": "{months}个月前",
   "communityShareNoAchievements": "暂无成就",
   "communityShareStartCheckin": "开始打卡解锁成就吧！",
-  "communitySharePointsValue": "+{points} 积分",
   "communityShareClose": "关闭",
   "communityShareTimeCapsule": "时光胶囊",
   "communityShareWordCount": "{count}字",
   "communityShareDepthLevel": "深度 Lv.{level}",
-  "communitySharePosterTitle": "{name} 的荣耀身份",
-  "communityShareGrowthTitle": "{name} 的本周成长",
-  "communityShareGrowthSubtitle": "等级 Lv.{level} · 亮度 {brightness}%",
-  "communityShareTemplateName": "{name} 模板",
   "communityShareCorePosters": "4 种核心海报",
   "userEngagementState": "参与状态",
   "userSessionCount7d": "7日会话 {count}",
@@ -13146,7 +12696,6 @@
     }
   },
   "planViewCurrentPlan": "当前计划",
-  "planViewNoTasksForPlan": "暂无任务",
   "planViewNoPlanTasks": "暂无方案任务",
   "planViewAllPlanTasks": "查看全部计划任务",
   "planViewQuotaFull": "当前已占满 3 个活跃计划位，先停用或归档旧计划再创建新的。",
@@ -14059,8 +13608,8 @@
   "galaxySectorInspiration": "灵感",
   "planSprintSubmitFailed": "冲刺提交失败，请重试",
   "planPortfolioLoadFailedMsg": "加载学习组合失败",
+  "galaxySectorDarkMatter": "暗物质",
   "planPortfolioRetry": "重试",
-  "planGuideAiNotReturn": "AI 未返回结果，请重试",
   "planViewDetails": "查看详情",
   "toolsPlanLinked": "计划结束时间",
   "ebLoadError": "加载错题失败，请重试",
@@ -15028,6 +14577,7 @@
   "homeAuroraCorrectionSubmit": "发送",
   "homeWeatherWithSummary": "今天适合{hint}，{summary}",
   "homeWeatherOnlyHint": "今天适合{hint}",
+  "homeAskAurora": "问 Aurora",
   "homeNextActionTitle": "下一步",
   "homeNextActionAllClear": "清空啦",
   "homeNextActionNoPending": "当前没有待推进任务",
@@ -15143,6 +14693,7 @@
   "homeOnboardingChatSparkle": "跟Sparkle聊聊",
   "homeOnboardingChatSubtitle": "聊聊你的想法，获得个性化建议",
   "homeOnboardingExploreSubtitle": "发现你的知识结构，找到提升方向",
+  "homeOnboardingExploreGalaxy": "探索知识星图",
   "homeOnboardingResumeTitle": "完成引导，让 AI 更懂你",
   "homeOnboardingResumeSummary": "学习画像和建模访谈还没完成。先随便体验，随时回来继续——AI 已经可以用了。",
   "homeOnboardingResumeCta": "继续引导",
@@ -15411,6 +14962,7 @@
       }
     }
   },
+  "homeNoUrgentAction": "今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。",
   "goalIntentTitle": "告诉我你想达成什么",
   "goalIntentHint": "一句话就好，比如「7天后计网考试基本没学想先别挂」",
   "goalIntentTypeHere": "在这里输入",
@@ -15478,7 +15030,6 @@
   "envelopeDimSupport": "支持度",
   "envelopeDimComplexity": "复杂度",
   "taskDetailSemanticsTitle": "任务详情",
-  "chatSemanticsScreen": "聊天界面",
   "streakQualityRecoveryScore": "恢复力",
   "streakQualitySuggestedAction": "建议行动",
   "envelopeEngagementSummary": "{streak}天连续 · 本周{sessions}次会话",
@@ -15515,8 +15066,6 @@
   "chatLabelRetry": "重试",
   "chatLabelRefresh": "刷新",
   "chatLabelCollapse": "收起",
-  "chatLabelExpand": "展开",
-  "chatLabelAuto": "自动",
   "chatLabelModel": "模型",
   "chatLabelTier": "档位",
   "chatLabelFast": "敏捷",
@@ -15579,8 +15128,6 @@
   },
   "chatAgendaConfirmCorrectionFeedback": "确认聊天纠错反馈",
   "chatAgendaAdjustReplyStrategy": "调整后续回复策略",
-  "chatAgendaConfirmStatusBarJudgment": "确认顶部提醒里的判断",
-  "chatAgendaDecideAdjustNextSteps": "决定下一步是否调整",
   "chatAgendaConfirmTaskBlockCause": "确认卡点更像时间、难度还是启动问题",
   "chatAgendaAdjustNextTaskEasier": "把下一张任务卡调成更容易开始的版本",
   "chatAgendaConfirmStatusBarJudgmentShort": "确认状态带里的判断",
@@ -15800,7 +15347,6 @@
   "intentKeepGoing": "继续了解",
   "intentDaysLeft": "剩 {days} 天",
   "sprintCompletionLoading": "加载中...",
-  "planEditLoading": "加载计划中...",
   "learningPortfolioLoading": "加载中...",
   "sprintActionLoading": "加载中...",
   "syncCenterLoading": "加载中...",
@@ -15994,23 +15540,9 @@
       }
     }
   },
-  "communityCheckinLike": "点赞",
-  "communityEncourageLabel": "鼓励",
   "communitySimilarGoalPursuers": "同目标伙伴",
   "communitySimilarGoalPursuersCount": "和你追同样目标的 {count} 位伙伴",
   "communityMutualFriendsCount": "{count} 位共同好友",
-  "communityGoalProgressFormat": "{title} · {percent}%",
-  "@communityGoalProgressFormat": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      },
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
-  "communityDefaultUserName": "用户",
   "communitySimilarGoalConnectMessage": "我们正在追相似目标，一起加油？",
   "communityFriendRequestSent": "好友请求已发送",
   "communityFriendRequestFailed": "暂时无法发送好友请求",
@@ -17796,8 +17328,6 @@
   "@visualElementsFilter": {},
   "communityCheckinGoalLabel": "关联目标（可选）",
   "@communityCheckinGoalLabel": {},
-  "communityCheckinGoalHint": "关联后可从打卡回看目标轨迹",
-  "@communityCheckinGoalHint": {},
   "communityCheckinGoalNone": "不关联目标",
   "@communityCheckinGoalNone": {},
   "communityHubCheckinGoalSuccess": "打卡成功，+{flame} 火苗",

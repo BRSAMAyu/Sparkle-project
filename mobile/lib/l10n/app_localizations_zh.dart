@@ -126,9 +126,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get refresh => '刷新';
 
   @override
-  String get chatAiSystemSettings => 'AI 系统设置';
-
-  @override
   String get sensoryFeedbackSectionTitle => '感官反馈';
 
   @override
@@ -217,9 +214,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskCard => '任务卡片';
-
-  @override
-  String get planCard => '计划卡片';
 
   @override
   String get startTask => '开始任务';
@@ -354,48 +348,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createSprintPlan => '创建冲刺计划';
 
   @override
-  String get planCreateTitle => '创建计划';
-
-  @override
   String get planCreateSuccess => '计划创建成功';
-
-  @override
-  String planCreateFailed(Object error) {
-    return '创建计划失败: $error';
-  }
 
   @override
   String get planNameLabel => '计划名称';
 
   @override
-  String get planNameHint => '输入计划名称...';
-
-  @override
   String get planNameRequired => '请输入计划名称';
-
-  @override
-  String get planDescLabel => '计划描述';
-
-  @override
-  String get planDescHint => '描述你的计划目标...';
-
-  @override
-  String get planSubjectLabel => '主题/学科';
-
-  @override
-  String get planSubjectHint => '如：计算机科学、英语...';
 
   @override
   String get planTargetDateLabel => '目标日期';
 
   @override
   String get planTargetDateUnset => '未设置目标日期';
-
-  @override
-  String get planDailyMinutesLabel => '每日可用时间';
-
-  @override
-  String get planDailyMinutesHint => '每天计划投入多少分钟';
 
   @override
   String get planPriorityLabel => '优先级';
@@ -411,9 +376,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get planPriorityLow => '低';
-
-  @override
-  String get planCreating => '创建中...';
 
   @override
   String get planCreateAction => '创建计划';
@@ -536,9 +498,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get editPlan => '编辑计划';
-
-  @override
-  String get planEditInProgress => '计划编辑功能开发中';
 
   @override
   String get planId => '计划ID';
@@ -787,15 +746,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatModeStandard => '标准对话';
 
   @override
-  String get chatModeDeep => '深度专注';
-
-  @override
-  String get chatModeCreative => '创意模式';
-
-  @override
-  String get chatModeAnalytical => '分析模式';
-
-  @override
   String get chatModeStandardDesc => '标准 AI 对话模式';
 
   @override
@@ -866,17 +816,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get switchAgentModeSemantics => '切换 Agent 模式';
 
   @override
-  String chatDagLayerProgress(Object current, Object total) {
-    return '第 $current/$total 层';
-  }
-
-  @override
-  String get chatDagProcessing => '处理依赖关系中...';
-
-  @override
-  String get chatDagCompleted => '分析完成';
-
-  @override
   String get chatInputPlaceholder => '输入消息...';
 
   @override
@@ -892,55 +831,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatInputTapToShare => '点击选择分享内容';
 
   @override
-  String get chatVoiceInput => '语音输入';
-
-  @override
-  String get chatAttachment => '附件';
-
-  @override
-  String get chatEmoji => '表情';
-
-  @override
-  String get chatSend => '发送';
-
-  @override
-  String get chatTyping => 'AI 正在输入...';
-
-  @override
-  String get chatOnline => '在线';
-
-  @override
-  String get chatOffline => '离线';
-
-  @override
-  String get chatReconnect => '重新连接';
-
-  @override
-  String get chatClearHistory => '清空历史';
-
-  @override
-  String get chatExportChat => '导出对话';
-
-  @override
   String get chatNewChat => '新对话';
 
   @override
   String get chatHistory => '对话历史';
 
   @override
-  String get chatNoHistory => '暂无对话历史';
-
-  @override
-  String get chatDeleteConfirm => '确定删除此对话？';
-
-  @override
-  String get chatDeleted => '对话已删除';
-
-  @override
   String get chatCopied => '已复制到剪贴板';
-
-  @override
-  String get chatRegenerate => '重新生成';
 
   @override
   String get chatCopy => '复制';
@@ -955,45 +852,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatWords => '词';
 
   @override
-  String get chatFeedback => '反馈';
-
-  @override
-  String get chatReportIssue => '报告问题';
-
-  @override
-  String get chatMessageTooLong => '消息过长';
-
-  @override
-  String get chatEmptyMessage => '不能发送空消息';
-
-  @override
   String get chatConnectionLost => '连接断开，正在重试...';
 
   @override
-  String get chatConnectionRestored => '连接已恢复';
-
-  @override
-  String get chatWelcome => '你好！今天我能帮你什么？';
-
-  @override
   String get chatWelcomeSubtitle => '你的学习伙伴。我会看着你的进展，有把握时提醒你，拿不准时先问你。';
-
-  @override
-  String get chatSuggestion1 => '帮我规划学习';
-
-  @override
-  String get chatSuggestion2 => '解释一个概念';
-
-  @override
-  String get chatSuggestion3 => '查看我的进度';
-
-  @override
-  String get chatSuggestion4 => '推荐学习资源';
-
-  @override
-  String chatAgentSwitched(Object agent) {
-    return '已切换到 $agent';
-  }
 
   @override
   String get achievementTitle => '成就';
@@ -4611,9 +4473,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityStreakLabel => '连胜';
 
   @override
-  String get communitySharedTask => '分享了一个任务';
-
-  @override
   String get shareResourceTitle => '分享到社群';
 
   @override
@@ -5329,9 +5188,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatPlanUnbound => '未绑定计划';
 
   @override
-  String get chatFileProcessing => '文件处理中，完成后可用于对话';
-
-  @override
   String get chatPromptDeepAnalysis1 => '先给综合判断，再展开依据';
 
   @override
@@ -5431,18 +5287,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatOfflineQueueCompleteSemantic => '排队消息已全部发送';
-
-  @override
-  String get chatMessageQueued => '等待发送';
-
-  @override
-  String get chatMessageSending => '正在发送';
-
-  @override
-  String get chatMessageSendFailed => '发送失败';
-
-  @override
-  String get chatMessageRetrySend => '重试';
 
   @override
   String get chatAgentNavigator => '星图导航';
@@ -5601,9 +5445,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String chatModeTeamSummary(Object count, Object mode) {
     return '$count位专家·$mode';
   }
-
-  @override
-  String get chatModeCustomTeamLabel => '自定义团队';
 
   @override
   String get chatModeCustomTeamTitle => '自定义专家团队';
@@ -5975,58 +5816,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityTitle => '星火社群';
 
   @override
-  String get communitySearch => '搜索';
-
-  @override
-  String get communitySearchUsers => '搜索用户';
-
-  @override
-  String get communitySearchGroups => '搜索群组';
-
-  @override
   String get communityDiscoverFriends => '去发现好友';
-
-  @override
-  String get communityDiscoverFriendsHint => '查看推荐的好友';
 
   @override
   String get communityCreateGroup => '创建社群';
 
   @override
-  String get communityCreateGroupHint => '创建一个新的学习群组';
-
-  @override
-  String get communityActions => '社群操作';
-
-  @override
-  String get communityNoFriends => '还没有好友';
-
-  @override
-  String get communityNoGroups => '还没有加入群组';
-
-  @override
-  String get communityStatusOnline => '在线';
-
-  @override
-  String get communityStatusOffline => '离线';
-
-  @override
-  String get communityFocusModeOn => '专注模式开启中';
-
-  @override
-  String get communityFocusModeOff => '开启专注模式';
-
-  @override
-  String get communityFocusModeEnabled => '已开启专注模式，消息将不会打扰您';
-
-  @override
-  String get communityFocusModeDisabled => '已关闭专注模式';
-
-  @override
   String get communityTabFeed => '动态';
-
-  @override
-  String get communityTabFriends => '好友';
 
   @override
   String get communityTabGroups => '群组';
@@ -6036,11 +5832,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communityAddFriend => '加好友';
-
-  @override
-  String communityMembers(Object count) {
-    return '$count 成员';
-  }
 
   @override
   String get friendsMyFriends => '我的好友';
@@ -6142,16 +5933,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planHistoryTitle => '历史计划';
 
   @override
-  String get planHistoryEmpty => '暂无历史计划';
-
-  @override
   String get planHistoryRestore => '恢复计划';
 
   @override
   String get planHistoryRestoreSuccess => '计划已恢复';
-
-  @override
-  String get planHistoryDeleteConfirm => '确定要删除这个历史计划吗？';
 
   @override
   String get planTypeSprint => '冲刺计划';
@@ -6673,28 +6458,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get translationHistoryEmpty => '暂无翻译历史';
 
   @override
-  String get memoryEvidenceChain => '证据链';
-
-  @override
-  String get memoryNoEvidence => '暂无证据';
-
-  @override
   String get memoryCurrentVersion => '当前版本';
 
   @override
   String get memoryVersionHistory => '版本历史';
-
-  @override
-  String get memorySortNewest => '最新';
-
-  @override
-  String get memorySortOldest => '最旧';
-
-  @override
-  String get memorySortImportance => '重要度';
-
-  @override
-  String get memoryEvidenceResolveFailed => '证据解析失败';
 
   @override
   String get memoryStatus => '状态';
@@ -6721,9 +6488,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryRetractedAt => '撤回时间';
 
   @override
-  String get memoryUpdate => '更新';
-
-  @override
   String get memoryConfidence => '置信度';
 
   @override
@@ -6745,9 +6509,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryRevertNotEnabled => 'Revert 功能尚未启用';
 
   @override
-  String get memoryWhyThisMemory => '为什么有这条记忆？';
-
-  @override
   String get memoryEvidenceCount => '证据数';
 
   @override
@@ -6758,12 +6519,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memoryViewEvidence => '查看证据';
-
-  @override
-  String get memoryAllowedCapture => '已允许捕获';
-
-  @override
-  String get memoryCaptureLevel => '捕获级别';
 
   @override
   String get memoryTypeNone => '无';
@@ -6796,15 +6551,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryKeyBlockedHint => '该偏好已被屏蔽，后续不会记录此类记忆。';
 
   @override
-  String get memoryExplanationPreference => '已记录，因为您的偏好最近更新了。';
-
-  @override
-  String get memoryExplanationEpisodic => '已记录，因为这段经历被标记为重要。';
-
-  @override
-  String get memoryExplanationGoal => '已记录，以保持您的活跃目标可见。';
-
-  @override
   String get memoryCopied => '已复制记忆内容';
 
   @override
@@ -6829,28 +6575,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryMergeComingSoon => '合并功能暂未开放';
 
   @override
-  String get memoryCorrectionSubmitted => '已提交纠错';
-
-  @override
-  String get memoryCorrectionFailed => '纠错失败';
-
-  @override
   String get memoryHistoryLoadFailed => '历史记录加载失败';
 
   @override
   String get memorySettingsLoadFailed => '加载记忆设置失败';
-
-  @override
-  String get memoryAddEvidence => '添加证据';
-
-  @override
-  String get memoryEvidenceType => '证据类型';
-
-  @override
-  String get memoryEvidenceSource => '来源';
-
-  @override
-  String get memoryEvidenceContent => '内容';
 
   @override
   String memoryChatLabel(String role) {
@@ -7580,11 +7308,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDueDateUnset => '无截止日期';
 
   @override
-  String chatAchievementUnlocked(Object arg0) {
-    return '$arg0';
-  }
-
-  @override
   String chatActionErrorSuggestion(Object arg0) {
     return '$arg0';
   }
@@ -7908,16 +7631,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatFocusStart => '开始专注';
 
   @override
-  String get chatInputDocumentClean => '清理文档';
-
-  @override
   String get chatInterventionViewPlan => '查看计划';
 
   @override
   String get chatInterventionViewSettings => '查看设置';
-
-  @override
-  String get chatOpenStudyMaterialsLibrary => '打开学习资料库';
 
   @override
   String get chatKnowledgeCitationBody => '知识引用';
@@ -8013,11 +7730,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatOrchestrationTraceTitle => '编排追踪';
-
-  @override
-  String chatPendingMessagesFailed(int count) {
-    return '$count 条未发送消息被丢弃。';
-  }
 
   @override
   String chatPendingMessagesAuthExpired(int count) {
@@ -8177,11 +7889,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String chatStudyMaterialsKnowledgeNodes(Object count) {
-    return '$count 个知识节点';
-  }
-
-  @override
   String get chatStudyMaterialsLabel => '学习资料';
 
   @override
@@ -8189,9 +7896,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatStudyMaterialsPausedDescription => '下一轮对话将暂停文档检索。';
-
-  @override
-  String get chatStudyMaterialsReady => '已就绪';
 
   @override
   String chatStreakSummary(Object arg0, Object arg1) {
@@ -8334,19 +8038,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityAgentQuickConsensus => '快速共识';
 
   @override
-  String get communityAgentQuickConsensusPrompt => '帮我快速总结群内共识';
-
-  @override
   String get communityAgentQuickReminder => '快速提醒';
 
   @override
-  String get communityAgentQuickReminderPrompt => '帮我设置一个提醒';
-
-  @override
   String get communityAgentQuickSummary => '快速总结';
-
-  @override
-  String get communityAgentQuickSummaryPrompt => '帮我总结最近的讨论';
 
   @override
   String get communityAgentThinking => 'AI 思考中...';
@@ -9739,9 +9434,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get planRecentFeedback => '最近反馈';
-
-  @override
-  String get planRelatedTasks => '相关任务';
 
   @override
   String get planRestore => '恢复计划';
@@ -11683,9 +11375,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatSwipeToSwitch => '左右滑动切换不同入口';
 
   @override
-  String get chatCurrentLearningTopic => '当前学习主题';
-
-  @override
   String get chatCollaborationProcess => '协作过程';
 
   @override
@@ -11699,9 +11388,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatReviewFirstThenExpand => '先看重点，再决定要不要展开完整体验';
-
-  @override
-  String get chatPathLabel => '路径';
 
   @override
   String get chatMasteryLabel => '掌握度';
@@ -11769,74 +11455,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatPromptPreviewSend => '直接发送';
-
-  @override
-  String get chatParticipantLabel => '参与者';
-
-  @override
-  String get chatPromptComparePaths => '比较两条路线';
-
-  @override
-  String chatPromptComparePathsMessage(Object pathA, Object pathB) {
-    return '比较一下「$pathA」和「$pathB」的取舍。';
-  }
-
-  @override
-  String get chatPromptDefaultPathA => '路线 A';
-
-  @override
-  String get chatPromptDefaultPathB => '路线 B';
-
-  @override
-  String get chatPromptPrerequisites => '先补什么前置';
-
-  @override
-  String chatPromptPrerequisitesMessage(Object topic) {
-    return '如果我现在就开始学「$topic」，最该先补的前置是什么？';
-  }
-
-  @override
-  String get chatPromptExamFocus => '考试重点是什么';
-
-  @override
-  String chatPromptExamFocusMessage(Object topic) {
-    return '围绕「$topic」，告诉我最容易成为考试重点的部分和原因。';
-  }
-
-  @override
-  String get chatPromptMakePlan => '给我排成计划';
-
-  @override
-  String chatPromptMakePlanMessage(Object topic) {
-    return '把「$topic」这条路径改写成 7 天可执行的小计划。';
-  }
-
-  @override
-  String get chatOneOfTheRoles => '其中一个角色';
-
-  @override
-  String get chatPromptLetMeAnswer => '让我来回答';
-
-  @override
-  String chatPromptLetMeAnswerMessage(Object speaker, Object topic) {
-    return '让 $speaker 围绕「$topic」继续追问我一个关键问题，我来回答。';
-  }
-
-  @override
-  String get chatPromptPracticeExplain => '练习讲给别人听';
-
-  @override
-  String chatPromptPracticeExplainMessage(Object topic) {
-    return '围绕「$topic」安排一轮需要我讲给别人听的仿真。';
-  }
-
-  @override
-  String get chatPromptErrorDiagnosis => '换成错因诊断';
-
-  @override
-  String chatPromptErrorDiagnosisMessage(Object topic) {
-    return '把「$topic」切到错因诊断模式，帮我定位真正的卡点。';
-  }
 
   @override
   String get chatPromptOrderActions => '排今天行动顺序';
@@ -12038,11 +11656,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dashboardQuickCalibration => '快速校准';
 
   @override
-  String planEditTypeTitle(Object type) {
-    return '编辑$type';
-  }
-
-  @override
   String get planUpdated => '计划已更新';
 
   @override
@@ -12072,210 +11685,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planSuggestedSprintTask2 => '完成冲刺关键里程碑';
 
   @override
-  String get planSave => '保存计划';
-
-  @override
-  String get planStepBasics => '计划定位';
-
-  @override
-  String get planStepSchedule => '时间结构';
-
-  @override
-  String get planStepTasks => '任务编排';
-
-  @override
-  String get planStepGuide => '计划边界与指南';
-
-  @override
-  String get planStepReview => '确认预览';
-
-  @override
-  String get planAiVersionCopied => 'AI 版本已复制';
-
-  @override
-  String get planBasicsDescription => '先定义这是一张真正的计划卡，而不是普通任务。';
-
-  @override
-  String get planBasicsNameHint => '例如：6 周英语口语提升 / 期中冲刺收束';
-
-  @override
-  String get planBasicsNameRequired => '请先填写计划名称';
-
-  @override
-  String get planBasicsSubjectLabel => '主题方向';
-
-  @override
-  String get planBasicsSubjectHint => '英语、Flutter、考研数学、论文阅读...';
-
-  @override
-  String get planBasicsGoalLabelGrowth => '长期目标';
-
-  @override
-  String get planBasicsGoalLabelSprint => '冲刺目标';
-
-  @override
-  String get planBasicsGoalHintGrowth => '写清楚这个成长计划最终想形成什么能力、习惯或成果。';
-
-  @override
-  String get planBasicsGoalHintSprint => '写清楚这次冲刺的结果、验收标准和不能偏离的主线。';
-
-  @override
-  String get planBasicsGoalRequired => '请写出这张计划卡的目标';
-
-  @override
-  String get planBasicsPriorityLabel => '计划优先级';
-
-  @override
-  String get planPriorityNormalValue => '正常';
-
-  @override
-  String get planPriorityCriticalValue => '关键';
-
-  @override
-  String get planScheduleDescription => '把持续时间、每日投入和提醒节奏一次性定清楚。';
-
-  @override
-  String get planScheduleDailyMinutesLabel => '每日可投入时长';
-
-  @override
-  String planScheduleMinutesUnit(Object minutes) {
-    return '$minutes 分钟';
-  }
-
-  @override
-  String planScheduleTotalHours(Object hours) {
-    return '总预估工时 $hours 小时';
-  }
-
-  @override
-  String get planScheduleTargetDateUnset => '暂未设置';
-
-  @override
-  String get planScheduleReminderTime => '每日提醒时间';
-
-  @override
-  String get planScheduleStageLabel => '当前计划阶段';
-
-  @override
-  String get planScheduleStageSprint => '冲刺推进';
-
-  @override
-  String get planScheduleStageDaily => '日常执行';
-
-  @override
-  String get planScheduleStageReview => '复盘调优';
-
-  @override
-  String get planScheduleStagePaused => '暂时暂停';
-
-  @override
   String get planScheduleChipWeekday => '工作日推进，周末复盘';
-
-  @override
-  String get planScheduleChipMorning => '早晨启动，晚上收束';
-
-  @override
-  String get planScheduleChipAfternoon => '午后主攻，夜间轻复盘';
-
-  @override
-  String get planScheduleRhythmLabel => '节奏说明';
-
-  @override
-  String get planScheduleRhythmHint => '例如：周一到周五推进，周六复盘，周日补缺';
-
-  @override
-  String get planTasksDescription => '这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。';
-
-  @override
-  String get planTasksBlueprintLabel => '任务编排说明';
-
-  @override
-  String get planTasksBlueprintHint => '例如：先搭框架，再每天推进主线，最后统一复盘补漏。';
-
-  @override
-  String get planTasksRefExisting => '参考已有任务';
-
-  @override
-  String planTasksMinutesDifficulty(Object minutes, Object difficulty) {
-    return '$minutes 分钟 · 难度 $difficulty';
-  }
-
-  @override
-  String get planTasksCopyToPlan => '复制进计划';
-
-  @override
-  String get planTasksNewTaskLabel => '新增计划任务';
-
-  @override
-  String get planTasksNewTaskHint => '例如：完成一轮章节梳理';
-
-  @override
-  String get planTasksDurationLabel => '时长';
-
-  @override
-  String get planTasksAddToPlan => '加入计划任务';
-
-  @override
-  String get planTasksEmpty => '当前还没有计划任务';
-
-  @override
-  String get planGuideScopeLabel => '计划边界与注意事项';
-
-  @override
-  String get planGuideScopeHint => '例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。';
-
-  @override
-  String get planGuidePerspectiveLabel => '任务指南视角';
-
-  @override
-  String get planGuideForHuman => '给自己看';
-
-  @override
-  String get planGuideForAi => '给 AI 用';
-
-  @override
-  String get planGuideHumanInfo => '用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。';
-
-  @override
-  String get planGuideAiInfo => 'AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。';
-
-  @override
-  String get planGuideHumanTitle => '用户版执行指南';
-
-  @override
-  String get planGuideAiTitle => '给 AI 的执行版本';
-
-  @override
-  String get planGuideGenerating => '生成中';
-
-  @override
-  String get planGuideGenerateHuman => '生成用户版';
-
-  @override
-  String get planGuideGenerateAi => '生成 AI 版';
-
-  @override
-  String get planGuideHumanHint => '生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。';
-
-  @override
-  String get planGuideAiEmpty => '还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。';
-
-  @override
-  String get planGuideCopyAi => '复制 AI 版';
-
-  @override
-  String planReviewSummary(Object planType, Object minutes, Object hours) {
-    return '$planType · $minutes 分钟/天 · $hours 小时';
-  }
-
-  @override
-  String get planReviewEditInfo => '保存后会更新计划描述，并为新增草案创建新的计划任务。';
-
-  @override
-  String get planReviewCreateInfo => '创建后会生成一张更完整的计划卡，并同步创建计划任务。';
-
-  @override
-  String get planReviewFinalDescription => '最终写入的计划描述';
 
   @override
   String get taskExecutionChatAboutStuckPoint => '和 Sparkle 聊聊这个卡点';
@@ -14069,15 +13479,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryPanelAiInferredDescription => 'AI 推断自聊天，默认仅作记忆展示，不参与下游决策。';
 
   @override
-  String get memoryPanelClearFilter => '清空筛选';
-
-  @override
   String get memoryPanelCommitmentDismissed => '已忽略该承诺';
-
-  @override
-  String memoryPanelConfidenceValue(Object value) {
-    return '置信度 $value';
-  }
 
   @override
   String memoryPanelConflictFailed(Object error) {
@@ -14097,9 +13499,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String memoryPanelCorrectionCount(Object count) {
     return '纠错 $count';
   }
-
-  @override
-  String get memoryPanelDate => '日期';
 
   @override
   String memoryPanelDeviationsDetected(Object count) {
@@ -14131,33 +13530,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '先聊一聊你的目标、偏好或刚完成的学习动作，系统才会开始在这里整理长期记忆。';
 
   @override
-  String get memoryPanelEmptyFilterDescription => '试试清空筛选条件，重新查看所有已整理的记忆。';
-
-  @override
-  String get memoryPanelEmptyFilterTitle => '暂无符合条件的记忆';
-
-  @override
   String get memoryPanelEmptyTitle => '记忆面板还没有内容';
 
   @override
-  String get memoryPanelEvidenceAll => '证据全部';
-
-  @override
-  String get memoryPanelEvidenceMissing => '缺失';
-
-  @override
-  String get memoryPanelEvidenceOk => 'OK';
-
-  @override
-  String get memoryPanelEvidenceRedacted => '已隐藏';
-
-  @override
   String get memoryPanelForesightHint => '前瞻提示';
-
-  @override
-  String memoryPanelImportanceValue(Object value) {
-    return '重要度 $value';
-  }
 
   @override
   String memoryPanelItemCount(Object count) {
@@ -14178,16 +13554,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryPanelMarkedComplete => '已标记为完成';
 
   @override
-  String get memoryPanelMetricsNone => '指标: -';
-
-  @override
   String get memoryPanelNotUpdated => '未更新';
 
   @override
   String get memoryPanelRecentScenes => '最近场景';
-
-  @override
-  String get memoryPanelRevoke => '撤销';
 
   @override
   String memoryPanelRevokeFailed(Object error) {
@@ -16886,176 +16256,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get examSprintTargetHighScore => '冲高分';
 
   @override
-  String get memorySettingsTitle => '记忆控制';
-
-  @override
-  String get memorySettingsBack => '返回';
-
-  @override
-  String get memorySettingsDisabled => '记忆控制未启用';
-
-  @override
-  String memorySettingsLoadError(Object error) {
-    return '加载记忆设置失败: $error';
-  }
-
-  @override
-  String memorySettingsSaveError(Object error) {
-    return '保存失败: $error';
-  }
-
-  @override
-  String get memorySettingsSaveSuccess => '记忆设置已更新';
-
-  @override
-  String get memorySettingsUnavailable => '记忆控制不可用';
-
-  @override
-  String get memorySettingsEnabledChip => '记忆已启用';
-
-  @override
-  String get memorySettingsDisabledChip => '记忆已暂停';
-
-  @override
-  String get memorySettingsControllableChip => '偏好可控';
-
-  @override
-  String get memorySettingsDescription =>
-      '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。';
-
-  @override
-  String get memorySettingsEnableTitle => '启用长期记忆';
-
-  @override
-  String get memorySettingsEnableDesc => '关闭后会暂停新的记忆写入，但不会删除历史记录。';
-
-  @override
-  String get memorySettingsSocialTitle => '社交语义子开关';
-
-  @override
-  String get memorySettingsSocialDesc =>
-      'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。';
-
-  @override
-  String get memorySettingsSocialSelf => '自我记忆';
-
-  @override
   String get memorySettingsSocialPersonMention => '人物提及';
-
-  @override
-  String get memorySettingsSocialRelationship => '关系动态';
-
-  @override
-  String get memorySettingsSocialCommitment => '承诺事项';
-
-  @override
-  String get memorySettingsPushTitle => '主动提醒';
-
-  @override
-  String get memorySettingsPushDesc =>
-      'Stage 18 默认关闭。只有你显式开启后，系统才会发送承诺跟进或活跃恢复提醒。';
-
-  @override
-  String get memorySettingsPushEnableTitle => '启用主动提醒';
-
-  @override
-  String get memorySettingsPushEnableDesc => '总开关。关闭后 Stage 18 主动提醒会全部停用。';
-
-  @override
-  String get memorySettingsPushFollowUpTitle => '承诺跟进';
-
-  @override
-  String get memorySettingsPushFollowUpDesc => '只针对你明确表达过、且已经逾期的承诺事项。';
-
-  @override
-  String get memorySettingsPushRecoveryTitle => '活跃恢复';
-
-  @override
-  String get memorySettingsPushRecoveryDesc => '只针对曾经连续活跃、且 72 小时未活跃的情况。';
-
-  @override
-  String get memorySettingsQuietHoursTitle => '静默时段';
-
-  @override
-  String get memorySettingsQuietHoursDesc =>
-      '你可以收窄系统默认的 22:00-08:00，但不能把提醒扩张到这段时间里。';
-
-  @override
-  String get memorySettingsStartTime => '开始时间';
-
-  @override
-  String get memorySettingsEndTime => '结束时间';
-
-  @override
-  String memorySettingsCurrentTimezone(Object timezone) {
-    return '当前时区：$timezone';
-  }
-
-  @override
-  String get memorySettingsViewInbox => '查看提醒收件箱';
-
-  @override
-  String get memorySettingsTypeTitle => '记忆类型';
-
-  @override
-  String get memorySettingsTypeDesc => '决定哪些内容会被长期记住。';
-
-  @override
-  String get memorySettingsPreferenceTitle => '偏好';
-
-  @override
-  String get memorySettingsPreferenceDesc => '记录回答风格、学习节奏和常见偏好。';
-
-  @override
-  String get memorySettingsGoalTitle => '目标';
-
-  @override
-  String get memorySettingsGoalDesc => '记录已确认的长期目标和阶段意图。';
-
-  @override
-  String get memorySettingsEpisodicTitle => '经历';
-
-  @override
-  String get memorySettingsEpisodicDesc => '记录对后续决策有帮助的关键事件与反馈。';
-
-  @override
-  String get memorySettingsInferredTitle => 'AI 自动记忆';
-
-  @override
-  String get memorySettingsInferredDesc => '允许系统从聊天中推断短期经历；每条都必须可见、可撤销。';
-
-  @override
-  String get memorySettingsCaptureTitle => '捕获强度';
-
-  @override
-  String get memorySettingsCaptureDesc => '越高越积极，但也会记录更多上下文。';
-
-  @override
-  String get memorySettingsCaptureLow => '低';
-
-  @override
-  String get memorySettingsCaptureMedium => '中';
-
-  @override
-  String get memorySettingsCaptureHigh => '高';
-
-  @override
-  String get memorySettingsBlockPrefTitle => '屏蔽偏好';
-
-  @override
-  String get memorySettingsBlockPrefDesc => '不希望长期存储的偏好项可以在这里关闭。';
-
-  @override
-  String get memorySettingsBlockSourceTitle => '屏蔽来源';
-
-  @override
-  String get memorySettingsBlockSourceDesc => '限制哪些入口不会写入长期记忆。';
-
-  @override
-  String get memorySettingsSaveButton => '保存设置';
-
-  @override
-  String get memorySettingsSaving => '保存中...';
 
   @override
   String get reportLearningAnalysisReport => '学习分析报告';
@@ -22106,9 +21307,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatGroupTasks => '群组任务';
 
   @override
-  String get chatGrowthNotNeeded => '不需要';
-
-  @override
   String chatGrowthStreakDays(int days) {
     return '$days 天';
   }
@@ -22166,9 +21364,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatMemoryOriginalTurn => '原 turn';
 
   @override
-  String get chatMemoryReferenceCorrectFailed => '记忆纠正失败';
-
-  @override
   String get chatMemoryReferenceDetailTitle => '相关记忆';
 
   @override
@@ -22180,6 +21375,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String chatMemoryReferenceUsed(Object count) {
     return '引用了 $count 条相关记忆';
+  }
+
+  @override
+  String chatMemoryReferenceReceiptLabel(Object count) {
+    return 'Aurora 引用了 $count 条相关记忆';
   }
 
   @override
@@ -22243,9 +21443,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatNotNeeded => '不需要';
-
-  @override
-  String get chatNudgeReviewText => '我来复盘一下';
 
   @override
   String get chatNudgeStartReview => '开始复盘';
@@ -22404,9 +21601,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatPrivateQuickSummary => '快速总结';
 
   @override
-  String get chatPrivateQuickSummaryLabel => '快速总结';
-
-  @override
   String get chatPrivateRestoreOriginal => '恢复原文';
 
   @override
@@ -22529,16 +21723,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatRoundtableCodingExpert => '编程专家';
-
-  @override
   String get chatRoundtableConclusion => '综合结论';
 
   @override
   String get chatRoundtableCoordinator => '协调器';
-
-  @override
-  String get chatRoundtableDeepAnalyst => '深度分析师';
 
   @override
   String get chatRoundtableErrorSpecialist => '纠错专家';
@@ -22551,11 +21739,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatRoundtableExpertCollab => '专家协作';
-
-  @override
-  String chatRoundtableExpertCollabCount(Object count) {
-    return '专家协作 $count位';
-  }
 
   @override
   String get chatRoundtableGalaxyNavigator => '星图导航';
@@ -22572,9 +21755,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatRoundtableLowComplexity => '低复杂度';
 
   @override
-  String get chatRoundtableMathExpert => '数学专家';
-
-  @override
   String get chatRoundtableMediumComplexity => '中等复杂度';
 
   @override
@@ -22586,18 +21766,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatRoundtableScienceExpert => '理科专家';
 
   @override
-  String get chatRoundtableSearchExpert => '搜索专家';
-
-  @override
   String get chatRoundtableTimeCoach => '时间教练';
 
   @override
   String chatRoundtableTurnCount(Object count) {
     return '$count 条观点';
   }
-
-  @override
-  String get chatRoundtableWritingExpert => '写作专家';
 
   @override
   String get chatSettingsEnableSeedDesc => '为当前聊天注入已启用的种子库内容与回答风格。';
@@ -22613,9 +21787,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatSettingsOpenAdvanced => '打开高级设置';
-
-  @override
-  String get chatSettingsOpenAdvancedDesc => '进入透明模式的详细配置页面。';
 
   @override
   String get chatSettingsPureMode => '纯净模式';
@@ -22766,9 +21937,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatStreamCommunityInsight => '社群洞察';
-
-  @override
-  String get chatStreamCompleted => '已完成';
 
   @override
   String chatStreamHoursMins(Object hours, Object mins) {
@@ -22938,9 +22106,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatWidgetPlanSummary => '计划摘要';
-
-  @override
-  String get chatWidgetTaskList => '任务列表';
 
   @override
   String get chatWsUnknownError => '未知错误';
@@ -26894,9 +26059,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planSprintStep5Title => '5. 你现在大概会多少？最怕哪几章？';
 
   @override
-  String get planSprintScariestChapters => '最怕哪几章？';
-
-  @override
   String get planSprintStep6Title => '6. 每天真实能学多久？';
 
   @override
@@ -26908,9 +26070,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String planSprintDailyChipLabel(Object minutes) {
     return '$minutes 分钟';
   }
-
-  @override
-  String get planSprintRealisticTime => '用你大概率能坚持的时间，不用理想状态。';
 
   @override
   String get planSprintGenerateFirstDay => '生成我的第一天任务';
@@ -26942,9 +26101,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String planSprintRecommendedMode(Object mode) {
     return '建议模式 $mode';
   }
-
-  @override
-  String get planSprintFirstDayTodo => '第一天先做什么';
 
   @override
   String get planSprintStartFirstDay => '开始第一天任务';
@@ -26980,14 +26136,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get planSprintTargetHighScore => '冲高分';
-
-  @override
-  String planSprintCompletionSubject(Object subject) {
-    return '$subject 7 天备考成果';
-  }
-
-  @override
-  String get planSprintCompletionNoSubject => '7 天备考成果';
 
   @override
   String get planSprintStillSummarizing => '冲刺成果还在汇总中';
@@ -27151,11 +26299,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planPortfolioCreateSprint => '去创建考试冲刺';
 
   @override
-  String planPortfolioLoadError(Object message) {
-    return '学习档案加载失败：$message';
-  }
-
-  @override
   String get planPortfolioLoadMore => '加载更多';
 
   @override
@@ -27222,11 +26365,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String planLoadFailedError(Object error) {
     return '计划加载失败：$error';
-  }
-
-  @override
-  String planStageTaskTitle(Object number, Object planName) {
-    return '$planName - 第$number阶段任务';
   }
 
   @override
@@ -27459,21 +26597,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get communityUserFallback => '用户';
-
-  @override
   String accountabilityUnlockedOn(String date) {
     return '在 $date 解锁';
-  }
-
-  @override
-  String communityWeeksAgo(int count) {
-    return '$count周前';
-  }
-
-  @override
-  String communityMonthsAgo(int count) {
-    return '$count个月前';
   }
 
   @override
@@ -27488,38 +26613,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get communityFirstSideBySide => '第一次并肩前进';
-
-  @override
-  String get communityFirstSideBySideDesc => '成功建立第一个责任伙伴关系';
-
-  @override
-  String get communitySevenDayStreak => '七日共进';
-
-  @override
-  String get communitySevenDayStreakDesc => '在责任伙伴关系中连续7天打卡';
-
-  @override
-  String get communitySevenDayCheckin => '7 天连续打卡成就';
-
-  @override
-  String get communityEnglishSprintPlan => '本周英语冲刺计划';
-
-  @override
-  String get communityShareProgressLabel => '进度';
-
-  @override
-  String communityPointsLabel(String points) {
-    return '+$points';
-  }
-
-  @override
   String communityTotalCheckins(int count) {
     return '$count 次';
   }
-
-  @override
-  String get communityTotalCheckinsLabel => '总打卡';
 
   @override
   String get communityChat => '聊天';
@@ -27628,11 +26724,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String communityDaysAgo(Object count) {
     return '$count天前';
-  }
-
-  @override
-  String communityBadgeUnlockedOn(Object date) {
-    return '解锁于 $date';
   }
 
   @override
@@ -28198,11 +27289,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String communityProgressColon(Object percent) {
-    return '进度: $percent%';
-  }
-
-  @override
   String get communityKnowledgeNode => '知识节点';
 
   @override
@@ -28244,52 +27330,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityLinkCopied => '链接已复制';
 
   @override
-  String communityUnblockConfirm(Object name) {
-    return '确定要解除对 $name 的拉黑吗？\n\n解除后对方可以重新发送好友请求和消息给您。';
-  }
-
-  @override
-  String communityUnblocked(Object name) {
-    return '已解除对 $name 的拉黑';
-  }
-
-  @override
-  String communityMuteMember(Object name) {
-    return '禁言 $name';
-  }
-
-  @override
-  String get communityMute24h => '24小时';
-
-  @override
-  String communityMuteMinutes(Object minutes) {
-    return '$minutes 分钟';
-  }
-
-  @override
-  String communityWarnMember(Object name) {
-    return '警告 $name';
-  }
-
-  @override
-  String communityGroupMembers(Object name) {
-    return '$name - 成员';
-  }
-
-  @override
-  String get communityGroupSearchHint => '搜索社群...';
-
-  @override
-  String communityGroupTasksMinutes(Object minutes) {
-    return '$minutes 分钟';
-  }
-
-  @override
-  String communitySlowModeSeconds(Object seconds) {
-    return '$seconds 秒';
-  }
-
-  @override
   String get communityFriendGoalHint => '例如：每天学习英语 30 分钟';
 
   @override
@@ -28304,67 +27344,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get communityFeedFilterGlobal => '全局动态';
-
-  @override
-  String get communityFeedFilterSquad => '我的小队';
-
-  @override
-  String get communityFeedFilterGoalMates => '目标伙伴';
-
-  @override
-  String get communityFeedFilterFollowing => '我的关注';
-
-  @override
   String get communityFeedGlobal => '全局动态';
 
   @override
   String get communityFeedMySquad => '我的小队';
 
   @override
-  String get communityNoFeedYetTitle => '社区还没有火花';
-
-  @override
-  String get communityNoFeedYetDescription => '分享一个计划、洞察或小胜利，开始这里的第一次对话。';
-
-  @override
-  String get communitySharePostAction => '发一条动态';
-
-  @override
-  String get communityRefreshFeedAction => '刷新动态';
-
-  @override
-  String get communityGroupTypeSprint => '冲刺群组';
-
-  @override
-  String get communityGroupTypeSquad => '小队';
-
-  @override
-  String communitySprintGoalChip(Object goal) {
-    return '冲刺目标: $goal';
-  }
-
-  @override
   String get communityFeedback => '评价';
 
   @override
   String get communityShareSource => '来源';
-
-  @override
-  String communityAdoptFailedWithError(Object error) {
-    return '采纳失败: $error';
-  }
-
-  @override
-  String get communityOwnerFullView => '你看到完整视图';
-
-  @override
-  String get communityPartnerSummaryView => '伙伴只看到摘要';
-
-  @override
-  String communityHiddenFields(Object fields) {
-    return '已隐藏: $fields';
-  }
 
   @override
   String communityPartnerObservationPermissions(String name) {
@@ -28375,47 +27364,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityAllowObservation => '允许观察我';
 
   @override
-  String get communityObservationDisabled => '关闭后，对方不再收到任何关于你的信号或观察提醒';
-
-  @override
   String get communitySeeStudyTime => '看到我的学习时间';
 
   @override
   String get communitySeeTaskContent => '看到我的具体任务内容';
 
   @override
-  String get communitySeeEmotionalState => '看到我的情绪/能量状态';
-
-  @override
-  String communityShareProgressPercent(Object percent) {
-    return '进度: $percent%';
-  }
-
-  @override
-  String get communityKnowledgeNodeLabel => '知识节点';
-
-  @override
-  String get communityTimeCapsuleLabel => '时光胶囊';
-
-  @override
-  String get communityPartnersLabel => '伙伴';
-
-  @override
-  String get communityFriendsLabel => '好友';
-
-  @override
   String communityBoundMilestone(Object label) {
     return '绑定里程碑：$label';
   }
-
-  @override
-  String get communityCommunity => '社群';
-
-  @override
-  String get communityLoadFailedTitle => '加载失败';
-
-  @override
-  String get communityRetry => '重试';
 
   @override
   String get communityNoCommunitySpark => '还没有社区火花';
@@ -28471,9 +27428,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String communityShareDaysLater(Object days) {
     return '$days天后';
   }
-
-  @override
-  String get communityShareEvaluation => '评价';
 
   @override
   String get communityShareTaskComplete => '任务完成';
@@ -28566,41 +27520,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityShareBrightness => '亮度';
 
   @override
-  String communityShareUnlockedAt(Object date) {
-    return '解锁于 $date';
-  }
-
-  @override
-  String get communityShareTodayDate => '今天';
-
-  @override
-  String get communityShareYesterday => '昨天';
-
-  @override
-  String communityShareDaysAgo(Object days) {
-    return '$days天前';
-  }
-
-  @override
-  String communityShareWeeksAgo(Object weeks) {
-    return '$weeks周前';
-  }
-
-  @override
-  String communityShareMonthsAgo(Object months) {
-    return '$months个月前';
-  }
-
-  @override
   String get communityShareNoAchievements => '暂无成就';
 
   @override
   String get communityShareStartCheckin => '开始打卡解锁成就吧！';
-
-  @override
-  String communitySharePointsValue(Object points) {
-    return '+$points 积分';
-  }
 
   @override
   String get communityShareClose => '关闭';
@@ -28616,26 +27539,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String communityShareDepthLevel(Object level) {
     return '深度 Lv.$level';
-  }
-
-  @override
-  String communitySharePosterTitle(Object name) {
-    return '$name 的荣耀身份';
-  }
-
-  @override
-  String communityShareGrowthTitle(Object name) {
-    return '$name 的本周成长';
-  }
-
-  @override
-  String communityShareGrowthSubtitle(Object brightness, Object level) {
-    return '等级 Lv.$level · 亮度 $brightness%';
-  }
-
-  @override
-  String communityShareTemplateName(Object name) {
-    return '$name 模板';
   }
 
   @override
@@ -29370,9 +28273,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get planViewCurrentPlan => '当前计划';
-
-  @override
-  String get planViewNoTasksForPlan => '暂无任务';
 
   @override
   String get planViewNoPlanTasks => '暂无方案任务';
@@ -30497,10 +29397,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planPortfolioLoadFailedMsg => '加载学习组合失败';
 
   @override
-  String get planPortfolioRetry => '重试';
+  String get galaxySectorDarkMatter => '暗物质';
 
   @override
-  String get planGuideAiNotReturn => 'AI 未返回结果，请重试';
+  String get planPortfolioRetry => '重试';
 
   @override
   String get planViewDetails => '查看详情';
@@ -32561,6 +31461,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get homeAskAurora => '问 Aurora';
+
+  @override
   String get homeNextActionTitle => '下一步';
 
   @override
@@ -32753,6 +31656,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeOnboardingExploreSubtitle => '发现你的知识结构，找到提升方向';
+
+  @override
+  String get homeOnboardingExploreGalaxy => '探索知识星图';
 
   @override
   String get homeOnboardingResumeTitle => '完成引导，让 AI 更懂你';
@@ -33114,6 +32020,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get homeNoUrgentAction => '今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。';
+
+  @override
   String get goalIntentTitle => '告诉我你想达成什么';
 
   @override
@@ -33325,9 +32234,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailSemanticsTitle => '任务详情';
 
   @override
-  String get chatSemanticsScreen => '聊天界面';
-
-  @override
   String get streakQualityRecoveryScore => '恢复力';
 
   @override
@@ -33406,12 +32312,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatLabelCollapse => '收起';
-
-  @override
-  String get chatLabelExpand => '展开';
-
-  @override
-  String get chatLabelAuto => '自动';
 
   @override
   String get chatLabelModel => '模型';
@@ -33522,12 +32422,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatAgendaAdjustReplyStrategy => '调整后续回复策略';
-
-  @override
-  String get chatAgendaConfirmStatusBarJudgment => '确认顶部提醒里的判断';
-
-  @override
-  String get chatAgendaDecideAdjustNextSteps => '决定下一步是否调整';
 
   @override
   String get chatAgendaConfirmTaskBlockCause => '确认卡点更像时间、难度还是启动问题';
@@ -33868,9 +32762,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sprintCompletionLoading => '加载中...';
-
-  @override
-  String get planEditLoading => '加载计划中...';
 
   @override
   String get learningPortfolioLoading => '加载中...';
@@ -34236,12 +33127,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get communityCheckinLike => '点赞';
-
-  @override
-  String get communityEncourageLabel => '鼓励';
-
-  @override
   String get communitySimilarGoalPursuers => '同目标伙伴';
 
   @override
@@ -34253,14 +33138,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String communityMutualFriendsCount(int count) {
     return '$count 位共同好友';
   }
-
-  @override
-  String communityGoalProgressFormat(String title, int percent) {
-    return '$title · $percent%';
-  }
-
-  @override
-  String get communityDefaultUserName => '用户';
 
   @override
   String get communitySimilarGoalConnectMessage => '我们正在追相似目标，一起加油？';
@@ -37433,9 +36310,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communityCheckinGoalLabel => '关联目标（可选）';
-
-  @override
-  String get communityCheckinGoalHint => '关联后可从打卡回看目标轨迹';
 
   @override
   String get communityCheckinGoalNone => '不关联目标';

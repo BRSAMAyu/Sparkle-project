@@ -127,9 +127,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refresh => 'Refresh';
 
   @override
-  String get chatAiSystemSettings => 'AI system settings';
-
-  @override
   String get sensoryFeedbackSectionTitle => 'Sensory Feedback';
 
   @override
@@ -230,9 +227,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskCard => 'Task Card';
-
-  @override
-  String get planCard => 'Plan Card';
 
   @override
   String get startTask => 'Start Task';
@@ -376,48 +370,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createSprintPlan => 'Create Sprint Plan';
 
   @override
-  String get planCreateTitle => 'Create Plan';
-
-  @override
   String get planCreateSuccess => 'Plan created successfully';
-
-  @override
-  String planCreateFailed(Object error) {
-    return 'Failed to create plan: $error';
-  }
 
   @override
   String get planNameLabel => 'Plan Name';
 
   @override
-  String get planNameHint => 'Enter plan name...';
-
-  @override
   String get planNameRequired => 'Please enter plan name';
-
-  @override
-  String get planDescLabel => 'Description';
-
-  @override
-  String get planDescHint => 'Describe your plan goals...';
-
-  @override
-  String get planSubjectLabel => 'Subject';
-
-  @override
-  String get planSubjectHint => 'e.g., Computer Science, English...';
 
   @override
   String get planTargetDateLabel => 'Target Date';
 
   @override
   String get planTargetDateUnset => 'No target date set';
-
-  @override
-  String get planDailyMinutesLabel => 'Daily Available Time';
-
-  @override
-  String get planDailyMinutesHint => 'How many minutes per day';
 
   @override
   String get planPriorityLabel => 'Priority';
@@ -433,9 +398,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planPriorityLow => 'Low';
-
-  @override
-  String get planCreating => 'Creating...';
 
   @override
   String get planCreateAction => 'Create Plan';
@@ -563,9 +525,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editPlan => 'Edit Plan';
-
-  @override
-  String get planEditInProgress => 'Plan edit feature is in development';
 
   @override
   String get planId => 'Plan ID';
@@ -815,15 +774,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatModeStandard => 'Standard chat';
 
   @override
-  String get chatModeDeep => 'Deep Focus';
-
-  @override
-  String get chatModeCreative => 'Creative';
-
-  @override
-  String get chatModeAnalytical => 'Analytical';
-
-  @override
   String get chatModeStandardDesc => 'Standard AI conversation mode';
 
   @override
@@ -895,17 +845,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get switchAgentModeSemantics => 'Switch agent mode';
 
   @override
-  String chatDagLayerProgress(Object current, Object total) {
-    return 'Layer $current/$total';
-  }
-
-  @override
-  String get chatDagProcessing => 'Processing dependencies...';
-
-  @override
-  String get chatDagCompleted => 'Analysis complete';
-
-  @override
   String get chatInputPlaceholder => 'Type a message...';
 
   @override
@@ -921,55 +860,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInputTapToShare => 'Tap to select content to share';
 
   @override
-  String get chatVoiceInput => 'Voice Input';
-
-  @override
-  String get chatAttachment => 'Attach File';
-
-  @override
-  String get chatEmoji => 'Emoji';
-
-  @override
-  String get chatSend => 'Send';
-
-  @override
-  String get chatTyping => 'AI is typing...';
-
-  @override
-  String get chatOnline => 'Online';
-
-  @override
-  String get chatOffline => 'Offline';
-
-  @override
-  String get chatReconnect => 'Reconnect';
-
-  @override
-  String get chatClearHistory => 'Clear History';
-
-  @override
-  String get chatExportChat => 'Export Chat';
-
-  @override
   String get chatNewChat => 'New Chat';
 
   @override
   String get chatHistory => 'Chat History';
 
   @override
-  String get chatNoHistory => 'No chat history';
-
-  @override
-  String get chatDeleteConfirm => 'Delete this chat?';
-
-  @override
-  String get chatDeleted => 'Chat deleted';
-
-  @override
   String get chatCopied => 'Copied to clipboard';
-
-  @override
-  String get chatRegenerate => 'Regenerate';
 
   @override
   String get chatCopy => 'Copy';
@@ -984,46 +881,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatWords => 'words';
 
   @override
-  String get chatFeedback => 'Feedback';
-
-  @override
-  String get chatReportIssue => 'Report Issue';
-
-  @override
-  String get chatMessageTooLong => 'Message is too long';
-
-  @override
-  String get chatEmptyMessage => 'Cannot send empty message';
-
-  @override
   String get chatConnectionLost => 'Connection lost, retrying...';
-
-  @override
-  String get chatConnectionRestored => 'Connection restored';
-
-  @override
-  String get chatWelcome => 'Hello! How can I help you today?';
 
   @override
   String get chatWelcomeSubtitle =>
       'I keep an eye on your learning — I\'ll speak up when I\'m confident, and ask when I\'m not.';
-
-  @override
-  String get chatSuggestion1 => 'Help me plan my study';
-
-  @override
-  String get chatSuggestion2 => 'Explain a concept';
-
-  @override
-  String get chatSuggestion3 => 'Review my progress';
-
-  @override
-  String get chatSuggestion4 => 'Suggest learning resources';
-
-  @override
-  String chatAgentSwitched(Object agent) {
-    return 'Switched to $agent';
-  }
 
   @override
   String get achievementTitle => 'Achievements';
@@ -4809,9 +4671,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityStreakLabel => 'Streak';
 
   @override
-  String get communitySharedTask => 'Shared a task';
-
-  @override
   String get shareResourceTitle => 'Share with community';
 
   @override
@@ -5555,10 +5414,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPlanUnbound => 'No plan linked';
 
   @override
-  String get chatFileProcessing =>
-      'File is processing and will be available for chat soon';
-
-  @override
   String get chatPromptDeepAnalysis1 =>
       'Give a summary first, then show the rationale';
 
@@ -5666,19 +5521,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'All queued messages have been sent';
 
   @override
-  String get chatMessageQueued => 'Queued';
-
-  @override
-  String get chatMessageSending => 'Sending';
-
-  @override
-  String get chatMessageSendFailed => 'Send failed';
-
-  @override
-  String get chatMessageRetrySend => 'Retry';
-
-  @override
-  String get chatAgentNavigator => 'Star Map Navigator';
+  String get chatAgentNavigator => 'Galaxy Navigator';
 
   @override
   String get chatAgentExamStrategist => 'Exam Strategist';
@@ -5839,9 +5682,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String chatModeTeamSummary(Object count, Object mode) {
     return '$count experts · $mode';
   }
-
-  @override
-  String get chatModeCustomTeamLabel => 'Custom team';
 
   @override
   String get chatModeCustomTeamTitle => 'Custom expert team';
@@ -6223,59 +6063,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityTitle => 'Community';
 
   @override
-  String get communitySearch => 'Search';
-
-  @override
-  String get communitySearchUsers => 'Search Users';
-
-  @override
-  String get communitySearchGroups => 'Search Groups';
-
-  @override
   String get communityDiscoverFriends => 'Discover Friends';
-
-  @override
-  String get communityDiscoverFriendsHint => 'View recommended friends';
 
   @override
   String get communityCreateGroup => 'Create Group';
 
   @override
-  String get communityCreateGroupHint => 'Create a new study group';
-
-  @override
-  String get communityActions => 'Community Actions';
-
-  @override
-  String get communityNoFriends => 'No friends yet';
-
-  @override
-  String get communityNoGroups => 'No groups joined';
-
-  @override
-  String get communityStatusOnline => 'Online';
-
-  @override
-  String get communityStatusOffline => 'Offline';
-
-  @override
-  String get communityFocusModeOn => 'Focus mode on';
-
-  @override
-  String get communityFocusModeOff => 'Enable focus mode';
-
-  @override
-  String get communityFocusModeEnabled =>
-      'Focus mode enabled. You won\'t be disturbed';
-
-  @override
-  String get communityFocusModeDisabled => 'Focus mode disabled';
-
-  @override
   String get communityTabFeed => 'Feed';
-
-  @override
-  String get communityTabFriends => 'Friends';
 
   @override
   String get communityTabGroups => 'Groups';
@@ -6285,11 +6079,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityAddFriend => 'Add';
-
-  @override
-  String communityMembers(Object count) {
-    return '$count members';
-  }
 
   @override
   String get friendsMyFriends => 'My Friends';
@@ -6392,16 +6181,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planHistoryTitle => 'Plan History';
 
   @override
-  String get planHistoryEmpty => 'No plan history';
-
-  @override
   String get planHistoryRestore => 'Restore Plan';
 
   @override
   String get planHistoryRestoreSuccess => 'Plan restored';
-
-  @override
-  String get planHistoryDeleteConfirm => 'Delete this plan history?';
 
   @override
   String get planTypeSprint => 'Sprint Plan';
@@ -6941,28 +6724,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get translationHistoryEmpty => 'No translation history';
 
   @override
-  String get memoryEvidenceChain => 'Evidence Chain';
-
-  @override
-  String get memoryNoEvidence => 'No Evidence';
-
-  @override
   String get memoryCurrentVersion => 'Current Version';
 
   @override
   String get memoryVersionHistory => 'Version History';
-
-  @override
-  String get memorySortNewest => 'Newest';
-
-  @override
-  String get memorySortOldest => 'Oldest';
-
-  @override
-  String get memorySortImportance => 'Importance';
-
-  @override
-  String get memoryEvidenceResolveFailed => 'Evidence resolve failed';
 
   @override
   String get memoryStatus => 'Status';
@@ -6989,9 +6754,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryRetractedAt => 'Retracted At';
 
   @override
-  String get memoryUpdate => 'Update';
-
-  @override
   String get memoryConfidence => 'Confidence';
 
   @override
@@ -7014,9 +6776,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryRevertNotEnabled => 'Revert feature not enabled';
 
   @override
-  String get memoryWhyThisMemory => 'Why this memory?';
-
-  @override
   String get memoryEvidenceCount => 'Evidence';
 
   @override
@@ -7027,12 +6786,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memoryViewEvidence => 'View Evidence';
-
-  @override
-  String get memoryAllowedCapture => 'Allowed capture';
-
-  @override
-  String get memoryCaptureLevel => 'Capture level';
 
   @override
   String get memoryTypeNone => 'None';
@@ -7071,18 +6824,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'This preference is blocked, such memories will not be recorded.';
 
   @override
-  String get memoryExplanationPreference =>
-      'Captured because your preference updated recently.';
-
-  @override
-  String get memoryExplanationEpisodic =>
-      'Captured because this experience was marked important.';
-
-  @override
-  String get memoryExplanationGoal =>
-      'Captured to keep your active goals visible.';
-
-  @override
   String get memoryCopied => 'Memory content copied';
 
   @override
@@ -7107,28 +6848,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryMergeComingSoon => 'Merge isn\'t available yet';
 
   @override
-  String get memoryCorrectionSubmitted => 'Correction submitted';
-
-  @override
-  String get memoryCorrectionFailed => 'Correction failed';
-
-  @override
   String get memoryHistoryLoadFailed => 'Failed to load history';
 
   @override
   String get memorySettingsLoadFailed => 'Failed to load memory settings';
-
-  @override
-  String get memoryAddEvidence => 'Add Evidence';
-
-  @override
-  String get memoryEvidenceType => 'Evidence Type';
-
-  @override
-  String get memoryEvidenceSource => 'Source';
-
-  @override
-  String get memoryEvidenceContent => 'Content';
 
   @override
   String memoryChatLabel(String role) {
@@ -7881,11 +7604,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDueDateUnset => 'No due date';
 
   @override
-  String chatAchievementUnlocked(Object arg0) {
-    return '$arg0';
-  }
-
-  @override
   String chatActionErrorSuggestion(Object arg0) {
     return '$arg0';
   }
@@ -8218,16 +7936,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatFocusStart => 'Chat Focus Start';
 
   @override
-  String get chatInputDocumentClean => 'Chat Input Document Clean';
-
-  @override
   String get chatInterventionViewPlan => 'Chat Intervention View Plan';
 
   @override
   String get chatInterventionViewSettings => 'Chat Intervention View Settings';
-
-  @override
-  String get chatOpenStudyMaterialsLibrary => 'Open study materials library';
 
   @override
   String get chatKnowledgeCitationBody => 'Chat Knowledge Citation Body';
@@ -8324,11 +8036,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatOrchestrationTraceTitle => 'Chat Orchestration Trace Title';
-
-  @override
-  String chatPendingMessagesFailed(int count) {
-    return '$count pending messages were dropped.';
-  }
 
   @override
   String chatPendingMessagesAuthExpired(int count) {
@@ -8495,11 +8202,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String chatStudyMaterialsKnowledgeNodes(Object count) {
-    return '$count knowledge nodes';
-  }
-
-  @override
   String get chatStudyMaterialsLabel => 'Study materials';
 
   @override
@@ -8508,9 +8210,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chatStudyMaterialsPausedDescription =>
       'Document retrieval is paused for the next turn.';
-
-  @override
-  String get chatStudyMaterialsReady => 'Ready';
 
   @override
   String chatStreakSummary(Object arg0, Object arg1) {
@@ -8656,22 +8355,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityAgentQuickConsensus => 'Community Agent Quick Consensus';
 
   @override
-  String get communityAgentQuickConsensusPrompt =>
-      'Community Agent Quick Consensus Prompt';
-
-  @override
   String get communityAgentQuickReminder => 'Community Agent Quick Reminder';
 
   @override
-  String get communityAgentQuickReminderPrompt =>
-      'Community Agent Quick Reminder Prompt';
-
-  @override
   String get communityAgentQuickSummary => 'Community Agent Quick Summary';
-
-  @override
-  String get communityAgentQuickSummaryPrompt =>
-      'Community Agent Quick Summary Prompt';
 
   @override
   String get communityAgentThinking => 'Community Agent Thinking';
@@ -10119,9 +9806,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planRecentFeedback => 'Plan Recent Feedback';
-
-  @override
-  String get planRelatedTasks => 'Plan Related Tasks';
 
   @override
   String get planRestore => 'Plan Restore';
@@ -12175,9 +11859,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSwipeToSwitch => 'Swipe left/right to switch entries';
 
   @override
-  String get chatCurrentLearningTopic => 'Current learning topic';
-
-  @override
   String get chatCollaborationProcess => 'Collaboration process';
 
   @override
@@ -12192,9 +11873,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chatReviewFirstThenExpand =>
       'Review highlights first, then decide whether to expand';
-
-  @override
-  String get chatPathLabel => 'Path';
 
   @override
   String get chatMasteryLabel => 'Mastery';
@@ -12263,74 +11941,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatPromptPreviewSend => 'Send now';
-
-  @override
-  String get chatParticipantLabel => 'Participant';
-
-  @override
-  String get chatPromptComparePaths => 'Compare two paths';
-
-  @override
-  String chatPromptComparePathsMessage(Object pathA, Object pathB) {
-    return 'Compare the trade-offs between \"$pathA\" and \"$pathB\".';
-  }
-
-  @override
-  String get chatPromptDefaultPathA => 'Path A';
-
-  @override
-  String get chatPromptDefaultPathB => 'Path B';
-
-  @override
-  String get chatPromptPrerequisites => 'What prerequisites to cover first';
-
-  @override
-  String chatPromptPrerequisitesMessage(Object topic) {
-    return 'If I start learning \"$topic\" now, what prerequisites should I cover first?';
-  }
-
-  @override
-  String get chatPromptExamFocus => 'What are the exam key points';
-
-  @override
-  String chatPromptExamFocusMessage(Object topic) {
-    return 'Tell me the parts of \"$topic\" most likely to be exam key points and why.';
-  }
-
-  @override
-  String get chatPromptMakePlan => 'Make it a plan';
-
-  @override
-  String chatPromptMakePlanMessage(Object topic) {
-    return 'Rewrite the \"$topic\" path into a 7-day executable mini-plan.';
-  }
-
-  @override
-  String get chatOneOfTheRoles => 'One of the roles';
-
-  @override
-  String get chatPromptLetMeAnswer => 'Let me answer';
-
-  @override
-  String chatPromptLetMeAnswerMessage(Object speaker, Object topic) {
-    return 'Have $speaker ask me a follow-up question around \"$topic\", and I\'ll answer.';
-  }
-
-  @override
-  String get chatPromptPracticeExplain => 'Practice explaining to others';
-
-  @override
-  String chatPromptPracticeExplainMessage(Object topic) {
-    return 'Arrange a simulation round around \"$topic\" where I explain to someone else.';
-  }
-
-  @override
-  String get chatPromptErrorDiagnosis => 'Switch to error diagnosis';
-
-  @override
-  String chatPromptErrorDiagnosisMessage(Object topic) {
-    return 'Switch \"$topic\" to error diagnosis mode and help me identify the real blocker.';
-  }
 
   @override
   String get chatPromptOrderActions => 'Order today\'s actions';
@@ -12539,11 +12149,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardQuickCalibration => 'Quick Calibration';
 
   @override
-  String planEditTypeTitle(Object type) {
-    return 'Edit $type';
-  }
-
-  @override
   String get planUpdated => 'Plan updated';
 
   @override
@@ -12575,228 +12180,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planSuggestedSprintTask2 => 'Complete key sprint milestones';
 
   @override
-  String get planSave => 'Save plan';
-
-  @override
-  String get planStepBasics => 'Plan setup';
-
-  @override
-  String get planStepSchedule => 'Schedule';
-
-  @override
-  String get planStepTasks => 'Tasks';
-
-  @override
-  String get planStepGuide => 'Boundaries & guide';
-
-  @override
-  String get planStepReview => 'Review';
-
-  @override
-  String get planAiVersionCopied => 'AI version copied';
-
-  @override
-  String get planBasicsDescription =>
-      'Define this as a real plan card, not just a regular task.';
-
-  @override
-  String get planBasicsNameHint =>
-      'e.g., 6-week English speaking improvement / midterm sprint wrap-up';
-
-  @override
-  String get planBasicsNameRequired => 'Please fill in the plan name first';
-
-  @override
-  String get planBasicsSubjectLabel => 'Subject';
-
-  @override
-  String get planBasicsSubjectHint =>
-      'English, Flutter, GRE Math, paper reading...';
-
-  @override
-  String get planBasicsGoalLabelGrowth => 'Long-term goal';
-
-  @override
-  String get planBasicsGoalLabelSprint => 'Sprint goal';
-
-  @override
-  String get planBasicsGoalHintGrowth =>
-      'Describe the ability, habit, or outcome this growth plan aims to achieve.';
-
-  @override
-  String get planBasicsGoalHintSprint =>
-      'Describe the sprint outcome, acceptance criteria, and non-negotiable focus.';
-
-  @override
-  String get planBasicsGoalRequired =>
-      'Please describe the goal of this plan card';
-
-  @override
-  String get planBasicsPriorityLabel => 'Plan priority';
-
-  @override
-  String get planPriorityNormalValue => 'Normal';
-
-  @override
-  String get planPriorityCriticalValue => 'Critical';
-
-  @override
-  String get planScheduleDescription =>
-      'Set your duration, daily effort, and reminder rhythm all at once.';
-
-  @override
-  String get planScheduleDailyMinutesLabel => 'Daily available time';
-
-  @override
-  String planScheduleMinutesUnit(Object minutes) {
-    return '$minutes min';
-  }
-
-  @override
-  String planScheduleTotalHours(Object hours) {
-    return 'Total estimated: ${hours}h';
-  }
-
-  @override
-  String get planScheduleTargetDateUnset => 'Not set';
-
-  @override
-  String get planScheduleReminderTime => 'Daily reminder';
-
-  @override
-  String get planScheduleStageLabel => 'Current plan stage';
-
-  @override
-  String get planScheduleStageSprint => 'Sprint push';
-
-  @override
-  String get planScheduleStageDaily => 'Daily execution';
-
-  @override
-  String get planScheduleStageReview => 'Review & adjust';
-
-  @override
-  String get planScheduleStagePaused => 'Paused';
-
-  @override
   String get planScheduleChipWeekday => 'Weekday push, weekend review';
-
-  @override
-  String get planScheduleChipMorning => 'Morning start, evening wrap-up';
-
-  @override
-  String get planScheduleChipAfternoon =>
-      'Afternoon focus, light evening review';
-
-  @override
-  String get planScheduleRhythmLabel => 'Rhythm notes';
-
-  @override
-  String get planScheduleRhythmHint =>
-      'e.g., Mon-Fri push, Sat review, Sun catch-up';
-
-  @override
-  String get planTasksDescription =>
-      'This step determines what actions the plan will carry. Existing tasks are for reference; new tasks will be linked to the plan.';
-
-  @override
-  String get planTasksBlueprintLabel => 'Task blueprint';
-
-  @override
-  String get planTasksBlueprintHint =>
-      'e.g., build framework first, push daily progress, then review and fill gaps.';
-
-  @override
-  String get planTasksRefExisting => 'Reference existing tasks';
-
-  @override
-  String planTasksMinutesDifficulty(Object minutes, Object difficulty) {
-    return '$minutes min · difficulty $difficulty';
-  }
-
-  @override
-  String get planTasksCopyToPlan => 'Copy to plan';
-
-  @override
-  String get planTasksNewTaskLabel => 'New plan task';
-
-  @override
-  String get planTasksNewTaskHint => 'e.g., Complete a chapter review';
-
-  @override
-  String get planTasksDurationLabel => 'Duration';
-
-  @override
-  String get planTasksAddToPlan => 'Add to plan';
-
-  @override
-  String get planTasksEmpty => 'No plan tasks yet';
-
-  @override
-  String get planGuideScopeLabel => 'Boundaries & notes';
-
-  @override
-  String get planGuideScopeHint =>
-      'e.g., this plan excludes ad-hoc tasks and focuses only on exam prep; push one main action per day.';
-
-  @override
-  String get planGuidePerspectiveLabel => 'Guide perspective';
-
-  @override
-  String get planGuideForHuman => 'For myself';
-
-  @override
-  String get planGuideForAi => 'For AI';
-
-  @override
-  String get planGuideHumanInfo =>
-      'The human version is saved as the default execution guide on the plan card, helping you push forward directly.';
-
-  @override
-  String get planGuideAiInfo =>
-      'The AI version is generated only when needed for Sparkle\'s internal task assistant and is not persisted by default.';
-
-  @override
-  String get planGuideHumanTitle => 'Human execution guide';
-
-  @override
-  String get planGuideAiTitle => 'AI execution version';
-
-  @override
-  String get planGuideGenerating => 'Generating';
-
-  @override
-  String get planGuideGenerateHuman => 'Generate human version';
-
-  @override
-  String get planGuideGenerateAi => 'Generate AI version';
-
-  @override
-  String get planGuideHumanHint =>
-      'After generation, you\'ll see the plan\'s main thread, daily rhythm, risk reminders, and today\'s starting action.';
-
-  @override
-  String get planGuideAiEmpty =>
-      'No AI version yet. Only generated when explicitly needed to avoid wasting tokens.';
-
-  @override
-  String get planGuideCopyAi => 'Copy AI version';
-
-  @override
-  String planReviewSummary(Object planType, Object minutes, Object hours) {
-    return '$planType · $minutes min/day · ${hours}h';
-  }
-
-  @override
-  String get planReviewEditInfo =>
-      'Saving will update the plan description and create new tasks for added drafts.';
-
-  @override
-  String get planReviewCreateInfo =>
-      'Creating will generate a more complete plan card and create plan tasks.';
-
-  @override
-  String get planReviewFinalDescription => 'Final plan description';
 
   @override
   String get taskExecutionChatAboutStuckPoint =>
@@ -14666,15 +14050,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'AI inferred from chat, for display only, not used in downstream decisions.';
 
   @override
-  String get memoryPanelClearFilter => 'Clear Filter';
-
-  @override
   String get memoryPanelCommitmentDismissed => 'Commitment dismissed';
-
-  @override
-  String memoryPanelConfidenceValue(Object value) {
-    return 'Confidence $value';
-  }
 
   @override
   String memoryPanelConflictFailed(Object error) {
@@ -14694,9 +14070,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String memoryPanelCorrectionCount(Object count) {
     return 'Corrections $count';
   }
-
-  @override
-  String get memoryPanelDate => 'Date';
 
   @override
   String memoryPanelDeviationsDetected(Object count) {
@@ -14728,34 +14101,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Start by chatting about your goals, preferences, or recent learning activities so the system can organize long-term memories here.';
 
   @override
-  String get memoryPanelEmptyFilterDescription =>
-      'Try clearing filters to see all organized memories.';
-
-  @override
-  String get memoryPanelEmptyFilterTitle => 'No matching memories';
-
-  @override
   String get memoryPanelEmptyTitle => 'Memory panel is empty';
 
   @override
-  String get memoryPanelEvidenceAll => 'All Evidence';
-
-  @override
-  String get memoryPanelEvidenceMissing => 'Missing';
-
-  @override
-  String get memoryPanelEvidenceOk => 'OK';
-
-  @override
-  String get memoryPanelEvidenceRedacted => 'Redacted';
-
-  @override
   String get memoryPanelForesightHint => 'Foresight Hint';
-
-  @override
-  String memoryPanelImportanceValue(Object value) {
-    return 'Importance $value';
-  }
 
   @override
   String memoryPanelItemCount(Object count) {
@@ -14776,16 +14125,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPanelMarkedComplete => 'Marked as complete';
 
   @override
-  String get memoryPanelMetricsNone => 'Metrics: -';
-
-  @override
   String get memoryPanelNotUpdated => 'Not updated';
 
   @override
   String get memoryPanelRecentScenes => 'Recent Scenes';
-
-  @override
-  String get memoryPanelRevoke => 'Revoke';
 
   @override
   String memoryPanelRevokeFailed(Object error) {
@@ -17627,188 +16970,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examSprintTargetHighScore => 'Aim high';
 
   @override
-  String get memorySettingsTitle => 'Memory Control';
-
-  @override
-  String get memorySettingsBack => 'Back';
-
-  @override
-  String get memorySettingsDisabled => 'Memory controls are not enabled';
-
-  @override
-  String memorySettingsLoadError(Object error) {
-    return 'Failed to load memory settings: $error';
-  }
-
-  @override
-  String memorySettingsSaveError(Object error) {
-    return 'Save failed: $error';
-  }
-
-  @override
-  String get memorySettingsSaveSuccess => 'Memory settings updated';
-
-  @override
-  String get memorySettingsUnavailable => 'Memory control unavailable';
-
-  @override
-  String get memorySettingsEnabledChip => 'Memory enabled';
-
-  @override
-  String get memorySettingsDisabledChip => 'Memory paused';
-
-  @override
-  String get memorySettingsControllableChip => 'Preferences controllable';
-
-  @override
-  String get memorySettingsDescription =>
-      'Control how long-term memory learns your preferences, goals, and experiences. Defaults to conservative — only truly valuable information for future decisions should be retained.';
-
-  @override
-  String get memorySettingsEnableTitle => 'Enable long-term memory';
-
-  @override
-  String get memorySettingsEnableDesc =>
-      'Disabling pauses new memory writes but does not delete history.';
-
-  @override
-  String get memorySettingsSocialTitle => 'Social semantics toggles';
-
-  @override
-  String get memorySettingsSocialDesc =>
-      'Stage 17 only handles memory declarations and front-door reads. Disabling a category hides that social semantic type at the front door.';
-
-  @override
-  String get memorySettingsSocialSelf => 'Self memory';
-
-  @override
   String get memorySettingsSocialPersonMention => 'Person mentions';
-
-  @override
-  String get memorySettingsSocialRelationship => 'Relationship dynamics';
-
-  @override
-  String get memorySettingsSocialCommitment => 'Commitments';
-
-  @override
-  String get memorySettingsPushTitle => 'Proactive Reminders';
-
-  @override
-  String get memorySettingsPushDesc =>
-      'Stage 18 is off by default. Only after you explicitly enable it will the system send commitment follow-ups or engagement recovery reminders.';
-
-  @override
-  String get memorySettingsPushEnableTitle => 'Enable proactive reminders';
-
-  @override
-  String get memorySettingsPushEnableDesc =>
-      'Master switch. When off, all Stage 18 proactive reminders are disabled.';
-
-  @override
-  String get memorySettingsPushFollowUpTitle => 'Commitment follow-up';
-
-  @override
-  String get memorySettingsPushFollowUpDesc =>
-      'Only for commitments you explicitly made and are overdue.';
-
-  @override
-  String get memorySettingsPushRecoveryTitle => 'Engagement recovery';
-
-  @override
-  String get memorySettingsPushRecoveryDesc =>
-      'Only for users who were consistently active and haven\'t been active for 72 hours.';
-
-  @override
-  String get memorySettingsQuietHoursTitle => 'Quiet hours';
-
-  @override
-  String get memorySettingsQuietHoursDesc =>
-      'You can narrow the system default of 22:00-08:00, but cannot expand reminders into this period.';
-
-  @override
-  String get memorySettingsStartTime => 'Start time';
-
-  @override
-  String get memorySettingsEndTime => 'End time';
-
-  @override
-  String memorySettingsCurrentTimezone(Object timezone) {
-    return 'Current timezone: $timezone';
-  }
-
-  @override
-  String get memorySettingsViewInbox => 'View reminder inbox';
-
-  @override
-  String get memorySettingsTypeTitle => 'Memory types';
-
-  @override
-  String get memorySettingsTypeDesc =>
-      'Determines which content is stored long-term.';
-
-  @override
-  String get memorySettingsPreferenceTitle => 'Preferences';
-
-  @override
-  String get memorySettingsPreferenceDesc =>
-      'Records response style, learning pace, and common preferences.';
-
-  @override
-  String get memorySettingsGoalTitle => 'Goals';
-
-  @override
-  String get memorySettingsGoalDesc =>
-      'Records confirmed long-term goals and stage intentions.';
-
-  @override
-  String get memorySettingsEpisodicTitle => 'Experiences';
-
-  @override
-  String get memorySettingsEpisodicDesc =>
-      'Records key events and feedback helpful for future decisions.';
-
-  @override
-  String get memorySettingsInferredTitle => 'AI auto memory';
-
-  @override
-  String get memorySettingsInferredDesc =>
-      'Allows the system to infer short-term experiences from chats; each entry must be visible and revocable.';
-
-  @override
-  String get memorySettingsCaptureTitle => 'Capture intensity';
-
-  @override
-  String get memorySettingsCaptureDesc =>
-      'Higher is more aggressive, but also captures more context.';
-
-  @override
-  String get memorySettingsCaptureLow => 'Low';
-
-  @override
-  String get memorySettingsCaptureMedium => 'Medium';
-
-  @override
-  String get memorySettingsCaptureHigh => 'High';
-
-  @override
-  String get memorySettingsBlockPrefTitle => 'Block preferences';
-
-  @override
-  String get memorySettingsBlockPrefDesc =>
-      'Disable preference items you don\'t want stored long-term.';
-
-  @override
-  String get memorySettingsBlockSourceTitle => 'Block sources';
-
-  @override
-  String get memorySettingsBlockSourceDesc =>
-      'Restrict which entry points won\'t write to long-term memory.';
-
-  @override
-  String get memorySettingsSaveButton => 'Save settings';
-
-  @override
-  String get memorySettingsSaving => 'Saving...';
 
   @override
   String get reportLearningAnalysisReport => 'Learning Analysis Report';
@@ -23047,9 +22209,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatGroupTasks => 'Group tasks';
 
   @override
-  String get chatGrowthNotNeeded => 'Not needed';
-
-  @override
   String chatGrowthStreakDays(int days) {
     return '$days d';
   }
@@ -23111,9 +22270,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMemoryOriginalTurn => 'Original turn';
 
   @override
-  String get chatMemoryReferenceCorrectFailed => 'Memory correction failed';
-
-  @override
   String get chatMemoryReferenceDetailTitle => 'Related memories';
 
   @override
@@ -23125,6 +22281,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String chatMemoryReferenceUsed(Object count) {
     return 'Used $count related memories';
+  }
+
+  @override
+  String chatMemoryReferenceReceiptLabel(Object count) {
+    return 'Aurora used $count related memories';
   }
 
   @override
@@ -23191,9 +22352,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatNotNeeded => 'Not needed';
-
-  @override
-  String get chatNudgeReviewText => 'Let me review';
 
   @override
   String get chatNudgeStartReview => 'Start review';
@@ -23362,9 +22520,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPrivateQuickSummary => 'Quick summary';
 
   @override
-  String get chatPrivateQuickSummaryLabel => 'Quick summary';
-
-  @override
   String get chatPrivateRestoreOriginal => 'Restore original';
 
   @override
@@ -23492,16 +22647,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chatRoundtableCodingExpert => 'Coding Expert';
-
-  @override
   String get chatRoundtableConclusion => 'Overall conclusion';
 
   @override
   String get chatRoundtableCoordinator => 'Coordinator';
-
-  @override
-  String get chatRoundtableDeepAnalyst => 'Deep Analyst';
 
   @override
   String get chatRoundtableErrorSpecialist => 'Error Specialist';
@@ -23516,12 +22665,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatRoundtableExpertCollab => 'Expert collaboration';
 
   @override
-  String chatRoundtableExpertCollabCount(Object count) {
-    return 'Expert collaboration ($count)';
-  }
-
-  @override
-  String get chatRoundtableGalaxyNavigator => 'Star Map Navigator';
+  String get chatRoundtableGalaxyNavigator => 'Galaxy Navigator';
 
   @override
   String chatRoundtableHiddenTurns(Object count) {
@@ -23535,9 +22679,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatRoundtableLowComplexity => 'Low complexity';
 
   @override
-  String get chatRoundtableMathExpert => 'Math Expert';
-
-  @override
   String get chatRoundtableMediumComplexity => 'Medium complexity';
 
   @override
@@ -23549,18 +22690,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatRoundtableScienceExpert => 'Science Expert';
 
   @override
-  String get chatRoundtableSearchExpert => 'Search Expert';
-
-  @override
   String get chatRoundtableTimeCoach => 'Time Coach';
 
   @override
   String chatRoundtableTurnCount(Object count) {
     return '$count viewpoints';
   }
-
-  @override
-  String get chatRoundtableWritingExpert => 'Writing Expert';
 
   @override
   String get chatSettingsEnableSeedDesc =>
@@ -23579,10 +22714,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatSettingsOpenAdvanced => 'Open Advanced Settings';
-
-  @override
-  String get chatSettingsOpenAdvancedDesc =>
-      'Enter detailed transparency configuration page.';
 
   @override
   String get chatSettingsPureMode => 'Pure Mode';
@@ -23744,9 +22875,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatStreamCommunityInsight => 'Community insight';
-
-  @override
-  String get chatStreamCompleted => 'Completed';
 
   @override
   String chatStreamHoursMins(Object hours, Object mins) {
@@ -23918,9 +23046,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatWidgetPlanSummary => 'Plan summary';
-
-  @override
-  String get chatWidgetTaskList => 'Task list';
 
   @override
   String get chatWsUnknownError => 'Unknown error';
@@ -28053,9 +27178,6 @@ class AppLocalizationsEn extends AppLocalizations {
       '5. How much do you know? Which chapters scare you most?';
 
   @override
-  String get planSprintScariestChapters => 'Which chapters scare you most?';
-
-  @override
   String get planSprintStep6Title =>
       '6. How long can you realistically study per day?';
 
@@ -28068,10 +27190,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String planSprintDailyChipLabel(Object minutes) {
     return '$minutes min';
   }
-
-  @override
-  String get planSprintRealisticTime =>
-      'Use a time you can realistically stick to, not ideal conditions.';
 
   @override
   String get planSprintGenerateFirstDay => 'Generate My First Day Tasks';
@@ -28106,9 +27224,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String planSprintRecommendedMode(Object mode) {
     return 'Recommended mode $mode';
   }
-
-  @override
-  String get planSprintFirstDayTodo => 'What to do first on day one';
 
   @override
   String get planSprintStartFirstDay => 'Start Day 1 Tasks';
@@ -28146,14 +27261,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planSprintTargetHighScore => 'Excel';
-
-  @override
-  String planSprintCompletionSubject(Object subject) {
-    return '$subject 7-Day Sprint Results';
-  }
-
-  @override
-  String get planSprintCompletionNoSubject => '7-Day Sprint Results';
 
   @override
   String get planSprintStillSummarizing =>
@@ -28326,11 +27433,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planPortfolioCreateSprint => 'Create Exam Sprint';
 
   @override
-  String planPortfolioLoadError(Object message) {
-    return 'Failed to load learning archive: $message';
-  }
-
-  @override
   String get planPortfolioLoadMore => 'Load More';
 
   @override
@@ -28397,11 +27499,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String planLoadFailedError(Object error) {
     return 'Failed to load plan: $error';
-  }
-
-  @override
-  String planStageTaskTitle(Object number, Object planName) {
-    return '$planName - Stage $number Task';
   }
 
   @override
@@ -28641,21 +27738,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get communityUserFallback => 'User';
-
-  @override
   String accountabilityUnlockedOn(String date) {
     return 'Unlocked on $date';
-  }
-
-  @override
-  String communityWeeksAgo(int count) {
-    return '${count}w ago';
-  }
-
-  @override
-  String communityMonthsAgo(int count) {
-    return '${count}mo ago';
   }
 
   @override
@@ -28671,40 +27755,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get communityFirstSideBySide => 'First Side by Side';
-
-  @override
-  String get communityFirstSideBySideDesc =>
-      'Successfully established your first accountability partnership';
-
-  @override
-  String get communitySevenDayStreak => '7-Day Streak Together';
-
-  @override
-  String get communitySevenDayStreakDesc =>
-      'Check in for 7 consecutive days in a partnership';
-
-  @override
-  String get communitySevenDayCheckin => '7-Day Check-in Streak';
-
-  @override
-  String get communityEnglishSprintPlan => 'This Week\'s English Sprint Plan';
-
-  @override
-  String get communityShareProgressLabel => 'Progress';
-
-  @override
-  String communityPointsLabel(String points) {
-    return '+$points';
-  }
-
-  @override
   String communityTotalCheckins(int count) {
     return '$count times';
   }
-
-  @override
-  String get communityTotalCheckinsLabel => 'Total check-ins';
 
   @override
   String get communityChat => 'Chat';
@@ -28816,11 +27869,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String communityDaysAgo(Object count) {
     return '${count}d ago';
-  }
-
-  @override
-  String communityBadgeUnlockedOn(Object date) {
-    return 'Unlocked on $date';
   }
 
   @override
@@ -29422,11 +28470,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String communityProgressColon(Object percent) {
-    return 'Progress: $percent%';
-  }
-
-  @override
   String get communityKnowledgeNode => 'Knowledge node';
 
   @override
@@ -29468,52 +28511,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityLinkCopied => 'Link copied';
 
   @override
-  String communityUnblockConfirm(Object name) {
-    return 'Are you sure you want to unblock $name?\n\nThey will be able to send friend requests and messages again.';
-  }
-
-  @override
-  String communityUnblocked(Object name) {
-    return 'Unblocked $name';
-  }
-
-  @override
-  String communityMuteMember(Object name) {
-    return 'Mute $name';
-  }
-
-  @override
-  String get communityMute24h => '24h';
-
-  @override
-  String communityMuteMinutes(Object minutes) {
-    return '${minutes}m';
-  }
-
-  @override
-  String communityWarnMember(Object name) {
-    return 'Warn $name';
-  }
-
-  @override
-  String communityGroupMembers(Object name) {
-    return '$name - Members';
-  }
-
-  @override
-  String get communityGroupSearchHint => 'Search groups...';
-
-  @override
-  String communityGroupTasksMinutes(Object minutes) {
-    return '$minutes min';
-  }
-
-  @override
-  String communitySlowModeSeconds(Object seconds) {
-    return '${seconds}s';
-  }
-
-  @override
   String get communityFriendGoalHint => 'e.g. study English 30 minutes daily';
 
   @override
@@ -29529,68 +28526,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get communityFeedFilterGlobal => 'Global Feed';
-
-  @override
-  String get communityFeedFilterSquad => 'My Squad';
-
-  @override
-  String get communityFeedFilterGoalMates => 'Goal Mates';
-
-  @override
-  String get communityFeedFilterFollowing => 'Following';
-
-  @override
   String get communityFeedGlobal => 'Global Feed';
 
   @override
   String get communityFeedMySquad => 'My Squad';
 
   @override
-  String get communityNoFeedYetTitle => 'No community spark yet';
-
-  @override
-  String get communityNoFeedYetDescription =>
-      'Share a plan, insight, or small win to start the first conversation here.';
-
-  @override
-  String get communitySharePostAction => 'Share a post';
-
-  @override
-  String get communityRefreshFeedAction => 'Refresh feed';
-
-  @override
-  String get communityGroupTypeSprint => 'Sprint group';
-
-  @override
-  String get communityGroupTypeSquad => 'Squad';
-
-  @override
-  String communitySprintGoalChip(Object goal) {
-    return 'Sprint goal: $goal';
-  }
-
-  @override
   String get communityFeedback => 'Feedback';
 
   @override
   String get communityShareSource => 'Source';
-
-  @override
-  String communityAdoptFailedWithError(Object error) {
-    return 'Adoption failed: $error';
-  }
-
-  @override
-  String get communityOwnerFullView => 'You see the full view';
-
-  @override
-  String get communityPartnerSummaryView => 'Partner sees summary only';
-
-  @override
-  String communityHiddenFields(Object fields) {
-    return 'Hidden: $fields';
-  }
 
   @override
   String communityPartnerObservationPermissions(String name) {
@@ -29601,48 +28546,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityAllowObservation => 'Allow observation';
 
   @override
-  String get communityObservationDisabled =>
-      'When off, this buddy no longer receives any signals or observations about you';
-
-  @override
   String get communitySeeStudyTime => 'See my study time';
 
   @override
   String get communitySeeTaskContent => 'See specific task content';
 
   @override
-  String get communitySeeEmotionalState => 'See my emotional / energy state';
-
-  @override
-  String communityShareProgressPercent(Object percent) {
-    return 'Progress: $percent%';
-  }
-
-  @override
-  String get communityKnowledgeNodeLabel => 'Knowledge Node';
-
-  @override
-  String get communityTimeCapsuleLabel => 'Time Capsule';
-
-  @override
-  String get communityPartnersLabel => 'Partners';
-
-  @override
-  String get communityFriendsLabel => 'Friends';
-
-  @override
   String communityBoundMilestone(Object label) {
     return 'Bound milestone: $label';
   }
-
-  @override
-  String get communityCommunity => 'Community';
-
-  @override
-  String get communityLoadFailedTitle => 'Load failed';
-
-  @override
-  String get communityRetry => 'Retry';
 
   @override
   String get communityNoCommunitySpark => 'No community spark yet';
@@ -29701,9 +28613,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String communityShareDaysLater(Object days) {
     return '${days}d later';
   }
-
-  @override
-  String get communityShareEvaluation => 'Evaluation';
 
   @override
   String get communityShareTaskComplete => 'Task Complete';
@@ -29796,42 +28705,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityShareBrightness => 'Brightness';
 
   @override
-  String communityShareUnlockedAt(Object date) {
-    return 'Unlocked at $date';
-  }
-
-  @override
-  String get communityShareTodayDate => 'Today';
-
-  @override
-  String get communityShareYesterday => 'Yesterday';
-
-  @override
-  String communityShareDaysAgo(Object days) {
-    return '${days}d ago';
-  }
-
-  @override
-  String communityShareWeeksAgo(Object weeks) {
-    return '${weeks}w ago';
-  }
-
-  @override
-  String communityShareMonthsAgo(Object months) {
-    return '${months}mo ago';
-  }
-
-  @override
   String get communityShareNoAchievements => 'No achievements yet';
 
   @override
   String get communityShareStartCheckin =>
       'Start checking in to unlock achievements!';
-
-  @override
-  String communitySharePointsValue(Object points) {
-    return '+$points points';
-  }
 
   @override
   String get communityShareClose => 'Close';
@@ -29847,26 +28725,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String communityShareDepthLevel(Object level) {
     return 'Depth Lv.$level';
-  }
-
-  @override
-  String communitySharePosterTitle(Object name) {
-    return '$name\'s Glory Identity';
-  }
-
-  @override
-  String communityShareGrowthTitle(Object name) {
-    return '$name\'s Weekly Growth';
-  }
-
-  @override
-  String communityShareGrowthSubtitle(Object brightness, Object level) {
-    return 'Level Lv.$level · Brightness $brightness%';
-  }
-
-  @override
-  String communityShareTemplateName(Object name) {
-    return '$name Template';
   }
 
   @override
@@ -30642,9 +29500,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planViewCurrentPlan => 'Current Plan';
-
-  @override
-  String get planViewNoTasksForPlan => 'No Tasks';
 
   @override
   String get planViewNoPlanTasks => 'No Plan Tasks';
@@ -31814,11 +30669,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planPortfolioLoadFailedMsg => 'Failed to load learning portfolio';
 
   @override
-  String get planPortfolioRetry => 'Retry';
+  String get galaxySectorDarkMatter => 'Dark Matter';
 
   @override
-  String get planGuideAiNotReturn =>
-      'AI did not return a result, please try again';
+  String get planPortfolioRetry => 'Retry';
 
   @override
   String get planViewDetails => 'View details';
@@ -33971,6 +32825,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get homeAskAurora => 'Ask Aurora';
+
+  @override
   String get homeNextActionTitle => 'Next';
 
   @override
@@ -34168,6 +33025,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeOnboardingExploreSubtitle =>
       'Discover your knowledge structure and growth areas';
+
+  @override
+  String get homeOnboardingExploreGalaxy => 'Explore knowledge map';
 
   @override
   String get homeOnboardingResumeTitle =>
@@ -34551,6 +33411,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get homeNoUrgentAction =>
+      'No urgent action is queued. Review, add context, or let Aurora reprioritize.';
+
+  @override
   String get goalIntentTitle => 'Tell me what you want to achieve';
 
   @override
@@ -34763,9 +33627,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailSemanticsTitle => 'Task detail';
 
   @override
-  String get chatSemanticsScreen => 'Chat screen';
-
-  @override
   String get streakQualityRecoveryScore => 'Recovery';
 
   @override
@@ -34847,12 +33708,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatLabelCollapse => 'Collapse';
-
-  @override
-  String get chatLabelExpand => 'Expand';
-
-  @override
-  String get chatLabelAuto => 'Auto';
 
   @override
   String get chatLabelModel => 'Model';
@@ -34967,14 +33822,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chatAgendaAdjustReplyStrategy =>
       'Adjust subsequent reply strategy';
-
-  @override
-  String get chatAgendaConfirmStatusBarJudgment =>
-      'Confirm status bar judgment';
-
-  @override
-  String get chatAgendaDecideAdjustNextSteps =>
-      'Decide whether to adjust next steps';
 
   @override
   String get chatAgendaConfirmTaskBlockCause =>
@@ -35332,9 +34179,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sprintCompletionLoading => 'Loading...';
-
-  @override
-  String get planEditLoading => 'Loading plan...';
 
   @override
   String get learningPortfolioLoading => 'Loading...';
@@ -35705,12 +34549,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get communityCheckinLike => 'Like';
-
-  @override
-  String get communityEncourageLabel => 'Encourage';
-
-  @override
   String get communitySimilarGoalPursuers => 'Similar goal pursuers';
 
   @override
@@ -35722,14 +34560,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String communityMutualFriendsCount(int count) {
     return '$count mutual';
   }
-
-  @override
-  String communityGoalProgressFormat(String title, int percent) {
-    return '$title · $percent%';
-  }
-
-  @override
-  String get communityDefaultUserName => 'User';
 
   @override
   String get communitySimilarGoalConnectMessage =>
@@ -39053,10 +37883,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityCheckinGoalLabel => 'Link a goal (optional)';
-
-  @override
-  String get communityCheckinGoalHint =>
-      'Link to revisit your goal trajectory from this check-in';
 
   @override
   String get communityCheckinGoalNone => 'No goal';
