@@ -152,7 +152,9 @@ class OntologyGenerator:
         )
 
         try:
-            result = self._repair_payload(payload or fallback.to_dict())
+            # V3-FIX-238：json_call 诚实宽型可返 list，非 dict 一律用本地
+            # fallback 骨架进修复管线（原实现运行时靠 except 兜住 list）。
+            result = self._repair_payload(payload if isinstance(payload, dict) else fallback.to_dict())
             result.truncated = truncated
             return result
         except Exception as exc:

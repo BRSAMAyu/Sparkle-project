@@ -70,7 +70,9 @@ class AnalysisOrchestrator:
             temperature=temperature,
         )
 
-        if analysis is None or not analysis.get("root_cause"):
+        # V3-FIX-238：json_call 诚实宽型可返 list，非 dict 一律按解析失败处理
+        # （原实现对 non-empty list 会在 .get 处 AttributeError）。
+        if not isinstance(analysis, dict) or not analysis.get("root_cause"):
             logger.warning(f"Analysis parsing failed for task {task.task_id}")
             return AnalysisResult(
                 task_id=task.task_id,

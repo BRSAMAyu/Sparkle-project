@@ -28,6 +28,28 @@ from loguru import logger
 
 from app.services.llm_service import llm_service
 
+# json_call / safe_llm_json_call 的统一宽型：LLM 合法输出 JSON object 或 JSON
+# array，二者都会被解析返回（V3-FIX-238 收窄裁决：收窄为 dict-only 会让
+# plan_tools/focus_service/theater 风险分级这三个 prompt 明确要求 array 的消费
+# 面永远拿 fallback，属行为回归，故契约诚实化为宽型 + 调用方收窄）。
+JSONPayload = dict[str, Any] | list[Any]
+
+
+def json_as_dict(payload: JSONPayload | None) -> dict[str, Any] | None:
+    """宽型 JSON 返回值按 dict 消费面收窄：list/None 一律视为 None。
+
+    Example:
+        data = json_as_dict(await wrapper.json_call(messages, fallback={}))
+        if data is None:
+            ...  # 走降级
+    """
+    return payload if isinstance(payload, dict) else None
+
+
+def json_as_list(payload: JSONPayload | None) -> list[Any] | None:
+    """宽型 JSON 返回值按 list 消费面收窄：dict/None 一律视为 None。"""
+    return payload if isinstance(payload, list) else None
+
 
 class LLMFallbackError(Exception):
     """LLM降级后仍失败的异常"""
@@ -209,13 +231,13 @@ class LLMFallbackWrapper:
         self,
         service_name: str,
         default_fallback: str = "",
-        default_json_fallback: dict[str, Any] | None = None,
+        default_json_fallback: dict[str, Any] | list[Any] | None = None,
         timeout: float = 30.0,
         retry_count: int = 1
     ):
         self.service_name = service_name
         self.default_fallback = default_fallback
-        self.default_json_fallback = default_json_fallback or {}
+        self.default_json_fallback: dict[str, Any] | list[Any] = default_json_fallback or {}
         self.timeout = timeout
         self.retry_count = retry_count
 
@@ -239,11 +261,17 @@ class LLMFallbackWrapper:
     async def json_call(
         self,
         messages: list[dict[str, str]],
-        fallback: dict[str, Any] | None = None,
+        fallback: dict[str, Any] | list[Any] | None = None,
         service: Any = None,
         **kwargs
-    ) -> dict[str, Any] | None:
-        """安全调用LLM并返回JSON"""
+    ) -> dict[str, Any] | list[Any] | None:
+        """安全调用LLM并返回JSON。
+
+        契约（V3-FIX-238）：与底层 ``safe_llm_json_call`` 对齐的诚实宽型
+        ``dict | list | None``——LLM 输出 JSON array 时本方法返回 list，
+        不是解析失败。dict 消费面请用 ``json_as_dict`` 收窄，list 消费面用
+        ``json_as_list``；不要假设返回恒为 dict。
+        """
         return await safe_llm_json_call(
             messages,
             fallback=fallback or self.default_json_fallback,

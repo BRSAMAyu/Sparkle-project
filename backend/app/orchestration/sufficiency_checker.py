@@ -497,7 +497,9 @@ class SufficiencyChecker:
             service=await _get_fast_lane_service(),  # TTFT-CFG: FAST 车道
             temperature=0.1,
         )
-        return bool(result.get("specific", True)) if result else True
+        # V3-FIX-238：json_call 诚实宽型可返 list，非 dict（含 None）一律按
+        # 降级语义视为"足够具体"（原实现对 non-empty list 会 AttributeError）。
+        return bool(result.get("specific", True)) if isinstance(result, dict) else True
 
     async def _generate_clarification(self, intent: str, user_message: str) -> str:
 

@@ -429,7 +429,10 @@ class LearningReportAgent:
             fallback={"markdown": fallback},
             temperature=0.3,
         )
-        return str((data or {}).get("markdown") or fallback)
+        # V3-FIX-238：json_call 诚实宽型可返 list，non-empty list 曾在
+        # (data or {}).get 处 AttributeError；非 dict 一律用本地 fallback。
+        payload = data if isinstance(data, dict) else {}
+        return str(payload.get("markdown") or fallback)
 
     async def _reflect_on_markdown(
         self,
@@ -466,16 +469,19 @@ class LearningReportAgent:
             fallback=fallback,
             temperature=0.2,
         )
+        # V3-FIX-238：json_call 诚实宽型可返 list，non-empty list 曾在
+        # (data or {}).get 处 AttributeError；非 dict 一律用本地 fallback。
+        payload = data if isinstance(data, dict) else {}
         return {
-            "needs_revision": bool((data or {}).get("needs_revision")),
+            "needs_revision": bool(payload.get("needs_revision")),
             "missing_sections": [
-                str(item) for item in list((data or {}).get("missing_sections") or []) if str(item).strip()
+                str(item) for item in list(payload.get("missing_sections") or []) if str(item).strip()
             ],
-            "focus_areas": [str(item) for item in list((data or {}).get("focus_areas") or []) if str(item).strip()],
-            "revision_brief": str((data or {}).get("revision_brief") or fallback["revision_brief"]),
+            "focus_areas": [str(item) for item in list(payload.get("focus_areas") or []) if str(item).strip()],
+            "revision_brief": str(payload.get("revision_brief") or fallback["revision_brief"]),
             "query_expansion": [
                 str(item)
-                for item in list((data or {}).get("query_expansion") or fallback["query_expansion"])
+                for item in list(payload.get("query_expansion") or fallback["query_expansion"])
                 if str(item).strip()
             ],
         }
@@ -524,7 +530,9 @@ class LearningReportAgent:
             fallback={"markdown": fallback},
             temperature=0.25,
         )
-        return str((data or {}).get("markdown") or fallback)
+        # V3-FIX-238：同 _compose_markdown，非 dict 一律用本地 fallback。
+        payload = data if isinstance(data, dict) else {}
+        return str(payload.get("markdown") or fallback)
 
     def _build_report_persona_section(self) -> str:
         profile = agent_profile_registry.get_profile(AgentRole.GENERATION)

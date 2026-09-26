@@ -150,9 +150,10 @@ class OmniBarService:
             fallback={"type": "CHAT"},  # 默认降级到聊天模式
             temperature=0.1,
         )
-        if result is None:
-            return self._fallback_after_llm(text, None)
-        return self._fallback_after_llm(text, result)
+        # V3-FIX-238：json_call 诚实宽型可返 list，非 dict 一律按无有效结果
+        # 交给 _fallback_after_llm 走规则兜底（原实现对 list 会在其 .get 处
+        # AttributeError）。
+        return self._fallback_after_llm(text, result if isinstance(result, dict) else None)
 
     def _fallback_after_llm(
         self,

@@ -520,7 +520,10 @@ class CognitiveService:
                             },
                             temperature=0.5,
                         )
-                        if json_or_none is None:
+                        # V3-FIX-238：json_call 诚实宽型可返 list，非 dict
+                        # （含 None）一律按解析失败兜底（原实现对 non-empty
+                        # list 会在下方 .get 处 AttributeError）。
+                        if not isinstance(json_or_none, dict):
                             logger.error(f"Failed to parse LLM analysis for {fragment_id}")
                             json_or_none = {
                                 "pattern_name": "Unknown Pattern",
@@ -553,7 +556,8 @@ class CognitiveService:
                             },
                             temperature=0.5
                         )
-                        if json_or_none is None:
+                        # V3-FIX-238：同上，非 dict（含 None）一律按解析失败兜底。
+                        if not isinstance(json_or_none, dict):
                             logger.error(f"Failed to parse LLM analysis for {fragment_id}")
                             json_or_none = {
                                 "pattern_name": "Unknown Pattern",

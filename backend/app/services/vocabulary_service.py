@@ -216,7 +216,9 @@ class VocabularyService:
             fallback={"word": word, "definitions": [], "examples": []},
             temperature=0.2,
         )
-        if data is None:
+        # V3-FIX-238：json_call 诚实宽型可返 list，非 dict 一律走空词条 +
+        # 下方纯文本兜底链（原实现对 list 会在 .get 处 AttributeError）。
+        if not isinstance(data, dict):
             data = {}
 
         definitions = VocabularyService._normalize_definitions(data.get("definitions"))

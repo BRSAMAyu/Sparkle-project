@@ -479,7 +479,10 @@ class UnifiedIntentRouter:
                 temperature=0.1,
             )
 
-            if response is None:
+            # V3-FIX-238：json_call 诚实宽型可返 list（LLM 未按要求回 object），
+            # 非 dict 一律视为本次分类失败，走同款 chat 降级 dict（原实现对
+            # list 会 AttributeError 被下方 except 吞成静默降级）。
+            if not isinstance(response, dict):
                 response = {"primary_intent": "chat", "confidence": 0.5, "is_complex": False}
 
             # 解析结果
