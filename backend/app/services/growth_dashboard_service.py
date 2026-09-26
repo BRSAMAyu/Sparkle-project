@@ -11,13 +11,14 @@ from sqlalchemy import case, desc, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import time_utils
 from app.core.cache import cache_service
 from app.models.achievement import UserStreakStats
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.plan import Plan, PlanPriority
 from app.models.task import Task, TaskStatus
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.services.daily_task_selection_service import DailyTaskSelectionService
 from app.services.llm_fallback_utils import safe_llm_json_call
 from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
@@ -99,7 +100,9 @@ class GrowthDashboardService:
             weakest_area=weakest_area,
         )
         active_plan_health = await self._get_plan_health(user_id, active_plan)
-        active_plan_progress = self._serialize_active_plan(active_plan, health=active_plan_health)
+        active_plan_progress = self._serialize_active_plan(
+            active_plan, health=active_plan_health, today=await self._user_local_today(user_id)
+        )
         what_changed_card = self._build_what_changed_card(
             growth_signal=growth_signal,
             growth_status=growth_status,
@@ -196,7 +199,10 @@ class GrowthDashboardService:
             plan_name=str(active_plan.name).strip() if active_plan and active_plan.name else None,
             subject=str(active_plan.subject).strip() if active_plan and active_plan.subject else None,
             days_to_deadline=(
-                self._days_until(active_plan.target_date) if active_plan and active_plan.target_date else None
+                # target_day 即本行上下文的「今天」（V3-FIX-209：days_left 按用户日切）
+                self._days_until(active_plan.target_date, today=target_day)
+                if active_plan and active_plan.target_date
+                else None
             ),
             yesterday_total=yesterday_stats["total"],
             yesterday_completed=yesterday_stats["completed"],
@@ -536,9 +542,9 @@ class GrowthDashboardService:
         if most_important_task and most_important_task.get("title"):
             subtitle_parts.append(f"我建议你先做「{most_important_task['title']}」")
         elif active_plan and active_plan.target_date:
-            subtitle_parts.append(
-                f"当前计划「{active_plan.name}」离目标日还有 {self._days_until(active_plan.target_date)} 天"
-            )
+            # V3-FIX-209：days_left 按用户本地日切，修前 _utcnow().date() 是 UTC date
+            plan_days_left = self._days_until(active_plan.target_date, today=await self._user_local_today(user_id))
+            subtitle_parts.append(f"当前计划「{active_plan.name}」离目标日还有 {plan_days_left} 天")
 
         if streak_days > 0:
             subtitle_parts.append(f"你已经连续 {streak_days} 天保持推进")
@@ -799,7 +805,9 @@ class GrowthDashboardService:
             "risk_score": selection.score,
             "reason": selection.reason,
             "plan_name": plan.name if plan else None,
-            "days_to_deadline": self._days_until(due_reference) if due_reference else None,
+            "days_to_deadline": (
+                self._days_until(due_reference, today=await self._user_local_today(user_id)) if due_reference else None
+            ),
             "selection_signals": selection.signals,
         }
 
@@ -867,6 +875,7 @@ class GrowthDashboardService:
         plan: Plan | None,
         *,
         health: PlanHealthReport | None = None,
+        today: date | None = None,
     ) -> dict[str, Any] | None:
         if plan is None:
             return None
@@ -885,15 +894,29 @@ class GrowthDashboardService:
             "health_reasons": list(health.reasons or []) if health else [],
             "mastery_level": float(plan.mastery_level or 0.0),
             "target_date": plan.target_date.isoformat() if plan.target_date else None,
-            "days_to_deadline": self._days_until(plan.target_date) if plan.target_date else None,
+            "days_to_deadline": self._days_until(plan.target_date, today=today) if plan.target_date else None,
         }
 
+    async def _user_local_today(self, user_id: UUID) -> date:
+        """用户本地日（V3-FIX-209）：push_preference.timezone 标量直查，缺省 Asia/Shanghai。
+
+        沿 experience_readouts._user_local_today / focus_service._local_today
+        先例（规避身份映射命中未加载关系的 async lazy-load）。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        return time_utils.local_date(_utcnow(), time_utils.valid_timezone_name(tz_name))
+
     @staticmethod
-    def _days_until(value: date | datetime | None) -> int:
+    def _days_until(value: date | datetime | None, today: date | None = None) -> int:
+        """目标日距今的天数；today=用户本地日（V3-FIX-209）。
+
+        修前恒用 ``_utcnow().date()``（UTC date）——UTC+8 晨间（UTC 尚在
+        前日）days_left 偏一日；未传 today 的直调方保持历史 UTC 行为。
+        """
         if value is None:
             return 0
         if isinstance(value, datetime):
             target = value.date()
         else:
             target = value
-        return (target - _utcnow().date()).days
+        return (target - (today if today is not None else _utcnow().date())).days

@@ -501,7 +501,13 @@ async def get_experience_growth_dashboard(
     narrative = await ProgressNarrativeService(db, redis=cache_service.redis, cache=cache_service).get_weekly_narrative(
         current_user.id
     )
-    since = _utcnow() - timedelta(days=7)
+    # V3-FIX-208：FocusSession.start_time 是客户端本地墙上钟列（V3-FIX-37
+    # 定界：mobile 发本地 ISO 串、无时区后缀），7 天窗口端点必须用用户本地
+    # 日的墙上零点（FocusService.get_weekly_stats 先例；勿用
+    # local_midnight_as_utc_naive——那是 UTC 存储列的换算）。修前
+    # ``_utcnow() - timedelta(days=7)``（UTC 瞬间）直比墙上钟列，窗口起点
+    # 随时刻在本地 7 天前零点附近漂移 ±8h，漏计/多计窗口边缘会话。
+    since = time_utils.local_midnight_wall(await _user_local_today(db, current_user.id) - timedelta(days=7))
     focus_result = await db.execute(
         select(
             func.coalesce(func.sum(FocusSession.duration_minutes), 0),

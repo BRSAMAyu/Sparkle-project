@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import time_utils
 from app.core.profile_context import ProfileContext
 from app.core.user_insight_state import UserInsightState
 from app.models.task import Task, TaskStatus
+from app.models.user import PushPreference
 
 
 def _utcnow() -> datetime:
@@ -65,8 +67,12 @@ class UserInsightAnalysisService:
         turn_signals: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         tasks = await self._load_recent_tasks(user_id)
+        # V3-FIX-209：due_soon 的 7 天界须按用户本地日切（Task.due_date 是
+        # 墙上钟日界列），修前 ``_utcnow().date()`` 是 UTC date，UTC+8 晨间
+        # （UTC 尚在前日）due_soon 少算一日。
+        today = await self._user_local_today(user_id)
         short_span = self._build_short_span(state=state, tasks=tasks, turn_signals=turn_signals or {})
-        medium_span = self._build_medium_span(state=state, tasks=tasks)
+        medium_span = self._build_medium_span(state=state, tasks=tasks, today=today)
         contradictions = self._build_contradictions(
             state=state,
             profile_context=profile_context,
@@ -92,6 +98,15 @@ class UserInsightAnalysisService:
             "contradictions": contradictions,
             "confidence_decay": confidence_decay,
         }
+
+    async def _user_local_today(self, user_id: UUID) -> date:
+        """用户本地日（V3-FIX-209）：push_preference.timezone 标量直查，缺省 Asia/Shanghai。
+
+        沿 experience_readouts._user_local_today / focus_service._local_today
+        先例（规避身份映射命中未加载关系的 async lazy-load）。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        return time_utils.local_date(_utcnow(), time_utils.valid_timezone_name(tz_name))
 
     async def _load_recent_tasks(self, user_id: UUID) -> list[Task]:
         since = _utcnow() - timedelta(days=self.TASK_WINDOW_DAYS)
@@ -171,7 +186,9 @@ class UserInsightAnalysisService:
             "support_level": support_level,
         }
 
-    def _build_medium_span(self, *, state: UserInsightState, tasks: list[Task]) -> dict[str, Any]:
+    def _build_medium_span(
+        self, *, state: UserInsightState, tasks: list[Task], today: date | None = None
+    ) -> dict[str, Any]:
         completion_anchor = [task.completed_at or task.started_at or task.created_at for task in tasks]
         weekday_count = sum(1 for item in completion_anchor if item.weekday() < 5)
         weekend_count = sum(1 for item in completion_anchor if item.weekday() >= 5)
@@ -192,7 +209,10 @@ class UserInsightAnalysisService:
         else:
             drift_label = "high_drift"
 
-        due_soon = sum(1 for task in tasks if task.due_date and (task.due_date - _utcnow().date()).days <= 7)
+        # today=用户本地日（analyze 传入）；缺省回退仅服务未传 today 的直调
+        # 方（历史 UTC 行为，便于兼容既有直调面）。
+        effective_today = today or _utcnow().date()
+        due_soon = sum(1 for task in tasks if task.due_date and (task.due_date - effective_today).days <= 7)
         calendar_density = _strip(state.current_state.get("calendar_density_level") or "low")
         exam_days_left = _as_int(_extract_exam_urgency(state).get("days_left"))
         deadline_pressure = "low"

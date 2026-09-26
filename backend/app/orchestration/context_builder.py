@@ -34,7 +34,7 @@ from app.core.metrics import (
     AURORA_RETURNING_CONTEXT_TIER_TOTAL,
     CONTEXT_CACHE_VERSION_DECISIONS,
 )
-from app.core.time_utils import utcnow
+from app.core.time_utils import local_date, utcnow, valid_timezone_name
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import CognitiveFragment
@@ -42,6 +42,7 @@ from app.models.plan import Plan
 from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
 from app.models.task_feedback import TaskFeedback
+from app.models.user import PushPreference
 from app.orchestration.capability_lane import MEMORY_CLASS_INSTRUCTION, classify_memory_class_message
 from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.scaffolding.scaffolding_fsm import ScaffoldingFSM
@@ -1684,13 +1685,23 @@ class ContextBuilderMixin:
             )
             latest_completed = task_result.first()
 
+            # V3-FIX-207：Task.due_date 是客户端给到的到期日（无时刻成分，
+            # 墙上钟语义），overdue 窗口两端须用用户本地日——修前
+            # ``last_message_at.date()`` / ``utcnow().date()`` 都是 UTC
+            # date，UTC+8 晨间（UTC 尚在前日）把「本地今日到期」任务滞后
+            # 一日才计逾期。tz 解析沿 experience_readouts._user_local_today
+            # 先例（push_preference.timezone 标量直查，缺省 Asia/Shanghai）。
+            tz_name = valid_timezone_name(
+                await db_session.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_uuid))
+            )
+            local_today = local_date(utcnow(), tz_name)
             overdue_result = await db_session.execute(
                 select(func.count(Task.id)).where(
                     Task.user_id == user_uuid,
                     Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
                     Task.due_date.is_not(None),
-                    Task.due_date >= last_message_at.date(),
-                    Task.due_date <= utcnow().date(),
+                    Task.due_date >= local_date(last_message_at, tz_name),
+                    Task.due_date <= local_today,
                 )
             )
             overdue_count = int(overdue_result.scalar() or 0)
