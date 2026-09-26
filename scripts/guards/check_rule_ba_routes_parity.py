@@ -407,7 +407,10 @@ ENGINE_ONLY: dict[str, str] = {
     "/api/v1/community/groups/{}/knowledge-base/documents": "community long tail (P3 §6.2)",
     "/api/v1/community/groups/{}/moderation": "community long tail (P3 §6.2)",
     "/api/v1/community/groups/{}/files": "community long tail (P3 §6.2)",
-    "/api/v1/community/groups/{}/files/{}/copy-to-library": "community long tail (P3 §6.2)",
+    # copy-to-library removed from this ledger by V3-FIX-145: the gateway now
+    # registers POST /groups/:group_id/files/:file_id/copy-to-library on the
+    # authed community group (proxy_routes.go), so it is no longer an
+    # engine-only surface. Pinned in proxy_routes_copy_to_library_test.go.
     "/api/v1/community/recommended-resources": "community long tail (P3 §6.2)",
     "/api/v1/community/resources": "community long tail (P3 §6.2)",
     "/api/v1/community/strategy-outcomes": "community long tail (P3 §6.2)",

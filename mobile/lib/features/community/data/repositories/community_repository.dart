@@ -1500,11 +1500,14 @@ class CommunityRepository {
   // ── Group File Library Copy ───────────────────────────────────────────────
 
   /// 将群文件保存到个人文件库
-  /// TODO: endpoint POST /api/v1/community/groups/{groupId}/files/{fileId}/copy-to-library
-  /// is not yet implemented on the backend — add backend support when ready.
+  /// 引擎侧自 initial commit 即实现（backend/app/api/v1/community.py
+  /// copy-to-library，route-tier: authed）；网关代理路由 V3-FIX-145 补挂。
+  /// V3-FIX-145: dio concatenates baseUrl + path — baseUrl already carries
+  /// /api/v1 (ApiEndpoints.baseUrl), so a literal '/api/v1/...' here produced
+  /// /api/v1/api/v1/... and a guaranteed 404.
   Future<void> copyFileToMyLibrary(String groupId, String fileId) async {
     await _apiClient.post<dynamic>(
-      '/api/v1/community/groups/$groupId/files/$fileId/copy-to-library',
+      '/community/groups/$groupId/files/$fileId/copy-to-library',
     );
   }
 }

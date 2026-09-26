@@ -17,7 +17,8 @@ class EvidenceResolveService {
       'items': refs.map((ref) => ref.toJson()).toList(),
     };
     final response = await _apiClient.post<Map<String, dynamic>>(
-      '/api/v1/events/evidence/resolve',
+      // V3-FIX-145: baseUrl 已含 /api/v1，字面前缀会双前缀 404。
+      '/events/evidence/resolve',
       data: payload,
     );
     final items = (response.data?['resolved'] as List<dynamic>? ?? [])

@@ -266,8 +266,11 @@ class FileRepository {
   }
 
   Future<void> copyGroupFileToMyLibrary(String groupId, String fileId) async {
+    // V3-FIX-145: dio concatenates baseUrl + path — baseUrl already carries
+    // /api/v1 (ApiEndpoints.baseUrl), so a literal '/api/v1/...' here produced
+    // /api/v1/api/v1/... and a guaranteed 404.
     await _dio.post<void>(
-      '/api/v1/community/groups/$groupId/files/$fileId/copy-to-library',
+      '/community/groups/$groupId/files/$fileId/copy-to-library',
     );
   }
 }

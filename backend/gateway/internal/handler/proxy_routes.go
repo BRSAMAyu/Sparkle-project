@@ -653,6 +653,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.GET("/groups/:group_id/topics", h.proxyWithHeaders)
 		// Group Files
 		community.POST("/groups/:group_id/files/:file_id/share", h.proxyWithHeaders)
+		// V3-FIX-145: engine has served POST copy-to-library since the initial
+		// commit (api/v1/community.py, route-tier: authed) but the explicit
+		// community group never proxied it — the gateway answered 404
+		// route-not-found while the mobile "save to my library" entries were
+		// live (file_message_bubble / group_knowledge_base_view). Same shape
+		// as O10 goals/analyze-intent; same authed group and proxy chain as
+		// the sibling file routes.
+		// route-tier: authed
+		community.POST("/groups/:group_id/files/:file_id/copy-to-library", h.proxyWithHeaders)
 		community.GET("/groups/:group_id/files", h.proxyWithHeaders)
 		community.PUT("/groups/:group_id/files/:file_id/permissions", h.proxyWithHeaders)
 		community.GET("/groups/:group_id/files/categories", h.proxyWithHeaders)

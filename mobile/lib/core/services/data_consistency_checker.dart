@@ -129,7 +129,8 @@ class DataConsistencyChecker {
       // 查询Go Gateway的Redis缓存
       // 注意：这需要Go Gateway提供相应的API端点
       final response = await _dio.get<Map<String, dynamic>>(
-        '/api/v1/chat/cache/check',
+        // V3-FIX-145: baseUrl 已含 /api/v1，字面前缀会双前缀 404。
+        '/chat/cache/check',
         queryParameters: {
           'message_id': messageId,
           'conversation_id': conversationId,
@@ -164,7 +165,8 @@ class DataConsistencyChecker {
       // 查询Python DB持久化
       // 注意：这需要Go Gateway提供相应的API端点
       final response = await _dio.get<Map<String, dynamic>>(
-        '/api/v1/chat/db/check',
+        // V3-FIX-145: baseUrl 已含 /api/v1，字面前缀会双前缀 404。
+        '/chat/db/check',
         queryParameters: {
           'message_id': messageId,
           'conversation_id': conversationId,
