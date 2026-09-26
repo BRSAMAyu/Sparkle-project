@@ -153,12 +153,8 @@ KNOWN_DRIFT: dict[str, dict] = {
         "expiry": _dt.date(2026, 10, 7),
         "note": "mobile StreakDayStatus 缺 weak（四层断链，台账 V3-FIX-259）",
     },
-    "AchievementType": {
-        "fix": "V3-FIX-260",
-        "owner": "待派",
-        "expiry": _dt.date(2026, 10, 7),
-        "note": "mobile AchievementType 缺 planning（单面新增，台账 V3-FIX-260）",
-    },
+    # V3-FIX-260 豁免已删：wt542 修复落地（mobile 补 planning+unknown 哨兵，
+    # 守卫实测对齐仅剩 EP002 unknown WARN），豁免即删保持棘轮纯净。
 }
 
 # ---------------------------------------------------------------------------
