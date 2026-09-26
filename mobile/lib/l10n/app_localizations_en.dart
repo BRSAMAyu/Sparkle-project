@@ -1008,7 +1008,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatWelcome => 'Hello! How can I help you today?';
 
   @override
-  String get chatWelcomeSubtitle => 'What do you want to do today?';
+  String get chatWelcomeSubtitle => 'I keep an eye on your learning — I\'ll speak up when I\'m confident, and ask when I\'m not.';
 
   @override
   String get chatSuggestion1 => 'Help me plan my study';
@@ -5532,7 +5532,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSessionDataError => 'Session data error, please try again';
 
   @override
-  String get chatWelcomeTitle => 'Hi, I\'m your AI tutor';
+  String get chatWelcomeTitle => 'Hi, I\'m Aurora';
 
   @override
   String get chatQuickActionNewTask => 'Create micro task';

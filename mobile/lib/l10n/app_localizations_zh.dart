@@ -979,7 +979,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatWelcome => '你好！今天我能帮你什么？';
 
   @override
-  String get chatWelcomeSubtitle => '今天想做点什么？';
+  String get chatWelcomeSubtitle => '你的学习伙伴。我会看着你的进展，有把握时提醒你，拿不准时先问你。';
 
   @override
   String get chatSuggestion1 => '帮我规划学习';
@@ -5308,7 +5308,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatSessionDataError => '会话数据异常，请重试';
 
   @override
-  String get chatWelcomeTitle => '你好，我是你的 AI 导师';
+  String get chatWelcomeTitle => '你好，我是 Aurora';
 
   @override
   String get chatQuickActionNewTask => '新建微任务';
