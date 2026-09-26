@@ -6,10 +6,12 @@ from uuid import UUID
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import time_utils
 from app.core.event_bus import event_bus
 from app.models.cognitive import BehaviorPattern, PatternType
 from app.models.focus import FocusSession, FocusStatus
 from app.models.task import Task, TaskStatus
+from app.models.user import PushPreference
 from app.services.analytics.blindspot_analyzer import BlindspotAnalyzer
 
 # Fixed: Import class from module, not instance
@@ -18,6 +20,16 @@ from app.services.nudge_service import NudgeService
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+async def _user_local_today(db: AsyncSession, user_id: UUID) -> date:
+    """用户本地日（V3-FIX-211）：push_preference.timezone 标量直查，缺省 Asia/Shanghai。
+
+    tz 解析沿 experience_readouts._user_local_today 先例（规避身份映射命中
+    未加载关系的 async lazy-load）。
+    """
+    tz_name = await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+    return time_utils.local_date(_utcnow(), time_utils.valid_timezone_name(tz_name))
 
 
 class BehaviorPatternService:
@@ -93,7 +105,10 @@ class BehaviorPatternService:
         """
         # Get daily averages for last 3 days
         stats = []
-        today = date.today()
+        # V3-FIX-211：today 取用户本地日。修前 date.today() 是宿主机本地日
+        # （既非 UTC 亦非用户时区）；_get_daily_focus_average 的零点日窗与
+        # FocusSession.start_time（用户墙上钟列）同域，唯 date 来源错。
+        today = await _user_local_today(self.db, user_id)
         for i in range(3):
             target_date = today - timedelta(days=i)
             avg = await self._get_daily_focus_average(user_id, target_date)
@@ -162,6 +177,12 @@ class BehaviorPatternService:
         return result.scalars().all() # type: ignore
 
     async def _get_daily_focus_average(self, user_id: UUID, date: date) -> float:
+        """单日专注均值。``date`` 必须是用户本地日（V3-FIX-211 定界）。
+
+        日窗端点是 naive 零点/末尾形状，与 FocusSession.start_time（客户端
+        本地墙上钟列）同域，无跨钟；调用方须传用户本地日（唯一生产路径
+        analyze_focus_decay 现取 _user_local_today），勿传宿主机/UTC 日。
+        """
         start = datetime.combine(date, time.min)
         end = datetime.combine(date, time.max)
 

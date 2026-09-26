@@ -1,19 +1,21 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core import time_utils
 from app.core.cache import cache_service
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.task import Task, TaskStatus
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.services.growth_dashboard_service import GrowthDashboardService
 from app.services.progress_narrative_service import ProgressNarrativeService
 from app.signals.growth_chronicle import GrowthChronicleService
@@ -69,7 +71,12 @@ class _GrowthExperienceDashboardBuilder:
         self.db = db
 
     def _compute_lookback(self, user: User) -> tuple[datetime, int]:
-        """Progressive lookback: use registration date for new users (<7 days)."""
+        """Progressive lookback: use registration date for new users (<7 days).
+
+        返回 UTC 域端点，只供 UTC 存储列（Task.completed_at / Task.created_at /
+        StudyRecord.created_at）使用；FocusSession.start_time 是墙上钟列，必须走
+        :meth:`_wall_lookback`（V3-FIX-211）。
+        """
         now = _utcnow()
         created = getattr(user, "created_at", None)
         if created and created.tzinfo is not None:
@@ -79,16 +86,48 @@ class _GrowthExperienceDashboardBuilder:
             return created, days_active
         return now - timedelta(days=self.LOOKBACK_DAYS), self.LOOKBACK_DAYS
 
+    async def _user_local_clock(self, user_id: UUID) -> tuple[date, str]:
+        """(用户本地日, 时区名)（V3-FIX-211）。
+
+        tz 解析沿 experience_readouts._user_local_today 先例：PushPreference
+        .timezone 标量直查（规避身份映射命中未加载关系的 async lazy-load），
+        缺省/非法回落主市场 Asia/Shanghai。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        timezone_name = time_utils.valid_timezone_name(tz_name)
+        return time_utils.local_date(_utcnow(), timezone_name), timezone_name
+
+    async def _wall_lookback(self, user_id: UUID, *, user: User) -> datetime:
+        """FocusSession.start_time（墙上钟列）的回看起点（V3-FIX-211）。
+
+        修前 _compute_lookback 的 UTC 瞬间 since 直比墙上钟列，窗口端点在
+        本地日界附近随时刻漂移 ±8h（V3-FIX-208 同族）。与 _compute_lookback
+        同分支：新用户（注册 <7d）取注册时刻换算成的用户本地墙上钟 naive
+        （保持「自注册起」语义同钟），否则取本地 (today - LOOKBACK_DAYS)
+        零点 naive（local_midnight_wall，V3-FIX-208 先例；勿用
+        local_midnight_as_utc_naive——那是 UTC 存储列的换算）。
+        """
+        today, timezone_name = await self._user_local_clock(user_id)
+        created = getattr(user, "created_at", None)
+        if not isinstance(created, datetime):
+            created = None
+        if created is not None and created.tzinfo is not None:
+            created = created.replace(tzinfo=None)
+        if created is not None and (_utcnow() - created).days < self.LOOKBACK_DAYS:
+            return created.replace(tzinfo=UTC).astimezone(ZoneInfo(timezone_name)).replace(tzinfo=None)
+        return time_utils.local_midnight_wall(today - timedelta(days=self.LOOKBACK_DAYS))
+
     async def build(self, user_id: UUID, *, user: User) -> dict[str, Any]:
         since, days_active = self._compute_lookback(user)
+        wall_since = await self._wall_lookback(user_id, user=user)
         growth_snapshot = await GrowthDashboardService(self.db).build_snapshot(user_id, user=user)
         weekly_narrative = await self._weekly_narrative(user_id)
         chronicle_entries = await self._chronicle_entries(user_id)
-        time_distribution = await self._time_distribution(user_id, since)
+        time_distribution = await self._time_distribution(user_id, wall_since)
         efficiency_metrics = await self._efficiency_metrics(user_id, since)
         weakness_radar = await self._weakness_radar(user_id)
         knowledge_changes = await self._knowledge_changes(user_id, since)
-        plan_stability = await self._plan_stability(user_id, since)
+        plan_stability = await self._plan_stability(user_id, wall_since)
 
         return {
             "days_active": days_active,

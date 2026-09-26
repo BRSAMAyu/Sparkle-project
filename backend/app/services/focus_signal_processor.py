@@ -3,15 +3,17 @@ Focus signal processor - translate focus sessions into inferred preferences.
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import time_utils
 from app.core.cache import cache_service
 from app.models.focus import FocusSession, FocusStatus
+from app.models.user import PushPreference
 from app.services.cognitive_service import CognitiveService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_write_service import ProfileWriteService
@@ -20,6 +22,16 @@ from app.services.signal_adaptation import recency_weight, weighted_median
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+async def _user_local_today(db: AsyncSession, user_id: UUID) -> date:
+    """用户本地日（V3-FIX-211）：push_preference.timezone 标量直查，缺省 Asia/Shanghai。
+
+    tz 解析沿 experience_readouts._user_local_today 先例（规避身份映射命中
+    未加载关系的 async lazy-load）。
+    """
+    tz_name = await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+    return time_utils.local_date(_utcnow(), time_utils.valid_timezone_name(tz_name))
 
 
 class FocusSignalProcessor:
@@ -35,7 +47,15 @@ class FocusSignalProcessor:
 
     async def process_focus_event(self, user_id: UUID) -> None:
         now = _utcnow()
-        since = now - timedelta(days=self.WINDOW_DAYS)
+        # V3-FIX-211：FocusSession.start_time 是墙上钟列，14 天窗口端点用本地
+        # (today-WINDOW_DAYS) 零点 naive（local_midnight_wall，V3-FIX-208 先例；
+        # 勿用 local_midnight_as_utc_naive——那是 UTC 存储列的换算）。修前
+        # _utcnow()-WINDOW_DAYS 的 UTC 瞬间直比墙上钟列，端点随时刻漂移 ±8h。
+        # recency_weight(start_time, now=...) 是连续衰减权重（非窗口边界），
+        # 不在本卡登记面，保持不动。
+        since = time_utils.local_midnight_wall(
+            await _user_local_today(self.db, user_id) - timedelta(days=self.WINDOW_DAYS)
+        )
         result = await self.db.execute(
             select(FocusSession).where(
                 FocusSession.user_id == user_id,

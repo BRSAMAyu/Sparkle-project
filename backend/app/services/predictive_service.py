@@ -14,7 +14,7 @@ import asyncio
 import json
 import statistics
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from time import perf_counter
 from typing import Any, cast
 from uuid import UUID, uuid4
@@ -40,6 +40,7 @@ except ImportError:  # pragma: no cover - redis is optional in unit tests
 
 from app.aurora.privacy import redact_pii
 from app.config import settings
+from app.core import time_utils
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.cache import cache_service
 from app.core.llm_router import llm_router
@@ -49,6 +50,7 @@ from app.models.event import TrackingEvent
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.task import Task, TaskStatus
+from app.models.user import PushPreference
 from app.schemas.foresight import ForesightSnapshot
 from app.services.aurora_stage27_foresight_kill_switch_service import (
     AuroraStage27ForesightKillSwitchService,
@@ -187,6 +189,17 @@ class PredictiveService:
     @staticmethod
     def _get_current_time() -> datetime:
         return datetime.now(UTC)
+
+    async def _user_local_today(self, user_id: UUID) -> date:
+        """用户本地日（V3-FIX-211）：push_preference.timezone 标量直查，缺省 Asia/Shanghai。
+
+        tz 解析沿 experience_readouts._user_local_today / growth_dashboard_service
+        先例（规避身份映射命中未加载关系的 async lazy-load）。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        return time_utils.local_date(
+            self._get_current_time().replace(tzinfo=None), time_utils.valid_timezone_name(tz_name)
+        )
 
     async def build_foresight_snapshot(self, user_id: UUID) -> ForesightSnapshot:
         normalized_user_id = self._require_user_id(user_id)
@@ -887,6 +900,13 @@ class PredictiveService:
         now = self._get_current_time().replace(tzinfo=None)
         last_24h = now - timedelta(hours=24)
         last_7d = now - timedelta(days=7)
+        # V3-FIX-211 按列定钟：last_24h/last_7d（UTC 瞬间）只供 UTC 存储列
+        # （Task.completed_at / StudyRecord.created_at）；FocusSession.start_time
+        # 是墙上钟列，24h 专注窗端点用本地 (today-1d) 零点 naive（208 先例）。
+        # Task.due_date 是墙上钟日界语义（V3-FIX-37 定界），overdue 比用户本地日
+        # （207 教义；修前比 UTC date，UTC+8 晨间漏计本地昨日到期）。
+        local_today = await self._user_local_today(user_id)
+        focus_since = time_utils.local_midnight_wall(local_today - timedelta(days=1))
 
         pending_stmt = (
             select(Task)
@@ -908,7 +928,7 @@ class PredictiveService:
 
         focus_stmt = select(FocusSession).where(
             FocusSession.user_id == user_id,
-            FocusSession.start_time >= last_24h,
+            FocusSession.start_time >= focus_since,
             FocusSession.status == FocusStatus.COMPLETED,
         )
         focus_sessions = (await self.db.execute(focus_stmt)).scalars().all()
@@ -926,7 +946,7 @@ class PredictiveService:
         study_count_7d = int((await self.db.execute(study_7d_stmt)).scalar() or 0)
 
         top_task = pending_tasks[0] if pending_tasks else None
-        overdue_count = sum(1 for task in pending_tasks if task.due_date is not None and task.due_date < now.date())
+        overdue_count = sum(1 for task in pending_tasks if task.due_date is not None and task.due_date < local_today)
 
         if top_task is not None:
             reasons = [
@@ -1059,10 +1079,12 @@ class PredictiveService:
         active_plan_id: str | None,
         surface: str,
     ) -> dict[str, Any]:
-        now = self._get_current_time().replace(tzinfo=None)
         normalized = partial_text.strip()
         lowered = normalized.lower()
-        last_24h = now - timedelta(hours=24)
+        # V3-FIX-211：FocusSession.start_time 是墙上钟列，24h 专注计数端点用
+        # 本地 (today-1d) 零点 naive（同 _build_rule_based_next_intent）；本函数
+        # 无其他 UTC 存储列窗口，修前的 now/last_24h（UTC 瞬间）仅喂墙上钟列，已删。
+        focus_since = time_utils.local_midnight_wall(await self._user_local_today(user_id) - timedelta(days=1))
 
         pending_stmt = (
             select(Task)
@@ -1078,7 +1100,7 @@ class PredictiveService:
 
         focus_stmt = select(func.count(FocusSession.id)).where(
             FocusSession.user_id == user_id,
-            FocusSession.start_time >= last_24h,
+            FocusSession.start_time >= focus_since,
             FocusSession.status == FocusStatus.COMPLETED,
         )
         focus_count_last_24h = int((await self.db.execute(focus_stmt)).scalar() or 0)

@@ -508,8 +508,13 @@ class GrowthDashboardService:
         most_important_task: dict[str, Any] | None,
         weakest_area: str | None,
     ) -> dict[str, Any]:
+        # V3-FIX-211 按列定钟：period_start（UTC 瞬间）只供 _count_completed_tasks
+        # 的 UTC 存储列；focus_minutes 的 FocusSession.start_time 是墙上钟列，
+        # 窗口端点用本地 (today-7d) 零点 naive（V3-FIX-208 先例）。
         period_start = _utcnow() - timedelta(days=self.LOOKBACK_DAYS)
-        focus_minutes = await self._sum_focus_minutes(user_id, period_start)
+        today, _tz_name = await self._user_local_clock(user_id)
+        focus_period_start = time_utils.local_midnight_wall(today - timedelta(days=self.LOOKBACK_DAYS))
+        focus_minutes = await self._sum_focus_minutes(user_id, focus_period_start)
         tasks_completed = await self._count_completed_tasks(user_id, period_start)
         streak_days = await self._get_current_streak_days(user_id)
         display_name = str(user.nickname or user.full_name or user.username or "Sparkle").strip()
@@ -665,30 +670,38 @@ class GrowthDashboardService:
         return int(result.scalar() or 0)
 
     async def _get_current_streak_days(self, user_id: UUID) -> int:
-        cutoff = _utcnow() - timedelta(days=30)
+        # V3-FIX-211 双列按钟取 cutoff：completed_at 是 UTC 存储列（UTC 瞬间
+        # 正确），start_time 是墙上钟列（本地 30 天前零点 naive）；活跃日按列
+        # 归一到用户本地日，cursor=用户本地日（修前 UTC date，UTC+8 晨间把
+        # 墙上钟「本地今日」会话排除在 streak 之外）。
+        today, tz_name = await self._user_local_clock(user_id)
+        cutoff_utc = _utcnow() - timedelta(days=30)
+        cutoff_wall = time_utils.local_midnight_wall(today - timedelta(days=30))
         task_result = await self.db.execute(
             select(Task.completed_at).where(
                 Task.user_id == user_id,
                 Task.status == TaskStatus.COMPLETED,
-                Task.completed_at >= cutoff,
+                Task.completed_at >= cutoff_utc,
             )
         )
         focus_result = await self.db.execute(
             select(FocusSession.start_time).where(
                 FocusSession.user_id == user_id,
                 FocusSession.status == FocusStatus.COMPLETED,
-                FocusSession.start_time >= cutoff,
+                FocusSession.start_time >= cutoff_wall,
             )
         )
-        active_days = {
-            value.date()
-            for value in [*task_result.scalars().all(), *focus_result.scalars().all()]
+        task_days = {
+            time_utils.local_date(value, tz_name)
+            for value in task_result.scalars().all()
             if isinstance(value, datetime)
         }
+        focus_days = {value.date() for value in focus_result.scalars().all() if isinstance(value, datetime)}
+        active_days = task_days | focus_days
         if not active_days:
             return 0
 
-        cursor = _utcnow().date()
+        cursor = today
         if cursor not in active_days and (cursor - timedelta(days=1)) in active_days:
             cursor -= timedelta(days=1)
 
@@ -897,14 +910,25 @@ class GrowthDashboardService:
             "days_to_deadline": self._days_until(plan.target_date, today=today) if plan.target_date else None,
         }
 
+    async def _user_local_clock(self, user_id: UUID) -> tuple[date, str]:
+        """(用户本地日, 时区名)（V3-FIX-211）：push_preference.timezone 标量直查，缺省 Asia/Shanghai。
+
+        tz 解析沿 experience_readouts._user_local_today / focus_service._local_today
+        先例（规避身份映射命中未加载关系的 async lazy-load）。streak 活跃日
+        归一（completed_at 的 UTC naive → 本地日）需要时区名，与 today 一次取齐。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        timezone_name = time_utils.valid_timezone_name(tz_name)
+        return time_utils.local_date(_utcnow(), timezone_name), timezone_name
+
     async def _user_local_today(self, user_id: UUID) -> date:
         """用户本地日（V3-FIX-209）：push_preference.timezone 标量直查，缺省 Asia/Shanghai。
 
         沿 experience_readouts._user_local_today / focus_service._local_today
         先例（规避身份映射命中未加载关系的 async lazy-load）。
         """
-        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
-        return time_utils.local_date(_utcnow(), time_utils.valid_timezone_name(tz_name))
+        today, _timezone_name = await self._user_local_clock(user_id)
+        return today
 
     @staticmethod
     def _days_until(value: date | datetime | None, today: date | None = None) -> int:

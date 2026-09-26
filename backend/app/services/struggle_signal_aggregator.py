@@ -11,14 +11,27 @@ from loguru import logger
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import time_utils
 from app.models.error_book import ErrorRecord
 from app.models.focus import FocusSession
 from app.models.plan_state import PlanState
 from app.models.task import Task, TaskStatus
+from app.models.user import PushPreference
 
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+async def _user_local_clock(db: AsyncSession, user_id: UUID | str) -> tuple[date, str]:
+    """(用户本地日, 时区名)（V3-FIX-211）：push_preference.timezone 标量直查，缺省 Asia/Shanghai。
+
+    tz 解析沿 experience_readouts._user_local_today 先例（规避身份映射命中
+    未加载关系的 async lazy-load）。
+    """
+    tz_name = await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+    timezone_name = time_utils.valid_timezone_name(tz_name)
+    return time_utils.local_date(_utcnow(), timezone_name), timezone_name
 
 
 def _coerce_uuid(value: str | UUID) -> UUID | str:
@@ -164,8 +177,16 @@ class StruggleSignalAggregator:
         user_uuid = _coerce_uuid(user_id)
         plan_uuid = _coerce_uuid(plan_id)
         now = _utcnow()
-        today_start = datetime.combine(now.date(), time.min)
-        tomorrow_start = today_start + timedelta(days=1)
+        # V3-FIX-211 「今日」窗口按列定钟：Task.created_at/updated_at 是 UTC
+        # 存储列，端点用 local_midnight_as_utc_naive 换算的本地日界瞬间；
+        # FocusSession.start_time 是墙上钟列，端点用 local_midnight_wall 本地
+        # 零点 naive。修前两端点同为 UTC 日零点（combine(_utcnow().date())）
+        # ——墙钟列跨钟、UTC 列的「今日」也是 UTC 日，UTC+8 晨间双错。
+        local_today, timezone_name = await _user_local_clock(db, user_uuid)
+        today_start_utc = time_utils.local_midnight_as_utc_naive(local_today, timezone_name)
+        tomorrow_start_utc = today_start_utc + timedelta(days=1)
+        today_start_wall = time_utils.local_midnight_wall(local_today)
+        tomorrow_start_wall = today_start_wall + timedelta(days=1)
 
         (
             (today_skipped, today_total),
@@ -179,18 +200,20 @@ class StruggleSignalAggregator:
                 db,
                 user_id=user_uuid,
                 plan_id=plan_uuid,
-                start=today_start,
-                end=tomorrow_start,
+                start=today_start_utc,
+                end=tomorrow_start_utc,
             ),
             self._short_session_counts(
                 db,
                 user_id=user_uuid,
                 plan_id=plan_uuid,
-                start=today_start,
-                end=tomorrow_start,
+                start=today_start_wall,
+                end=tomorrow_start_wall,
             ),
             self._error_counts_3d(db, user_id=user_uuid, now=now),
-            self._overdue_task_count(db, user_id=user_uuid, plan_id=plan_uuid, today=now.date()),
+            # Task.due_date 是墙上钟日界语义（V3-FIX-37 定界），overdue 比用户
+            # 本地日（207 教义；修前比 UTC date，UTC+8 晨间漏计本地昨日到期）。
+            self._overdue_task_count(db, user_id=user_uuid, plan_id=plan_uuid, today=local_today),
             self._struggle_streak(db, user_id=user_uuid, plan_id=plan_uuid),
             self._completion_gap(db, user_id=user_uuid, plan_id=plan_uuid, now=now),
         )
@@ -491,7 +514,9 @@ class StruggleSignalAggregator:
     async def _days_behind(self, db: AsyncSession, *, user_id: str, plan_id: str) -> float:
         user_uuid = _coerce_uuid(user_id)
         plan_uuid = _coerce_uuid(plan_id)
-        today = _utcnow().date()
+        # V3-FIX-211：Task.due_date 是墙上钟日界语义，比用户本地日（207 教义；
+        # 修前 _utcnow().date() 是 UTC date，UTC+8 晨间少算一日）。
+        today, _ = await _user_local_clock(db, user_uuid)
         result = await db.execute(
             select(Task.due_date).where(
                 Task.user_id == user_uuid,

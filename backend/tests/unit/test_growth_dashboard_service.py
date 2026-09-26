@@ -15,6 +15,9 @@ async def test_growth_status_reads_like_growth_briefing():
     service._count_completed_tasks = AsyncMock(return_value=8)  # type: ignore[method-assign]
     service._get_current_streak_days = AsyncMock(return_value=4)  # type: ignore[method-assign]
     service._get_weakest_area = AsyncMock(return_value="听力理解")  # type: ignore[method-assign]
+    # V3-FIX-211：_get_growth_status 取用户本地日/墙钟窗口需查 tz（本用例 db=None，
+    # 与上方 _sum_focus_minutes 等同属打桩的取数协作者）
+    service._user_local_clock = AsyncMock(return_value=(date(2026, 9, 25), "Asia/Shanghai"))  # type: ignore[method-assign]
 
     user = SimpleNamespace(nickname="Mina", full_name=None, username="mina")
     active_plan = SimpleNamespace(name="IELTS 冲刺", subject="IELTS", target_date=None)

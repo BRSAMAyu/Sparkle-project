@@ -1,12 +1,15 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import time_utils
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import StudyRecord
 from app.models.task import Task, TaskStatus
+from app.models.user import PushPreference
 
 
 class WeeklyStatsService:
@@ -23,13 +26,17 @@ class WeeklyStatsService:
 
     async def get_weekly_summary(self, user_id: str, start_date: datetime, end_date: datetime) -> dict[str, Any]:
         """
-        Get high-level weekly summary stats.
+        Get high-level weekly stats.
         """
+        # V3-FIX-211 按列定钟：start/end 是调用方传入的 UTC 滚动瞬间（无跨钟
+        # 地服务 StudyRecord.created_at / Task.updated_at）；FocusSession.start_time
+        # 是墙上钟列，focus 查询端点换算成同一真实区间的用户本地墙上 naive。
+        focus_start, focus_end = await self._wall_window(user_id, start_date, end_date)
         # 1. Study Time
         total_study_minutes = await self._get_total_study_time(user_id, start_date, end_date)
 
         # 2. Focus Sessions
-        focus_stats = await self._get_focus_stats(user_id, start_date, end_date)
+        focus_stats = await self._get_focus_stats(user_id, focus_start, focus_end)
 
         # 3. Tasks Completed
         tasks_completed = await self._get_tasks_completed_count(user_id, start_date, end_date)
@@ -53,6 +60,24 @@ class WeeklyStatsService:
             "nodes_learned": mastery_stats["nodes_count"],
             "active_days": active_days
         }
+
+    async def _wall_window(self, user_id: str, start_date: datetime, end_date: datetime) -> tuple[datetime, datetime]:
+        """调用方 UTC 瞬间窗口 → 用户本地墙上钟域（FocusSession.start_time 列域，V3-FIX-211）。
+
+        定界：本服务窗口端点由调用方传入（weekly_digest_service /
+        weekly_synthesis_service 均为 ``_utcnow()`` 派生的 UTC 滚动瞬间）。
+        同一端点直比 StudyRecord.created_at / Task.updated_at（UTC 存储列）
+        无跨钟，而 FocusSession.start_time 存客户端本地墙上时间 naive——不
+        换算时专注计数随市场时区漂移 ±8h。此处把端点换算成同一真实区间的
+        用户本地墙上 naive（周期语义零改动）；如产品要把周窗对齐本地日界
+        （local_midnight_wall），需连同调用方周期语义一起拍板，非本卡面。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        tz = ZoneInfo(time_utils.valid_timezone_name(tz_name))
+        return (
+            start_date.replace(tzinfo=UTC).astimezone(tz).replace(tzinfo=None),
+            end_date.replace(tzinfo=UTC).astimezone(tz).replace(tzinfo=None),
+        )
 
     async def _get_total_study_time(self, user_id: str, start_date: datetime, end_date: datetime) -> int:
         """Calculate total study minutes from study records."""
