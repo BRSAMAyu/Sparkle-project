@@ -21013,6 +21013,58 @@
         "title": "LLMGuideRequest",
         "type": "object"
       },
+      "LLMHealthResetRequest": {
+        "description": "复位请求体：model_key 缺省 = 全量复位所有已登记模型。",
+        "properties": {
+          "model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "指定模型键；缺省全量复位",
+            "title": "Model Key"
+          }
+        },
+        "title": "LLMHealthResetRequest",
+        "type": "object"
+      },
+      "LLMHealthResetResponse": {
+        "description": "复位回执：双源各自实际清除面，供 runbook 验证步骤核对。",
+        "properties": {
+          "memory_reset_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Memory Reset Keys",
+            "type": "array"
+          },
+          "model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Key"
+          },
+          "redis_cleared_keys": {
+            "title": "Redis Cleared Keys",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "memory_reset_keys",
+          "redis_cleared_keys"
+        ],
+        "title": "LLMHealthResetResponse",
+        "type": "object"
+      },
       "LeaderboardEntry": {
         "description": "小队榜单条目：D-COMM-3 完成度聚合 + 排名包装（不新增口径）。",
         "properties": {
@@ -46097,6 +46149,61 @@
         ]
       }
     },
+    "/api/v1/admin/llm-health/reset": {
+      "post": {
+        "description": "复位模型健康双源（内存 + redis）。\n\n用途：故障演练/排障后让「已恢复的 provider」立即回到候选面，无需重启引擎。",
+        "operationId": "reset_llm_model_health_api_v1_admin_llm_health_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LLMHealthResetRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMHealthResetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reset Llm Model Health",
+        "tags": [
+          "LLM Health Admin",
+          "LLM Health Admin"
+        ]
+      }
+    },
     "/api/v1/admin/memory/adjustments/run": {
       "post": {
         "operationId": "run_adjustments_api_v1_admin_memory_adjustments_run_post",
@@ -53778,7 +53885,7 @@
     },
     "/api/v1/chat/stream": {
       "post": {
-        "description": "流式聊天接口（SSE）\n适合长回复场景，实时展示 LLM 生成内容\n\nSSE 帧协议（V3-FIX-63 契约声明）：``text/event-stream``，data 载荷为单行\nJSON，以空行（``\\n\\n``）成帧；新增帧型必须同步本枚举与契约锁测试。\ntype 枚举：\n- text: {\"content\": str} LLM 文本增量\n- tool_start: {\"tool\": str} 工具调用开始宣布（每个调用恰一次）\n- tool_result: {\"result\": object} 工具执行结果（ToolResult 序列化）\n- widget: {\"widget_type\": str, \"widget_data\": object} 结构化卡片\n- error: {\"message\": str} 本轮处理失败的客户端可见失败面（不裸断连），恒以 done 收束\n- done: 终止帧，流结束的唯一标记。completed=true 为正常完成；completed=false\n      为中断轮（reason: upstream_stream_truncated=上游流缺 [DONE]/finish_reason\n      哨兵截断，已下行内容不完整且不落库；turn_failed=本轮处理失败，随 error 帧）。\n      客户端不得把 completed=false 轮当作完整答案渲染/入历史。\n\nV3-FIX-53：生成器内任何异常都不得静默断流——统一经 `error` 事件下行\n（客户端可见\"本轮失败\"），并以 done 帧收束；异常本身 log.exception 落地。",
+        "description": "流式聊天接口（SSE）\n适合长回复场景，实时展示 LLM 生成内容\n\nSSE 帧协议（V3-FIX-63 契约声明）：``text/event-stream``，data 载荷为单行\nJSON，以空行（``\\n\\n``）成帧；新增帧型必须同步本枚举与契约锁测试。\ntype 枚举：\n- text: {\"content\": str} LLM 文本增量\n- tool_start: {\"tool\": str} 工具调用开始宣布（每个调用恰一次）\n- tool_result: {\"result\": object} 工具执行结果（ToolResult 序列化）\n- widget: {\"widget_type\": str, \"widget_data\": object} 结构化卡片\n- error: {\"message\": str} 本轮处理失败的客户端可见失败面（不裸断连），恒以 done 收束\n- done: 终止帧，流结束的唯一标记。completed=true 为正常完成；completed=false\n  为中断轮（reason: upstream_stream_truncated=上游流缺 [DONE]/finish_reason\n  哨兵截断，已下行内容不完整且不落库；turn_failed=本轮处理失败，随 error 帧）。\n  客户端不得把 completed=false 轮当作完整答案渲染/入历史。\n\nV3-FIX-53：生成器内任何异常都不得静默断流——统一经 `error` 事件下行\n（客户端可见\"本轮失败\"），并以 done 帧收束；异常本身 log.exception 落地。\nV3-FIX-155：上游优雅断连（无哨兵）不是正常收尾——done 帧必须显式\ncompleted=false（中断哨兵），部分内容不落库为完整助手消息。",
         "operationId": "chat_stream_api_v1_chat_stream_post",
         "requestBody": {
           "content": {
