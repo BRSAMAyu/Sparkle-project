@@ -27,8 +27,12 @@ class FriendshipStatusEnum(StrEnum):
 
 
 class GroupTypeEnum(StrEnum):
+    # V3-FIX-289：与 models 真源（models/community.py GroupType，含 OFFICIAL）逐值对齐；
+    # 此前仅 squad/sprint，api/v1/community.py /groups/search、/groups/directory 的
+    # GroupTypeEnum(group.type.value) 转换点遇 official 群组直接 ValueError→500。
     SQUAD = "squad"
     SPRINT = "sprint"
+    OFFICIAL = "official"
 
 
 class GroupRoleEnum(StrEnum):

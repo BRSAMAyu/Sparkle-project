@@ -18,6 +18,10 @@
   * 声明了哨兵但 mobile 侧实际不存在该哨兵 → FAIL（EP005，安全网名存实亡）；
   * 单源直通族（如 RunStatus，引擎持有、mobile 字符串直通）在 mobile 出现同名
     Dart enum → FAIL（EP003，第二真源苗头）。
+- backend 同族多副本（backend_extra 登记，V3-FIX-289 起）：副本（如 GroupType 的
+  schemas API 副本）值集必须与 models 真源逐值一致——副本缺真源值/多真源外值均
+  FAIL（EP006，副本是全量镜像、无 mobile unknown 哨兵那类合法多值）；副本类缺失
+  属映射完整性 → EP004。
 - 已知断链豁免（KNOWN_DRIFT）：显式 allowlist 段，含修复卡号、归属与到期日；
   命中豁免的 FAIL 照常打印（KNOWN-DRIFT 行，绝不静默跳过）；到期后豁免自动失效
   重新变红，提示删豁免或续期。映射完整性问题（EP004）不适用豁免——守卫必须始终
@@ -184,10 +188,14 @@ FAMILIES: dict[str, dict] = {
         "mode": "dual",
     },
     "GroupType": {
-        # mobile 镜像 community_model.dart:11 仅 squad/sprint，缺 'official'（V3-FIX-266 豁免）；
-        # models 层真源含 official（community.py），API 面 schemas GroupTypeEnum 现仅 squad/sprint。
+        # 三份真源同族对账（V3-FIX-289）：models 真源含 official（community.py），
+        # mobile 镜像 community_model.dart:11 已同步（V3-FIX-266/269 修复面，
+        # unknown 哨兵兜底）；backend API 副本 schemas/community.py GroupTypeEnum
+        # 曾仅 squad/sprint，遇 official 群组令 /groups/search、/groups/directory
+        # 转换点 ValueError→500——现以 backend_extra 纳入射程防再漂移。
         "backend": ("app/models/community.py", "GroupType"),
         "mobile": ("lib/features/community/data/models/community_model.dart", "GroupType"),
+        "backend_extra": [("app/schemas/community.py", "GroupTypeEnum")],
         "mode": "dual",
     },
     "GroupRole": {
@@ -679,7 +687,7 @@ def inventory_unmapped_backend_enums(backend_root: Path) -> list[tuple[str, str]
 @dataclass
 class Finding:
     family: str
-    code: str  # EP001 / EP001T / EP002 / EP003 / EP004 / EP005
+    code: str  # EP001 / EP001T / EP002 / EP003 / EP004 / EP005 / EP006
     severity: str  # FAIL / WARN
     message: str
     exempt: str | None = None  # 豁免标注（fix 号），非 None 则不影响退出码
@@ -731,6 +739,47 @@ def _family_check(
                 f"映射完整性：backend {be_class} 存在重复值 {dupes}——StrEnum 值必须唯一",
             )
         )
+
+    # V3-FIX-289：backend 同族多副本对账（backend_extra）——副本值集必须与真源
+    # 逐值一致，缺值/多值均 FAIL EP006（不适用豁免）；副本类缺失属映射完整性 EP004。
+    for ex_rel, ex_class in spec.get("backend_extra", []):
+        ex_members = extract_python_str_enum(backend_root, ex_rel, ex_class)
+        if ex_members is None:
+            findings.append(
+                Finding(
+                    family,
+                    "EP004",
+                    "FAIL",
+                    f"映射完整性：backend 副本 {ex_class} 未找到（{ex_rel}）——映射表必须指向真实代码，不得豁免",
+                )
+            )
+            continue
+        ex_values = set(ex_members.values())
+        missing_in_copy = sorted(be_values - ex_values)
+        extra_in_copy = sorted(ex_values - be_values)
+        if missing_in_copy or extra_in_copy:
+            drift: list[str] = []
+            if missing_in_copy:
+                drift.append(f"缺真源值 {missing_in_copy}")
+            if extra_in_copy:
+                drift.append(f"多真源外值 {extra_in_copy}")
+            findings.append(
+                Finding(
+                    family,
+                    "EP006",
+                    "FAIL",
+                    f"backend 副本 {ex_class}（{ex_rel}）与真源 {be_class} 值集漂移：{'；'.join(drift)}",
+                )
+            )
+        else:
+            findings.append(
+                Finding(
+                    family,
+                    "OK",
+                    "PASS",
+                    f"{family}: backend 副本 {ex_class}（{ex_rel}）{len(ex_values)} 值与真源 {be_class} 对齐 ✓",
+                )
+            )
 
     if mode == "passthrough":
         # 在 mobile 全 lib 找同名 enum（单源族出现任何镜像定义即违规）
@@ -939,7 +988,8 @@ def self_test() -> int:
         # 用例 5：豁免在期 → FAIL 降为 exempt；豁免过期 → 仍 FAIL
         # 用例 6：passthrough 族 mobile 出现镜像 enum → FAIL EP003
         # 用例 7：映射完整性（backend 类缺失）→ FAIL EP004 且不受豁免影响
-        families = {
+        # 显式注解：含 backend_extra 后字面量 join 会退化为 dict[str, object]（mypy）
+        families: dict[str, dict] = {
             "Aligned": {
                 "backend": ("app/models/a.py", "Aligned"),
                 "mobile": ("lib/a.dart", "Aligned"),
@@ -975,6 +1025,25 @@ def self_test() -> int:
                 "mobile": ("lib/f.dart", "Ghost"),
                 "mode": "dual",
             },
+            # 用例 14：backend 同族多副本（backend_extra，V3-FIX-289）
+            "HasCopy": {
+                "backend": ("app/models/a.py", "HasCopy"),
+                "mobile": ("lib/g.dart", "HasCopy"),
+                "mode": "dual",
+                "backend_extra": [("app/schemas/a.py", "HasCopyApi")],
+            },
+            "HasCopyDrift": {
+                "backend": ("app/models/a.py", "HasCopyDrift"),
+                "mobile": ("lib/h.dart", "HasCopyDrift"),
+                "mode": "dual",
+                "backend_extra": [("app/schemas/b.py", "HasCopyDriftApi")],
+            },
+            "HasCopyGhost": {
+                "backend": ("app/models/a.py", "HasCopyGhost"),
+                "mobile": ("lib/i.dart", "HasCopyGhost"),
+                "mode": "dual",
+                "backend_extra": [("app/schemas/c.py", "NoSuchCopyClass")],
+            },
         }
 
         def members(prefix: str, values: list[str]) -> list[tuple[str, str]]:
@@ -997,6 +1066,18 @@ def self_test() -> int:
 
         _write_python_enum(be, "app/models/a.py", "RunLike", [("R1", "r1")])
         _write_dart_enum(mo, "lib/run_like.dart", "RunLike", plain=["r1"])  # 单源族的违例镜像
+
+        # 用例 14 fixture：backend 同族多副本（backend_extra）
+        _write_python_enum(be, "app/models/a.py", "HasCopy", [("H1", "h1"), ("H2", "h2")])
+        _write_dart_enum(mo, "lib/g.dart", "HasCopy", json_values=["h1", "h2"])
+        _write_python_enum(be, "app/schemas/a.py", "HasCopyApi", [("H1", "h1"), ("H2", "h2")])
+        _write_python_enum(be, "app/models/a.py", "HasCopyDrift", [("J1", "j1"), ("J2", "j2")])
+        _write_dart_enum(mo, "lib/h.dart", "HasCopyDrift", json_values=["j1", "j2"])
+        # 副本缺 j2（V3-FIX-289 的 bug 形态：schemas 副本缺真源值）
+        _write_python_enum(be, "app/schemas/b.py", "HasCopyDriftApi", [("J1", "j1")])
+        _write_python_enum(be, "app/models/a.py", "HasCopyGhost", [("K1", "k1")])
+        _write_dart_enum(mo, "lib/i.dart", "HasCopyGhost", json_values=["k1"])
+        # HasCopyGhost 的副本 app/schemas/c.py 故意不创建 → 映射完整性 EP004
 
         # Ghost：backend 类不存在，映射完整性 FAIL；同时挂一份（无效的）豁免验证豁免不覆盖 EP004
         expired_allow["Ghost"] = expired_allow["Alpha"]
@@ -1053,6 +1134,32 @@ def self_test() -> int:
         live_findings = run_checks(be, mo, families, live_allow, today=today)
         d = next(f for f in live_findings if f.family == "Delta" and f.code == "EP001")
         checks.append(("case5b 在期豁免标注 exempt", d.severity == "FAIL" and d.exempt is not None))
+
+        # 用例 14：backend 同族多副本（backend_extra，V3-FIX-289）
+        checks.append(
+            (
+                "case14a 副本对齐 PASS",
+                any(
+                    f.family == "HasCopy" and f.code == "OK" and f.severity == "PASS"
+                    for f in all_findings
+                ),
+            )
+        )
+        s, _ = sev_of(all_findings, "HasCopyDrift", "EP006")
+        checks.append(("case14b 副本缺值 FAIL EP006", s == "FAIL"))
+        checks.append(
+            (
+                "case14b EP006 报文列出缺失值",
+                "j2" in next(
+                    f.message
+                    for f in all_findings
+                    if f.family == "HasCopyDrift" and f.code == "EP006"
+                ),
+            )
+        )
+        s, ex = sev_of(all_findings, "HasCopyGhost", "EP004")
+        checks.append(("case14c 副本类缺失 FAIL EP004", s == "FAIL"))
+        checks.append(("case14c EP004 不受豁免", ex is None))
 
         # 用例 9：哨兵声明但缺失 → FAIL EP005
         _write_dart_enum(mo, "lib/c.dart", "Beta", json_values=["beta", "y1", "y2"])
