@@ -6,9 +6,9 @@
  "active": {
   "wt552": "mypy 批六烧减 642→≤607@1dd4d401",
   "wt553": "三族枚举漂移修复 269/270/271（两 P2：MessageType broadcast 活体崩面+PhotonTransactionType 触达最宽）@cb3a80a7",
-  "wt554": "FIX-272 staticmethod 第三波漏网（chat persistence 4 用例）@9d478473",
   "wt555": "CARD-DUAL-WRITE 守卫停用债处置（考古→复活/修/退役三选一）@44f8924b",
-  "wt556": "CASCADE 第二批 lib/ 面 186 条（加严：求值次数/初始化序/拿不准即跳）@3506802c"
+  "wt556": "CASCADE 第二批 lib/ 面 186 条（加严：求值次数/初始化序/拿不准即跳）@3506802c",
+  "wt557": "entitlement Python/Go 双实现等价测试（B-06 在册观察收口，向量单源双端消费）@9a927192"
  },
  "done": [
   "A-01",
@@ -554,7 +554,8 @@
   "wt548",
   "wt544",
   "wt551",
-  "wt549"
+  "wt549",
+  "wt554"
  ],
  "blocked": [],
  "notes": [
@@ -697,6 +698,7 @@
   "2026-09-27 01:2x 轮：wt548 守卫扩表集成完毕（08869c95+a5a0285e，**三连撞号 266/267/268→269/270/271**（第 19-21 次）台账+脚本 KNOWN_DRIFT fix 引用双面同步重编号；守卫 65 族 PASS FAIL=0 豁免=3 WARN=4（哨兵设计内）；全量守卫 BG 外零回归；树清）——扩表 15→65 族（dual+30 全 file:line 证据/passthrough+20 防 mobile 镜像/backend-only+24 消噪声，JobStatus/PlanStatus 两个关键判例防误触）。**守卫立即产出**：3 新漂移（269 GroupType official 潜伏 P3/270 MessageType broadcast P2 活体崩面/271 PhotonTransactionType 三值 P2 触达最宽——guest_seed 随访客首启即写）。wt553 立即补位修三族（259/260 范式+豁免即删）。守卫投资回报闭环：扩表即抓 2 P2。三问：在航 5 槽（wt544/549/551/552/553）；空槽 0；下一卡=CI 裁决→day6 晨门栈升级（08:00）。",
   "2026-09-27 01:4x 轮：wt544 FIX-258 集成完毕（305e230c+72e54c03，union-merge 264→272 重编号第 22 次撞号；合并态 demo origin 套件 7/7 绿+mypy 642=642；树清）——B-02 双缺口后一半收口：ChatMessage.origin 列（StrEnum llm|demo server_default llm，迁移 f258_20260925 PG 全链重放+三方审计零漂+schema.sql/sqlc 重导）+两 choke point 写侧置标（LLMSecurityWrapper 放行只读 demo_mode）+MemoryInferredWriteLane demo 轮整轮过滤（污染链实录修前 episodic 假行写出）。**stash 共享栈事故处置**：wt544 误 pop wt547 WIP 后已自恢复（store 5d314f21），集成侧核对其为终态前体（3/4 文件与已集成 cc8f18c5 有差、终态权威已验证）→安全 drop 清栈。wt554 立即补位=FIX-272（staticmethod 第三波：NBP-1/B-01 四用例宽 except 吞错恒红）。三问：在航 5 槽（wt549/551/552/553/554）；空槽 0；下一卡=CI 裁决→day6 晨门栈升级（08:00，余量 6h+）。",
   "2026-09-27 02:0x 轮：wt551 union-merge 根修集成完毕（63ebb36b+a1f326ad，union-merge 268→273 重编号第 23 次撞号——**用旧工具完成最后一次合并后即刻退役**：15 测全绿（含 246/247 事故复现/265→267 真事故重建端到端/状态进化算法反向长度陷阱）；树清）——吞行根因确证：临时件 _rawN 跨侧同序号键碰撞取长者丢另一侧。**新工具即刻为集成交付标准**：scripts/devtools/ledger_union_merge.py（分轨算法+--renumber+--check 吞行检测），本会话后续所有台账合并改用它。wt555 立即补位=CARD-DUAL-WRITE 守卫停用债（B-06 面五在册债：考古停用理由→复活/修/退役三选一证据驱动）。三问：在航 5 槽（wt549/552/553/554/555）；空槽 0；下一卡=CI 裁决（在航 ~75min 正常区间）→day6 晨门栈升级（08:00）。",
-  "2026-09-27 02:2x 轮：wt549 CASCADE 第一刀集成完毕（37f1d69a+7e15e0b5；**新 union-merge 工具首次实战**：--renumber 267=274 --check 一次通过零吞行双侧 ID 验在场（旧工具第 24 次撞号即由新工具无缝接手）；gate PASS INFO 378（409-31）CASCADE 219→188；树清）——test 面 31/32 转换 1 跳过（会产新 lint 的形态无纯等价解，判例立）；lib/ 186 条留第二批。wt556 立即补位=CASCADE lib 面（产品码加严纪律：接收者求值次数/初始化序敏感/拿不准即跳，目标 ≥60 零风险优先）。三问：在航 5 槽（wt552/553/554/555/556）；空槽 0；下一卡=CI 裁决→day6 晨门栈升级（08:00）。"
+  "2026-09-27 02:2x 轮：wt549 CASCADE 第一刀集成完毕（37f1d69a+7e15e0b5；**新 union-merge 工具首次实战**：--renumber 267=274 --check 一次通过零吞行双侧 ID 验在场（旧工具第 24 次撞号即由新工具无缝接手）；gate PASS INFO 378（409-31）CASCADE 219→188；树清）——test 面 31/32 转换 1 跳过（会产新 lint 的形态无纯等价解，判例立）；lib/ 186 条留第二批。wt556 立即补位=CASCADE lib 面（产品码加严纪律：接收者求值次数/初始化序敏感/拿不准即跳，目标 ≥60 零风险优先）。三问：在航 5 槽（wt552/553/554/555/556）；空槽 0；下一卡=CI 裁决→day6 晨门栈升级（08:00）。",
+  "2026-09-27 02:4x 轮：wt554 FIX-272 集成完毕（934b076b+e945562e，新工具 union-merge 第二战 check 通过；合并态 13/13 绿零吞错 warning+mypy 642=642，树清）——staticmethod 化三波漏网全收口（rb10/桩包裹/本波四用例）；修法亮点：变异负控（临时断言 >=999 失败实录）证明链路真实到达入库断言非裸奔绿。wt557 立即补位=entitlement 双实现等价测试（B-06「注释互认无等价测试」观察收口：测试向量单源 JSON 双端消费）。三问：在航 5 槽（wt552/553/555/556/557）；空槽 0；下一卡=CI 裁决（在航 ~2h 又超区间——本轮核 job 步骤活性后定夺）→day6 晨门栈升级。"
  ]
 }
