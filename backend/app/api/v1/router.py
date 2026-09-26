@@ -130,7 +130,7 @@ from app.api.v1 import (
     vocabulary,
 )
 from app.config import settings
-from app.config.release_flags import release_flags_response
+from app.config.release_flags import release_flags_response, require_release_flag
 
 api_router = APIRouter()
 
@@ -300,9 +300,23 @@ api_router.include_router(user_settings.router)
 api_router.include_router(user_persona_batch.router)
 api_router.include_router(notification_center.router)
 # Shop & Photon system
-api_router.include_router(shop.router, prefix="/shop", tags=["shop"])
+# V3-FIX-05（wt483 PLAN §2.2 卡 C shop 提前量）：目录 0 行的空商城面收口——
+# shop/inventory 组注册级挂 RELEASE_ENABLE_SHOP 旗（默认 False → 403
+# FEATURE_DISABLED，先于端点鉴权生效），只对深链兜底；移动端唯一入口
+# streak_details_screen.dart 已随本卡移除。重启商城翻 RELEASE_ENABLE_SHOP=True。
+api_router.include_router(
+    shop.router,
+    prefix="/shop",
+    tags=["shop"],
+    dependencies=[Depends(require_release_flag("RELEASE_ENABLE_SHOP"))],
+)
 api_router.include_router(photons.router, prefix="/photons", tags=["photons"])
-api_router.include_router(inventory.router, prefix="/inventory", tags=["inventory"])
+api_router.include_router(
+    inventory.router,
+    prefix="/inventory",
+    tags=["inventory"],
+    dependencies=[Depends(require_release_flag("RELEASE_ENABLE_SHOP"))],
+)
 # Visual Element System（V3-FIX-182：LABS 孤儿链发布闸，默认关；见 ENABLE_VISUAL_ELEMENTS）
 api_router.include_router(
     visual_elements.router,

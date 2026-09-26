@@ -5,7 +5,9 @@
 - release_flags.py 是薄视图（禁第二个 BaseSettings——V3-FIX-21 同族禁令）；
 - GET /api/v1/release-flags 单一响应形（小写 snake_case，键集=移动端解码面，PLAN §2.8.1）；
 - require_release_flag 工厂：旗 False→403 FEATURE_DISABLED / True→放行（测试内翻转，不改默认）；
-- 卡 A 红线守卫：api_router 现有路由不得消费 release-flag 依赖（挂旗在卡 B/C，零行为变化）。
+- 卡 A 红线守卫（已阶段化演进，V3-FIX-05）：release-flag 依赖只允许出现在已
+  裁决组（现 = /shop、/inventory，wt483 PLAN §2.2 卡 C shop 提前量），其他组
+  消费即红；卡 A 落地时原形为全禁零消费。
 """
 
 from __future__ import annotations
@@ -158,19 +160,39 @@ class TestReleaseFlagsContractEndpoint:
 
 
 class TestCardAZeroBehaviorRedLine:
-    """卡 A 红线：任何现有路由不得已挂 release-flag 依赖（挂旗在卡 B/C）。"""
+    """release-flag 消费面守卫（卡 A 红线的阶段化演进）。
 
-    def test_no_api_route_consumes_release_flag_dependency(self):
+    卡 A 落地时是零行为红线（无任何路由消费）；V3-FIX-05（wt483 PLAN §2.2
+    卡 C shop 提前量）起 /shop、/inventory 两组合法消费 RELEASE_ENABLE_SHOP。
+    本守卫钉住：消费面只能停在已裁决的组上，任何其他组偷挂 release-flag
+    依赖即红（挂旗必须走卡片裁决，不允许顺手扩散）。
+    """
+
+    # 已裁决的 release-flag 消费组（api_router 相对前缀 → 消费卡片）
+    ALLOWED_FLAG_CONSUMING_PREFIXES = frozenset({"/shop", "/inventory"})
+
+    def test_release_flag_dependency_only_on_adjudicated_groups(self):
         scanned = 0
+        consuming = set()
         for route in api_router.routes:
-            for dependency in getattr(route, "dependencies", []):
-                scanned += 1
+            route_dependencies = getattr(route, "dependencies", [])
+            for dependency in route_dependencies:
                 qualname = getattr(getattr(dependency, "dependency", None), "__qualname__", "")
-                assert "require_release_flag" not in qualname, (
-                    f"route {getattr(route, 'path', '?')} already consumes a release-flag dependency — "
-                    "card A must stay zero-behavior (flags attach in cards B/C)"
-                )
+                if "require_release_flag" in qualname:
+                    consuming.add(getattr(route, "path", "?"))
+                scanned += 1
         assert scanned > 0, "scan must be non-vacuous: api_router routes carry (auth) dependencies"
+        unexpected = {
+            path
+            for path in consuming
+            if not any(path == p or path.startswith(f"{p}/") for p in self.ALLOWED_FLAG_CONSUMING_PREFIXES)
+        }
+        assert not unexpected, (
+            f"routes outside adjudicated groups consume release-flag dependencies: {sorted(unexpected)} — "
+            "mounting a flag requires a card adjudication (wt483 PLAN), not a drive-by"
+        )
+        # 本卡裁决面非空：shop/inventory 两组在场（否则守卫退化为空许可）
+        assert consuming, "shop/inventory must consume require_release_flag (V3-FIX-05 gate)"
 
     def test_release_flags_module_exposes_no_router(self):
         """薄视图不自带 APIRouter——端点注册唯一入口在 api/v1/router.py。"""

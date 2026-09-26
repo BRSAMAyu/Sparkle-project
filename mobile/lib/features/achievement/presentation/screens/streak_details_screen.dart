@@ -103,11 +103,9 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
                     delay: const Duration(milliseconds: 300),
                     child: _buildRiskHint(streakStats, l10n),
                   ),
-                  const SizedBox(height: DS.spacing16),
-                  _AnimatedSection(
-                    delay: const Duration(milliseconds: 400),
-                    child: _buildShopCallToAction(context, l10n),
-                  ),
+                  // V3-FIX-05（wt483 PLAN §2.2）：shop 商城 CTA 入口已移除——
+                  // 商城目录 0 行，唯一应用内入口深链由后端 RELEASE_ENABLE_SHOP
+                  // 旗兜底 403（api/v1/router.py）；D-MONETIZE 重启时随旗恢复。
                   const SizedBox(height: DS.spacing24),
                 ],
               ),
@@ -388,47 +386,6 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
       text: text,
     );
   }
-
-  Widget _buildShopCallToAction(BuildContext context, AppLocalizations l10n) => Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.surfacePrimary,
-        borderRadius: DS.borderRadius16,
-        border: Border.all(color: DS.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.streakShopTitle,
-                  style: TextStyle(
-                    fontSize: DS.fontSizeBase,
-                    fontWeight: DS.fontWeightSemibold,
-                    color: DS.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: DS.spacing4),
-                Text(
-                  l10n.streakShopSubtitle,
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    color: DS.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: DS.spacing12),
-          SparkleButton.primary(
-            label: l10n.streakShopAction,
-            onPressed: () => context.push('/shop'),
-          ),
-        ],
-      ),
-    );
 }
 
 // ---------------------------------------------------------------------------
