@@ -6,6 +6,7 @@ Capsule Favorite Service
 from __future__ import annotations
 
 import re
+from typing import TypedDict
 from uuid import UUID
 
 from loguru import logger
@@ -16,6 +17,26 @@ from app.core.event_bus import event_bus
 from app.core.event_types import CAPSULE_FAVORITE_UPDATED
 from app.models.capsule_favorite import CapsuleFavorite
 from app.models.curiosity_capsule import CuriosityCapsule
+
+
+class MethodPreferenceCount(TypedDict):
+    """``_rank_method_preferences`` 输入的单个学习方式计数条目。"""
+
+    key: str
+    label: str
+    count: int
+    source_titles: list[str]
+
+
+class CapsulePreferenceSummary(TypedDict):
+    """``get_preferences`` 返回的胶囊偏好画像。"""
+
+    favorite_count: int
+    content_depth_preference: str | None
+    subject_affinity: list[str]
+    recent_notes: list[str]
+    method_preferences: list[dict[str, object]]
+    method_preference_summary: list[str]
 
 
 class CapsuleFavoriteService:
@@ -165,7 +186,7 @@ class CapsuleFavoriteService:
         favorites = result.scalars().all()
 
         # 加载关联的胶囊
-        result = [
+        favorite_items = [
             {
                 "id": str(f.id),
                 "capsule_id": str(f.capsule_id),
@@ -176,7 +197,7 @@ class CapsuleFavoriteService:
             for f in favorites
         ]
 
-        return result
+        return favorite_items
 
     async def is_favorited(
         self,
@@ -204,7 +225,7 @@ class CapsuleFavoriteService:
         db: AsyncSession,
         *,
         limit: int = 50,
-    ) -> dict[str, object]:
+    ) -> CapsulePreferenceSummary:
         result = await db.execute(
             select(CapsuleFavorite, CuriosityCapsule)
             .join(CuriosityCapsule, CuriosityCapsule.id == CapsuleFavorite.capsule_id)
@@ -230,7 +251,7 @@ class CapsuleFavoriteService:
         depth_counts: dict[str, int] = {}
         subject_counts: dict[str, int] = {}
         recent_notes: list[str] = []
-        method_counts: dict[str, dict[str, object]] = {}
+        method_counts: dict[str, MethodPreferenceCount] = {}
         for favorite, capsule in rows:
             depth = str(getattr(capsule.depth_level, "value", capsule.depth_level) or "").strip()
             if depth:
@@ -373,7 +394,7 @@ class CapsuleFavoriteService:
 
     @staticmethod
     def _rank_method_preferences(
-        method_counts: dict[str, dict[str, object]],
+        method_counts: dict[str, MethodPreferenceCount],
         *,
         favorite_count: int,
     ) -> list[dict[str, object]]:

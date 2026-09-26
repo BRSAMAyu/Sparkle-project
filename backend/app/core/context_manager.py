@@ -6,7 +6,7 @@ import inspect
 import json
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, Mapping
 from uuid import UUID
 
 from loguru import logger
@@ -510,11 +510,11 @@ class ContextOrchestrator:
         db_session: AsyncSession | None = None,
     ) -> dict[str, Any]:
         db = db_session or self.db
+        favorite_preferences: Mapping[str, Any] = {}
         try:
             favorite_preferences = await CapsuleFavoriteService().get_preferences(user_id, db)
         except Exception as exc:
             logger.warning("Failed to load capsule preferences: {}", exc)
-            favorite_preferences = {}
         try:
             stored_preferences = await self._get_profile_capsule_preferences(user_id, db)
         except Exception as exc:
@@ -549,8 +549,8 @@ class ContextOrchestrator:
 
     @staticmethod
     def _merge_capsule_preferences(
-        stored_preferences: dict[str, Any],
-        favorite_preferences: dict[str, Any],
+        stored_preferences: Mapping[str, Any],
+        favorite_preferences: Mapping[str, Any],
     ) -> dict[str, Any]:
         merged = dict(stored_preferences or {})
         merged.update(

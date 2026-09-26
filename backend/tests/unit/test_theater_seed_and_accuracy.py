@@ -1102,7 +1102,13 @@ async def test_theater_api_passes_simulation_session_id(monkeypatch):
         topic,
         target_node_id=None,
         horizon_days=14,
+        preview_mode=False,
         simulation_session_id=None,
+        context=None,
+        available_time_per_day=None,
+        current_level=None,
+        materials=None,
+        goal_type=None,
     ):
         captured["simulation_session_id"] = simulation_session_id
         return {"prediction_id": "prediction-1", "topic": topic}

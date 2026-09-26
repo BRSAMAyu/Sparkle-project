@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from typing import Any, TypedDict
 from uuid import UUID
 
 from sqlalchemy import select
@@ -15,6 +16,20 @@ from app.schemas.smart_schedule import (
     TimeSlotSuggestion,
 )
 from app.services.personalization.preference_service import PreferenceService
+
+
+class ScheduleProfile(TypedDict):
+    """``_build_schedule_profile`` 产出的当日排程画像（内部契约）。"""
+
+    focus_hours: list[int]
+    focus_source: str
+    inactive_hours: list[int]
+    recurring_windows: set[int]
+    busy_windows: set[int]
+    density_level: str
+    exam_urgency: dict[str, Any] | None
+    signals_used: list[str]
+    fallback_used: bool
 
 
 class SmartScheduleService:
@@ -74,7 +89,7 @@ class SmartScheduleService:
         user_id: UUID,
         target_date: date,
         existing_events: list[CalendarEvent],
-    ) -> dict[str, object]:
+    ) -> ScheduleProfile:
         prefs = await PreferenceService(self.db).get_preferences(user_id)
         explicit = dict(prefs.explicit or {})
         inferred = dict(prefs.inferred or {})
@@ -273,7 +288,7 @@ class SmartScheduleService:
         slot: tuple[int, int],
         energy_cost: int,
         difficulty: int,
-        schedule_profile: dict[str, object],
+        schedule_profile: ScheduleProfile,
     ) -> tuple[float, list[str]]:
         start_hour = slot[0] // 60
         score = 0.35
@@ -331,7 +346,8 @@ class SmartScheduleService:
 
         if isinstance(exam_urgency, dict):
             try:
-                days_left = int(exam_urgency.get("days_left"))
+                raw_days_left = exam_urgency.get("days_left")
+                days_left = int(raw_days_left) if raw_days_left is not None else None
             except (TypeError, ValueError):
                 days_left = None
             if days_left is not None and days_left <= 14:
@@ -382,7 +398,7 @@ class SmartScheduleService:
         value = max(0, min(24 * 60, int(value)))
         return f"{value // 60:02d}:{value % 60:02d}"
 
-    def _build_cognitive_insights(self, schedule_profile: dict[str, object]) -> dict[str, object]:
+    def _build_cognitive_insights(self, schedule_profile: ScheduleProfile) -> dict[str, object]:
         exam_urgency = schedule_profile.get("exam_urgency")
         exam_pressure = None
         if isinstance(exam_urgency, dict) and exam_urgency.get("days_left") is not None:

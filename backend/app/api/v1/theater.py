@@ -61,25 +61,17 @@ async def generate_theater_prediction(
 ):
     service = PredictionTheaterService(db)
     try:
-        payload = {
-            "user_id": UUID(user_id),
-            "topic": request.topic,
-            "target_node_id": request.target_node_id,
-            "horizon_days": request.horizon_days,
-            "simulation_session_id": request.simulation_session_id,
-        }
-        if request.context is not None:
-            payload["context"] = request.context
-        if request.available_time_per_day is not None:
-            payload["available_time_per_day"] = request.available_time_per_day
-        if request.current_level is not None:
-            payload["current_level"] = request.current_level
-        if request.materials is not None:
-            payload["materials"] = request.materials
-        if request.goal_type is not None:
-            payload["goal_type"] = request.goal_type
         return await service.generate_prediction(
-            **payload,
+            user_id=UUID(user_id),
+            topic=request.topic,
+            target_node_id=request.target_node_id,
+            horizon_days=request.horizon_days,
+            simulation_session_id=request.simulation_session_id,
+            context=request.context,
+            available_time_per_day=request.available_time_per_day,
+            current_level=request.current_level,
+            materials=request.materials,
+            goal_type=request.goal_type,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

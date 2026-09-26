@@ -211,7 +211,7 @@ class UserInsightCompiler:
             for key in self.STABLE_PREFERENCE_KEYS
             if prefs.get(key) not in (None, "", [], {})
         }
-        current_state = {
+        current_state: dict[str, Any] = {
             "overall_mastery": float(profile_context.knowledge_summary.overall_mastery or 0.0),
             "active_subjects": list(profile_context.knowledge_summary.active_learning_subjects or []),
             "dominant_pattern_type": profile_context.cognitive_summary.dominant_pattern_type,
@@ -274,7 +274,7 @@ class UserInsightCompiler:
             confidence_val = float(pattern.confidence or 0.0)
             if confidence_val < 0.7:
                 continue
-            constraint = {
+            constraint: dict[str, Any] = {
                 "id": f"cognitive:{pattern.pattern_name}",
                 "label": pattern.pattern_name,
                 "type": "behavioral",

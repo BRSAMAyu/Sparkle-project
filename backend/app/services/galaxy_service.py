@@ -2808,7 +2808,8 @@ class GalaxyService:
             return resolved_id
 
         metadata = self._lookup_sprint_node_metadata(external_node_id)
-        node_meta = metadata.get("node") if isinstance(metadata.get("node"), dict) else {}
+        node_meta_raw = metadata.get("node")
+        node_meta: dict[str, Any] = node_meta_raw if isinstance(node_meta_raw, dict) else {}
         node_label = str(node_meta.get("label") or external_node_id).strip()
         subject = str(metadata.get("subject") or "").strip()
         description = str(node_meta.get("recommended_action") or "").strip()
@@ -2874,7 +2875,7 @@ class GalaxyService:
                 )
             )
         ).all()
-        state_by_node_id = {
+        state_by_node_id: dict[UUID, dict[str, float | int | None]] = {
             node_uuid: {
                 "mastery_score": self._mastery_score_percent(mastery_score),
                 "revision": int(revision or 0),
@@ -2991,7 +2992,8 @@ class GalaxyService:
 
         node = await self.db.get(KnowledgeNode, resolved_node_id) if resolved_node_id is not None else None
         metadata = self._lookup_sprint_node_metadata(canonical_node_id)
-        node_meta = metadata.get("node") if isinstance(metadata.get("node"), dict) else {}
+        node_meta_raw = metadata.get("node")
+        node_meta: dict[str, Any] = node_meta_raw if isinstance(node_meta_raw, dict) else {}
         node_label = (
             str(getattr(node, "name", "") or "").strip()
             or str(node_meta.get("label") or "").strip()
@@ -3291,7 +3293,8 @@ class GalaxyService:
                         old_mastery = float(status.mastery_score or 0.0)
                         current_updated_at = _to_utc_naive(status.updated_at)
                         current_revision = int(status.revision or 0)
-                        if version and current_updated_at and _to_utc_naive(version) <= current_updated_at:
+                        incoming_updated_at = _to_utc_naive(version)
+                        if current_updated_at and incoming_updated_at and incoming_updated_at <= current_updated_at:
                             logger.warning(
                                 f"Ignoring stale update (Time) for node {node_id}. Incoming version {version} <= current {current_updated_at}"
                             )
@@ -3339,7 +3342,8 @@ class GalaxyService:
                         current_revision = current[2] or 0
 
                         # Fallback to Physical Clock conflict detection (Legacy)
-                        if version and current_updated_at and _to_utc_naive(version) <= current_updated_at:
+                        incoming_updated_at = _to_utc_naive(version)
+                        if current_updated_at and incoming_updated_at and incoming_updated_at <= current_updated_at:
                             logger.warning(
                                 f"Ignoring stale update (Time) for node {node_id}. Incoming version {version} <= current {current_updated_at}"
                             )

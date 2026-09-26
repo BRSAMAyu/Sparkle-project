@@ -577,8 +577,7 @@ async def lifespan(fastapp: FastAPI):
             await start_expansion_worker()
 
             # 5. 启动图同步 Worker (AGE)
-            if start_sync_worker:
-                await start_sync_worker()
+            await start_sync_worker()
         except Exception as e:
             logger.error(f"Startup tasks failed: {e}")
             # 可以在这里决定是否终止启动
@@ -591,8 +590,7 @@ async def lifespan(fastapp: FastAPI):
     logger.info("Shutting down Sparkle API Server...")
 
     # 停止图同步 Worker
-    if stop_sync_worker:
-        await stop_sync_worker()
+    await stop_sync_worker()
 
     # 停止知识拓展后台任务
     await stop_expansion_worker()

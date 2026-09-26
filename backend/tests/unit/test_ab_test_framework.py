@@ -97,8 +97,8 @@ async def test_get_experiment_stats(ab_framework: ABTestFrameworkEnhanced, db_se
     )
     db_session.get.return_value = experiment
 
-    row1 = SimpleNamespace(count=30, success_rate=0.5, avg_latency=120.0)
-    row2 = SimpleNamespace(count=40, success_rate=0.7, avg_latency=110.0)
+    row1 = SimpleNamespace(sample_count=30, success_rate=0.5, avg_latency=120.0)
+    row2 = SimpleNamespace(sample_count=40, success_rate=0.7, avg_latency=110.0)
     db_session.execute.side_effect = [
         SimpleNamespace(one=lambda: row1),
         SimpleNamespace(one=lambda: row2),

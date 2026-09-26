@@ -4,7 +4,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
-from typing import Any, cast
+from typing import Any, Callable, cast
 from uuid import UUID
 
 from loguru import logger
@@ -489,9 +489,9 @@ class ErrorReplanBridge:
                     recent_error,
                     node_name_map,
                     fallback_node_ids=[
-                        self._coerce_uuid(value)
+                        coerced
                         for value in (recent_error.linked_knowledge_node_ids or [])
-                        if self._coerce_uuid(value) is not None
+                        if (coerced := self._coerce_uuid(value)) is not None
                     ],
                     locale=locale,
                 )
@@ -687,12 +687,12 @@ class ErrorReplanBridge:
                 or value.get("concept_id")
                 or value.get("value")
             )
-            values = [direct] if direct is not None else []
+            direct_values = [direct] if direct is not None else []
             for nested in value.values():
                 if nested is direct:
                     continue
-                values.extend(self._flatten_node_candidates(nested))
-            return values
+                direct_values.extend(self._flatten_node_candidates(nested))
+            return direct_values
         if isinstance(value, (list, tuple, set)):
             values: list[Any] = []
             for item in value:
@@ -730,13 +730,14 @@ class ErrorReplanBridge:
         if not self._looks_like_network_pack_candidate(feature_text):
             return None
 
+        task_template_lookup: Callable[[dict[str, Any], str], dict[str, Any] | None] | None = None
         try:
             from app.sprint_packs.sprint_pack_loader import get_task_template, load_pack
 
             pack = load_pack(self.NETWORK_PACK_SUBJECT)
+            task_template_lookup = get_task_template
         except Exception:
             pack = None
-            get_task_template = None  # type: ignore[assignment]
 
         if not pack:
             return None
@@ -799,7 +800,7 @@ class ErrorReplanBridge:
             related_labels = tuple(
                 str((pack_nodes_by_id.get(node_id) or {}).get("label") or node_id) for node_id in related_nodes
             )
-            template = get_task_template(pack, template_id) if get_task_template else None
+            template = task_template_lookup(pack, template_id) if task_template_lookup else None
             if template is not None:
                 template_id = str(template.get("template_id") or template_id)
 

@@ -6,7 +6,7 @@ Keeps downstream caches and user-visible updates in sync with preference changes
 import asyncio
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Mapping
 from uuid import UUID
 
 from loguru import logger
@@ -357,7 +357,7 @@ class ProfileEventConsumer:
         return [str(value)]
 
     @staticmethod
-    def _capsule_preference_updates(preferences: dict[str, Any]) -> dict[str, Any]:
+    def _capsule_preference_updates(preferences: Mapping[str, Any]) -> dict[str, Any]:
         updates: dict[str, Any] = {"capsule_preferences": preferences or {}}
         depth = str((preferences or {}).get("content_depth_preference") or "").strip()
         if depth:

@@ -246,6 +246,11 @@ class ABTestFrameworkEnhanced:
         if existing:
             # Load variant
             variant = await self.db.get(ABExperimentVariant, existing.variant_id)
+            if variant is None:
+                raise ValueError(
+                    f"Variant {existing.variant_id} referenced by assignment {existing.id} not found "
+                    f"in experiment {experiment_id}"
+                )
             return variant, False
 
         # Get variants
@@ -262,7 +267,7 @@ class ABTestFrameworkEnhanced:
         # Deterministic assignment based on hash
         digest = hashlib.sha256(f"{user_id}:{experiment_id}".encode()).hexdigest()
         hash_val = int(digest, 16) % 10000
-        cumulative = 0
+        cumulative = 0.0
 
         for variant in variants:
             cumulative += variant.traffic_allocation_percentage * 100
@@ -329,7 +334,7 @@ class ABTestFrameworkEnhanced:
             f"Recorded metric {metric_name}={metric_value} for variant {variant_id}"
         )
 
-    async def get_experiment_stats(self, experiment_id: str) -> dict:
+    async def get_experiment_stats(self, experiment_id: str) -> dict[str, Any] | None:
         """
         Get aggregate statistics for an experiment.
 
@@ -365,7 +370,7 @@ class ABTestFrameworkEnhanced:
             # Get metrics for this variant
             metrics_result = await self.db.execute(
                 select(
-                    func.count(ABExperimentMetric.id).label("count"),
+                    func.count(ABExperimentMetric.id).label("sample_count"),
                     func.avg(
                         case(
                             (ABExperimentMetric.metric_name == "success", ABExperimentMetric.metric_value),
@@ -391,12 +396,12 @@ class ABTestFrameworkEnhanced:
                 "variant_id": str(variant.id),
                 "variant_name": variant.variant_name,
                 "is_control": variant.is_control,
-                "sample_size": row.count or 0,
+                "sample_size": row.sample_count or 0,
                 "success_rate": float(row.success_rate or 0),
                 "avg_latency": float(row.avg_latency or 0),
             }
 
-            total_sample_size += row.count or 0
+            total_sample_size += row.sample_count or 0
             stats["variants"].append(variant_stats)
 
         stats["sample_size_collected"] = total_sample_size
