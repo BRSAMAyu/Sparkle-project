@@ -821,6 +821,18 @@ async def lifespan(fastapp: FastAPI):
         galaxy_streaming_service_stale.stop()
         logger.info("GalaxyStreamingService stopped")
 
+    # FIX-16 ①残留收口（wt502）：post-commit 检索失效任务由 after_commit 钩子经
+    # 原生 create_task spawn（不经 spawn_tracked，下方统一 drain 覆盖不到）。关停
+    # 若不显式 await，残留 DEL 要么撞上已关闭 Redis 客户端、要么被静默丢弃——
+    # 陈旧版本化键将残留至 TTL（最长 30s 可重播旧版本内容）。必须先于 Redis 释放。
+    try:
+        from app.services.source_lifecycle import wait_for_pending_post_commit_invalidation
+
+        await wait_for_pending_post_commit_invalidation()
+        logger.info("Post-commit retrieval invalidation drained")
+    except Exception as e:
+        logger.warning(f"Post-commit retrieval invalidation drain failed: {e}")
+
     # FF-CONVERGENCE（wt310）：统一收口 fire-and-forget 后台任务——关停链在此
     # drain 全部经 spawn_tracked 追踪的短尾任务（审计写、信号采集、after-commit
     # 发布等）：先给 5s 自然收尾宽限，再 cancel 残留者。必须先于 event_bus /

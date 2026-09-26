@@ -227,7 +227,7 @@ def generate_embedding(self, node_id: str, text: str, user_id: str | None = None
 
     from app.db.session import AsyncSessionLocal
     from app.models.galaxy import KnowledgeNode
-    from app.services.embedding_service import embedding_service
+    from app.services.embedding_service import embedding_service, stamp_embedding_version
 
     async def _generate():
         async with AsyncSessionLocal() as session:
@@ -239,6 +239,10 @@ def generate_embedding(self, node_id: str, text: str, user_id: str | None = None
                 node = await session.get(KnowledgeNode, node_id)
                 if node:
                     node.embedding = embedding
+                    # V3-FIX-215（E-05 写入侧契约）：向量落库必须同事务打版本标，
+                    # 否则 embedding_model=NULL 的向量在 lenient 过滤下跨模型混入
+                    # 检索池，strict 翻转时又被整批排除。
+                    stamp_embedding_version(node, embedding)
                     session.add(node)
                     await session.commit()
 

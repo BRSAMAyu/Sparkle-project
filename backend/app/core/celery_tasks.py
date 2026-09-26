@@ -94,7 +94,7 @@ def generate_node_embedding(self, node_id: str, title: str, summary: str, user_i
 
     from app.db.session import AsyncSessionLocal
     from app.models.galaxy import KnowledgeNode
-    from app.services.embedding_service import embedding_service
+    from app.services.embedding_service import embedding_service, stamp_embedding_version
     from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 
     async def _process():
@@ -110,6 +110,9 @@ def generate_node_embedding(self, node_id: str, title: str, summary: str, user_i
                     raise ValueError(f"Node {node_id} not found")
 
                 node.embedding = embedding
+                # V3-FIX-215（E-05 写入侧契约）：同 celery_app.generate_embedding，
+                # 向量落库必须同事务打版本标（embedding_model/embedding_dim）。
+                stamp_embedding_version(node, embedding)
                 session.add(node)
                 await session.commit()
 

@@ -512,6 +512,14 @@ source_lifecycle_service = SourceLifecycleService()
 
 
 def source_lifecycle_payload(source: StoredFile, *, invalidated_keys: int = 0) -> dict[str, Any]:
+    """生命周期操作响应体。
+
+    ``invalidated_rag_keys`` 字段语义（FIX-16 ② 语义变更后的口径，wt502 注记）：
+    为「排期失效单元数」（1 + 关联群组数），**不是**精确删除键数——精确键数在
+    提交后异步失效完成时落结构化日志（提交前无法预知 SCAN 结果）。字段名保持
+    历史契约不更名（API 兼容，mobile 当前无消费方），消费方不应把它当删除计数
+    用于对账。
+    """
     return {
         "id": str(source.id),
         "file_name": source.file_name,
