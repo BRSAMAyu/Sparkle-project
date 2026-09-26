@@ -19,26 +19,32 @@
 红测关键例：同日 1 完成 + 1 已放弃 + 1 软删 + 1 逾期完成——
 修前 tasks_completed=2（含逾期补完成）、total_tasks_today=3（含放弃+软删），
 断言分母/分子按声明口径均为 1 即红。
+
+wt590 冻结钟对齐（CI run 36268994104 族C）：get_daily_stats 的「今日」走
+用户本地日（V3-FIX-197，缺省 Asia/Shanghai）——本文件原按 UTC 日播种
+due_date，宿主钟使 UTC 日 ≠ 上海本地日时（每日 16:00–24:00Z 窗口，恰为
+舰队夜间 CI 段）分母/分子全灭成 0。沿双冻结钟族判例
+（test_task_snooze_due_date_local_day.py / wt559 29cdf7ae）：冻结服务器
+UTC 钟 NOW=2026-09-25 20:00Z（上海本地 09-26 04:00，日界已跨、与 UTC 宿主
+日 09-25 可区分）+ 用户显式钉 PushPreference Asia/Shanghai，due_date 按
+新契约（用户本地日 09-26）播种，期望值不变，断言与宿主机 TZ 无关。
 """
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import datetime
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.statistics import get_daily_stats
 from app.models.task import Task, TaskStatus
-from app.models.user import User
+from app.models.user import PushPreference, User
 
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
-def _utc_today() -> date:
-    return datetime.now(UTC).date()
+# 冻结的「今天」（用户本地日）：NOW=2026-09-25 20:00Z → 上海本地 2026-09-26。
+_NOW_NAIVE_UTC = datetime(2026, 9, 25, 20, 0)
+_TODAY = datetime(2026, 9, 26).date()
+_YESTERDAY = datetime(2026, 9, 25).date()
 
 
 async def _seed_user(db: AsyncSession) -> User:
@@ -46,35 +52,37 @@ async def _seed_user(db: AsyncSession) -> User:
     db.add(user)
     await db.commit()
     await db.refresh(user)
+    db.add(PushPreference(user_id=user.id, timezone="Asia/Shanghai"))
+    await db.commit()
     return user
 
 
-async def test_daily_stats_denominator_matches_declared_scope(db_session: AsyncSession):
+async def test_daily_stats_denominator_matches_declared_scope(db_session: AsyncSession, monkeypatch):
     """同日 1 完成 + 1 已放弃 + 1 软删 + 1 逾期完成：分母按声明口径 = 1，分子同源 = 1。"""
+    # 冻结 statistics 的 utcnow（「今日」唯一时刻来源）+ 钉用户时区（见模块头）。
+    monkeypatch.setattr("app.api.v1.statistics._utcnow", lambda: _NOW_NAIVE_UTC, raising=False)
     user = await _seed_user(db_session)
-    today = _utc_today()
-    now = _utcnow_naive()
 
     seeds = [
         # 1 完成：今日到期、已完成 → 分子分母各计 1
         Task(
             user_id=user.id, title="今日完成", type="LEARNING", estimated_minutes=30,
-            status=TaskStatus.COMPLETED, due_date=today, completed_at=now,
+            status=TaskStatus.COMPLETED, due_date=_TODAY, completed_at=_NOW_NAIVE_UTC,
         ),
         # 1 已放弃：SSOT 已把 ABANDONED 排除出「今日任务」→ 不计分母
         Task(
             user_id=user.id, title="今日放弃", type="LEARNING", estimated_minutes=10,
-            status=TaskStatus.ABANDONED, due_date=today,
+            status=TaskStatus.ABANDONED, due_date=_TODAY,
         ),
         # 1 软删：deleted_at 非空 → 分子分母均不可见
         Task(
             user_id=user.id, title="今日软删", type="LEARNING", estimated_minutes=10,
-            status=TaskStatus.PENDING, due_date=today, deleted_at=now,
+            status=TaskStatus.PENDING, due_date=_TODAY, deleted_at=_NOW_NAIVE_UTC,
         ),
         # 1 逾期完成：到期日在昨日、今日补完成 → 时间轴统一到 due_date，不计入今日分子/分母
         Task(
             user_id=user.id, title="逾期补完成", type="LEARNING", estimated_minutes=20,
-            status=TaskStatus.COMPLETED, due_date=today - timedelta(days=1), completed_at=now,
+            status=TaskStatus.COMPLETED, due_date=_YESTERDAY, completed_at=_NOW_NAIVE_UTC,
         ),
     ]
     for task in seeds:
@@ -95,15 +103,15 @@ async def test_daily_stats_denominator_matches_declared_scope(db_session: AsyncS
     )
 
 
-async def test_daily_stats_active_pending_counts_in_denominator(db_session: AsyncSession):
+async def test_daily_stats_active_pending_counts_in_denominator(db_session: AsyncSession, monkeypatch):
     """今日到期的活跃待办（PENDING）计入分母——活跃态口径对齐 SSOT TODAY_ACTIVE_STATUSES。"""
+    monkeypatch.setattr("app.api.v1.statistics._utcnow", lambda: _NOW_NAIVE_UTC, raising=False)
     user = await _seed_user(db_session)
-    today = _utc_today()
 
     db_session.add(
         Task(
             user_id=user.id, title="今日待办", type="LEARNING", estimated_minutes=15,
-            status=TaskStatus.PENDING, due_date=today,
+            status=TaskStatus.PENDING, due_date=_TODAY,
         )
     )
     await db_session.commit()

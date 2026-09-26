@@ -196,6 +196,41 @@ def _force_real_llm_mode():
     llm_service_impl.demo_mode = snapshot
 
 
+# wt590（CI run 36268994104 族A/B 收口）：上者强制真实模式后，一切走过真实
+# LLM 调用链的用例（chat-mock 流、capsule feedback 认知同步等）在无 key 环境
+# 里 provider 必炸——llm_service 会把失败上报进三类进程级全局态：
+# llm_router._model_health（FIX-23 键型对齐后按注册 model_key 落账）、
+# circuit_breaker 的 _LOCAL_FAILURES/_LOCAL_OPEN（5 连败/60s 窗 → 开 30s）、
+# adaptive_routing_engine._stats（E-07 三维回流）。这些态跨用例残留会让后续
+# 选型/熔断/复位断言按「此前用例的失败史」翻红（CI 全量序实证：capsule
+# feedback 两连败残留 → grade_ab STANDARD 档跌到 deepseek_chat、
+# m2 stream 两个 503 Circuit Open、V3-FIX-81 复位面多出他人键）。沿 SRL/
+# DynamicToolRegistry 单例治理判例：本 autouse fixture 每用例前快照、用例后
+# 原位恢复（clear+update 保对象标识，防外部引用脱钩）；teardown 晚于
+# monkeypatch（conftest 级 autouse 先建后拆），q06 等用例对
+# _available_models/_model_health 的 monkeypatch 假注册先还原、再落本恢复。
+# 判定语义零改动——各相变/阈值行为照旧，只隔离跨用例泄漏。
+@pytest.fixture(autouse=True)
+def _restore_llm_global_health_state():
+    from app.core.adaptive_routing import adaptive_routing_engine
+    from app.core.llm_router import llm_router
+    from app.services import circuit_breaker as cb_module
+
+    health_snapshot = dict(llm_router._model_health)
+    stats_snapshot = dict(adaptive_routing_engine._stats)
+    cb_failures_snapshot = dict(cb_module._LOCAL_FAILURES)
+    cb_open_snapshot = dict(cb_module._LOCAL_OPEN)
+    yield
+    llm_router._model_health.clear()
+    llm_router._model_health.update(health_snapshot)
+    adaptive_routing_engine._stats.clear()
+    adaptive_routing_engine._stats.update(stats_snapshot)
+    cb_module._LOCAL_FAILURES.clear()
+    cb_module._LOCAL_FAILURES.update(cb_failures_snapshot)
+    cb_module._LOCAL_OPEN.clear()
+    cb_module._LOCAL_OPEN.update(cb_open_snapshot)
+
+
 # V3-FIX-120（同卡第二单例）：DynamicToolRegistry 是进程级单例（__new__ 恒返
 # _instance），而 phase2_core/x06 等用例对它 clear_all + monkeypatch 假注册——
 # CI 全量序实证：tests/test_phase2_core.py 的 registers_package_only_once 用假
