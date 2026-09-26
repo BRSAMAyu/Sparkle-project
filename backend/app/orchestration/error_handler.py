@@ -56,6 +56,9 @@ class AgentErrorHandler:
         # 拒绝，但以伪造的 IdempotencyConflict（"并发重复调用"）归因说谎；带幂等键
         # 路径则 uuid 解析 ValueError 裸抛。实录见
         # tests/unit/test_v3_fix217_error_handler_uid.py（危害面探针）。
+        # V3-FIX-223 追记：账本闸门失效归因已分流（身份串非法 → InvalidUserIdentity、
+        # 基建故障 → LedgerUnavailable、真并发保留 IdempotencyConflict；读失败不再
+        # 裸抛）——本闸门仍是身份缺失的第一道防线，语义不变。
         if user_id is None or not str(user_id).strip():
             tool_result.suggestion = (
                 f"{tool_result.suggestion or ''}\n自动修正已跳过：本次请求缺少用户身份，无法安全重试工具调用。"

@@ -168,10 +168,12 @@ class _ExecutorSpy:
 
 class TestHarmProbeExecutorDirect:
     async def test_none_uid_read_tool_rejected_as_fake_idempotency_conflict(self, monkeypatch, guard_db):
-        """探针①：user_id=None + read 工具（无幂等键）→ 伪造 IdempotencyConflict 拒绝。
+        """探针①：user_id=None + read 工具（无幂等键）→ 拒绝（fail-closed 边界）。
 
-        实录（110131f8）：不崩溃、不越权（工具零执行、账本零开行），但错误类型
-        与消息说谎（"并发重复调用"——实际是身份缺失），自修正链据此被静默判死。
+        实录（110131f8）：不崩溃、不越权（工具零执行、账本零开行）。原行为是
+        伪造 IdempotencyConflict"并发重复调用"——归因说谎；**V3-FIX-223 修后**
+        同型输入（身份串非法）归因为参数错误类 ``InvalidUserIdentity``（诚实
+        归因），fail-closed 边界（零执行、零开行）原样成立。
         """
         tool = _StubReadTool()
         _install_read_registry(monkeypatch, tool)
@@ -179,23 +181,28 @@ class TestHarmProbeExecutorDirect:
         result = await executor.execute_tool_call(tool.name, {"title": "x"}, None, guard_db.session)
         assert result.success is False
         assert tool.execute_count == 0  # 执行未发生（fail-closed，非越权）
-        assert result.error_type == "IdempotencyConflict"  # 归因说谎：非并发冲突
-        assert "Concurrent duplicate call" in (result.error_message or "")
+        # V3-FIX-223：归因修正——不再伪装成"Concurrent duplicate call"
+        assert result.error_type == "InvalidUserIdentity"
+        assert "not a valid UUID" in (result.error_message or "")
+        assert "Concurrent duplicate call" not in (result.error_message or "")
         rows = (await guard_db.session.execute(select(AgentToolCall))).scalars().all()
         assert rows == []  # 账本零开行
 
     async def test_none_uid_with_idempotency_key_raises_valueerror(self, monkeypatch, guard_db):
-        """探针②：user_id=None + tool_call_id（幂等键）→ ValueError 裸抛。
+        """探针②：user_id=None + tool_call_id（幂等键）→ 直调面得到 ToolResult。
 
         实录（110131f8）：``_find_ledger_row`` 的 uuid 解析失败被 re-raise，
-        直调面得不到 ToolResult 而是异常；自修正链上面靠 handler 的兜底
-        except 把它吞成"修正失败"——失效被掩盖为修正不可用。
+        直调面裸抛 ValueError（链上被 handler 兜底 except 吞成"修正失败"）。
+        **V3-FIX-223 修后**：读失败不再裸抛——包装为 fail-closed ToolResult
+        （InvalidUserIdentity），错误不再被上游兜底掩盖。
         """
         tool = _StubReadTool()
         _install_read_registry(monkeypatch, tool)
         executor = ToolExecutor()
-        with pytest.raises(ValueError):
-            await executor.execute_tool_call(tool.name, {"title": "x"}, None, guard_db.session, tool_call_id="c9")
+        result = await executor.execute_tool_call(tool.name, {"title": "x"}, None, guard_db.session, tool_call_id="c9")
+        assert isinstance(result, ToolResult)  # 直调面契约：ToolResult，非裸异常
+        assert result.success is False
+        assert result.error_type == "InvalidUserIdentity"
         assert tool.execute_count == 0
 
     async def test_real_uid_same_call_succeeds(self, monkeypatch, guard_db):

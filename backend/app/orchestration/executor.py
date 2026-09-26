@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
 from app.core.business_metrics import COMPENSATION_TRIGGERED
@@ -240,6 +241,11 @@ _ERROR_TYPE_TO_FAILURE_KIND: dict[str, FailureKind] = {
     "IdempotencyConflict": FailureKind.IDEMPOTENCY_CONFLICT,
     "IdempotencyArgsMismatch": FailureKind.IDEMPOTENCY_ARGS_MISMATCH,
     "IdempotencyInterrupted": FailureKind.IDEMPOTENCY_INTERRUPTED,
+    # V3-FIX-223 · 账本闸门失效归因分流：
+    # - InvalidUserIdentity：身份串非法 = 调用方参数错误（确定性、不可重试）；
+    # - LedgerUnavailable：账本读/开行基建故障（暂态；side effect 未发生可重试）。
+    "InvalidUserIdentity": FailureKind.VALIDATION_ERROR,
+    "LedgerUnavailable": FailureKind.TOOL_EXCEPTION,
     "ValidationError": FailureKind.VALIDATION_ERROR,
     "ToolNotFound": FailureKind.UNKNOWN_TOOL,
     "ConfirmationRequired": FailureKind.CONFIRMATION_REQUIRED,
@@ -522,7 +528,28 @@ class ToolExecutor:
         guard.metadata = metadata
 
         if key:
-            existing = await self._find_ledger_row(db_session, user_id, tool_name, key)
+            # V3-FIX-223：账本读失败/身份串非法不再裸抛到直调面——闸门统一
+            # 包装为 fail-closed ToolResult（按真实故障类别诚实归因）。
+            try:
+                existing = await self._find_ledger_row(db_session, user_id, tool_name, key)
+            except (TypeError, ValueError):
+                guard.reject(
+                    error_type="InvalidUserIdentity",
+                    message=(
+                        f"Tool '{tool_name}' call rejected: user identity is not a valid UUID; "
+                        "call not executed (caller contract violation)"
+                    ),
+                )
+                return guard
+            except Exception:  # noqa: BLE001 — 账本不可读 → fail-closed（无账本不执行）
+                guard.reject(
+                    error_type="LedgerUnavailable",
+                    message=(
+                        f"Tool '{tool_name}' call rejected: tool call ledger is unavailable; "
+                        "side effect not executed (fail-closed)"
+                    ),
+                )
+                return guard
             if existing is not None:
                 if existing.args_hash and existing.args_hash != args_hash:
                     guard.reject(
@@ -576,11 +603,35 @@ class ToolExecutor:
                 return guard
             guard.run_id = str(run_row.id)
 
-        # 账本开行（与工具写入同事务：提交即「已发生且已记账」）
+        # 账本开行（与工具写入同事务：提交即「已发生且已记账」）。
+        # V3-FIX-223 · 失效按真实故障类别分型（fail-closed 不变，只换诚实归因）：
+        # - 身份串非法（uuid 解析失败）→ InvalidUserIdentity（参数错误类）；
+        # - 真并发同 (user, tool, key) 撞 uq_agent_tool_calls_idem 唯一索引
+        #   （SELECT 后竞态窗口内被并发插入）→ IdempotencyConflict（语义不变）；
+        # - 其余 DB/基建故障 → LedgerUnavailable（基建不可用类）。
+        # 不再把一切开行失败统一伪装成"Concurrent duplicate call"。
+        try:
+            ledger_user_id = uuid.UUID(str(user_id))
+            ledger_run_id = uuid.UUID(str(guard.run_id)) if guard.run_id else None
+        except (TypeError, ValueError) as exc:
+            logger.warning(
+                "tool call ledger begin rejected: user identity is not a valid UUID tool={} error={!r}",
+                tool_name,
+                exc,
+            )
+            await self._safe_rollback(db_session)
+            guard.reject(
+                error_type="InvalidUserIdentity",
+                message=(
+                    f"Tool '{tool_name}' call rejected: user identity is not a valid UUID; "
+                    "call not executed (caller contract violation)"
+                ),
+            )
+            return guard
         try:
             ledger = AgentToolCall(
-                user_id=uuid.UUID(str(user_id)),
-                run_id=uuid.UUID(str(guard.run_id)) if guard.run_id else None,
+                user_id=ledger_user_id,
+                run_id=ledger_run_id,
                 tool_name=tool_name,
                 tool_call_id=tool_call_id,
                 idempotency_key=key,
@@ -592,12 +643,46 @@ class ToolExecutor:
             db_session.add(ledger)
             await db_session.flush()
             guard.ledger = ledger
-        except Exception as exc:  # noqa: BLE001 — 并发同 key 撞唯一索引等 → fail-closed
-            logger.warning("tool call ledger begin failed (fail-closed) tool={} error={!r}", tool_name, exc)
+        except IntegrityError as exc:
+            # 幂等唯一索引命中判据：Postgres 报约束名，SQLite 报列三元组。
+            exc_text = str(exc)
+            if "uq_agent_tool_calls_idem" in exc_text or (
+                "agent_tool_calls.user_id" in exc_text
+                and "agent_tool_calls.tool_name" in exc_text
+                and "agent_tool_calls.idempotency_key" in exc_text
+            ):
+                # 真并发：同 key 在账本查询后、flush 前的窗口内被并发插入
+                logger.warning(
+                    "tool call ledger begin hit concurrent duplicate (fail-closed) tool={} key={} error={!r}",
+                    tool_name,
+                    key,
+                    exc,
+                )
+                await self._safe_rollback(db_session)
+                guard.reject(
+                    error_type="IdempotencyConflict",
+                    message=f"Concurrent duplicate call for tool '{tool_name}' detected; side effect not re-executed",
+                )
+            else:
+                # 非幂等索引的完整性错误（FK 等）＝账本写面不可用，不冒充并发冲突
+                logger.error("tool call ledger begin failed (infra) tool={} error={!r}", tool_name, exc)
+                await self._safe_rollback(db_session)
+                guard.reject(
+                    error_type="LedgerUnavailable",
+                    message=(
+                        f"Tool '{tool_name}' call rejected: tool call ledger is unavailable; "
+                        "side effect not executed (fail-closed)"
+                    ),
+                )
+        except Exception as exc:  # noqa: BLE001 — 账本开行基建故障（连接断等）→ fail-closed
+            logger.error("tool call ledger begin failed (infra) tool={} error={!r}", tool_name, exc)
             await self._safe_rollback(db_session)
             guard.reject(
-                error_type="IdempotencyConflict",
-                message=f"Concurrent duplicate call for tool '{tool_name}' detected; side effect not re-executed",
+                error_type="LedgerUnavailable",
+                message=(
+                    f"Tool '{tool_name}' call rejected: tool call ledger is unavailable; "
+                    "side effect not executed (fail-closed)"
+                ),
             )
         return guard
 
@@ -619,10 +704,22 @@ class ToolExecutor:
     async def _find_ledger_row(db_session: Any, user_id: str, tool_name: str, key: str) -> AgentToolCall | None:
         from sqlalchemy import select
 
+        # V3-FIX-223：身份串非法与账本读故障分流留痕——uuid 解析单独成段，
+        # 保证唯一调用面（_authorize_and_begin_call）能按异常类型诚实归因
+        # （TypeError/ValueError 只可能来自身份解析，不可能是账本读故障）。
+        try:
+            ledger_user_id = uuid.UUID(str(user_id))
+        except (TypeError, ValueError):
+            logger.warning(
+                "tool call ledger lookup skipped: user identity is not a valid UUID tool={} key={}",
+                tool_name,
+                key,
+            )
+            raise
         try:
             stmt = (
                 select(AgentToolCall).where(
-                    AgentToolCall.user_id == uuid.UUID(str(user_id)),
+                    AgentToolCall.user_id == ledger_user_id,
                     AgentToolCall.tool_name == tool_name,
                     AgentToolCall.idempotency_key == key,
                 )
