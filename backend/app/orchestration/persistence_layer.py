@@ -305,17 +305,25 @@ class PersistenceLayerMixin:
                 if not preview:
                     continue
 
+                # V3-FIX-264：metadata 是 proto map<string,string>（agent_service.proto:214），
+                # preview_data 是任意 dict——缺键/None/int 直传会在 protobuf 赋值期
+                # TypeError: bad argument type for built-in operation，被下方 except
+                # 吞成 warning，里程碑通知静默丢失。全值 str 化缺省策略：
+                # proposal_id 为引用键，空串即规范缺席值（proto3 map 无法表达缺席；
+                # 本通知为展示面，确认流走 action_id/pending_actions，不依赖此键，
+                # 空串与真实 ID（uuid/rp-/ap- 前缀）可区分，非静默吞数据）。
+                suggested_count = preview.get("suggested_count") or 0
                 await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=f"\U0001f389 \u606d\u559c\u8fbe\u6210\u91cc\u7a0b\u7891\uff01\u4e3a\u4f60\u63a8\u8350 {preview.get('suggested_count', 0)} \u4e2a\u65b0\u4efb\u52a1",
+                    delta=f"\U0001f389 \u606d\u559c\u8fbe\u6210\u91cc\u7a0b\u7891\uff01\u4e3a\u4f60\u63a8\u8350 {suggested_count} \u4e2a\u65b0\u4efb\u52a1",
                     metadata={
                         "widget_event": "milestone_proposal",
-                        "proposal_id": preview.get("proposal_id"),
-                        "action_id": proposal_action.get("action_id"),
-                        "plan_id": preview.get("plan_id"),
-                        "milestone_id": preview.get("milestone_id"),
-                        "task_count": preview.get("suggested_count", 0),
-                        "reasoning": preview.get("reasoning", ""),
-                        "tasks": json.dumps(preview.get("proposed_tasks", [])),
+                        "proposal_id": str(preview.get("proposal_id") or ""),
+                        "action_id": str(proposal_action.get("action_id") or ""),
+                        "plan_id": str(preview.get("plan_id") or ""),
+                        "milestone_id": str(preview.get("milestone_id") or ""),
+                        "task_count": str(suggested_count),
+                        "reasoning": str(preview.get("reasoning") or ""),
+                        "tasks": json.dumps(preview.get("proposed_tasks") or []),
                     }
                 ))
 

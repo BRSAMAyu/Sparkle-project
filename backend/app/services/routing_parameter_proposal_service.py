@@ -194,7 +194,10 @@ class RoutingParameterProposalService:
 
             # Propose a small adjustment toward the direction of improvement
             lo, hi = PARAMETER_BOUNDS.get(param_name, (0.0, 15.0))
-            proposed_value = await self._compute_proposed_value(
+            # _compute_proposed_value 是纯同步 @staticmethod（无 I/O 无并发），
+            # 直调；V3-FIX-264 修前误 await 同步返回值（float|None），
+            # 证据到达即 TypeError: object float can't be used in 'await' expression。
+            proposed_value = self._compute_proposed_value(
                 param_name, float(default_value), lo, hi, best_rate, avg_baseline,
             )
             if proposed_value is None or abs(proposed_value - float(default_value)) < 0.01:

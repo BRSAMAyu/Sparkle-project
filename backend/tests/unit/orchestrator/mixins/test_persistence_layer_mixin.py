@@ -5,6 +5,7 @@ Tests the persistence and side-effect helpers for the orchestrator.
 """
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -187,3 +188,100 @@ def test_coerce_session_uuid_with_invalid_string(orchestrator):
 
     # Should return a valid UUID
     assert isinstance(result, uuid.UUID)
+
+
+# ---------------------------------------------------------------------------
+# V3-FIX-264 点位2（wt543）：_notify_pending_milestone_proposals metadata 红转绿守卫
+# ---------------------------------------------------------------------------
+
+
+def _milestone_action(**preview_overrides) -> dict:
+    """milestone_task_proposal 待确认动作（preview_data 宽松形状）。
+
+    缺 proposal_id/milestone_id/reasoning/proposed_tasks——pending_actions_store
+    的 preview_data 是任意 dict（生产方契约外形状），正是修前 protobuf 赋值炸点。
+    """
+    preview: dict = {"suggested_count": 4, "plan_id": "plan-9"}
+    preview.update(preview_overrides)
+    return {
+        "tool_name": "milestone_task_proposal",
+        "action_id": "act-123",
+        "preview_data": preview,
+    }
+
+
+async def test_notify_milestone_proposal_sends_protobuf_safe_metadata(orchestrator, monkeypatch):
+    """metadata（proto map<string,string>）缺键 None / int 直传必须不再炸通知。
+
+    修前实录（台账 V3-FIX-263）：ChatResponse(metadata={...}) 构造期 TypeError
+    （None/int 不是 str），被方法体外层 `except Exception` 吞成 warning——
+    stream_callback 从未被调用，里程碑通知静默丢失。
+    """
+    action = _milestone_action()
+    monkeypatch.setattr(
+        "app.core.pending_actions.pending_actions_store.get_all_by_user",
+        AsyncMock(return_value=[action]),
+    )
+    callback = AsyncMock()
+
+    await orchestrator._notify_pending_milestone_proposals("user-1", callback)
+
+    callback.assert_awaited_once()
+    resp = callback.await_args.args[0]
+    md = dict(resp.metadata)
+    assert md["widget_event"] == "milestone_proposal"
+    assert md["proposal_id"] == ""  # 缺键 → 规范缺席值，通知不吞
+    assert md["action_id"] == "act-123"
+    assert md["plan_id"] == "plan-9"
+    assert md["milestone_id"] == ""
+    assert md["task_count"] == "4"  # int → str
+    assert md["reasoning"] == ""
+    assert json.loads(md["tasks"]) == []
+
+
+async def test_notify_milestone_proposal_full_preview_keys_roundtrip(orchestrator, monkeypatch):
+    """preview_data 键齐全（含 int suggested_count）时全链路可达且值保持。"""
+    action = _milestone_action(
+        proposal_id="prop-1",
+        milestone_id="ms-2",
+        reasoning="因为连续达标",
+        proposed_tasks=[{"title": "任务A"}, {"title": "任务B"}],
+    )
+    monkeypatch.setattr(
+        "app.core.pending_actions.pending_actions_store.get_all_by_user",
+        AsyncMock(return_value=[action]),
+    )
+    callback = AsyncMock()
+
+    await orchestrator._notify_pending_milestone_proposals("user-2", callback)
+
+    callback.assert_awaited_once()
+    resp = callback.await_args.args[0]
+    md = dict(resp.metadata)
+    assert md["proposal_id"] == "prop-1"
+    assert md["milestone_id"] == "ms-2"
+    assert md["task_count"] == "4"
+    assert md["reasoning"] == "因为连续达标"
+    assert json.loads(md["tasks"]) == [{"title": "任务A"}, {"title": "任务B"}]
+    assert "4 个新任务" in resp.delta
+
+
+async def test_notify_milestone_proposal_none_values_do_not_drop_notification(orchestrator, monkeypatch):
+    """preview_data 值显式 None（如 plan_id=None）时通知仍发出，缺省空串。"""
+    action = _milestone_action(
+        suggested_count=None, plan_id=None, proposal_id=None, reasoning=None,
+    )
+    monkeypatch.setattr(
+        "app.core.pending_actions.pending_actions_store.get_all_by_user",
+        AsyncMock(return_value=[action]),
+    )
+    callback = AsyncMock()
+
+    await orchestrator._notify_pending_milestone_proposals("user-3", callback)
+
+    callback.assert_awaited_once()
+    md = dict(callback.await_args.args[0].metadata)
+    assert md["task_count"] == "0"
+    assert md["plan_id"] == ""
+    assert md["proposal_id"] == ""
+    assert md["reasoning"] == ""
