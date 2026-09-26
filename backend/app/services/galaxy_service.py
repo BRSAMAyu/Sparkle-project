@@ -20,7 +20,7 @@ from typing import Any, Sequence, TypedDict, cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from loguru import logger
-from sqlalchemy import String, and_, bindparam, delete, func, inspect, or_, select, text
+from sqlalchemy import CursorResult, String, and_, bindparam, delete, func, inspect, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, undefer
 
@@ -3176,12 +3176,23 @@ class GalaxyService:
         version: datetime | None = None,
         request_id: str | None = None,
         revision: int | None = None,
+        merge_higher: bool = False,
     ):
         """
         Update node mastery with Outbox pattern and atomic revision checking to prevent race conditions.
 
         Race condition fix (C1): Uses atomic UPDATE with WHERE revision = expected_revision
         and RETURNING clause to detect conflicts in a single database operation.
+
+        V3-FIX-295（wt583）: ``merge_higher=True`` 走 max-wins compare-and-set
+        （CAS）—— 仅在 stored mastery 严格低于 new_mastery 时写入；stored ≥
+        new_mastery 时零写返回（old=new=stored，revision 不动），窗口内并发写
+        入的更高值不被覆盖。语义与 ``MasteryMergeCRDT.merge_mastery`` 的
+        max-wins 等价，但谓词随写入单条语句原子生效（PG ``ON CONFLICT ...
+        DO UPDATE ... WHERE mastery_score < EXCLUDED.mastery_score``；sqlite
+        ORM 分支同谓词守卫），两方言行为一致——区别于旧行为"无锁读→盲写
+        upsert"的 TOCTOU 窗口。与 ``revision`` 互斥使用（CAS 面向冲突后合并
+        腿，不带乐观锁 revision）。
         """
 
         def _to_utc_naive(dt: datetime | None) -> datetime | None:
@@ -3299,15 +3310,61 @@ class GalaxyService:
                                 f"Ignoring stale update (Time) for node {node_id}. Incoming version {version} <= current {current_updated_at}"
                             )
                             return {"success": False, "reason": "stale_update", "current_revision": current_revision}
-                        new_revision = current_revision + 1
-                        status.mastery_score = new_mastery
-                        status.bkt_mastery_prob = bkt_mastery_prob
-                        status.bkt_last_updated_at = update_time
-                        status.updated_at = update_time
-                        status.last_study_at = update_time
-                        status.last_interacted_at = update_time
-                        status.is_unlocked = True
-                        status.revision = new_revision
+                        if merge_higher:
+                            # V3-FIX-295 CAS：谓词随 UPDATE 语句本身生效（非
+                            # Python 层 check-then-act），与 PG 面的
+                            # ``DO UPDATE ... WHERE mastery_score < EXCLUDED`` 同谓词
+                            # 同语义——stored ≥ incoming 时零行更新，幂等返回。
+                            cas_result = await self.db.execute(
+                                text("""
+                                    UPDATE user_node_status
+                                    SET mastery_score = :mastery,
+                                        bkt_mastery_prob = :bkt_mastery_prob,
+                                        bkt_last_updated_at = :updated_at,
+                                        updated_at = :updated_at,
+                                        last_study_at = :updated_at,
+                                        last_interacted_at = :updated_at,
+                                        is_unlocked = true,
+                                        revision = revision + 1
+                                    WHERE user_id = :user_id
+                                      AND node_id = :node_id
+                                      AND mastery_score < :mastery
+                                """),
+                                {
+                                    # GUID 在非 PG 方言存 str(uuid)（见 models/base.GUID），
+                                    # 裸 SQL 绑定须显式字符串化（asyncpg 面才可绑 UUID）
+                                    "user_id": str(user_id),
+                                    "node_id": str(node_id),
+                                    "mastery": new_mastery,
+                                    "bkt_mastery_prob": bkt_mastery_prob,
+                                    "updated_at": update_time,
+                                },
+                            )
+                            if cast("CursorResult[Any]", cas_result).rowcount == 0:
+                                await self.db.rollback()
+                                return {
+                                    "success": True,
+                                    "old_mastery": old_mastery,
+                                    "new_mastery": old_mastery,
+                                    "current_revision": current_revision,
+                                }
+                            rev_row = (
+                                await self.db.execute(
+                                    text("SELECT revision FROM user_node_status WHERE user_id = :user_id AND node_id = :node_id"),
+                                    {"user_id": str(user_id), "node_id": str(node_id)},
+                                )
+                            ).fetchone()
+                            new_revision = int(rev_row[0]) if rev_row else current_revision + 1
+                        else:
+                            new_revision = current_revision + 1
+                            status.mastery_score = new_mastery
+                            status.bkt_mastery_prob = bkt_mastery_prob
+                            status.bkt_last_updated_at = update_time
+                            status.updated_at = update_time
+                            status.last_study_at = update_time
+                            status.last_interacted_at = update_time
+                            status.is_unlocked = True
+                            status.revision = new_revision
                     else:
                         old_mastery = 0.0
                         new_revision = 1
@@ -3355,7 +3412,7 @@ class GalaxyService:
                     new_revision = current_revision + 1
                     # UPSERT pattern for non-revision cases
                     # Use atomic revision increment to prevent TOCTOU race
-                    upsert_query = text("""
+                    upsert_sql = """
                         INSERT INTO user_node_status (
                             user_id,
                             node_id,
@@ -3403,9 +3460,15 @@ class GalaxyService:
                             last_interacted_at = EXCLUDED.updated_at,
                             is_unlocked = true,
                             revision = user_node_status.revision + 1
-                    """)
+                    """
+                    # V3-FIX-295 CAS：merge_higher 时谓词随 DO UPDATE 单语句原子
+                    # 生效——stored ≥ incoming 时零行更新（WHERE 对最新已提交行
+                    # 求值），消除"无锁读→盲写"窗口内高值被覆盖的 TOCTOU。
+                    if merge_higher:
+                        upsert_sql += "\n                        WHERE user_node_status.mastery_score < EXCLUDED.mastery_score"
+                    upsert_query = text(upsert_sql)
 
-                    await self.db.execute(
+                    upsert_result = await self.db.execute(
                         upsert_query,
                         {
                             "user_id": user_id,
@@ -3416,14 +3479,27 @@ class GalaxyService:
                             "revision": new_revision,
                         },
                     )
+                    cas_applied = cast("CursorResult[Any]", upsert_result).rowcount > 0
                     # Re-read the actual revision after atomic increment
                     rev_result = await self.db.execute(
-                        text("SELECT revision FROM user_node_status WHERE user_id = :user_id AND node_id = :node_id"),
+                        text("SELECT mastery_score, revision FROM user_node_status WHERE user_id = :user_id AND node_id = :node_id"),
                         {"user_id": user_id, "node_id": node_id},
                     )
                     rev_row = rev_result.fetchone()
                     if rev_row:
-                        new_revision = rev_row[0]
+                        new_revision = rev_row[1]
+                        if merge_higher and not cas_applied:
+                            # CAS 零行更新：stored ≥ incoming（窗口内更高值在
+                            # 场），幂等返回且不写审计/外发事件；new 值以重读的
+                            # 库内真值为准（pre-read 可能已被并发写超越）
+                            stored_mastery = float(rev_row[0] or 0.0)
+                            await self.db.rollback()
+                            return {
+                                "success": True,
+                                "old_mastery": stored_mastery,
+                                "new_mastery": stored_mastery,
+                                "current_revision": int(new_revision),
+                            }
 
             # === COMMON: Update Global Stats, Audit Log, Outbox ===
             # A. Update Global Stats (Collaborative Sparking)

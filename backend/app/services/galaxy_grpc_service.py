@@ -20,8 +20,13 @@ except ImportError:
 
 from app.core.cache import cache_service
 from app.schemas.galaxy import sanitize_display_text, sanitize_keywords, sanitize_node_display_title
+
+# MasteryMergeCRDT（V3-FIX-296 修真后保留为 max-wins 参考语义）：本 servicer 的
+# 冲突合并自 V3-FIX-295 起收口为 GalaxyService.update_node_mastery 的服务端
+# 原子 CAS（merge_higher=True），语义与 merge_mastery 的 max-wins 等价且无
+# TOCTOU 窗口，故此处不再直接调用。
 from app.services.galaxy.collaborative_service import CollaborativeGalaxyService
-from app.services.galaxy.crdt_persistence import CRDTPersistenceManager, MasteryMergeCRDT
+from app.services.galaxy.crdt_persistence import CRDTPersistenceManager
 from app.services.galaxy_service import GalaxyService
 
 # Memory cache for active YDocs to avoid reloading from DB every time
@@ -219,47 +224,35 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                 if not result.get("success"):
                     # CRDT merge: resolve offline sync conflicts with max-wins semantics
                     if result.get("reason") == "conflict":
-                        from sqlalchemy import select as sa_select
-
-                        from app.models.galaxy import UserNodeStatus
-                        current_revision = result.get("current_revision", 0)
-                        node_id_uuid = UUID(request.node_id) if isinstance(request.node_id, str) else request.node_id
-                        stmt = sa_select(UserNodeStatus.mastery_score).where(
-                            UserNodeStatus.user_id == UUID(user_id),
-                            UserNodeStatus.node_id == node_id_uuid,
-                        )
-                        current_result = await db.execute(stmt)
-                        current_row = current_result.fetchone()
-                        current_mastery = float(current_row[0]) if current_row else 0.0
-
-                        merged_mastery = MasteryMergeCRDT.merge_mastery(
-                            current_mastery,
-                            request.mastery,
-                        )
-                        if merged_mastery > current_mastery:
-                            # Incoming is higher — retry without revision check
-                            retry_result = await galaxy_service.update_node_mastery(
-                                user_id=UUID(user_id),
-                                node_id=UUID(request.node_id),
-                                new_mastery=merged_mastery,
-                                reason=request.reason,
-                                request_id=request.request_id,
-                            )
-                            if retry_result.get("success"):
-                                return galaxy_service_pb2.UpdateNodeMasteryResponse(
-                                    success=True,
-                                    old_mastery=int(retry_result.get("old_mastery", 0)),
-                                    new_mastery=int(retry_result.get("new_mastery", 0)),
-                                    request_id=request.request_id,
-                                    current_revision=retry_result.get("current_revision", 0),
-                                )
-                        # Idempotent: current value already >= incoming
-                        return galaxy_service_pb2.UpdateNodeMasteryResponse(
-                            success=True,
-                            old_mastery=int(current_mastery),
-                            new_mastery=int(current_mastery),
+                        # V3-FIX-295: 冲突合并收口为服务端单语句原子 CAS
+                        # （``merge_higher=True`` → ``WHERE mastery_score < incoming``）。
+                        # 旧实现此处是无锁 SELECT + 不带 revision 的盲写重试
+                        # upsert——SELECT 与重试之间的窗口内并发提交的更高掌握度
+                        # 会被盲写覆盖（wt576 按序注入复现：90 → 被重试 30 覆盖）。
+                        # CAS 谓词对最新已提交行原子求值：stored ≥ incoming 时零写
+                        # 幂等返回（高值保留），stored < incoming 时原子写入。
+                        retry_result = await galaxy_service.update_node_mastery(
+                            user_id=UUID(user_id),
+                            node_id=UUID(request.node_id),
+                            new_mastery=request.mastery,
+                            reason=request.reason,
                             request_id=request.request_id,
-                            current_revision=current_revision,
+                            merge_higher=True,
+                        )
+                        if retry_result.get("success"):
+                            return galaxy_service_pb2.UpdateNodeMasteryResponse(
+                                success=True,
+                                old_mastery=int(retry_result.get("old_mastery", 0)),
+                                new_mastery=int(retry_result.get("new_mastery", 0)),
+                                request_id=request.request_id,
+                                current_revision=retry_result.get("current_revision", 0),
+                            )
+                        # CAS 腿失败（如审计幂等 duplicate）——如实上抛原因
+                        return galaxy_service_pb2.UpdateNodeMasteryResponse(
+                            success=False,
+                            reason=retry_result.get("reason", "conflict"),
+                            request_id=request.request_id,
+                            current_revision=retry_result.get("current_revision", 0),
                         )
 
                     return galaxy_service_pb2.UpdateNodeMasteryResponse(

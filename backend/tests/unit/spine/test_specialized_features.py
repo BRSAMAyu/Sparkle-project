@@ -362,7 +362,12 @@ def test_crdt_task_status_merge_most_progressed():
 
 
 def test_crdt_node_merge_combines_fields():
-    """APP-005: full node merge uses max-mastery + most-progressed + increment revision."""
+    """APP-005: full node merge uses max-mastery + most-progressed + pure max revision.
+
+    V3-FIX-296（wt583）：revision 由 ``max+1`` 改为纯 ``max``——合并不是更新，
+    ``max+1`` 破坏 CRDT 幂等（merge_node(x,x) 每合一次推一格）；幂等合并要求
+    merge_node(x, x) 恒等于 x。
+    """
     from app.services.galaxy.crdt_persistence import MasteryMergeCRDT
 
     local = {"mastery_score": 40.0, "status": "in_progress", "revision": 3, "node_id": "n1"}
@@ -371,7 +376,7 @@ def test_crdt_node_merge_combines_fields():
 
     assert merged["mastery_score"] == 65.0
     assert merged["status"] == "in_progress"
-    assert merged["revision"] == 6  # max(3,5)+1
+    assert merged["revision"] == 5  # max(3,5)——纯 max，幂等（V3-FIX-296）
 
 
 def test_crdt_batch_merge_handles_both_sides():

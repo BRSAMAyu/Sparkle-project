@@ -170,13 +170,48 @@ class CRDTPersistenceManager:
 # ═══════════════════════════════════════════════════════════════════════
 
 
+def _coerce_updated_at(value: Any) -> datetime | None:
+    """把 updated_at 归一成可比较的 naive datetime（aware → UTC naive）。
+
+    接受 datetime / ISO 字符串（LWW 元数据可能经 JSON 往返退化为 str）；
+    无法解析或缺失时返回 None（按"最旧"参与比较）。
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    elif isinstance(value, str):
+        try:
+            dt = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+    else:
+        return None
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(UTC).replace(tzinfo=None)
+    return dt
+
+
 class MasteryMergeCRDT:
     """CRDT merge strategy for node mastery scores across devices.
 
     Strategy: max-wins for mastery scores (learning progress is monotonic).
-    For local task status: most-progressed wins.
+    For local task status: most-progressed wins
+    (``completed > in_progress > abandoned > pending`` — abandoned is a
+    mid-course give-up, not the most progressed terminal state).
     All merges are commutative, associative, and idempotent (CRDT properties).
+
+    V3-FIX-296（wt583）契约修正：终态序表把 completed 置于 abandoned 之上；
+    revision 改纯 max（merge_node(x, x) 恒等于 x，恢复幂等）；metadata
+    （note/updated_at 等未显式归并字段）按 updated_at 真实 LWW，平局归
+    local（等时刻的不同 metadata 本征歧义，取确定序）。
     """
+
+    # V3-FIX-296: most-progressed 终态序。completed 是学习进度语义里最高的
+    # 终态；abandoned（中途放弃）高于 pending（从未开始）但低于 in_progress
+    # （仍在推进）——原序表 abandoned(3)>completed(2) 与 "most progressed
+    # wins" 自述相悖，会让放弃覆盖完成。
+    _TASK_STATUS_ORDER = {"pending": 0, "abandoned": 1, "in_progress": 2, "completed": 3}
 
     @staticmethod
     def merge_mastery(local: float, remote: float) -> float:
@@ -185,8 +220,12 @@ class MasteryMergeCRDT:
 
     @staticmethod
     def merge_task_status(local: str, remote: str) -> str:
-        """Merge task status — most progressed wins."""
-        order = {"pending": 0, "in_progress": 1, "completed": 2, "abandoned": 3}
+        """Merge task status — most progressed wins.
+
+        序表见 ``_TASK_STATUS_ORDER``：completed > in_progress > abandoned >
+        pending。同序即同值（序表按状态单射），平局返回 local 不破坏交换律。
+        """
+        order = MasteryMergeCRDT._TASK_STATUS_ORDER
         if order.get(local, 0) >= order.get(remote, 0):
             return local
         return remote
@@ -199,12 +238,20 @@ class MasteryMergeCRDT:
         """Merge a full node from two devices.
 
         Rules:
-        - mastery: max wins
-        - status: most progressed wins
-        - revision: max wins (LWW for metadata)
-        - updated_at: latest wins
+        - mastery_score: max wins
+        - status: most progressed wins (completed > in_progress > abandoned > pending)
+        - revision: max wins — pure max keeps the merge idempotent
+          (``merge_node(x, x) == x``；原 ``max + 1`` 把合并混同更新，破坏 CRDT 幂等)
+        - 其余字段（note/updated_at 等 metadata）: LWW by updated_at,
+          ties resolve to local
         """
-        merged = dict(local)
+        local_updated = _coerce_updated_at(local.get("updated_at"))
+        remote_updated = _coerce_updated_at(remote.get("updated_at"))
+        # metadata LWW 基座：updated_at 严格更新的一方作为未显式归并字段的底本
+        remote_newer = remote_updated is not None and (
+            local_updated is None or remote_updated > local_updated
+        )
+        merged = dict(remote) if remote_newer else dict(local)
 
         local_mastery = float(local.get("mastery_score", 0.0))
         remote_mastery = float(remote.get("mastery_score", 0.0))
@@ -216,7 +263,7 @@ class MasteryMergeCRDT:
 
         local_rev = int(local.get("revision", 0))
         remote_rev = int(remote.get("revision", 0))
-        merged["revision"] = max(local_rev, remote_rev) + 1
+        merged["revision"] = max(local_rev, remote_rev)
 
         return merged
 
