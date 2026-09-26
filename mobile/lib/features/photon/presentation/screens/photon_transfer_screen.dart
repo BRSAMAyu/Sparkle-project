@@ -458,7 +458,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
         );
         AppFeedback.success(context, context.l10n.ptSuccess);
         // Refresh balance
-        ref.read(photonBalanceProvider.notifier).refreshBalance();
+        unawaited(ref.read(photonBalanceProvider.notifier).refreshBalance());
         Navigator.of(context).pop();
       }
     } catch (e) {

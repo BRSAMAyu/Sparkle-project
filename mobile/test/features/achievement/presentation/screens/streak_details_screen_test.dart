@@ -23,7 +23,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  Widget _buildHarness({
+  Widget buildHarness({
     required StreakStats stats,
     required List<StreakDayRecord> days,
   }) {
@@ -45,7 +45,7 @@ void main() {
     );
   }
 
-  List<StreakDayRecord> _history({required int activeDays, required int totalDays}) {
+  List<StreakDayRecord> history({required int activeDays, required int totalDays}) {
     final now = DateTime.now();
     final records = <StreakDayRecord>[];
     for (var i = 0; i < totalDays; i++) {
@@ -72,7 +72,7 @@ void main() {
       totalCheckinDays: activeDays,
     );
     await tester.pumpWidget(
-      _buildHarness(stats: stats, days: _history(activeDays: activeDays, totalDays: totalDays)),
+      buildHarness(stats: stats, days: history(activeDays: activeDays, totalDays: totalDays)),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1700));
@@ -93,7 +93,7 @@ void main() {
       totalCheckinDays: 12,
     );
     await tester.pumpWidget(
-      _buildHarness(stats: stats, days: _history(activeDays: 12, totalDays: 30)),
+      buildHarness(stats: stats, days: history(activeDays: 12, totalDays: 30)),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1700));
@@ -110,7 +110,7 @@ void main() {
       maxFreezeCharges: 3,
       totalCheckinDays: 5,
     );
-    await tester.pumpWidget(_buildHarness(stats: stats, days: const []));
+    await tester.pumpWidget(buildHarness(stats: stats, days: const []));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1700));
 

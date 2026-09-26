@@ -648,7 +648,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
         // Navigate to capsule screen after successful creation
         final context = navigatorKey.currentContext;
         if (context != null) {
-          GoRouter.of(context).push('/curiosity-capsule');
+          unawaited(GoRouter.of(context).push('/curiosity-capsule'));
         }
       }
     } catch (e) {
@@ -656,7 +656,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       // Still navigate to capsule screen even if creation fails
       final context = navigatorKey.currentContext;
       if (context != null) {
-        GoRouter.of(context).push('/curiosity-capsule');
+        unawaited(GoRouter.of(context).push('/curiosity-capsule'));
       }
     }
   }

@@ -120,14 +120,16 @@ class JPushService extends AsyncNotifier<void> {
       );
 
       // Get registration ID
-      _jpush.getRegistrationID().then((rid) {
-        if (rid.isNotEmpty) {
-          _registrationId = rid;
-          _logger.i('JPush Registration ID: $rid');
-          unawaited(_registerTokenWithBackend(rid));
-          onTokenRefresh?.call(rid);
-        }
-      });
+      unawaited(
+        _jpush.getRegistrationID().then((rid) {
+          if (rid.isNotEmpty) {
+            _registrationId = rid;
+            _logger.i('JPush Registration ID: $rid');
+            unawaited(_registerTokenWithBackend(rid));
+            onTokenRefresh?.call(rid);
+          }
+        }),
+      );
 
       // Apply for notification permission (iOS)
       if (Platform.isIOS) {
@@ -280,7 +282,7 @@ class JPushService extends AsyncNotifier<void> {
     }
 
     try {
-      _jpush.setBadge(badge);
+      unawaited(_jpush.setBadge(badge));
       _logger.d('JPush badge set: $badge');
       return true;
     } catch (e) {
@@ -294,7 +296,7 @@ class JPushService extends AsyncNotifier<void> {
     if (!_isInitialized) return;
 
     try {
-      _jpush.stopPush();
+      unawaited(_jpush.stopPush());
       _isStopped = true;
       _logger.i('JPush stopped');
     } catch (e) {
@@ -307,7 +309,7 @@ class JPushService extends AsyncNotifier<void> {
     if (!_isInitialized) return;
 
     try {
-      _jpush.resumePush();
+      unawaited(_jpush.resumePush());
       _isStopped = false;
       _logger.i('JPush resumed');
     } catch (e) {
@@ -332,7 +334,7 @@ class JPushService extends AsyncNotifier<void> {
     if (!_isInitialized) return;
 
     try {
-      _jpush.clearAllNotifications();
+      unawaited(_jpush.clearAllNotifications());
       _logger.i('All JPush notifications cleared');
     } catch (e) {
       _logger.e('Failed to clear JPush notifications: $e');

@@ -39,7 +39,7 @@ class CapsuleNotifier extends StateNotifier<AsyncValue<List<CuriosityCapsuleMode
       });
     } catch (e) {
       // Error handling - refresh to revert
-      fetchTodayCapsules();
+      unawaited(fetchTodayCapsules());
     }
   }
 
@@ -61,7 +61,7 @@ class CapsuleNotifier extends StateNotifier<AsyncValue<List<CuriosityCapsuleMode
       });
     } catch (e) {
       // Error handling
-      fetchTodayCapsules();
+      unawaited(fetchTodayCapsules());
     }
   }
 }

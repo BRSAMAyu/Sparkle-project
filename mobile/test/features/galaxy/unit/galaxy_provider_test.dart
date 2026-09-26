@@ -593,7 +593,7 @@ void main() {
         expect(state.nodes[0].masteryScore, equals(newMastery));
         expect(mockRepository.getGraphCalls, 1); // No reload triggered
 
-        eventsController.close();
+        unawaited(eventsController.close());
       });
 
       test(
@@ -667,7 +667,7 @@ void main() {
         // Should have triggered a reload
         expect(mockRepository.getGraphCalls, greaterThan(callsBeforeEvent));
 
-        eventsController.close();
+        unawaited(eventsController.close());
       });
     });
   });

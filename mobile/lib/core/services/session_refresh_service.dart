@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -103,7 +105,7 @@ class SessionRefreshService {
     // trigger WebSocket reconnection by reinitializing the chatProvider.
     // The next sendMessage will establish a fresh connection.
     try {
-      ref.read(chatProvider.notifier).warmUpConnection();
+      unawaited(ref.read(chatProvider.notifier).warmUpConnection());
     } catch (_) {
       // Silently handle — next sendMessage will reconnect naturally
     }

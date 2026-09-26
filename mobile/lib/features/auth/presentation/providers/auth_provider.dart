@@ -211,7 +211,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             isAuthenticated: true,
             user: user,
           );
-          SessionRefreshService.refreshSessionBoundProviders(_ref);
+          unawaited(SessionRefreshService.refreshSessionBoundProviders(_ref));
         } catch (e) {
           await _handleSessionCheckFailure(e, generation: generation);
         }
@@ -238,7 +238,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _authRepository.login(usernameOrEmail, password);
       if (_isStaleSessionOp(generation)) return;
       state = state.copyWith(isAuthenticated: true, user: user);
-      SessionRefreshService.refreshSessionBoundProviders(_ref);
+      unawaited(SessionRefreshService.refreshSessionBoundProviders(_ref));
     } catch (e) {
       if (_isStaleSessionOp(generation)) return;
       state = _failedAuthState(e, isAuthenticated: false);
@@ -281,7 +281,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       if (_isStaleSessionOp(generation)) return;
       state = state.copyWith(isAuthenticated: true, user: user);
-      SessionRefreshService.refreshSessionBoundProviders(_ref);
+      unawaited(SessionRefreshService.refreshSessionBoundProviders(_ref));
     } catch (e) {
       if (_isStaleSessionOp(generation)) return;
       state = _failedAuthState(e, isAuthenticated: false);
@@ -328,7 +328,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       if (_isStaleSessionOp(generation)) return;
       state = state.copyWith(isAuthenticated: true, user: user);
-      SessionRefreshService.refreshSessionBoundProviders(_ref);
+      unawaited(SessionRefreshService.refreshSessionBoundProviders(_ref));
     } catch (e) {
       if (_isStaleSessionOp(generation)) return;
       state = _failedAuthState(e, isAuthenticated: false);
@@ -369,7 +369,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isAuthenticated: true,
         user: user,
       );
-      SessionRefreshService.refreshSessionBoundProviders(_ref);
+      unawaited(SessionRefreshService.refreshSessionBoundProviders(_ref));
     } catch (e) {
       if (_isStaleSessionOp(generation)) return;
       debugPrint('⚠️ Guest login failed: $e');
@@ -405,7 +405,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final user = await _authRepository.updateProfile(data);
       state = state.copyWith(user: user);
-      SessionRefreshService.refreshSessionBoundProviders(_ref);
+      unawaited(SessionRefreshService.refreshSessionBoundProviders(_ref));
     } catch (e) {
       // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
       // 类型化判定，勿存 e.toString()）。
@@ -428,7 +428,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final user = await _authRepository.updateAvatar(filePath);
       state = state.copyWith(user: user);
-      SessionRefreshService.refreshSessionBoundProviders(_ref);
+      unawaited(SessionRefreshService.refreshSessionBoundProviders(_ref));
     } catch (e) {
       // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
       // 类型化判定，勿存 e.toString()）。
@@ -745,7 +745,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           .setBool(_demoGuestModePreferenceKey, false);
       await _ref.read(guestServiceProvider).clearGuestData();
       state = state.copyWith(isAuthenticated: true, user: user);
-      SessionRefreshService.refreshSessionBoundProviders(_ref);
+      unawaited(SessionRefreshService.refreshSessionBoundProviders(_ref));
     } catch (e) {
       // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
       // 类型化判定，勿存 e.toString()）。
@@ -791,7 +791,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           .setBool(_demoGuestModePreferenceKey, false);
       await _ref.read(guestServiceProvider).clearGuestData();
       state = state.copyWith(isAuthenticated: true, user: user);
-      SessionRefreshService.refreshSessionBoundProviders(_ref);
+      unawaited(SessionRefreshService.refreshSessionBoundProviders(_ref));
     } catch (e) {
       // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
       // 类型化判定，勿存 e.toString()）。
@@ -819,7 +819,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         .setBool(_demoGuestModePreferenceKey, false);
     DemoDataService.isDemoMode = false;
     state = AuthState(); // Reset to initial state
-    SessionRefreshService.refreshSessionBoundProviders(_ref);
+    unawaited(SessionRefreshService.refreshSessionBoundProviders(_ref));
   }
 }
 

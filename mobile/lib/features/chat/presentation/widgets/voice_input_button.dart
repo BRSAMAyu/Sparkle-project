@@ -139,7 +139,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
       _didFinishRecording = false;
     });
 
-    _animationController?.forward();
+    unawaited(_animationController?.forward());
 
     // 启动时长计时器
     _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -160,7 +160,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
           _isRecording = false;
           _isProcessing = false;
         });
-        _animationController?.reverse();
+        unawaited(_animationController?.reverse());
         widget.onError(context.l10n.voiceInputLoginRequired);
       }
       return;
@@ -210,7 +210,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
           _isRecording = false;
           _isProcessing = false;
         });
-        _animationController?.reverse();
+        unawaited(_animationController?.reverse());
         widget.onError(context.l10n.voiceInputStartFailed(e.toString()));
       }
     }
@@ -234,7 +234,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         _isRecording = false;
         _isProcessing = false;
       });
-      _animationController?.reverse();
+      unawaited(_animationController?.reverse());
       _notifyRecordingFinished();
     }
   }
@@ -254,7 +254,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         _isProcessing = false;
         _latestTranscript = '';
       });
-      _animationController?.reverse();
+      unawaited(_animationController?.reverse());
       widget.onDraftCancelled?.call();
       widget.onRecordingStopped?.call();
     }

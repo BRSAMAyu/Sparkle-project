@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -148,7 +149,7 @@ void main() {
 
     // BGM-off must never block the journey: fire it without awaiting here
     // (an earlier run stalled the whole test awaiting the audio service).
-    unawaitedBgmOff();
+    unawaited(unawaitedBgmOff());
 
     try {
       // ---- STEP 1: login page ----

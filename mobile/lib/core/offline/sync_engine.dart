@@ -97,7 +97,7 @@ class SyncEngine {
     });
 
     // Trigger processing immediately just in case watch doesn't catch it instantly
-    _processOutbox();
+    unawaited(_processOutbox());
   }
 
   @Deprecated('Use enqueue with topic/opType.')

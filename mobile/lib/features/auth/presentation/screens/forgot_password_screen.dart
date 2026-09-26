@@ -47,7 +47,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           .forgotPassword(_emailController.text.trim());
       if (!mounted) return;
       AppFeedback.success(context, message);
-      if (mounted) context.push('/reset-password');
+      if (mounted) unawaited(context.push('/reset-password'));
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(context, UserFacingError.from(e));

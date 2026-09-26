@@ -84,7 +84,7 @@ class FirebaseMessagingService {
       FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpened);
 
       // 3. Terminated state - check for initial message
-      _checkInitialMessage();
+      unawaited(_checkInitialMessage());
 
       // Register background handler
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

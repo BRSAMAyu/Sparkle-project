@@ -90,7 +90,7 @@ class PerformanceService extends ChangeNotifier {
       (candidate) => candidate.storageValue == storedValue,
       orElse: () => MotionIntensityLevel.high,
     );
-    setMotionIntensityLevel(level, persist: false);
+    unawaited(setMotionIntensityLevel(level, persist: false));
   }
 
   // --- Getters for Features based on Tier ---
