@@ -92,7 +92,6 @@
   "errorAuthRequired": "请先登录后再使用这个功能哦",
   "errorTokenExpired": "登录信息已过期，请重新登录~",
   "errorNotFound": "没有找到相关内容，试试其他关键词？",
-  "errorEmptyState": "这里空空如也，快去添加内容吧",
   "retry": "重试",
   "back": "返回",
   "welcomeSubtitle": "期末备考提分，AI 陪你把该拿的分拿回来",
@@ -573,34 +572,16 @@
   "streakStartChallenge": "开始",
   "streakChallenge": "挑战",
   "streakFreezeCharges": "冻结次数",
-  "errorNetwork": "网络错误",
   "errorNetworkDetail": "请检查您的网络连接",
   "errorOfflineQueuedDetail": "当前离线：操作已保存，恢复网络后会自动同步",
   "staleSnapshotAsOf": "离线数据 · 截至 {time}",
-  "errorServer": "服务器错误",
   "errorServerDetail": "服务器出现问题",
   "errorUnknown": "未知错误",
   "errorUnknownDetail": "发生了意外错误",
-  "errorValidation": "验证错误",
-  "errorValidationDetail": "请检查您的输入",
-  "errorPermission": "权限不足",
-  "errorPermissionDetail": "您没有权限执行此操作",
-  "errorNotFoundTitle": "未找到",
   "errorNotFoundDetail": "请求的资源不存在",
-  "errorTimeout": "请求超时",
   "errorTimeoutDetail": "请求处理时间过长",
-  "errorCancelled": "已取消",
-  "errorCancelledDetail": "操作已取消",
-  "errorStorage": "存储错误",
-  "errorStorageDetail": "保存数据失败",
-  "errorSync": "同步错误",
-  "errorSyncDetail": "同步数据失败",
-  "errorAuth": "认证错误",
   "errorAuthDetail": "请重新登录",
-  "errorRateLimitTitle": "请求过于频繁",
   "errorRateLimitDetail": "请稍后再试",
-  "errorMaintenance": "系统维护中",
-  "errorMaintenanceDetail": "系统正在升级，请稍后再来",
   "timeJustNow": "刚刚",
   "timeMinutesAgo": "{count}分钟前",
   "timeHoursAgo": "{count}小时前",
@@ -2182,7 +2163,6 @@
   "errorBookNoErrors": "还没有错题记录",
   "errorBookNoErrorsHint": "点击右下角 + 按钮添加错题",
   "errorBookNoReview": "暂无需要复习的错题",
-  "errorBookNoReviewHint": "做得很好！继续保持",
   "errorBookNoReviewDescription": "做得很好！继续保持。先补记最近做错的一题，系统才会安排后续复习。",
   "errorBookRecordFirstError": "去记录第一道错题",
   "errorBookDeleteSuccess": "删除成功",
@@ -2206,15 +2186,12 @@
   "errorBookAiAnalysis": "AI 分析",
   "errorBookKnowledgeLinks": "关联知识点",
   "errorBookKnowledgeLinkTooltip": "查看学习路径",
-  "errorBookKnowledgeLinkSnack": "即将跳转到 {nodeName} 知识点",
   "errorBookReviewStats": "复习统计",
   "errorBookLastReview": "上次复习",
   "errorBookNextReview": "下次复习",
   "errorBookStartReview": "开始复习",
   "errorBookLoadFailedHuman": "错题内容暂时加载不了。你的错题没有丢，点重试再试一次。",
-  "errorBookEditInProgress": "编辑功能即将上线",
   "errorBookReanalyzing": "正在重新分析...",
-  "errorBookReviewInProgress": "复习功能即将上线",
   "errorBookDeleteFailedHuman": "删除没有成功。这道错题还在你的错题本里，稍后再试一次。",
   "errorBookMasteryBandHigh": "已掌握",
   "errorBookMasteryBandMid": "巩固中",
@@ -2230,13 +2207,6 @@
   "@errorBookCreatedAt": {
     "placeholders": {
       "date": {
-        "type": "Object"
-      }
-    }
-  },
-  "@errorBookKnowledgeLinkSnack": {
-    "placeholders": {
-      "nodeName": {
         "type": "Object"
       }
     }
@@ -2420,75 +2390,7 @@
   "knowledgeReload": "重新加载",
   "knowledgeGeneratePath": "生成学习路径",
   "knowledgeDescription": "描述",
-  "knowledgeNoDescription": "暂无描述",
   "knowledgeRelatedNodes": "相关节点",
-  "knowledgeSourceMaterialsTitle": "来源资料",
-  "knowledgeSourceMaterialsSummary": "{documents} 份文档 · {chunks} 个知识片段",
-  "@knowledgeSourceMaterialsSummary": {
-    "placeholders": {
-      "documents": {
-        "type": "Object"
-      },
-      "chunks": {
-        "type": "Object"
-      }
-    }
-  },
-  "knowledgeSourceMaterialsPersonalBadge": "我的上传",
-  "knowledgeSourceMaterialsSystemBadge": "暂未附带个人笔记",
-  "knowledgeSourceMaterialsUploadDate": "上传于 {date}",
-  "@knowledgeSourceMaterialsUploadDate": {
-    "placeholders": {
-      "date": {}
-    }
-  },
-  "knowledgeSourceMaterialsChunkUnit": "片段",
-  "knowledgeSourceMaterialsEmptyTitle": "让这个节点回到你的真实资料里",
-  "knowledgeSourceMaterialsEmptyBody": "为「{topic}」补充自己的讲义或笔记，让这条知识真正可追溯。",
-  "@knowledgeSourceMaterialsEmptyBody": {
-    "placeholders": {
-      "topic": {}
-    }
-  },
-  "knowledgeSourceMaterialsAddNotes": "添加关于「{topic}」的笔记",
-  "@knowledgeSourceMaterialsAddNotes": {
-    "placeholders": {
-      "topic": {}
-    }
-  },
-  "knowledgeSourceMaterialsReadMore": "阅读更多",
-  "knowledgeSourceMaterialsNoPreview": "这份资料暂时还没有可展示的片段。",
-  "knowledgeSourceMaterialsOpenFailed": "暂时无法打开来源资料。",
-  "knowledgeSourceMaterialsUploadSaved": "{filename} 已上传，处理并挂接后会显示在这里。",
-  "@knowledgeSourceMaterialsUploadSaved": {
-    "placeholders": {
-      "filename": {}
-    }
-  },
-  "knowledgeSourceMaterialsPage": "第 {page} 页",
-  "@knowledgeSourceMaterialsPage": {
-    "placeholders": {
-      "page": {
-        "type": "Object"
-      }
-    }
-  },
-  "knowledgeSourceMaterialsPages": "第 {pages} 页",
-  "@knowledgeSourceMaterialsPages": {
-    "placeholders": {
-      "pages": {}
-    }
-  },
-  "knowledgeSourceMaterialsChunk": "片段 {index}",
-  "@knowledgeSourceMaterialsChunk": {
-    "placeholders": {
-      "index": {
-        "type": "Object"
-      }
-    }
-  },
-  "knowledgePrerequisites": "前置知识",
-  "knowledgeMasteryProgress": "掌握进度",
   "knowledgeKeywords": "关键词",
   "knowledgeEstimated": "预计",
   "knowledgeMinutes": "分钟",
@@ -3667,7 +3569,6 @@
   "galaxyImportanceIntermediate": "中级",
   "galaxyImportanceNormal": "普通",
   "galaxyLLMActionFailed": "{arg0}",
-  "galaxyLoadFailed": "加载失败",
   "galaxyLoadFailedTitle": "星图加载失败",
   "galaxyLoadingMessage": "正在加载星图...",
   "galaxyLoadingTitle": "加载中",
@@ -3694,7 +3595,6 @@
   "galaxyPerfStatusCritical": "性能严重不足",
   "galaxyPerfStatusDegraded": "性能下降",
   "galaxyPerfStatusOptimal": "性能最佳",
-  "galaxyReload": "重新加载",
   "galaxySearchHint": "搜索知识节点...",
   "galaxySearchHintDetail": "输入关键词搜索",
   "galaxySearchNoResults": "未找到相关节点",
@@ -3707,11 +3607,6 @@
   "galaxySectorTech": "科技",
   "galaxySectorVoid": "虚空",
   "galaxySectorWisdom": "智慧",
-  "galaxySimulationReplaySpeed": "回放速度",
-  "galaxySimulationRepulsion": "斥力",
-  "galaxySimulationReset": "重置",
-  "galaxySimulationSubtitle": "调整物理参数",
-  "galaxySimulationTitle": "模拟设置",
   "galaxyUsingCache": "使用缓存数据",
   "guestUpgradeAcceptPoliciesRequired": "请先阅读并同意用户协议与隐私政策",
   "guestUpgradeAgreePrivacy": "我已阅读并同意《隐私政策》",
@@ -7413,7 +7308,6 @@
   "galaxyNodeAddMaterial": "将资料添加到这个节点",
   "galaxyNodeReviewPrompt": "带我复习「{label}」。请先基于这个知识节点定位我最该补的薄弱点，再给我一组短练习。",
   "galaxyNodeGeneratePlan": "生成学习计划",
-  "galaxyNodeGeneratePlanDesc": "AI 生成个性化学习路径与任务",
   "galaxyNodeWhyToday": "为什么是今天？",
   "galaxyNodeReasonNew": "你还没有开始学习这个节点——它已解锁，随时可以开始。",
   "galaxyNodeReasonEarly": "刚开始——在这里打好基础，将解锁后续的依赖主题。",
@@ -10868,13 +10762,8 @@
   "galaxyNodeReadMore": "阅读更多",
   "galaxyNodeNoPreview": "这份资料暂时还没有可展示的片段。",
   "galaxyNodeOpenFailed": "暂时无法打开来源资料。",
-  "galaxyNodeSummaryDocChunks": "{documents} 份文档 · {chunks} 个知识片段",
   "galaxyNodeEmptySourceBody": "为这个主题补充自己的讲义或笔记，让知识真正可追溯。",
   "galaxyNodeAddNotesLabel": "添加关于",
-  "galaxyNodeUploadSaved": "已上传，处理并挂接后会显示在这里。",
-  "galaxyNodePageLabel": "第",
-  "galaxyNodePagesLabel": "第",
-  "galaxyNodeExcerptLabel": "片段",
   "galaxyNodeUploadDateLabel": "上传于",
   "galaxySimSettings": "星图视图设置",
   "galaxySimSettingsDesc": "调节显示密度、力场参数与回放节奏，让星图浏览更顺手、更直观。",
@@ -10908,11 +10797,6 @@
   "galaxyNoMasteryTitle": "还没有点亮掌握记录",
   "galaxyNoMasterySubtitle": "先完成一个学习任务或复习一个知识点，星图才会开始出现真实掌握度。",
   "galaxyGoStudy": "去学习",
-  "galaxyPreviewHighMastery": "这个知识点你上次掌握度 {score} 分，基于你的学习频率，现在是强化它的好时机。",
-  "galaxyPreviewErrorReturn": "最近相关错题有回流，趁现在补一轮更容易稳住。",
-  "galaxyPreviewReviewWindow": "距离上次强化已经约 {days} 天，正好卡在复习窗口。",
-  "galaxyPreviewReviewReady": "它已经进入复习窗口，补一轮会更划算。",
-  "galaxyPreviewUnstable": "当前掌握度还不稳，趁记忆还在时再加固一次。",
   "galaxyUnknownError": "未知错误",
   "galaxyUnnamedNode": "未命名节点",
   "galaxyBasicConcepts": "相关基础概念",
@@ -12812,12 +12696,8 @@
       }
     }
   },
-  "galaxySectorRational": "理性",
-  "galaxySectorCreation": "创造",
-  "galaxySectorInspiration": "灵感",
   "planSprintSubmitFailed": "冲刺提交失败，请重试",
   "planPortfolioLoadFailedMsg": "加载学习组合失败",
-  "galaxySectorDarkMatter": "暗物质",
   "planPortfolioRetry": "重试",
   "planViewDetails": "查看详情",
   "toolsPlanLinked": "计划结束时间",
@@ -13769,23 +13649,6 @@
   "examChaptersLinearAlgebra": "矩阵|行列式|向量组|特征值|二次型",
   "examChaptersEnglish": "词汇|长难句|阅读|翻译|写作",
   "examChaptersGeneric": "第一章|第二章|第三章|第四章|第五章",
-  "homeFailureServer": "服务暂时不稳",
-  "homeFailureValidation": "需要调整请求",
-  "homeFailureNetwork": "网络不稳定",
-  "homeFailureOffline": "离线了",
-  "homeFailureUnknown": "首页暂时加载失败",
-  "homeFailureAuth": "去登录",
-  "homeFailureOfflineRetry": "连网后重试",
-  "homeCommandCenterTitle": "现在的指挥台",
-  "homeNoTasksToday": "今天未排任务",
-  "homeTodayMapped": "今天的任务已经清楚了",
-  "homeCheckRhythm": "先检查今天的计划节奏",
-  "homeSetGoal": "先定一个今天能开始的目标",
-  "homeAuroraCorrectionCancel": "取消",
-  "homeAuroraCorrectionSubmit": "发送",
-  "homeWeatherWithSummary": "今天适合{hint}，{summary}",
-  "homeWeatherOnlyHint": "今天适合{hint}",
-  "homeAskAurora": "问 Aurora",
   "homeNextActionTitle": "下一步",
   "homeNextActionAllClear": "清空啦",
   "homeNextActionNoPending": "当前没有待推进任务",
@@ -13894,14 +13757,6 @@
   "homeAuroraDialogHint": "哪里判断错了？说说你的想法…",
   "homeAuroraDialogCancel": "取消",
   "homeAuroraDialogSend": "发送",
-  "homeQuickCreate": "快速创建",
-  "homeOnboardingSummary": "我是你的AI成长伙伴。设定目标，我来帮你一步步达成。",
-  "homeOnboardingSetGoal": "设定目标",
-  "homeOnboardingSetGoalSubtitle": "告诉我你想达成什么，我来帮你制定计划",
-  "homeOnboardingChatSparkle": "跟Sparkle聊聊",
-  "homeOnboardingChatSubtitle": "聊聊你的想法，获得个性化建议",
-  "homeOnboardingExploreSubtitle": "发现你的知识结构，找到提升方向",
-  "homeOnboardingExploreGalaxy": "探索知识星图",
   "homeOnboardingResumeTitle": "完成引导，让 AI 更懂你",
   "homeOnboardingResumeSummary": "学习画像和建模访谈还没完成。先随便体验，随时回来继续——AI 已经可以用了。",
   "homeOnboardingResumeCta": "继续引导",
@@ -13996,181 +13851,6 @@
   "stuckJourneyInterventionDelegate": "把机械的部分交给工具",
   "stuckJourneyInterventionCoExecute": "让 Sparkle 陪你一起做",
   "stuckHelpJourneyCta": "让 Sparkle 一步步帮我理",
-  "homeSlotDailyBriefing": "今日简报",
-  "homeSlotDailyBriefingReady": "今天 {count} 件待办 · 已就绪",
-  "@homeSlotDailyBriefingReady": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotDailyBriefingFallback": "当天的状态与节奏",
-  "homeSlotKeyMetrics": "关键指标",
-  "homeSlotKeyMetricsStreak": "🔥 连续 {streak} 天",
-  "@homeSlotKeyMetricsStreak": {
-    "placeholders": {
-      "streak": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotKeyMetricsFallback": "进度、连续天数、动力",
-  "homeSlotCommandCenter": "指挥中心",
-  "homeSlotCommandCenterNext": "下一步：{label}",
-  "@homeSlotCommandCenterNext": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      }
-    }
-  },
-  "homeSlotCommandCenterFallback": "下一步行动入口",
-  "homeSlotUnderstanding": "理解面板",
-  "homeSlotUnderstandingSummary": "Sparkle 对你的认知拆解",
-  "homeSlotReturnCaseFile": "回归档案",
-  "homeSlotReturnCaseFileSummary": "上次离开时的现场",
-  "homeSlotGoalSnapshot": "目标详情",
-  "homeSlotGoalSnapshotFallback": "当前目标的近况",
-  "homeSlotMultiGoalBoard": "多目标看板",
-  "homeSlotMultiGoalDone": "{done}/{total} 件已完成",
-  "@homeSlotMultiGoalDone": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotMultiGoalFallback": "所有目标的总览",
-  "homeSlotTaskBoard": "任务面板",
-  "homeSlotTaskBoardProgress": "完成 {done}/{total}",
-  "@homeSlotTaskBoardProgress": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotTaskBoardGoalHit": "完成 {done}/{total} · 今日达标",
-  "@homeSlotTaskBoardGoalHit": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotTaskBoardToGo": "完成 {done}/{total} · 再 {remaining} 件冲刺",
-  "@homeSlotTaskBoardToGo": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotTaskBoardFallback": "今日待办与进度",
-  "homeSlotExamSprint": "考试冲刺",
-  "homeSlotExamSprintDaysLeft": "{subject} · {days} 天后",
-  "@homeSlotExamSprintDaysLeft": {
-    "placeholders": {
-      "subject": {
-        "type": "String"
-      },
-      "days": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotExamSprintNotStarted": "尚未启动 · 点开创建",
-  "homeSlotExamSprintEmptyTitle": "考试冲刺",
-  "homeSlotExamSprintEmptyBody": "还没有进行中的冲刺。设置一个目标，看到每日节奏与剩余天数。",
-  "homeSlotExamSprintEmptyAction": "创建冲刺",
-  "homeSlotUpdates": "动态",
-  "homeSlotUpdatesSummary": "通知、洞察、提醒",
-  "homeSlotGrowthQuality": "成长质量",
-  "homeSlotGrowthQualitySummary": "深度、稳定性、平衡",
-  "homeSlotWeeklyNarrative": "本周叙事",
-  "homeSlotWeeklyNarrativeSummary": "一周变化的故事线",
-  "homeSlotCommunity": "同行社群",
-  "homeSlotCommunitySummary": "伙伴动态与监督",
-  "homeSlotAchievements": "成就进度",
-  "homeSlotAchievementsSummary": "近期解锁与里程碑",
-  "homeSlotLearningHeatmap": "学习热力图",
-  "homeSlotLearningHeatmapSummary": "过去30天的活跃度",
-  "homeSlotWorkspaceCards": "工作区卡片",
-  "homeSlotWorkspaceCardsVisible": "{count} 张已显示",
-  "@homeSlotWorkspaceCardsVisible": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotWorkspaceCardsNone": "尚未启用任何卡片",
-  "homeEmptyDashboardTitle": "驾驶舱已经清空",
-  "homeEmptyDashboardBody": "点开下方“自定义”重新选择想要常驻的模块。",
-  "homeCustomizeDashboard": "自定义驾驶舱",
-  "homeFailureAuthTitle": "需要重新登录",
-  "homeFailureServerTitle": "服务暂时不稳",
-  "homeFailureValidationTitle": "需要调整请求",
-  "homeFailureNetworkTitle": "网络不稳定",
-  "homeFailureOfflineTitle": "离线了",
-  "homeFailureUnknownTitle": "首页暂时加载失败",
-  "homeFailureAuthAction": "去登录",
-  "homeFailureOfflineAction": "连网后重试",
-  "homeCommandCenterEyebrow": "现在的指挥台",
-  "homeCommandCenterNoTasks": "今天未排任务",
-  "homeCommandCenterHealth": "健康度 {percent}%",
-  "@homeCommandCenterHealth": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
-  "homeHighPriority": "高优先级",
-  "homeCompletingUpdatesProgress": "完成后会更新计划进度",
-  "homeSparkleWillTurn": "Sparkle 会把目标拆成下一步、进度和风险提醒。",
-  "homeRiskBottleneck": "风险：{topic} 正在卡住进度",
-  "@homeRiskBottleneck": {
-    "placeholders": {
-      "topic": {
-        "type": "String"
-      }
-    }
-  },
-  "homeRiskDeadline": "风险：{label}",
-  "@homeRiskDeadline": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      }
-    }
-  },
-  "homeRiskLowHealth": "风险：计划健康度偏低，需要重新校准",
-  "homeSelectGoal": "选择目标: {label}",
-  "@homeSelectGoal": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      }
-    }
-  },
-  "homeNoUrgentAction": "今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。",
   "goalIntentTitle": "告诉我你想达成什么",
   "goalIntentHint": "一句话就好，比如「7天后计网考试基本没学想先别挂」",
   "goalIntentUnderstanding": "正在理解…",

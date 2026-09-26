@@ -304,10 +304,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t find what you\'re looking for, maybe try another keyword?';
 
   @override
-  String get errorEmptyState =>
-      'It\'s a bit empty here, why not add something?';
-
-  @override
   String get retry => 'Retry';
 
   @override
@@ -1646,9 +1642,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get streakFreezeCharges => 'Freeze Charges';
 
   @override
-  String get errorNetwork => 'Network error';
-
-  @override
   String get errorNetworkDetail => 'Please check your internet connection';
 
   @override
@@ -1661,9 +1654,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get errorServer => 'Server error';
-
-  @override
   String get errorServerDetail => 'Something went wrong on our end';
 
   @override
@@ -1673,66 +1663,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorUnknownDetail => 'An unexpected error occurred';
 
   @override
-  String get errorValidation => 'Validation error';
-
-  @override
-  String get errorValidationDetail => 'Please check your input';
-
-  @override
-  String get errorPermission => 'Permission denied';
-
-  @override
-  String get errorPermissionDetail =>
-      'You don\'t have permission to perform this action';
-
-  @override
-  String get errorNotFoundTitle => 'Not found';
-
-  @override
   String get errorNotFoundDetail => 'The requested resource was not found';
-
-  @override
-  String get errorTimeout => 'Request timeout';
 
   @override
   String get errorTimeoutDetail => 'The request took too long to complete';
 
   @override
-  String get errorCancelled => 'Cancelled';
-
-  @override
-  String get errorCancelledDetail => 'The operation was cancelled';
-
-  @override
-  String get errorStorage => 'Storage error';
-
-  @override
-  String get errorStorageDetail => 'Failed to save data';
-
-  @override
-  String get errorSync => 'Sync error';
-
-  @override
-  String get errorSyncDetail => 'Failed to sync data';
-
-  @override
-  String get errorAuth => 'Authentication error';
-
-  @override
   String get errorAuthDetail => 'Please sign in again';
 
   @override
-  String get errorRateLimitTitle => 'Too many requests';
-
-  @override
   String get errorRateLimitDetail => 'Please wait a moment and try again';
-
-  @override
-  String get errorMaintenance => 'Under maintenance';
-
-  @override
-  String get errorMaintenanceDetail =>
-      'We\'re making things better, please check back soon';
 
   @override
   String get timeJustNow => 'Just now';
@@ -5512,9 +5452,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorBookNoReview => 'No errors need review';
 
   @override
-  String get errorBookNoReviewHint => 'Great job! Keep it up';
-
-  @override
   String get errorBookNoReviewDescription =>
       'Great job! Keep it up. Record a recent missed question first, then Sparkle can schedule future reviews.';
 
@@ -5588,11 +5525,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorBookKnowledgeLinkTooltip => 'View Learning Path';
 
   @override
-  String errorBookKnowledgeLinkSnack(Object nodeName) {
-    return 'Navigating to $nodeName knowledge point';
-  }
-
-  @override
   String get errorBookReviewStats => 'Review Statistics';
 
   @override
@@ -5609,13 +5541,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your error records could not load right now. Nothing is lost — tap retry to try again.';
 
   @override
-  String get errorBookEditInProgress => 'Edit feature coming soon';
-
-  @override
   String get errorBookReanalyzing => 'Reanalyzing...';
-
-  @override
-  String get errorBookReviewInProgress => 'Review feature coming soon';
 
   @override
   String get errorBookDeleteFailedHuman =>
@@ -5931,84 +5857,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get knowledgeDescription => 'Description';
 
   @override
-  String get knowledgeNoDescription => 'No description';
-
-  @override
   String get knowledgeRelatedNodes => 'Related Nodes';
-
-  @override
-  String get knowledgeSourceMaterialsTitle => 'Source Materials';
-
-  @override
-  String knowledgeSourceMaterialsSummary(Object documents, Object chunks) {
-    return '$documents documents · $chunks knowledge chunks';
-  }
-
-  @override
-  String get knowledgeSourceMaterialsPersonalBadge => 'Personal upload';
-
-  @override
-  String get knowledgeSourceMaterialsSystemBadge =>
-      'No personal notes attached yet';
-
-  @override
-  String knowledgeSourceMaterialsUploadDate(Object date) {
-    return 'Uploaded $date';
-  }
-
-  @override
-  String get knowledgeSourceMaterialsChunkUnit => 'chunks';
-
-  @override
-  String get knowledgeSourceMaterialsEmptyTitle =>
-      'Trace this node back to your own notes';
-
-  @override
-  String knowledgeSourceMaterialsEmptyBody(Object topic) {
-    return 'Add your own notes about $topic to make this knowledge node traceable.';
-  }
-
-  @override
-  String knowledgeSourceMaterialsAddNotes(Object topic) {
-    return 'Add notes about $topic';
-  }
-
-  @override
-  String get knowledgeSourceMaterialsReadMore => 'Read more';
-
-  @override
-  String get knowledgeSourceMaterialsNoPreview =>
-      'No excerpt preview is available yet.';
-
-  @override
-  String get knowledgeSourceMaterialsOpenFailed =>
-      'Unable to open the source material right now.';
-
-  @override
-  String knowledgeSourceMaterialsUploadSaved(Object filename) {
-    return '$filename uploaded. It will appear here after processing and attachment.';
-  }
-
-  @override
-  String knowledgeSourceMaterialsPage(Object page) {
-    return 'Page $page';
-  }
-
-  @override
-  String knowledgeSourceMaterialsPages(Object pages) {
-    return 'Pages $pages';
-  }
-
-  @override
-  String knowledgeSourceMaterialsChunk(Object index) {
-    return 'Excerpt $index';
-  }
-
-  @override
-  String get knowledgePrerequisites => 'Prerequisites';
-
-  @override
-  String get knowledgeMasteryProgress => 'Mastery Progress';
 
   @override
   String get knowledgeKeywords => 'Keywords';
@@ -8869,9 +8718,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyLoadFailed => 'Load failed';
-
-  @override
   String get galaxyLoadFailedTitle => 'Star map failed to load';
 
   @override
@@ -8962,9 +8808,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyPerfStatusOptimal => 'Performance optimal';
 
   @override
-  String get galaxyReload => 'Reload galaxy';
-
-  @override
   String get galaxySearchHint => 'Search knowledge nodes...';
 
   @override
@@ -9001,21 +8844,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxySectorWisdom => 'Wisdom';
-
-  @override
-  String get galaxySimulationReplaySpeed => 'Replay speed';
-
-  @override
-  String get galaxySimulationRepulsion => 'Repulsion';
-
-  @override
-  String get galaxySimulationReset => 'Reset';
-
-  @override
-  String get galaxySimulationSubtitle => 'Adjust physics parameters';
-
-  @override
-  String get galaxySimulationTitle => 'Simulation settings';
 
   @override
   String get galaxyUsingCache => 'Showing cached data';
@@ -16533,10 +16361,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyNodeGeneratePlan => 'Generate Learning Plan';
-
-  @override
-  String get galaxyNodeGeneratePlanDesc =>
-      'AI generates a personalized learning path with tasks';
 
   @override
   String get galaxyNodeWhyToday => 'Why today?';
@@ -25357,29 +25181,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyNodeOpenFailed => 'Unable to open source material.';
 
   @override
-  String galaxyNodeSummaryDocChunks(Object chunks, Object documents) {
-    return '$documents docs · $chunks knowledge chunks';
-  }
-
-  @override
   String get galaxyNodeEmptySourceBody =>
       'Add your own notes or lectures for this topic to make knowledge truly traceable.';
 
   @override
   String get galaxyNodeAddNotesLabel => 'Add notes about';
-
-  @override
-  String get galaxyNodeUploadSaved =>
-      'Uploaded, will appear here after processing.';
-
-  @override
-  String get galaxyNodePageLabel => 'Page';
-
-  @override
-  String get galaxyNodePagesLabel => 'Pages';
-
-  @override
-  String get galaxyNodeExcerptLabel => 'Excerpt';
 
   @override
   String get galaxyNodeUploadDateLabel => 'Uploaded on';
@@ -25494,28 +25300,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyGoStudy => 'Go Study';
-
-  @override
-  String galaxyPreviewHighMastery(Object score) {
-    return 'Your last mastery for this knowledge point was $score. Based on your learning frequency, now is a good time to reinforce it.';
-  }
-
-  @override
-  String get galaxyPreviewErrorReturn =>
-      'Related errors have returned recently. It is easier to stabilize if you reinforce now.';
-
-  @override
-  String galaxyPreviewReviewWindow(Object days) {
-    return 'It has been about $days days since your last reinforcement, right in the review window.';
-  }
-
-  @override
-  String get galaxyPreviewReviewReady =>
-      'It has entered the review window. A reinforcement round would be more efficient.';
-
-  @override
-  String get galaxyPreviewUnstable =>
-      'Current mastery is unstable. Reinforce while the memory is still fresh.';
 
   @override
   String get galaxyUnknownError => 'Unknown error';
@@ -28953,23 +28737,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxySectorRational => 'Rational';
-
-  @override
-  String get galaxySectorCreation => 'Creation';
-
-  @override
-  String get galaxySectorInspiration => 'Inspiration';
-
-  @override
   String get planSprintSubmitFailed =>
       'Sprint submission failed, please try again';
 
   @override
   String get planPortfolioLoadFailedMsg => 'Failed to load learning portfolio';
-
-  @override
-  String get galaxySectorDarkMatter => 'Dark Matter';
 
   @override
   String get planPortfolioRetry => 'Retry';
@@ -31070,61 +30842,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Chapter 1|Chapter 2|Chapter 3|Chapter 4|Chapter 5';
 
   @override
-  String get homeFailureServer => 'Service issue';
-
-  @override
-  String get homeFailureValidation => 'Check request';
-
-  @override
-  String get homeFailureNetwork => 'Connection issue';
-
-  @override
-  String get homeFailureOffline => 'Offline';
-
-  @override
-  String get homeFailureUnknown => 'Dashboard unavailable';
-
-  @override
-  String get homeFailureAuth => 'Sign in';
-
-  @override
-  String get homeFailureOfflineRetry => 'Retry online';
-
-  @override
-  String get homeCommandCenterTitle => 'Command Center';
-
-  @override
-  String get homeNoTasksToday => 'No tasks today';
-
-  @override
-  String get homeTodayMapped => 'Today is mapped out';
-
-  @override
-  String get homeCheckRhythm => 'Check today plan rhythm';
-
-  @override
-  String get homeSetGoal => 'Set a goal you can start today';
-
-  @override
-  String get homeAuroraCorrectionCancel => 'Cancel';
-
-  @override
-  String get homeAuroraCorrectionSubmit => 'Submit';
-
-  @override
-  String homeWeatherWithSummary(Object hint, Object summary) {
-    return 'Great for $hint, $summary';
-  }
-
-  @override
-  String homeWeatherOnlyHint(Object hint) {
-    return 'Great for $hint';
-  }
-
-  @override
-  String get homeAskAurora => 'Ask Aurora';
-
-  @override
   String get homeNextActionTitle => 'Next';
 
   @override
@@ -31299,34 +31016,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeAuroraDialogSend => 'Send';
 
   @override
-  String get homeQuickCreate => 'Quick create';
-
-  @override
-  String get homeOnboardingSummary =>
-      'I\'m your AI growth companion. Set a goal and I\'ll help you achieve it step by step.';
-
-  @override
-  String get homeOnboardingSetGoal => 'Set a goal';
-
-  @override
-  String get homeOnboardingSetGoalSubtitle =>
-      'Tell me what you want to achieve';
-
-  @override
-  String get homeOnboardingChatSparkle => 'Chat with Sparkle';
-
-  @override
-  String get homeOnboardingChatSubtitle =>
-      'Share your thoughts, get personalized guidance';
-
-  @override
-  String get homeOnboardingExploreSubtitle =>
-      'Discover your knowledge structure and growth areas';
-
-  @override
-  String get homeOnboardingExploreGalaxy => 'Explore knowledge map';
-
-  @override
   String get homeOnboardingResumeTitle =>
       'Finish setup so Sparkle knows you better';
 
@@ -31480,236 +31169,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stuckHelpJourneyCta => 'Let Sparkle walk through it with me';
-
-  @override
-  String get homeSlotDailyBriefing => 'Daily briefing';
-
-  @override
-  String homeSlotDailyBriefingReady(int count) {
-    return '$count next actions · ready to start';
-  }
-
-  @override
-  String get homeSlotDailyBriefingFallback => 'Today\'s status & pace';
-
-  @override
-  String get homeSlotKeyMetrics => 'Key metrics';
-
-  @override
-  String homeSlotKeyMetricsStreak(int streak) {
-    return '🔥 $streak-day streak';
-  }
-
-  @override
-  String get homeSlotKeyMetricsFallback => 'Progress, streak, momentum';
-
-  @override
-  String get homeSlotCommandCenter => 'Command center';
-
-  @override
-  String homeSlotCommandCenterNext(String label) {
-    return 'Next: $label';
-  }
-
-  @override
-  String get homeSlotCommandCenterFallback => 'Pick up the next action';
-
-  @override
-  String get homeSlotUnderstanding => 'Understanding';
-
-  @override
-  String get homeSlotUnderstandingSummary => 'How Sparkle reads you';
-
-  @override
-  String get homeSlotReturnCaseFile => 'Return case file';
-
-  @override
-  String get homeSlotReturnCaseFileSummary => 'Where you left off';
-
-  @override
-  String get homeSlotGoalSnapshot => 'Goal snapshot';
-
-  @override
-  String get homeSlotGoalSnapshotFallback => 'Active goal snapshot';
-
-  @override
-  String get homeSlotMultiGoalBoard => 'Multi-goal board';
-
-  @override
-  String homeSlotMultiGoalDone(int done, int total) {
-    return '$done of $total done';
-  }
-
-  @override
-  String get homeSlotMultiGoalFallback => 'All goals at a glance';
-
-  @override
-  String get homeSlotTaskBoard => 'Task board';
-
-  @override
-  String homeSlotTaskBoardProgress(int done, int total) {
-    return '$done/$total done';
-  }
-
-  @override
-  String homeSlotTaskBoardGoalHit(int done, int total) {
-    return '$done/$total done · today\'s goal hit';
-  }
-
-  @override
-  String homeSlotTaskBoardToGo(int done, int total, int remaining) {
-    return '$done/$total done · $remaining to go';
-  }
-
-  @override
-  String get homeSlotTaskBoardFallback => 'Today\'s tasks & progress';
-
-  @override
-  String get homeSlotExamSprint => 'Exam sprint';
-
-  @override
-  String homeSlotExamSprintDaysLeft(String subject, int days) {
-    return '$subject · ${days}d left';
-  }
-
-  @override
-  String get homeSlotExamSprintNotStarted => 'Not started · tap to set up';
-
-  @override
-  String get homeSlotExamSprintEmptyTitle => 'Exam sprint';
-
-  @override
-  String get homeSlotExamSprintEmptyBody =>
-      'No active sprint yet. Set a target to see daily cadence and days left.';
-
-  @override
-  String get homeSlotExamSprintEmptyAction => 'Create sprint';
-
-  @override
-  String get homeSlotUpdates => 'Updates';
-
-  @override
-  String get homeSlotUpdatesSummary => 'Notifications & insights';
-
-  @override
-  String get homeSlotGrowthQuality => 'Growth quality';
-
-  @override
-  String get homeSlotGrowthQualitySummary => 'Depth, stability, balance';
-
-  @override
-  String get homeSlotWeeklyNarrative => 'Weekly narrative';
-
-  @override
-  String get homeSlotWeeklyNarrativeSummary => 'This week\'s story';
-
-  @override
-  String get homeSlotCommunity => 'Community';
-
-  @override
-  String get homeSlotCommunitySummary => 'Partners & accountability';
-
-  @override
-  String get homeSlotAchievements => 'Achievements';
-
-  @override
-  String get homeSlotAchievementsSummary => 'Recent unlocks & milestones';
-
-  @override
-  String get homeSlotLearningHeatmap => 'Learning heatmap';
-
-  @override
-  String get homeSlotLearningHeatmapSummary => 'Last 30 days of activity';
-
-  @override
-  String get homeSlotWorkspaceCards => 'Workspace cards';
-
-  @override
-  String homeSlotWorkspaceCardsVisible(int count) {
-    return '$count cards visible';
-  }
-
-  @override
-  String get homeSlotWorkspaceCardsNone => 'No cards enabled';
-
-  @override
-  String get homeEmptyDashboardTitle => 'Your dashboard is empty';
-
-  @override
-  String get homeEmptyDashboardBody =>
-      'Tap \"Customize\" below to bring slots back.';
-
-  @override
-  String get homeCustomizeDashboard => 'Customize dashboard';
-
-  @override
-  String get homeFailureAuthTitle => 'Sign-in needed';
-
-  @override
-  String get homeFailureServerTitle => 'Service issue';
-
-  @override
-  String get homeFailureValidationTitle => 'Check request';
-
-  @override
-  String get homeFailureNetworkTitle => 'Connection issue';
-
-  @override
-  String get homeFailureOfflineTitle => 'Offline';
-
-  @override
-  String get homeFailureUnknownTitle => 'Dashboard unavailable';
-
-  @override
-  String get homeFailureAuthAction => 'Sign in';
-
-  @override
-  String get homeFailureOfflineAction => 'Retry online';
-
-  @override
-  String get homeCommandCenterEyebrow => 'Command Center';
-
-  @override
-  String get homeCommandCenterNoTasks => 'No tasks today';
-
-  @override
-  String homeCommandCenterHealth(int percent) {
-    return '$percent% health';
-  }
-
-  @override
-  String get homeHighPriority => 'High priority';
-
-  @override
-  String get homeCompletingUpdatesProgress =>
-      'Completing it updates your plan progress';
-
-  @override
-  String get homeSparkleWillTurn =>
-      'Sparkle will turn it into a next step, progress, and risk signal.';
-
-  @override
-  String homeRiskBottleneck(String topic) {
-    return 'Risk: $topic is slowing progress';
-  }
-
-  @override
-  String homeRiskDeadline(String label) {
-    return 'Risk: $label';
-  }
-
-  @override
-  String get homeRiskLowHealth =>
-      'Risk: plan health is low; recalibration may help';
-
-  @override
-  String homeSelectGoal(String label) {
-    return 'Select goal: $label';
-  }
-
-  @override
-  String get homeNoUrgentAction =>
-      'No urgent action is queued. Review, add context, or let Aurora reprioritize.';
 
   @override
   String get goalIntentTitle => 'Tell me what you want to achieve';

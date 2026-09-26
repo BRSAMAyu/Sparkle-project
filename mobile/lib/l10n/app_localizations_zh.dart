@@ -285,9 +285,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorNotFound => '没有找到相关内容，试试其他关键词？';
 
   @override
-  String get errorEmptyState => '这里空空如也，快去添加内容吧';
-
-  @override
   String get retry => '重试';
 
   @override
@@ -1603,9 +1600,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get streakFreezeCharges => '冻结次数';
 
   @override
-  String get errorNetwork => '网络错误';
-
-  @override
   String get errorNetworkDetail => '请检查您的网络连接';
 
   @override
@@ -1617,9 +1611,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get errorServer => '服务器错误';
-
-  @override
   String get errorServerDetail => '服务器出现问题';
 
   @override
@@ -1629,64 +1620,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorUnknownDetail => '发生了意外错误';
 
   @override
-  String get errorValidation => '验证错误';
-
-  @override
-  String get errorValidationDetail => '请检查您的输入';
-
-  @override
-  String get errorPermission => '权限不足';
-
-  @override
-  String get errorPermissionDetail => '您没有权限执行此操作';
-
-  @override
-  String get errorNotFoundTitle => '未找到';
-
-  @override
   String get errorNotFoundDetail => '请求的资源不存在';
-
-  @override
-  String get errorTimeout => '请求超时';
 
   @override
   String get errorTimeoutDetail => '请求处理时间过长';
 
   @override
-  String get errorCancelled => '已取消';
-
-  @override
-  String get errorCancelledDetail => '操作已取消';
-
-  @override
-  String get errorStorage => '存储错误';
-
-  @override
-  String get errorStorageDetail => '保存数据失败';
-
-  @override
-  String get errorSync => '同步错误';
-
-  @override
-  String get errorSyncDetail => '同步数据失败';
-
-  @override
-  String get errorAuth => '认证错误';
-
-  @override
   String get errorAuthDetail => '请重新登录';
 
   @override
-  String get errorRateLimitTitle => '请求过于频繁';
-
-  @override
   String get errorRateLimitDetail => '请稍后再试';
-
-  @override
-  String get errorMaintenance => '系统维护中';
-
-  @override
-  String get errorMaintenanceDetail => '系统正在升级，请稍后再来';
 
   @override
   String get timeJustNow => '刚刚';
@@ -5274,9 +5217,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorBookNoReview => '暂无需要复习的错题';
 
   @override
-  String get errorBookNoReviewHint => '做得很好！继续保持';
-
-  @override
   String get errorBookNoReviewDescription => '做得很好！继续保持。先补记最近做错的一题，系统才会安排后续复习。';
 
   @override
@@ -5348,11 +5288,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorBookKnowledgeLinkTooltip => '查看学习路径';
 
   @override
-  String errorBookKnowledgeLinkSnack(Object nodeName) {
-    return '即将跳转到 $nodeName 知识点';
-  }
-
-  @override
   String get errorBookReviewStats => '复习统计';
 
   @override
@@ -5368,13 +5303,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorBookLoadFailedHuman => '错题内容暂时加载不了。你的错题没有丢，点重试再试一次。';
 
   @override
-  String get errorBookEditInProgress => '编辑功能即将上线';
-
-  @override
   String get errorBookReanalyzing => '正在重新分析...';
-
-  @override
-  String get errorBookReviewInProgress => '复习功能即将上线';
 
   @override
   String get errorBookDeleteFailedHuman => '删除没有成功。这道错题还在你的错题本里，稍后再试一次。';
@@ -5684,80 +5613,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get knowledgeDescription => '描述';
 
   @override
-  String get knowledgeNoDescription => '暂无描述';
-
-  @override
   String get knowledgeRelatedNodes => '相关节点';
-
-  @override
-  String get knowledgeSourceMaterialsTitle => '来源资料';
-
-  @override
-  String knowledgeSourceMaterialsSummary(Object documents, Object chunks) {
-    return '$documents 份文档 · $chunks 个知识片段';
-  }
-
-  @override
-  String get knowledgeSourceMaterialsPersonalBadge => '我的上传';
-
-  @override
-  String get knowledgeSourceMaterialsSystemBadge => '暂未附带个人笔记';
-
-  @override
-  String knowledgeSourceMaterialsUploadDate(Object date) {
-    return '上传于 $date';
-  }
-
-  @override
-  String get knowledgeSourceMaterialsChunkUnit => '片段';
-
-  @override
-  String get knowledgeSourceMaterialsEmptyTitle => '让这个节点回到你的真实资料里';
-
-  @override
-  String knowledgeSourceMaterialsEmptyBody(Object topic) {
-    return '为「$topic」补充自己的讲义或笔记，让这条知识真正可追溯。';
-  }
-
-  @override
-  String knowledgeSourceMaterialsAddNotes(Object topic) {
-    return '添加关于「$topic」的笔记';
-  }
-
-  @override
-  String get knowledgeSourceMaterialsReadMore => '阅读更多';
-
-  @override
-  String get knowledgeSourceMaterialsNoPreview => '这份资料暂时还没有可展示的片段。';
-
-  @override
-  String get knowledgeSourceMaterialsOpenFailed => '暂时无法打开来源资料。';
-
-  @override
-  String knowledgeSourceMaterialsUploadSaved(Object filename) {
-    return '$filename 已上传，处理并挂接后会显示在这里。';
-  }
-
-  @override
-  String knowledgeSourceMaterialsPage(Object page) {
-    return '第 $page 页';
-  }
-
-  @override
-  String knowledgeSourceMaterialsPages(Object pages) {
-    return '第 $pages 页';
-  }
-
-  @override
-  String knowledgeSourceMaterialsChunk(Object index) {
-    return '片段 $index';
-  }
-
-  @override
-  String get knowledgePrerequisites => '前置知识';
-
-  @override
-  String get knowledgeMasteryProgress => '掌握进度';
 
   @override
   String get knowledgeKeywords => '关键词';
@@ -8527,9 +8383,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyLoadFailed => '加载失败';
-
-  @override
   String get galaxyLoadFailedTitle => '星图加载失败';
 
   @override
@@ -8618,9 +8471,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyPerfStatusOptimal => '性能最佳';
 
   @override
-  String get galaxyReload => '重新加载';
-
-  @override
   String get galaxySearchHint => '搜索知识节点...';
 
   @override
@@ -8657,21 +8507,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get galaxySectorWisdom => '智慧';
-
-  @override
-  String get galaxySimulationReplaySpeed => '回放速度';
-
-  @override
-  String get galaxySimulationRepulsion => '斥力';
-
-  @override
-  String get galaxySimulationReset => '重置';
-
-  @override
-  String get galaxySimulationSubtitle => '调整物理参数';
-
-  @override
-  String get galaxySimulationTitle => '模拟设置';
 
   @override
   String get galaxyUsingCache => '使用缓存数据';
@@ -15818,9 +15653,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get galaxyNodeGeneratePlan => '生成学习计划';
-
-  @override
-  String get galaxyNodeGeneratePlanDesc => 'AI 生成个性化学习路径与任务';
 
   @override
   String get galaxyNodeWhyToday => '为什么是今天？';
@@ -24313,27 +24145,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyNodeOpenFailed => '暂时无法打开来源资料。';
 
   @override
-  String galaxyNodeSummaryDocChunks(Object chunks, Object documents) {
-    return '$documents 份文档 · $chunks 个知识片段';
-  }
-
-  @override
   String get galaxyNodeEmptySourceBody => '为这个主题补充自己的讲义或笔记，让知识真正可追溯。';
 
   @override
   String get galaxyNodeAddNotesLabel => '添加关于';
-
-  @override
-  String get galaxyNodeUploadSaved => '已上传，处理并挂接后会显示在这里。';
-
-  @override
-  String get galaxyNodePageLabel => '第';
-
-  @override
-  String get galaxyNodePagesLabel => '第';
-
-  @override
-  String get galaxyNodeExcerptLabel => '片段';
 
   @override
   String get galaxyNodeUploadDateLabel => '上传于';
@@ -24443,25 +24258,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get galaxyGoStudy => '去学习';
-
-  @override
-  String galaxyPreviewHighMastery(Object score) {
-    return '这个知识点你上次掌握度 $score 分，基于你的学习频率，现在是强化它的好时机。';
-  }
-
-  @override
-  String get galaxyPreviewErrorReturn => '最近相关错题有回流，趁现在补一轮更容易稳住。';
-
-  @override
-  String galaxyPreviewReviewWindow(Object days) {
-    return '距离上次强化已经约 $days 天，正好卡在复习窗口。';
-  }
-
-  @override
-  String get galaxyPreviewReviewReady => '它已经进入复习窗口，补一轮会更划算。';
-
-  @override
-  String get galaxyPreviewUnstable => '当前掌握度还不稳，趁记忆还在时再加固一次。';
 
   @override
   String get galaxyUnknownError => '未知错误';
@@ -27733,22 +27529,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxySectorRational => '理性';
-
-  @override
-  String get galaxySectorCreation => '创造';
-
-  @override
-  String get galaxySectorInspiration => '灵感';
-
-  @override
   String get planSprintSubmitFailed => '冲刺提交失败，请重试';
 
   @override
   String get planPortfolioLoadFailedMsg => '加载学习组合失败';
-
-  @override
-  String get galaxySectorDarkMatter => '暗物质';
 
   @override
   String get planPortfolioRetry => '重试';
@@ -29757,61 +29541,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get examChaptersGeneric => '第一章|第二章|第三章|第四章|第五章';
 
   @override
-  String get homeFailureServer => '服务暂时不稳';
-
-  @override
-  String get homeFailureValidation => '需要调整请求';
-
-  @override
-  String get homeFailureNetwork => '网络不稳定';
-
-  @override
-  String get homeFailureOffline => '离线了';
-
-  @override
-  String get homeFailureUnknown => '首页暂时加载失败';
-
-  @override
-  String get homeFailureAuth => '去登录';
-
-  @override
-  String get homeFailureOfflineRetry => '连网后重试';
-
-  @override
-  String get homeCommandCenterTitle => '现在的指挥台';
-
-  @override
-  String get homeNoTasksToday => '今天未排任务';
-
-  @override
-  String get homeTodayMapped => '今天的任务已经清楚了';
-
-  @override
-  String get homeCheckRhythm => '先检查今天的计划节奏';
-
-  @override
-  String get homeSetGoal => '先定一个今天能开始的目标';
-
-  @override
-  String get homeAuroraCorrectionCancel => '取消';
-
-  @override
-  String get homeAuroraCorrectionSubmit => '发送';
-
-  @override
-  String homeWeatherWithSummary(Object hint, Object summary) {
-    return '今天适合$hint，$summary';
-  }
-
-  @override
-  String homeWeatherOnlyHint(Object hint) {
-    return '今天适合$hint';
-  }
-
-  @override
-  String get homeAskAurora => '问 Aurora';
-
-  @override
   String get homeNextActionTitle => '下一步';
 
   @override
@@ -29985,30 +29714,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeAuroraDialogSend => '发送';
 
   @override
-  String get homeQuickCreate => '快速创建';
-
-  @override
-  String get homeOnboardingSummary => '我是你的AI成长伙伴。设定目标，我来帮你一步步达成。';
-
-  @override
-  String get homeOnboardingSetGoal => '设定目标';
-
-  @override
-  String get homeOnboardingSetGoalSubtitle => '告诉我你想达成什么，我来帮你制定计划';
-
-  @override
-  String get homeOnboardingChatSparkle => '跟Sparkle聊聊';
-
-  @override
-  String get homeOnboardingChatSubtitle => '聊聊你的想法，获得个性化建议';
-
-  @override
-  String get homeOnboardingExploreSubtitle => '发现你的知识结构，找到提升方向';
-
-  @override
-  String get homeOnboardingExploreGalaxy => '探索知识星图';
-
-  @override
   String get homeOnboardingResumeTitle => '完成引导，让 AI 更懂你';
 
   @override
@@ -30145,230 +29850,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get stuckHelpJourneyCta => '让 Sparkle 一步步帮我理';
-
-  @override
-  String get homeSlotDailyBriefing => '今日简报';
-
-  @override
-  String homeSlotDailyBriefingReady(int count) {
-    return '今天 $count 件待办 · 已就绪';
-  }
-
-  @override
-  String get homeSlotDailyBriefingFallback => '当天的状态与节奏';
-
-  @override
-  String get homeSlotKeyMetrics => '关键指标';
-
-  @override
-  String homeSlotKeyMetricsStreak(int streak) {
-    return '🔥 连续 $streak 天';
-  }
-
-  @override
-  String get homeSlotKeyMetricsFallback => '进度、连续天数、动力';
-
-  @override
-  String get homeSlotCommandCenter => '指挥中心';
-
-  @override
-  String homeSlotCommandCenterNext(String label) {
-    return '下一步：$label';
-  }
-
-  @override
-  String get homeSlotCommandCenterFallback => '下一步行动入口';
-
-  @override
-  String get homeSlotUnderstanding => '理解面板';
-
-  @override
-  String get homeSlotUnderstandingSummary => 'Sparkle 对你的认知拆解';
-
-  @override
-  String get homeSlotReturnCaseFile => '回归档案';
-
-  @override
-  String get homeSlotReturnCaseFileSummary => '上次离开时的现场';
-
-  @override
-  String get homeSlotGoalSnapshot => '目标详情';
-
-  @override
-  String get homeSlotGoalSnapshotFallback => '当前目标的近况';
-
-  @override
-  String get homeSlotMultiGoalBoard => '多目标看板';
-
-  @override
-  String homeSlotMultiGoalDone(int done, int total) {
-    return '$done/$total 件已完成';
-  }
-
-  @override
-  String get homeSlotMultiGoalFallback => '所有目标的总览';
-
-  @override
-  String get homeSlotTaskBoard => '任务面板';
-
-  @override
-  String homeSlotTaskBoardProgress(int done, int total) {
-    return '完成 $done/$total';
-  }
-
-  @override
-  String homeSlotTaskBoardGoalHit(int done, int total) {
-    return '完成 $done/$total · 今日达标';
-  }
-
-  @override
-  String homeSlotTaskBoardToGo(int done, int total, int remaining) {
-    return '完成 $done/$total · 再 $remaining 件冲刺';
-  }
-
-  @override
-  String get homeSlotTaskBoardFallback => '今日待办与进度';
-
-  @override
-  String get homeSlotExamSprint => '考试冲刺';
-
-  @override
-  String homeSlotExamSprintDaysLeft(String subject, int days) {
-    return '$subject · $days 天后';
-  }
-
-  @override
-  String get homeSlotExamSprintNotStarted => '尚未启动 · 点开创建';
-
-  @override
-  String get homeSlotExamSprintEmptyTitle => '考试冲刺';
-
-  @override
-  String get homeSlotExamSprintEmptyBody => '还没有进行中的冲刺。设置一个目标，看到每日节奏与剩余天数。';
-
-  @override
-  String get homeSlotExamSprintEmptyAction => '创建冲刺';
-
-  @override
-  String get homeSlotUpdates => '动态';
-
-  @override
-  String get homeSlotUpdatesSummary => '通知、洞察、提醒';
-
-  @override
-  String get homeSlotGrowthQuality => '成长质量';
-
-  @override
-  String get homeSlotGrowthQualitySummary => '深度、稳定性、平衡';
-
-  @override
-  String get homeSlotWeeklyNarrative => '本周叙事';
-
-  @override
-  String get homeSlotWeeklyNarrativeSummary => '一周变化的故事线';
-
-  @override
-  String get homeSlotCommunity => '同行社群';
-
-  @override
-  String get homeSlotCommunitySummary => '伙伴动态与监督';
-
-  @override
-  String get homeSlotAchievements => '成就进度';
-
-  @override
-  String get homeSlotAchievementsSummary => '近期解锁与里程碑';
-
-  @override
-  String get homeSlotLearningHeatmap => '学习热力图';
-
-  @override
-  String get homeSlotLearningHeatmapSummary => '过去30天的活跃度';
-
-  @override
-  String get homeSlotWorkspaceCards => '工作区卡片';
-
-  @override
-  String homeSlotWorkspaceCardsVisible(int count) {
-    return '$count 张已显示';
-  }
-
-  @override
-  String get homeSlotWorkspaceCardsNone => '尚未启用任何卡片';
-
-  @override
-  String get homeEmptyDashboardTitle => '驾驶舱已经清空';
-
-  @override
-  String get homeEmptyDashboardBody => '点开下方“自定义”重新选择想要常驻的模块。';
-
-  @override
-  String get homeCustomizeDashboard => '自定义驾驶舱';
-
-  @override
-  String get homeFailureAuthTitle => '需要重新登录';
-
-  @override
-  String get homeFailureServerTitle => '服务暂时不稳';
-
-  @override
-  String get homeFailureValidationTitle => '需要调整请求';
-
-  @override
-  String get homeFailureNetworkTitle => '网络不稳定';
-
-  @override
-  String get homeFailureOfflineTitle => '离线了';
-
-  @override
-  String get homeFailureUnknownTitle => '首页暂时加载失败';
-
-  @override
-  String get homeFailureAuthAction => '去登录';
-
-  @override
-  String get homeFailureOfflineAction => '连网后重试';
-
-  @override
-  String get homeCommandCenterEyebrow => '现在的指挥台';
-
-  @override
-  String get homeCommandCenterNoTasks => '今天未排任务';
-
-  @override
-  String homeCommandCenterHealth(int percent) {
-    return '健康度 $percent%';
-  }
-
-  @override
-  String get homeHighPriority => '高优先级';
-
-  @override
-  String get homeCompletingUpdatesProgress => '完成后会更新计划进度';
-
-  @override
-  String get homeSparkleWillTurn => 'Sparkle 会把目标拆成下一步、进度和风险提醒。';
-
-  @override
-  String homeRiskBottleneck(String topic) {
-    return '风险：$topic 正在卡住进度';
-  }
-
-  @override
-  String homeRiskDeadline(String label) {
-    return '风险：$label';
-  }
-
-  @override
-  String get homeRiskLowHealth => '风险：计划健康度偏低，需要重新校准';
-
-  @override
-  String homeSelectGoal(String label) {
-    return '选择目标: $label';
-  }
-
-  @override
-  String get homeNoUrgentAction => '今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。';
 
   @override
   String get goalIntentTitle => '告诉我你想达成什么';

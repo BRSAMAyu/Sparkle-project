@@ -650,12 +650,6 @@ abstract class AppLocalizations {
   /// **'没有找到相关内容，试试其他关键词？'**
   String get errorNotFound;
 
-  /// No description provided for @errorEmptyState.
-  ///
-  /// In zh, this message translates to:
-  /// **'这里空空如也，快去添加内容吧'**
-  String get errorEmptyState;
-
   /// No description provided for @retry.
   ///
   /// In zh, this message translates to:
@@ -3104,12 +3098,6 @@ abstract class AppLocalizations {
   /// **'冻结次数'**
   String get streakFreezeCharges;
 
-  /// No description provided for @errorNetwork.
-  ///
-  /// In zh, this message translates to:
-  /// **'网络错误'**
-  String get errorNetwork;
-
   /// No description provided for @errorNetworkDetail.
   ///
   /// In zh, this message translates to:
@@ -3127,12 +3115,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'离线数据 · 截至 {time}'**
   String staleSnapshotAsOf(Object time);
-
-  /// No description provided for @errorServer.
-  ///
-  /// In zh, this message translates to:
-  /// **'服务器错误'**
-  String get errorServer;
 
   /// No description provided for @errorServerDetail.
   ///
@@ -3152,47 +3134,11 @@ abstract class AppLocalizations {
   /// **'发生了意外错误'**
   String get errorUnknownDetail;
 
-  /// No description provided for @errorValidation.
-  ///
-  /// In zh, this message translates to:
-  /// **'验证错误'**
-  String get errorValidation;
-
-  /// No description provided for @errorValidationDetail.
-  ///
-  /// In zh, this message translates to:
-  /// **'请检查您的输入'**
-  String get errorValidationDetail;
-
-  /// No description provided for @errorPermission.
-  ///
-  /// In zh, this message translates to:
-  /// **'权限不足'**
-  String get errorPermission;
-
-  /// No description provided for @errorPermissionDetail.
-  ///
-  /// In zh, this message translates to:
-  /// **'您没有权限执行此操作'**
-  String get errorPermissionDetail;
-
-  /// No description provided for @errorNotFoundTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'未找到'**
-  String get errorNotFoundTitle;
-
   /// No description provided for @errorNotFoundDetail.
   ///
   /// In zh, this message translates to:
   /// **'请求的资源不存在'**
   String get errorNotFoundDetail;
-
-  /// No description provided for @errorTimeout.
-  ///
-  /// In zh, this message translates to:
-  /// **'请求超时'**
-  String get errorTimeout;
 
   /// No description provided for @errorTimeoutDetail.
   ///
@@ -3200,77 +3146,17 @@ abstract class AppLocalizations {
   /// **'请求处理时间过长'**
   String get errorTimeoutDetail;
 
-  /// No description provided for @errorCancelled.
-  ///
-  /// In zh, this message translates to:
-  /// **'已取消'**
-  String get errorCancelled;
-
-  /// No description provided for @errorCancelledDetail.
-  ///
-  /// In zh, this message translates to:
-  /// **'操作已取消'**
-  String get errorCancelledDetail;
-
-  /// No description provided for @errorStorage.
-  ///
-  /// In zh, this message translates to:
-  /// **'存储错误'**
-  String get errorStorage;
-
-  /// No description provided for @errorStorageDetail.
-  ///
-  /// In zh, this message translates to:
-  /// **'保存数据失败'**
-  String get errorStorageDetail;
-
-  /// No description provided for @errorSync.
-  ///
-  /// In zh, this message translates to:
-  /// **'同步错误'**
-  String get errorSync;
-
-  /// No description provided for @errorSyncDetail.
-  ///
-  /// In zh, this message translates to:
-  /// **'同步数据失败'**
-  String get errorSyncDetail;
-
-  /// No description provided for @errorAuth.
-  ///
-  /// In zh, this message translates to:
-  /// **'认证错误'**
-  String get errorAuth;
-
   /// No description provided for @errorAuthDetail.
   ///
   /// In zh, this message translates to:
   /// **'请重新登录'**
   String get errorAuthDetail;
 
-  /// No description provided for @errorRateLimitTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'请求过于频繁'**
-  String get errorRateLimitTitle;
-
   /// No description provided for @errorRateLimitDetail.
   ///
   /// In zh, this message translates to:
   /// **'请稍后再试'**
   String get errorRateLimitDetail;
-
-  /// No description provided for @errorMaintenance.
-  ///
-  /// In zh, this message translates to:
-  /// **'系统维护中'**
-  String get errorMaintenance;
-
-  /// No description provided for @errorMaintenanceDetail.
-  ///
-  /// In zh, this message translates to:
-  /// **'系统正在升级，请稍后再来'**
-  String get errorMaintenanceDetail;
 
   /// No description provided for @timeJustNow.
   ///
@@ -9800,12 +9686,6 @@ abstract class AppLocalizations {
   /// **'暂无需要复习的错题'**
   String get errorBookNoReview;
 
-  /// No description provided for @errorBookNoReviewHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'做得很好！继续保持'**
-  String get errorBookNoReviewHint;
-
   /// No description provided for @errorBookNoReviewDescription.
   ///
   /// In zh, this message translates to:
@@ -9944,12 +9824,6 @@ abstract class AppLocalizations {
   /// **'查看学习路径'**
   String get errorBookKnowledgeLinkTooltip;
 
-  /// No description provided for @errorBookKnowledgeLinkSnack.
-  ///
-  /// In zh, this message translates to:
-  /// **'即将跳转到 {nodeName} 知识点'**
-  String errorBookKnowledgeLinkSnack(Object nodeName);
-
   /// No description provided for @errorBookReviewStats.
   ///
   /// In zh, this message translates to:
@@ -9980,23 +9854,11 @@ abstract class AppLocalizations {
   /// **'错题内容暂时加载不了。你的错题没有丢，点重试再试一次。'**
   String get errorBookLoadFailedHuman;
 
-  /// No description provided for @errorBookEditInProgress.
-  ///
-  /// In zh, this message translates to:
-  /// **'编辑功能即将上线'**
-  String get errorBookEditInProgress;
-
   /// No description provided for @errorBookReanalyzing.
   ///
   /// In zh, this message translates to:
   /// **'正在重新分析...'**
   String get errorBookReanalyzing;
-
-  /// No description provided for @errorBookReviewInProgress.
-  ///
-  /// In zh, this message translates to:
-  /// **'复习功能即将上线'**
-  String get errorBookReviewInProgress;
 
   /// No description provided for @errorBookDeleteFailedHuman.
   ///
@@ -10556,125 +10418,11 @@ abstract class AppLocalizations {
   /// **'描述'**
   String get knowledgeDescription;
 
-  /// No description provided for @knowledgeNoDescription.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无描述'**
-  String get knowledgeNoDescription;
-
   /// No description provided for @knowledgeRelatedNodes.
   ///
   /// In zh, this message translates to:
   /// **'相关节点'**
   String get knowledgeRelatedNodes;
-
-  /// No description provided for @knowledgeSourceMaterialsTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'来源资料'**
-  String get knowledgeSourceMaterialsTitle;
-
-  /// No description provided for @knowledgeSourceMaterialsSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'{documents} 份文档 · {chunks} 个知识片段'**
-  String knowledgeSourceMaterialsSummary(Object documents, Object chunks);
-
-  /// No description provided for @knowledgeSourceMaterialsPersonalBadge.
-  ///
-  /// In zh, this message translates to:
-  /// **'我的上传'**
-  String get knowledgeSourceMaterialsPersonalBadge;
-
-  /// No description provided for @knowledgeSourceMaterialsSystemBadge.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂未附带个人笔记'**
-  String get knowledgeSourceMaterialsSystemBadge;
-
-  /// No description provided for @knowledgeSourceMaterialsUploadDate.
-  ///
-  /// In zh, this message translates to:
-  /// **'上传于 {date}'**
-  String knowledgeSourceMaterialsUploadDate(Object date);
-
-  /// No description provided for @knowledgeSourceMaterialsChunkUnit.
-  ///
-  /// In zh, this message translates to:
-  /// **'片段'**
-  String get knowledgeSourceMaterialsChunkUnit;
-
-  /// No description provided for @knowledgeSourceMaterialsEmptyTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'让这个节点回到你的真实资料里'**
-  String get knowledgeSourceMaterialsEmptyTitle;
-
-  /// No description provided for @knowledgeSourceMaterialsEmptyBody.
-  ///
-  /// In zh, this message translates to:
-  /// **'为「{topic}」补充自己的讲义或笔记，让这条知识真正可追溯。'**
-  String knowledgeSourceMaterialsEmptyBody(Object topic);
-
-  /// No description provided for @knowledgeSourceMaterialsAddNotes.
-  ///
-  /// In zh, this message translates to:
-  /// **'添加关于「{topic}」的笔记'**
-  String knowledgeSourceMaterialsAddNotes(Object topic);
-
-  /// No description provided for @knowledgeSourceMaterialsReadMore.
-  ///
-  /// In zh, this message translates to:
-  /// **'阅读更多'**
-  String get knowledgeSourceMaterialsReadMore;
-
-  /// No description provided for @knowledgeSourceMaterialsNoPreview.
-  ///
-  /// In zh, this message translates to:
-  /// **'这份资料暂时还没有可展示的片段。'**
-  String get knowledgeSourceMaterialsNoPreview;
-
-  /// No description provided for @knowledgeSourceMaterialsOpenFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂时无法打开来源资料。'**
-  String get knowledgeSourceMaterialsOpenFailed;
-
-  /// No description provided for @knowledgeSourceMaterialsUploadSaved.
-  ///
-  /// In zh, this message translates to:
-  /// **'{filename} 已上传，处理并挂接后会显示在这里。'**
-  String knowledgeSourceMaterialsUploadSaved(Object filename);
-
-  /// No description provided for @knowledgeSourceMaterialsPage.
-  ///
-  /// In zh, this message translates to:
-  /// **'第 {page} 页'**
-  String knowledgeSourceMaterialsPage(Object page);
-
-  /// No description provided for @knowledgeSourceMaterialsPages.
-  ///
-  /// In zh, this message translates to:
-  /// **'第 {pages} 页'**
-  String knowledgeSourceMaterialsPages(Object pages);
-
-  /// No description provided for @knowledgeSourceMaterialsChunk.
-  ///
-  /// In zh, this message translates to:
-  /// **'片段 {index}'**
-  String knowledgeSourceMaterialsChunk(Object index);
-
-  /// No description provided for @knowledgePrerequisites.
-  ///
-  /// In zh, this message translates to:
-  /// **'前置知识'**
-  String get knowledgePrerequisites;
-
-  /// No description provided for @knowledgeMasteryProgress.
-  ///
-  /// In zh, this message translates to:
-  /// **'掌握进度'**
-  String get knowledgeMasteryProgress;
 
   /// No description provided for @knowledgeKeywords.
   ///
@@ -15716,12 +15464,6 @@ abstract class AppLocalizations {
   /// **'{arg0}'**
   String galaxyLLMActionFailed(Object arg0);
 
-  /// No description provided for @galaxyLoadFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载失败'**
-  String get galaxyLoadFailed;
-
   /// No description provided for @galaxyLoadFailedTitle.
   ///
   /// In zh, this message translates to:
@@ -15878,12 +15620,6 @@ abstract class AppLocalizations {
   /// **'性能最佳'**
   String get galaxyPerfStatusOptimal;
 
-  /// No description provided for @galaxyReload.
-  ///
-  /// In zh, this message translates to:
-  /// **'重新加载'**
-  String get galaxyReload;
-
   /// No description provided for @galaxySearchHint.
   ///
   /// In zh, this message translates to:
@@ -15955,36 +15691,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'智慧'**
   String get galaxySectorWisdom;
-
-  /// No description provided for @galaxySimulationReplaySpeed.
-  ///
-  /// In zh, this message translates to:
-  /// **'回放速度'**
-  String get galaxySimulationReplaySpeed;
-
-  /// No description provided for @galaxySimulationRepulsion.
-  ///
-  /// In zh, this message translates to:
-  /// **'斥力'**
-  String get galaxySimulationRepulsion;
-
-  /// No description provided for @galaxySimulationReset.
-  ///
-  /// In zh, this message translates to:
-  /// **'重置'**
-  String get galaxySimulationReset;
-
-  /// No description provided for @galaxySimulationSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'调整物理参数'**
-  String get galaxySimulationSubtitle;
-
-  /// No description provided for @galaxySimulationTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'模拟设置'**
-  String get galaxySimulationTitle;
 
   /// No description provided for @galaxyUsingCache.
   ///
@@ -28686,12 +28392,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'生成学习计划'**
   String get galaxyNodeGeneratePlan;
-
-  /// No description provided for @galaxyNodeGeneratePlanDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 生成个性化学习路径与任务'**
-  String get galaxyNodeGeneratePlanDesc;
 
   /// No description provided for @galaxyNodeWhyToday.
   ///
@@ -44371,12 +44071,6 @@ abstract class AppLocalizations {
   /// **'暂时无法打开来源资料。'**
   String get galaxyNodeOpenFailed;
 
-  /// No description provided for @galaxyNodeSummaryDocChunks.
-  ///
-  /// In zh, this message translates to:
-  /// **'{documents} 份文档 · {chunks} 个知识片段'**
-  String galaxyNodeSummaryDocChunks(Object chunks, Object documents);
-
   /// No description provided for @galaxyNodeEmptySourceBody.
   ///
   /// In zh, this message translates to:
@@ -44388,30 +44082,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'添加关于'**
   String get galaxyNodeAddNotesLabel;
-
-  /// No description provided for @galaxyNodeUploadSaved.
-  ///
-  /// In zh, this message translates to:
-  /// **'已上传，处理并挂接后会显示在这里。'**
-  String get galaxyNodeUploadSaved;
-
-  /// No description provided for @galaxyNodePageLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'第'**
-  String get galaxyNodePageLabel;
-
-  /// No description provided for @galaxyNodePagesLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'第'**
-  String get galaxyNodePagesLabel;
-
-  /// No description provided for @galaxyNodeExcerptLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'片段'**
-  String get galaxyNodeExcerptLabel;
 
   /// No description provided for @galaxyNodeUploadDateLabel.
   ///
@@ -44610,36 +44280,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'去学习'**
   String get galaxyGoStudy;
-
-  /// No description provided for @galaxyPreviewHighMastery.
-  ///
-  /// In zh, this message translates to:
-  /// **'这个知识点你上次掌握度 {score} 分，基于你的学习频率，现在是强化它的好时机。'**
-  String galaxyPreviewHighMastery(Object score);
-
-  /// No description provided for @galaxyPreviewErrorReturn.
-  ///
-  /// In zh, this message translates to:
-  /// **'最近相关错题有回流，趁现在补一轮更容易稳住。'**
-  String get galaxyPreviewErrorReturn;
-
-  /// No description provided for @galaxyPreviewReviewWindow.
-  ///
-  /// In zh, this message translates to:
-  /// **'距离上次强化已经约 {days} 天，正好卡在复习窗口。'**
-  String galaxyPreviewReviewWindow(Object days);
-
-  /// No description provided for @galaxyPreviewReviewReady.
-  ///
-  /// In zh, this message translates to:
-  /// **'它已经进入复习窗口，补一轮会更划算。'**
-  String get galaxyPreviewReviewReady;
-
-  /// No description provided for @galaxyPreviewUnstable.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前掌握度还不稳，趁记忆还在时再加固一次。'**
-  String get galaxyPreviewUnstable;
 
   /// No description provided for @galaxyUnknownError.
   ///
@@ -50531,24 +50171,6 @@ abstract class AppLocalizations {
   /// **'{title}暂不可用'**
   String toolCurrentlyUnavailable(String title);
 
-  /// No description provided for @galaxySectorRational.
-  ///
-  /// In zh, this message translates to:
-  /// **'理性'**
-  String get galaxySectorRational;
-
-  /// No description provided for @galaxySectorCreation.
-  ///
-  /// In zh, this message translates to:
-  /// **'创造'**
-  String get galaxySectorCreation;
-
-  /// No description provided for @galaxySectorInspiration.
-  ///
-  /// In zh, this message translates to:
-  /// **'灵感'**
-  String get galaxySectorInspiration;
-
   /// No description provided for @planSprintSubmitFailed.
   ///
   /// In zh, this message translates to:
@@ -50560,12 +50182,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'加载学习组合失败'**
   String get planPortfolioLoadFailedMsg;
-
-  /// No description provided for @galaxySectorDarkMatter.
-  ///
-  /// In zh, this message translates to:
-  /// **'暗物质'**
-  String get galaxySectorDarkMatter;
 
   /// No description provided for @planPortfolioRetry.
   ///
@@ -54199,108 +53815,6 @@ abstract class AppLocalizations {
   /// **'第一章|第二章|第三章|第四章|第五章'**
   String get examChaptersGeneric;
 
-  /// No description provided for @homeFailureServer.
-  ///
-  /// In zh, this message translates to:
-  /// **'服务暂时不稳'**
-  String get homeFailureServer;
-
-  /// No description provided for @homeFailureValidation.
-  ///
-  /// In zh, this message translates to:
-  /// **'需要调整请求'**
-  String get homeFailureValidation;
-
-  /// No description provided for @homeFailureNetwork.
-  ///
-  /// In zh, this message translates to:
-  /// **'网络不稳定'**
-  String get homeFailureNetwork;
-
-  /// No description provided for @homeFailureOffline.
-  ///
-  /// In zh, this message translates to:
-  /// **'离线了'**
-  String get homeFailureOffline;
-
-  /// No description provided for @homeFailureUnknown.
-  ///
-  /// In zh, this message translates to:
-  /// **'首页暂时加载失败'**
-  String get homeFailureUnknown;
-
-  /// No description provided for @homeFailureAuth.
-  ///
-  /// In zh, this message translates to:
-  /// **'去登录'**
-  String get homeFailureAuth;
-
-  /// No description provided for @homeFailureOfflineRetry.
-  ///
-  /// In zh, this message translates to:
-  /// **'连网后重试'**
-  String get homeFailureOfflineRetry;
-
-  /// No description provided for @homeCommandCenterTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'现在的指挥台'**
-  String get homeCommandCenterTitle;
-
-  /// No description provided for @homeNoTasksToday.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天未排任务'**
-  String get homeNoTasksToday;
-
-  /// No description provided for @homeTodayMapped.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天的任务已经清楚了'**
-  String get homeTodayMapped;
-
-  /// No description provided for @homeCheckRhythm.
-  ///
-  /// In zh, this message translates to:
-  /// **'先检查今天的计划节奏'**
-  String get homeCheckRhythm;
-
-  /// No description provided for @homeSetGoal.
-  ///
-  /// In zh, this message translates to:
-  /// **'先定一个今天能开始的目标'**
-  String get homeSetGoal;
-
-  /// No description provided for @homeAuroraCorrectionCancel.
-  ///
-  /// In zh, this message translates to:
-  /// **'取消'**
-  String get homeAuroraCorrectionCancel;
-
-  /// No description provided for @homeAuroraCorrectionSubmit.
-  ///
-  /// In zh, this message translates to:
-  /// **'发送'**
-  String get homeAuroraCorrectionSubmit;
-
-  /// No description provided for @homeWeatherWithSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天适合{hint}，{summary}'**
-  String homeWeatherWithSummary(Object hint, Object summary);
-
-  /// No description provided for @homeWeatherOnlyHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天适合{hint}'**
-  String homeWeatherOnlyHint(Object hint);
-
-  /// No description provided for @homeAskAurora.
-  ///
-  /// In zh, this message translates to:
-  /// **'问 Aurora'**
-  String get homeAskAurora;
-
   /// No description provided for @homeNextActionTitle.
   ///
   /// In zh, this message translates to:
@@ -54619,54 +54133,6 @@ abstract class AppLocalizations {
   /// **'发送'**
   String get homeAuroraDialogSend;
 
-  /// No description provided for @homeQuickCreate.
-  ///
-  /// In zh, this message translates to:
-  /// **'快速创建'**
-  String get homeQuickCreate;
-
-  /// No description provided for @homeOnboardingSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'我是你的AI成长伙伴。设定目标，我来帮你一步步达成。'**
-  String get homeOnboardingSummary;
-
-  /// No description provided for @homeOnboardingSetGoal.
-  ///
-  /// In zh, this message translates to:
-  /// **'设定目标'**
-  String get homeOnboardingSetGoal;
-
-  /// No description provided for @homeOnboardingSetGoalSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'告诉我你想达成什么，我来帮你制定计划'**
-  String get homeOnboardingSetGoalSubtitle;
-
-  /// No description provided for @homeOnboardingChatSparkle.
-  ///
-  /// In zh, this message translates to:
-  /// **'跟Sparkle聊聊'**
-  String get homeOnboardingChatSparkle;
-
-  /// No description provided for @homeOnboardingChatSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'聊聊你的想法，获得个性化建议'**
-  String get homeOnboardingChatSubtitle;
-
-  /// No description provided for @homeOnboardingExploreSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'发现你的知识结构，找到提升方向'**
-  String get homeOnboardingExploreSubtitle;
-
-  /// No description provided for @homeOnboardingExploreGalaxy.
-  ///
-  /// In zh, this message translates to:
-  /// **'探索知识星图'**
-  String get homeOnboardingExploreGalaxy;
-
   /// No description provided for @homeOnboardingResumeTitle.
   ///
   /// In zh, this message translates to:
@@ -54900,402 +54366,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'让 Sparkle 一步步帮我理'**
   String get stuckHelpJourneyCta;
-
-  /// No description provided for @homeSlotDailyBriefing.
-  ///
-  /// In zh, this message translates to:
-  /// **'今日简报'**
-  String get homeSlotDailyBriefing;
-
-  /// No description provided for @homeSlotDailyBriefingReady.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天 {count} 件待办 · 已就绪'**
-  String homeSlotDailyBriefingReady(int count);
-
-  /// No description provided for @homeSlotDailyBriefingFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'当天的状态与节奏'**
-  String get homeSlotDailyBriefingFallback;
-
-  /// No description provided for @homeSlotKeyMetrics.
-  ///
-  /// In zh, this message translates to:
-  /// **'关键指标'**
-  String get homeSlotKeyMetrics;
-
-  /// No description provided for @homeSlotKeyMetricsStreak.
-  ///
-  /// In zh, this message translates to:
-  /// **'🔥 连续 {streak} 天'**
-  String homeSlotKeyMetricsStreak(int streak);
-
-  /// No description provided for @homeSlotKeyMetricsFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'进度、连续天数、动力'**
-  String get homeSlotKeyMetricsFallback;
-
-  /// No description provided for @homeSlotCommandCenter.
-  ///
-  /// In zh, this message translates to:
-  /// **'指挥中心'**
-  String get homeSlotCommandCenter;
-
-  /// No description provided for @homeSlotCommandCenterNext.
-  ///
-  /// In zh, this message translates to:
-  /// **'下一步：{label}'**
-  String homeSlotCommandCenterNext(String label);
-
-  /// No description provided for @homeSlotCommandCenterFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'下一步行动入口'**
-  String get homeSlotCommandCenterFallback;
-
-  /// No description provided for @homeSlotUnderstanding.
-  ///
-  /// In zh, this message translates to:
-  /// **'理解面板'**
-  String get homeSlotUnderstanding;
-
-  /// No description provided for @homeSlotUnderstandingSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'Sparkle 对你的认知拆解'**
-  String get homeSlotUnderstandingSummary;
-
-  /// No description provided for @homeSlotReturnCaseFile.
-  ///
-  /// In zh, this message translates to:
-  /// **'回归档案'**
-  String get homeSlotReturnCaseFile;
-
-  /// No description provided for @homeSlotReturnCaseFileSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'上次离开时的现场'**
-  String get homeSlotReturnCaseFileSummary;
-
-  /// No description provided for @homeSlotGoalSnapshot.
-  ///
-  /// In zh, this message translates to:
-  /// **'目标详情'**
-  String get homeSlotGoalSnapshot;
-
-  /// No description provided for @homeSlotGoalSnapshotFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前目标的近况'**
-  String get homeSlotGoalSnapshotFallback;
-
-  /// No description provided for @homeSlotMultiGoalBoard.
-  ///
-  /// In zh, this message translates to:
-  /// **'多目标看板'**
-  String get homeSlotMultiGoalBoard;
-
-  /// No description provided for @homeSlotMultiGoalDone.
-  ///
-  /// In zh, this message translates to:
-  /// **'{done}/{total} 件已完成'**
-  String homeSlotMultiGoalDone(int done, int total);
-
-  /// No description provided for @homeSlotMultiGoalFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'所有目标的总览'**
-  String get homeSlotMultiGoalFallback;
-
-  /// No description provided for @homeSlotTaskBoard.
-  ///
-  /// In zh, this message translates to:
-  /// **'任务面板'**
-  String get homeSlotTaskBoard;
-
-  /// No description provided for @homeSlotTaskBoardProgress.
-  ///
-  /// In zh, this message translates to:
-  /// **'完成 {done}/{total}'**
-  String homeSlotTaskBoardProgress(int done, int total);
-
-  /// No description provided for @homeSlotTaskBoardGoalHit.
-  ///
-  /// In zh, this message translates to:
-  /// **'完成 {done}/{total} · 今日达标'**
-  String homeSlotTaskBoardGoalHit(int done, int total);
-
-  /// No description provided for @homeSlotTaskBoardToGo.
-  ///
-  /// In zh, this message translates to:
-  /// **'完成 {done}/{total} · 再 {remaining} 件冲刺'**
-  String homeSlotTaskBoardToGo(int done, int total, int remaining);
-
-  /// No description provided for @homeSlotTaskBoardFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'今日待办与进度'**
-  String get homeSlotTaskBoardFallback;
-
-  /// No description provided for @homeSlotExamSprint.
-  ///
-  /// In zh, this message translates to:
-  /// **'考试冲刺'**
-  String get homeSlotExamSprint;
-
-  /// No description provided for @homeSlotExamSprintDaysLeft.
-  ///
-  /// In zh, this message translates to:
-  /// **'{subject} · {days} 天后'**
-  String homeSlotExamSprintDaysLeft(String subject, int days);
-
-  /// No description provided for @homeSlotExamSprintNotStarted.
-  ///
-  /// In zh, this message translates to:
-  /// **'尚未启动 · 点开创建'**
-  String get homeSlotExamSprintNotStarted;
-
-  /// No description provided for @homeSlotExamSprintEmptyTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'考试冲刺'**
-  String get homeSlotExamSprintEmptyTitle;
-
-  /// No description provided for @homeSlotExamSprintEmptyBody.
-  ///
-  /// In zh, this message translates to:
-  /// **'还没有进行中的冲刺。设置一个目标，看到每日节奏与剩余天数。'**
-  String get homeSlotExamSprintEmptyBody;
-
-  /// No description provided for @homeSlotExamSprintEmptyAction.
-  ///
-  /// In zh, this message translates to:
-  /// **'创建冲刺'**
-  String get homeSlotExamSprintEmptyAction;
-
-  /// No description provided for @homeSlotUpdates.
-  ///
-  /// In zh, this message translates to:
-  /// **'动态'**
-  String get homeSlotUpdates;
-
-  /// No description provided for @homeSlotUpdatesSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'通知、洞察、提醒'**
-  String get homeSlotUpdatesSummary;
-
-  /// No description provided for @homeSlotGrowthQuality.
-  ///
-  /// In zh, this message translates to:
-  /// **'成长质量'**
-  String get homeSlotGrowthQuality;
-
-  /// No description provided for @homeSlotGrowthQualitySummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'深度、稳定性、平衡'**
-  String get homeSlotGrowthQualitySummary;
-
-  /// No description provided for @homeSlotWeeklyNarrative.
-  ///
-  /// In zh, this message translates to:
-  /// **'本周叙事'**
-  String get homeSlotWeeklyNarrative;
-
-  /// No description provided for @homeSlotWeeklyNarrativeSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'一周变化的故事线'**
-  String get homeSlotWeeklyNarrativeSummary;
-
-  /// No description provided for @homeSlotCommunity.
-  ///
-  /// In zh, this message translates to:
-  /// **'同行社群'**
-  String get homeSlotCommunity;
-
-  /// No description provided for @homeSlotCommunitySummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'伙伴动态与监督'**
-  String get homeSlotCommunitySummary;
-
-  /// No description provided for @homeSlotAchievements.
-  ///
-  /// In zh, this message translates to:
-  /// **'成就进度'**
-  String get homeSlotAchievements;
-
-  /// No description provided for @homeSlotAchievementsSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'近期解锁与里程碑'**
-  String get homeSlotAchievementsSummary;
-
-  /// No description provided for @homeSlotLearningHeatmap.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习热力图'**
-  String get homeSlotLearningHeatmap;
-
-  /// No description provided for @homeSlotLearningHeatmapSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'过去30天的活跃度'**
-  String get homeSlotLearningHeatmapSummary;
-
-  /// No description provided for @homeSlotWorkspaceCards.
-  ///
-  /// In zh, this message translates to:
-  /// **'工作区卡片'**
-  String get homeSlotWorkspaceCards;
-
-  /// No description provided for @homeSlotWorkspaceCardsVisible.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 张已显示'**
-  String homeSlotWorkspaceCardsVisible(int count);
-
-  /// No description provided for @homeSlotWorkspaceCardsNone.
-  ///
-  /// In zh, this message translates to:
-  /// **'尚未启用任何卡片'**
-  String get homeSlotWorkspaceCardsNone;
-
-  /// No description provided for @homeEmptyDashboardTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'驾驶舱已经清空'**
-  String get homeEmptyDashboardTitle;
-
-  /// No description provided for @homeEmptyDashboardBody.
-  ///
-  /// In zh, this message translates to:
-  /// **'点开下方“自定义”重新选择想要常驻的模块。'**
-  String get homeEmptyDashboardBody;
-
-  /// No description provided for @homeCustomizeDashboard.
-  ///
-  /// In zh, this message translates to:
-  /// **'自定义驾驶舱'**
-  String get homeCustomizeDashboard;
-
-  /// No description provided for @homeFailureAuthTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'需要重新登录'**
-  String get homeFailureAuthTitle;
-
-  /// No description provided for @homeFailureServerTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'服务暂时不稳'**
-  String get homeFailureServerTitle;
-
-  /// No description provided for @homeFailureValidationTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'需要调整请求'**
-  String get homeFailureValidationTitle;
-
-  /// No description provided for @homeFailureNetworkTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'网络不稳定'**
-  String get homeFailureNetworkTitle;
-
-  /// No description provided for @homeFailureOfflineTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'离线了'**
-  String get homeFailureOfflineTitle;
-
-  /// No description provided for @homeFailureUnknownTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'首页暂时加载失败'**
-  String get homeFailureUnknownTitle;
-
-  /// No description provided for @homeFailureAuthAction.
-  ///
-  /// In zh, this message translates to:
-  /// **'去登录'**
-  String get homeFailureAuthAction;
-
-  /// No description provided for @homeFailureOfflineAction.
-  ///
-  /// In zh, this message translates to:
-  /// **'连网后重试'**
-  String get homeFailureOfflineAction;
-
-  /// No description provided for @homeCommandCenterEyebrow.
-  ///
-  /// In zh, this message translates to:
-  /// **'现在的指挥台'**
-  String get homeCommandCenterEyebrow;
-
-  /// No description provided for @homeCommandCenterNoTasks.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天未排任务'**
-  String get homeCommandCenterNoTasks;
-
-  /// No description provided for @homeCommandCenterHealth.
-  ///
-  /// In zh, this message translates to:
-  /// **'健康度 {percent}%'**
-  String homeCommandCenterHealth(int percent);
-
-  /// No description provided for @homeHighPriority.
-  ///
-  /// In zh, this message translates to:
-  /// **'高优先级'**
-  String get homeHighPriority;
-
-  /// No description provided for @homeCompletingUpdatesProgress.
-  ///
-  /// In zh, this message translates to:
-  /// **'完成后会更新计划进度'**
-  String get homeCompletingUpdatesProgress;
-
-  /// No description provided for @homeSparkleWillTurn.
-  ///
-  /// In zh, this message translates to:
-  /// **'Sparkle 会把目标拆成下一步、进度和风险提醒。'**
-  String get homeSparkleWillTurn;
-
-  /// No description provided for @homeRiskBottleneck.
-  ///
-  /// In zh, this message translates to:
-  /// **'风险：{topic} 正在卡住进度'**
-  String homeRiskBottleneck(String topic);
-
-  /// No description provided for @homeRiskDeadline.
-  ///
-  /// In zh, this message translates to:
-  /// **'风险：{label}'**
-  String homeRiskDeadline(String label);
-
-  /// No description provided for @homeRiskLowHealth.
-  ///
-  /// In zh, this message translates to:
-  /// **'风险：计划健康度偏低，需要重新校准'**
-  String get homeRiskLowHealth;
-
-  /// No description provided for @homeSelectGoal.
-  ///
-  /// In zh, this message translates to:
-  /// **'选择目标: {label}'**
-  String homeSelectGoal(String label);
-
-  /// No description provided for @homeNoUrgentAction.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。'**
-  String get homeNoUrgentAction;
 
   /// No description provided for @goalIntentTitle.
   ///

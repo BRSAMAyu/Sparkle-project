@@ -92,7 +92,6 @@
   "errorAuthRequired": "Please sign in to enjoy this feature",
   "errorTokenExpired": "Your session has expired, please sign in again~",
   "errorNotFound": "Couldn't find what you're looking for, maybe try another keyword?",
-  "errorEmptyState": "It's a bit empty here, why not add something?",
   "retry": "Retry",
   "back": "Back",
   "welcomeSubtitle": "Prep for finals and raise your grade with AI at your side",
@@ -573,34 +572,16 @@
   "streakStartChallenge": "Start",
   "streakChallenge": "Challenge",
   "streakFreezeCharges": "Freeze Charges",
-  "errorNetwork": "Network error",
   "errorNetworkDetail": "Please check your internet connection",
   "errorOfflineQueuedDetail": "You're offline — your action has been saved and will sync automatically once you're back online",
   "staleSnapshotAsOf": "Offline data · as of {time}",
-  "errorServer": "Server error",
   "errorServerDetail": "Something went wrong on our end",
   "errorUnknown": "Unknown error",
   "errorUnknownDetail": "An unexpected error occurred",
-  "errorValidation": "Validation error",
-  "errorValidationDetail": "Please check your input",
-  "errorPermission": "Permission denied",
-  "errorPermissionDetail": "You don't have permission to perform this action",
-  "errorNotFoundTitle": "Not found",
   "errorNotFoundDetail": "The requested resource was not found",
-  "errorTimeout": "Request timeout",
   "errorTimeoutDetail": "The request took too long to complete",
-  "errorCancelled": "Cancelled",
-  "errorCancelledDetail": "The operation was cancelled",
-  "errorStorage": "Storage error",
-  "errorStorageDetail": "Failed to save data",
-  "errorSync": "Sync error",
-  "errorSyncDetail": "Failed to sync data",
-  "errorAuth": "Authentication error",
   "errorAuthDetail": "Please sign in again",
-  "errorRateLimitTitle": "Too many requests",
   "errorRateLimitDetail": "Please wait a moment and try again",
-  "errorMaintenance": "Under maintenance",
-  "errorMaintenanceDetail": "We're making things better, please check back soon",
   "timeJustNow": "Just now",
   "timeMinutesAgo": "{count, plural, =1{1 minute ago} other{{count} minutes ago}}",
   "timeHoursAgo": "{count, plural, =1{1 hour ago} other{{count} hours ago}}",
@@ -2187,7 +2168,6 @@
   "errorBookNoErrors": "No errors recorded yet",
   "errorBookNoErrorsHint": "Tap the + button to add an error",
   "errorBookNoReview": "No errors need review",
-  "errorBookNoReviewHint": "Great job! Keep it up",
   "errorBookNoReviewDescription": "Great job! Keep it up. Record a recent missed question first, then Sparkle can schedule future reviews.",
   "errorBookRecordFirstError": "Record first error",
   "errorBookDeleteSuccess": "Deleted",
@@ -2211,15 +2191,12 @@
   "errorBookAiAnalysis": "AI Analysis",
   "errorBookKnowledgeLinks": "Knowledge Links",
   "errorBookKnowledgeLinkTooltip": "View Learning Path",
-  "errorBookKnowledgeLinkSnack": "Navigating to {nodeName} knowledge point",
   "errorBookReviewStats": "Review Statistics",
   "errorBookLastReview": "Last Review",
   "errorBookNextReview": "Next Review",
   "errorBookStartReview": "Start Review",
   "errorBookLoadFailedHuman": "Your error records could not load right now. Nothing is lost — tap retry to try again.",
-  "errorBookEditInProgress": "Edit feature coming soon",
   "errorBookReanalyzing": "Reanalyzing...",
-  "errorBookReviewInProgress": "Review feature coming soon",
   "errorBookDeleteFailedHuman": "The deletion did not go through. The record is still in your error book — try again in a moment.",
   "errorBookMasteryBandHigh": "Mastered",
   "errorBookMasteryBandMid": "Getting there",
@@ -2235,13 +2212,6 @@
   "@errorBookCreatedAt": {
     "placeholders": {
       "date": {
-        "type": "Object"
-      }
-    }
-  },
-  "@errorBookKnowledgeLinkSnack": {
-    "placeholders": {
-      "nodeName": {
         "type": "Object"
       }
     }
@@ -2425,75 +2395,7 @@
   "knowledgeReload": "Reload",
   "knowledgeGeneratePath": "Generate Learning Path",
   "knowledgeDescription": "Description",
-  "knowledgeNoDescription": "No description",
   "knowledgeRelatedNodes": "Related Nodes",
-  "knowledgeSourceMaterialsTitle": "Source Materials",
-  "knowledgeSourceMaterialsSummary": "{documents} documents · {chunks} knowledge chunks",
-  "@knowledgeSourceMaterialsSummary": {
-    "placeholders": {
-      "documents": {
-        "type": "Object"
-      },
-      "chunks": {
-        "type": "Object"
-      }
-    }
-  },
-  "knowledgeSourceMaterialsPersonalBadge": "Personal upload",
-  "knowledgeSourceMaterialsSystemBadge": "No personal notes attached yet",
-  "knowledgeSourceMaterialsUploadDate": "Uploaded {date}",
-  "@knowledgeSourceMaterialsUploadDate": {
-    "placeholders": {
-      "date": {}
-    }
-  },
-  "knowledgeSourceMaterialsChunkUnit": "chunks",
-  "knowledgeSourceMaterialsEmptyTitle": "Trace this node back to your own notes",
-  "knowledgeSourceMaterialsEmptyBody": "Add your own notes about {topic} to make this knowledge node traceable.",
-  "@knowledgeSourceMaterialsEmptyBody": {
-    "placeholders": {
-      "topic": {}
-    }
-  },
-  "knowledgeSourceMaterialsAddNotes": "Add notes about {topic}",
-  "@knowledgeSourceMaterialsAddNotes": {
-    "placeholders": {
-      "topic": {}
-    }
-  },
-  "knowledgeSourceMaterialsReadMore": "Read more",
-  "knowledgeSourceMaterialsNoPreview": "No excerpt preview is available yet.",
-  "knowledgeSourceMaterialsOpenFailed": "Unable to open the source material right now.",
-  "knowledgeSourceMaterialsUploadSaved": "{filename} uploaded. It will appear here after processing and attachment.",
-  "@knowledgeSourceMaterialsUploadSaved": {
-    "placeholders": {
-      "filename": {}
-    }
-  },
-  "knowledgeSourceMaterialsPage": "Page {page}",
-  "@knowledgeSourceMaterialsPage": {
-    "placeholders": {
-      "page": {
-        "type": "Object"
-      }
-    }
-  },
-  "knowledgeSourceMaterialsPages": "Pages {pages}",
-  "@knowledgeSourceMaterialsPages": {
-    "placeholders": {
-      "pages": {}
-    }
-  },
-  "knowledgeSourceMaterialsChunk": "Excerpt {index}",
-  "@knowledgeSourceMaterialsChunk": {
-    "placeholders": {
-      "index": {
-        "type": "Object"
-      }
-    }
-  },
-  "knowledgePrerequisites": "Prerequisites",
-  "knowledgeMasteryProgress": "Mastery Progress",
   "knowledgeKeywords": "Keywords",
   "knowledgeEstimated": "Estimated",
   "knowledgeMinutes": "minutes",
@@ -3647,7 +3549,6 @@
   "galaxyControlZoomIn": "Zoom in",
   "galaxyControlZoomOut": "Zoom out",
   "galaxyEmptyTitle": "Your galaxy is still waiting to be charted",
-  "galaxyEmptyMessage": "Unlock a few knowledge nodes or reload the map to let the constellation begin to grow.",
   "galaxyEmptyTitle": "Your star map is still waiting to be charted",
   "galaxyErrorConnectionFailed": "Connection failed",
   "galaxyErrorConnectionTimeout": "Connection timed out",
@@ -3671,7 +3572,6 @@
   "galaxyImportanceIntermediate": "Intermediate",
   "galaxyImportanceNormal": "Normal",
   "galaxyLLMActionFailed": "{arg0}",
-  "galaxyLoadFailed": "Load failed",
   "galaxyLoadFailedTitle": "Star map failed to load",
   "galaxyLoadingMessage": "Charting your knowledge map...",
   "galaxyLoadingTitle": "Loading the star map",
@@ -3698,7 +3598,6 @@
   "galaxyPerfStatusCritical": "Performance critical",
   "galaxyPerfStatusDegraded": "Performance degraded",
   "galaxyPerfStatusOptimal": "Performance optimal",
-  "galaxyReload": "Reload galaxy",
   "galaxySearchHint": "Search knowledge nodes...",
   "galaxySearchHintDetail": "Type keywords to search",
   "galaxySearchNoResults": "No matching nodes",
@@ -3711,11 +3610,6 @@
   "galaxySectorTech": "Technology",
   "galaxySectorVoid": "Void",
   "galaxySectorWisdom": "Wisdom",
-  "galaxySimulationReplaySpeed": "Replay speed",
-  "galaxySimulationRepulsion": "Repulsion",
-  "galaxySimulationReset": "Reset",
-  "galaxySimulationSubtitle": "Adjust physics parameters",
-  "galaxySimulationTitle": "Simulation settings",
   "galaxyUsingCache": "Showing cached data",
   "guestUpgradeAcceptPoliciesRequired": "Please read and agree to the policies",
   "guestUpgradeAgreePrivacy": "I agree to the Privacy Policy",
@@ -7418,7 +7312,6 @@
   "galaxyNodeAddMaterial": "Add material to this node",
   "galaxyNodeReviewPrompt": "Help me review \"{label}\". First identify the weakest point around this knowledge node, then give me a short practice set.",
   "galaxyNodeGeneratePlan": "Generate Learning Plan",
-  "galaxyNodeGeneratePlanDesc": "AI generates a personalized learning path with tasks",
   "galaxyNodeWhyToday": "Why today?",
   "galaxyNodeReasonNew": "You haven't started this yet — it's unblocked and ready to begin.",
   "galaxyNodeReasonEarly": "Early stage — building a foundation here will unlock dependent topics.",
@@ -9627,13 +9520,8 @@
   "galaxyNodeReadMore": "Read More",
   "galaxyNodeNoPreview": "This material has no previewable chunks yet.",
   "galaxyNodeOpenFailed": "Unable to open source material.",
-  "galaxyNodeSummaryDocChunks": "{documents} docs · {chunks} knowledge chunks",
   "galaxyNodeEmptySourceBody": "Add your own notes or lectures for this topic to make knowledge truly traceable.",
   "galaxyNodeAddNotesLabel": "Add notes about",
-  "galaxyNodeUploadSaved": "Uploaded, will appear here after processing.",
-  "galaxyNodePageLabel": "Page",
-  "galaxyNodePagesLabel": "Pages",
-  "galaxyNodeExcerptLabel": "Excerpt",
   "galaxyNodeUploadDateLabel": "Uploaded on",
   "galaxySimSettings": "Star Map View Settings",
   "galaxySimSettingsDesc": "Adjust display density, force field parameters, and replay speed for a smoother star map browsing experience.",
@@ -9667,11 +9555,6 @@
   "galaxyNoMasteryTitle": "No mastery records yet",
   "galaxyNoMasterySubtitle": "Complete a learning task or review a knowledge point first, then the star map will show real mastery data.",
   "galaxyGoStudy": "Go Study",
-  "galaxyPreviewHighMastery": "Your last mastery for this knowledge point was {score}. Based on your learning frequency, now is a good time to reinforce it.",
-  "galaxyPreviewErrorReturn": "Related errors have returned recently. It is easier to stabilize if you reinforce now.",
-  "galaxyPreviewReviewWindow": "It has been about {days} days since your last reinforcement, right in the review window.",
-  "galaxyPreviewReviewReady": "It has entered the review window. A reinforcement round would be more efficient.",
-  "galaxyPreviewUnstable": "Current mastery is unstable. Reinforce while the memory is still fresh.",
   "galaxyUnknownError": "Unknown error",
   "galaxyUnnamedNode": "Unnamed node",
   "galaxyBasicConcepts": "Related Basic Concepts",
@@ -12791,12 +12674,8 @@
       }
     }
   },
-  "galaxySectorRational": "Rational",
-  "galaxySectorCreation": "Creation",
-  "galaxySectorInspiration": "Inspiration",
   "planSprintSubmitFailed": "Sprint submission failed, please try again",
   "planPortfolioLoadFailedMsg": "Failed to load learning portfolio",
-  "galaxySectorDarkMatter": "Dark Matter",
   "planPortfolioRetry": "Retry",
   "planViewDetails": "View details",
   "toolsPlanLinked": "Planned end time",
@@ -13763,23 +13642,6 @@
   "examChaptersLinearAlgebra": "Matrices|Determinants|Vectors|Eigenvalues|Quadratic Forms",
   "examChaptersEnglish": "Vocabulary|Long Sentences|Reading|Translation|Writing",
   "examChaptersGeneric": "Chapter 1|Chapter 2|Chapter 3|Chapter 4|Chapter 5",
-  "homeFailureServer": "Service issue",
-  "homeFailureValidation": "Check request",
-  "homeFailureNetwork": "Connection issue",
-  "homeFailureOffline": "Offline",
-  "homeFailureUnknown": "Dashboard unavailable",
-  "homeFailureAuth": "Sign in",
-  "homeFailureOfflineRetry": "Retry online",
-  "homeCommandCenterTitle": "Command Center",
-  "homeNoTasksToday": "No tasks today",
-  "homeTodayMapped": "Today is mapped out",
-  "homeCheckRhythm": "Check today plan rhythm",
-  "homeSetGoal": "Set a goal you can start today",
-  "homeAuroraCorrectionCancel": "Cancel",
-  "homeAuroraCorrectionSubmit": "Submit",
-  "homeWeatherWithSummary": "Great for {hint}, {summary}",
-  "homeWeatherOnlyHint": "Great for {hint}",
-  "homeAskAurora": "Ask Aurora",
   "homeNextActionTitle": "Next",
   "homeNextActionAllClear": "All clear",
   "homeNextActionNoPending": "No pending actions",
@@ -13888,14 +13750,6 @@
   "homeAuroraDialogHint": "What did Aurora get wrong? Share your thoughts…",
   "homeAuroraDialogCancel": "Cancel",
   "homeAuroraDialogSend": "Send",
-  "homeQuickCreate": "Quick create",
-  "homeOnboardingSummary": "I'm your AI growth companion. Set a goal and I'll help you achieve it step by step.",
-  "homeOnboardingSetGoal": "Set a goal",
-  "homeOnboardingSetGoalSubtitle": "Tell me what you want to achieve",
-  "homeOnboardingChatSparkle": "Chat with Sparkle",
-  "homeOnboardingChatSubtitle": "Share your thoughts, get personalized guidance",
-  "homeOnboardingExploreSubtitle": "Discover your knowledge structure and growth areas",
-  "homeOnboardingExploreGalaxy": "Explore knowledge map",
   "homeOnboardingResumeTitle": "Finish setup so Sparkle knows you better",
   "homeOnboardingResumeSummary": "Your learning profile and modeling chat are still pending. Explore freely first — the AI is ready whenever you are.",
   "homeOnboardingResumeCta": "Continue setup",
@@ -13990,181 +13844,6 @@
   "stuckJourneyInterventionDelegate": "Hand the mechanical part to a tool",
   "stuckJourneyInterventionCoExecute": "Let Sparkle work through it with you",
   "stuckHelpJourneyCta": "Let Sparkle walk through it with me",
-  "homeSlotDailyBriefing": "Daily briefing",
-  "homeSlotDailyBriefingReady": "{count} next actions · ready to start",
-  "@homeSlotDailyBriefingReady": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotDailyBriefingFallback": "Today's status & pace",
-  "homeSlotKeyMetrics": "Key metrics",
-  "homeSlotKeyMetricsStreak": "🔥 {streak}-day streak",
-  "@homeSlotKeyMetricsStreak": {
-    "placeholders": {
-      "streak": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotKeyMetricsFallback": "Progress, streak, momentum",
-  "homeSlotCommandCenter": "Command center",
-  "homeSlotCommandCenterNext": "Next: {label}",
-  "@homeSlotCommandCenterNext": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      }
-    }
-  },
-  "homeSlotCommandCenterFallback": "Pick up the next action",
-  "homeSlotUnderstanding": "Understanding",
-  "homeSlotUnderstandingSummary": "How Sparkle reads you",
-  "homeSlotReturnCaseFile": "Return case file",
-  "homeSlotReturnCaseFileSummary": "Where you left off",
-  "homeSlotGoalSnapshot": "Goal snapshot",
-  "homeSlotGoalSnapshotFallback": "Active goal snapshot",
-  "homeSlotMultiGoalBoard": "Multi-goal board",
-  "homeSlotMultiGoalDone": "{done} of {total} done",
-  "@homeSlotMultiGoalDone": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotMultiGoalFallback": "All goals at a glance",
-  "homeSlotTaskBoard": "Task board",
-  "homeSlotTaskBoardProgress": "{done}/{total} done",
-  "@homeSlotTaskBoardProgress": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotTaskBoardGoalHit": "{done}/{total} done · today's goal hit",
-  "@homeSlotTaskBoardGoalHit": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotTaskBoardToGo": "{done}/{total} done · {remaining} to go",
-  "@homeSlotTaskBoardToGo": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotTaskBoardFallback": "Today's tasks & progress",
-  "homeSlotExamSprint": "Exam sprint",
-  "homeSlotExamSprintDaysLeft": "{subject} · {days}d left",
-  "@homeSlotExamSprintDaysLeft": {
-    "placeholders": {
-      "subject": {
-        "type": "String"
-      },
-      "days": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotExamSprintNotStarted": "Not started · tap to set up",
-  "homeSlotExamSprintEmptyTitle": "Exam sprint",
-  "homeSlotExamSprintEmptyBody": "No active sprint yet. Set a target to see daily cadence and days left.",
-  "homeSlotExamSprintEmptyAction": "Create sprint",
-  "homeSlotUpdates": "Updates",
-  "homeSlotUpdatesSummary": "Notifications & insights",
-  "homeSlotGrowthQuality": "Growth quality",
-  "homeSlotGrowthQualitySummary": "Depth, stability, balance",
-  "homeSlotWeeklyNarrative": "Weekly narrative",
-  "homeSlotWeeklyNarrativeSummary": "This week's story",
-  "homeSlotCommunity": "Community",
-  "homeSlotCommunitySummary": "Partners & accountability",
-  "homeSlotAchievements": "Achievements",
-  "homeSlotAchievementsSummary": "Recent unlocks & milestones",
-  "homeSlotLearningHeatmap": "Learning heatmap",
-  "homeSlotLearningHeatmapSummary": "Last 30 days of activity",
-  "homeSlotWorkspaceCards": "Workspace cards",
-  "homeSlotWorkspaceCardsVisible": "{count} cards visible",
-  "@homeSlotWorkspaceCardsVisible": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "homeSlotWorkspaceCardsNone": "No cards enabled",
-  "homeEmptyDashboardTitle": "Your dashboard is empty",
-  "homeEmptyDashboardBody": "Tap \"Customize\" below to bring slots back.",
-  "homeCustomizeDashboard": "Customize dashboard",
-  "homeFailureAuthTitle": "Sign-in needed",
-  "homeFailureServerTitle": "Service issue",
-  "homeFailureValidationTitle": "Check request",
-  "homeFailureNetworkTitle": "Connection issue",
-  "homeFailureOfflineTitle": "Offline",
-  "homeFailureUnknownTitle": "Dashboard unavailable",
-  "homeFailureAuthAction": "Sign in",
-  "homeFailureOfflineAction": "Retry online",
-  "homeCommandCenterEyebrow": "Command Center",
-  "homeCommandCenterNoTasks": "No tasks today",
-  "homeCommandCenterHealth": "{percent}% health",
-  "@homeCommandCenterHealth": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
-  "homeHighPriority": "High priority",
-  "homeCompletingUpdatesProgress": "Completing it updates your plan progress",
-  "homeSparkleWillTurn": "Sparkle will turn it into a next step, progress, and risk signal.",
-  "homeRiskBottleneck": "Risk: {topic} is slowing progress",
-  "@homeRiskBottleneck": {
-    "placeholders": {
-      "topic": {
-        "type": "String"
-      }
-    }
-  },
-  "homeRiskDeadline": "Risk: {label}",
-  "@homeRiskDeadline": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      }
-    }
-  },
-  "homeRiskLowHealth": "Risk: plan health is low; recalibration may help",
-  "homeSelectGoal": "Select goal: {label}",
-  "@homeSelectGoal": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      }
-    }
-  },
-  "homeNoUrgentAction": "No urgent action is queued. Review, add context, or let Aurora reprioritize.",
   "goalIntentTitle": "Tell me what you want to achieve",
   "goalIntentHint": "One sentence works, e.g. \"Computer Networks final in 7 days, barely studied\"",
   "goalIntentUnderstanding": "Understanding…",
