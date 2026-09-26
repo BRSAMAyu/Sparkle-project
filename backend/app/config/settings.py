@@ -491,7 +491,9 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_MODEL_NAME: str = "deepseek-flash"
     LLM_REASON_MODEL_NAME: str = "deepseek-v4-pro"
-    LLM_PROVIDER: str = "qwen"  # 'qwen' | 'dashscope' | 'xiaomi' | 'deepseek' | 'zhipu' | 'openai' | 'hunyuan'（2026-09 主力切 Qwen；GLM 车道保留待用）
+    LLM_PROVIDER: str = (
+        "qwen"  # 'qwen' | 'dashscope' | 'xiaomi' | 'deepseek' | 'zhipu' | 'openai' | 'hunyuan'（2026-09 主力切 Qwen；GLM 车道保留待用）
+    )
     LLM_QUOTA_ENABLED: bool = False  # Disable token quota checks by default for demo recording
     LLM_DAILY_BUDGET_USD: float = 10.0  # Daily USD budget for LLM calls (cost_controller circuit breaker)
     RAG_DAILY_BUDGET_USD: float = 2.0  # Daily USD budget for RAG operations
