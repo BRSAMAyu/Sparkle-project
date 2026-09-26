@@ -237,7 +237,11 @@ class LLMFallbackWrapper:
     ):
         self.service_name = service_name
         self.default_fallback = default_fallback
-        self.default_json_fallback: dict[str, Any] | list[Any] = default_json_fallback or {}
+        # V3-FIX-242：哨兵判空——仅未提供（None）时落 {}；显式 falsy（[]/{}）原样保留，
+        # 不得被 `or {}` 真值链收敛（plan_llm 声明的 [] 曾被静默换成 {}）。
+        self.default_json_fallback: dict[str, Any] | list[Any] = (
+            default_json_fallback if default_json_fallback is not None else {}
+        )
         self.timeout = timeout
         self.retry_count = retry_count
 
@@ -271,10 +275,14 @@ class LLMFallbackWrapper:
         ``dict | list | None``——LLM 输出 JSON array 时本方法返回 list，
         不是解析失败。dict 消费面请用 ``json_as_dict`` 收窄，list 消费面用
         ``json_as_list``；不要假设返回恒为 dict。
+
+        契约（V3-FIX-242）：``fallback`` 以 ``is None`` 哨兵判定是否提供——
+        显式 falsy fallback（``[]``/``{}``）原样生效，不会被单例默认静默替换；
+        未提供（None）时才落 ``default_json_fallback``。
         """
         return await safe_llm_json_call(
             messages,
-            fallback=fallback or self.default_json_fallback,
+            fallback=fallback if fallback is not None else self.default_json_fallback,
             timeout=self.timeout,
             retry_count=self.retry_count,
             service=service,
