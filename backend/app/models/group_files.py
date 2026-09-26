@@ -33,7 +33,14 @@ class GroupFile(BaseModel):
     category: Mapped[str | None] = mapped_column(String(64), nullable=True)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     tags: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
-    trust_level: Mapped[GroupFileTrustLevel] = mapped_column(Enum(GroupFileTrustLevel), default=GroupFileTrustLevel.MEMBER, nullable=False, index=True)
+    # V3-FIX-149：DB 枚举 groupfiletrustlevel（gkb001）为小写值 {official, verified, member}，values_callable 对齐按值读写；
+    # 缺它则 ORM 按枚举名（MEMBER 等）写库 → InvalidTextRepresentationError 500，读 'member' 默认行 → LookupError 500。
+    trust_level: Mapped[GroupFileTrustLevel] = mapped_column(
+        Enum(GroupFileTrustLevel, values_callable=lambda obj: [e.value for e in obj]),
+        default=GroupFileTrustLevel.MEMBER,
+        nullable=False,
+        index=True,
+    )
     is_knowledge_base: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     citation_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
