@@ -280,7 +280,7 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           TESTING: 'true'
         run: |
-          pytest backend/tests -v --cov=backend/app --cov-report=xml
+          pytest backend/tests -v --cov=backend/app --cov-report=xml --timeout=300 --timeout-method=thread
 
       - name: Aurora Golden Text Snapshot Tests
         env:
