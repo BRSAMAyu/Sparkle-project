@@ -46,7 +46,7 @@ from app.core.trace_spine import current_recorder, current_trace_id, emit_span
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
 from app.services.llm.concurrency import llm_concurrency
-from app.services.llm.fallback import llm_fallback_manager
+from app.services.llm.fallback import get_final_model_key, llm_fallback_manager
 from app.services.llm.providers import OpenAICompatibleProvider
 
 # ---------------------------------------------------------------------------
@@ -1447,12 +1447,17 @@ class LLMService:
                     request_params["extra_body"] = self._extra_body
 
                 selection = self._current_selection
+                served_model_key: str | None = None
                 if selection:
                     response = await self._create_raw_completion_with_fallback(
                         selection,
                         request_params,
                         operation_type="chat_with_tools",
                     )
+                    # V3-FIX-303：记账/trace 归因按实际服务模型（fallback 换道后
+                    # ≠ 原选）；无 fallback 时 get_final_model_key() 恒等返回原选
+                    # 模型键，零行为变化。
+                    served_model_key = get_final_model_key() or selection.model_key
                 else:
                     response = await self.provider.client.chat.completions.create(**request_params)
 
@@ -1460,15 +1465,18 @@ class LLMService:
                 message = choice.message
 
                 if response.usage and selection is not None:
+                    # V3-FIX-303：model 维度 = 实际服务模型（selection 分支下
+                    # served_model_key 必非空）。
+                    accounting_model_key = served_model_key or selection.model_key
                     span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
                     span.set_attribute("llm.usage.total_tokens", response.usage.total_tokens)
                     _record_token_usage(
-                        selection.model_key, response.usage.prompt_tokens,
+                        accounting_model_key, response.usage.prompt_tokens,
                         response.usage.completion_tokens, source="chat_with_tools",
                     )
                     await record_llm_cost(
-                        selection.model_key, response.usage.prompt_tokens,
+                        accounting_model_key, response.usage.prompt_tokens,
                         response.usage.completion_tokens, source="chat_with_tools",
                     )
                     await _track_daily_user_tokens(user_id, response.usage.total_tokens or 0)
@@ -1559,27 +1567,34 @@ class LLMService:
                     request_params["extra_body"] = self._extra_body
 
                 selection = self._current_selection
+                served_model_key: str | None = None
                 if selection:
                     response = await self._create_raw_completion_with_fallback(
                         selection,
                         request_params,
                         operation_type="continue_with_tool_results",
                     )
+                    # V3-FIX-303：记账归因按实际服务模型（fallback 换道后 ≠ 原选）；
+                    # 无 fallback 时恒等原选模型键，零行为变化。
+                    served_model_key = get_final_model_key() or selection.model_key
                 else:
                     response = await self.provider.client.chat.completions.create(**request_params)
                 choice = response.choices[0]
                 message = choice.message
 
                 if response.usage and selection is not None:
+                    # V3-FIX-303：model 维度 = 实际服务模型（selection 分支下
+                    # served_model_key 必非空）。
+                    accounting_model_key = served_model_key or selection.model_key
                     span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
                     span.set_attribute("llm.usage.total_tokens", response.usage.total_tokens)
                     _record_token_usage(
-                        selection.model_key, response.usage.prompt_tokens,
+                        accounting_model_key, response.usage.prompt_tokens,
                         response.usage.completion_tokens, source="tool_results",
                     )
                     await record_llm_cost(
-                        selection.model_key, response.usage.prompt_tokens,
+                        accounting_model_key, response.usage.prompt_tokens,
                         response.usage.completion_tokens, source="tool_results",
                     )
 
@@ -1674,6 +1689,10 @@ class LLMService:
                 _finish_reason_value: str | None = None
 
                 selection = self._current_selection
+                # V3-FIX-303：实际服务模型由 fallback 管理器在首帧成功时承诺
+                # （首帧即换道终点），首帧到达即钉住——流式期间消费方可能嵌套
+                # 其他 LLM 调用，记账时刻再读 contextvar 有被覆写的窗口。
+                served_model_key: str | None = None
                 if selection:
                     chunk_stream = self._create_raw_stream_with_fallback(
                         selection,
@@ -1694,6 +1713,10 @@ class LLMService:
 
                 try:
                     async for chunk in chunk_stream:
+                        if selection is not None and served_model_key is None:
+                            # V3-FIX-303：首帧即读——此刻 contextvar 必为本次调用
+                            # 的实际服务模型（manager 先写后 yield 同一帧）。
+                            served_model_key = get_final_model_key()
                         if hasattr(chunk, 'usage') and chunk.usage:
                             usage_data = chunk.usage
 
@@ -1801,7 +1824,9 @@ class LLMService:
                     span.set_attribute("llm.usage.prompt_tokens", usage_data.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", usage_data.completion_tokens)
                     span.set_attribute("llm.usage.total_tokens", usage_data.total_tokens)
-                    model_name = selection.model_key if selection else "unknown"
+                    # V3-FIX-303：model 维度 = 实际服务模型（fallback 换道后 ≠
+                    # 原选；无 fallback/未钉住时恒等回落原选模型键，零行为变化）。
+                    model_name = served_model_key or (selection.model_key if selection else "unknown")
                     _record_token_usage(
                         model_name, usage_data.prompt_tokens or 0,
                         usage_data.completion_tokens or 0, source="stream_chat",
@@ -1851,7 +1876,12 @@ class LLMService:
                         status="error" if _llm_error else "ok",
                         duration_ms=(time.perf_counter() - _llm_t0) * 1000.0,
                         tags={
-                            "model": str(selection.model_key if selection else self.default_model),
+                            # V3-FIX-303：优先实际服务模型；零帧流未钉住时恒等
+                            # 回落原选模型键（时间线 span，token/cost 本就缺省 0）。
+                            "model": str(
+                                served_model_key
+                                or (selection.model_key if selection else self.default_model)
+                            ),
                             "cost_usd": 0.0,
                         },
                     )

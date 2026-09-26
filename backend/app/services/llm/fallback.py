@@ -18,6 +18,7 @@ LLM 模型回退管理器 (Model Fallback Manager)
 import asyncio
 import time
 from collections.abc import AsyncGenerator
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, cast
@@ -52,6 +53,26 @@ class FallbackAttempt:
     success: bool | None = None  # None=进行中, True=成功, False=失败
     error_message: str | None = None
     ttfc_ms: float | None = None  # Time To First Chunk
+
+
+# V3-FIX-303：fallback 实际服务模型外传通道。
+# 历史：final_model_key 只落在 FallbackSession（1 写 0 读），记账面
+# （token/成本/O-02 trace）全挂在调用前原选模型上——fallback 换道后
+# 服务在 model-b、账记在 model-a，成本归因失真（wt591 实验）。
+# 契约：execute_with_fallback / execute_stream_with_fallback 每次成功
+# （含首候选直连成功的恒等情形）都把实际服务模型键写入本 contextvar；
+# 调用方在 await / 首帧到达后经 get_final_model_key() 读取。asyncio
+# 按任务隔离 context，并发链路互不串扰。
+_final_model_key: ContextVar[str | None] = ContextVar("llm_final_model_key", default=None)
+
+
+def get_final_model_key() -> str | None:
+    """返回当前上下文最近一次 fallback 链实际服务成功的模型键（V3-FIX-303）。
+
+    无 fallback 时等于原选模型键（恒等语义，零行为变化）；本上下文尚未
+    发生过成功调用时为 None，调用方须回落到原选模型键。
+    """
+    return _final_model_key.get()
 
 
 @dataclass
@@ -515,7 +536,8 @@ class LLMModelFallbackManager:
             require_tools: 调用带工具 schema 时保持候选在主聊天能力层（E-02）
 
         Returns:
-            LLM 响应
+            LLM 响应。实际服务模型键经 ``get_final_model_key()`` 外传
+            （V3-FIX-303）：无 fallback 时等于原选模型键（恒等）。
 
         Raises:
             Exception: 所有尝试都失败后抛出最后一个异常
@@ -619,6 +641,9 @@ class LLMModelFallbackManager:
 
                 session.final_success = True
                 session.final_model_key = model_key
+                # V3-FIX-303：实际服务模型外传（含首候选直连=恒等），供
+                # token/成本/O-02 trace 记账面消费。
+                _final_model_key.set(model_key)
                 session.end_time = time.time()
 
                 # 记录回退成功
@@ -725,6 +750,10 @@ class LLMModelFallbackManager:
 
         Yields:
             流式响应内容
+
+        注意（V3-FIX-303）：实际服务模型键经 ``get_final_model_key()`` 外传
+        ——流式契约无法经返回值携带，故在首帧成功承诺时写入；无 fallback
+        时等于原选模型键（恒等）。
         """
         # 对于流式调用，我们只在首次连接时支持回退
         # 一旦开始接收数据，就不再回退（因为用户已经开始看到响应）
@@ -746,6 +775,9 @@ class LLMModelFallbackManager:
                             # 首个 chunk 到达，记录成功
                             model_key = self._get_model_key(selection)
                             await self.manager.health_tracker.record_success(model_key)
+                            # V3-FIX-303：流式实际服务模型外传（首帧即承诺，
+                            # 中途不再换道；含首候选直连=恒等），供记账面消费。
+                            _final_model_key.set(model_key)
                             # E-07：流式路径此前只报 Redis tracker，从不回流
                             # router 内存健康与自适应反馈——补齐（FIX-23 同源缺口）
                             llm_router.report_model_success(model_key)
