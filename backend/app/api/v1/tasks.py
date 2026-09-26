@@ -1017,8 +1017,15 @@ async def snooze_task(
 ):
     """Push one task to a later date without changing the plan structure."""
     task = await _get_user_task_or_404(db, task_id, current_user.id)
+    # V3-FIX-250：写侧 due_date 派生切用户本地日（修前 date.today() 是宿主机
+    # 本地日，UTC 宿主上上海用户本地已次日时 snooze 落错日网格）。tz 沿 233
+    # 先例——PushPreference.timezone 标量直查，缺省 Asia/Shanghai。
+    tz_name = valid_timezone_name(
+        await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == current_user.id))
+    )
+    today = local_date(utcnow(), tz_name)
     target_date = (request.target_date if request else None) or (
-        date.today() + timedelta(days=(request.days if request else 1))
+        today + timedelta(days=(request.days if request else 1))
     )
     task.due_date = target_date
     tags = list(task.tags or [])

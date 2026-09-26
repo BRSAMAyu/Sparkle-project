@@ -1349,7 +1349,11 @@ async def replan_plan(
     if not plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
 
-    today = date.today()
+    # V3-FIX-250：today 切用户本地日（修前 date.today() 是宿主机钟）——
+    # explicit_target<=today 422 拒绝、previous_target>=today 幂等判定与
+    # _derive_replan_target 新终点派生（写侧落库值）三处同源，上海凌晨
+    # （本地已次日）按宿主机日偏一日。
+    today = await _user_local_today(db, current_user.id)
     previous_target = plan.target_date
 
     tasks_result = await db.execute(
@@ -1585,7 +1589,10 @@ async def archive_plan_state(
         completion_rate = plan.progress or 0.0
         days_ahead = 0
         if plan.target_date:
-            today = date.today()
+            # V3-FIX-250：提前完成天数按用户本地日计（修前 date.today() 是宿主机
+            # 钟，UTC 宿主上上海用户按本地日历已到终点日仍记「提前 1 天」流入
+            # SPRINT_AHEAD 事件面）。
+            today = await _user_local_today(db, current_user.id)
             days_ahead = (plan.target_date - today).days if completion_rate >= 1.0 else 0
 
         # Check if sprint meets completion threshold (80%+)
