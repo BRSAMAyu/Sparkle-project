@@ -146,8 +146,7 @@ class Plan(BaseModel):
     goal = relationship("Goal", foreign_keys=[goal_id])
     tasks = relationship("Task", back_populates="plan", cascade="all, delete-orphan", lazy="dynamic")
 
-    def __repr__(self):
-        return f"<Plan(name={self.name}, type={self.type}, progress={self.progress})>"
+    __repr_fields__ = ("name", "type", "progress")
 
 
 # 创建索引

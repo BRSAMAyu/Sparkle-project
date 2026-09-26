@@ -54,8 +54,7 @@ class TaskResourceLink(BaseModel):
 
     task = relationship("Task", back_populates="resource_links")
 
-    def __repr__(self) -> str:
-        return f"<TaskResourceLink(task_id={self.task_id}, type={self.resource_type})>"
+    __repr_fields__ = ("task_id", "resource_type")
 
 
 class TaskKnowledgeLink(BaseModel):
@@ -77,8 +76,7 @@ class TaskKnowledgeLink(BaseModel):
     task = relationship("Task", back_populates="knowledge_links")
     knowledge_node = relationship("KnowledgeNode")
 
-    def __repr__(self) -> str:
-        return f"<TaskKnowledgeLink(task_id={self.task_id}, node_id={self.knowledge_node_id})>"
+    __repr_fields__ = ("task_id", "knowledge_node_id")
 
 
 Index("idx_task_resource_links_task_type", TaskResourceLink.task_id, TaskResourceLink.resource_type)

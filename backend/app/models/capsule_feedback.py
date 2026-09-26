@@ -46,8 +46,7 @@ class CapsuleFeedback(BaseModel):
     user = relationship("User", back_populates="capsule_feedbacks")
     capsule = relationship("CuriosityCapsule", back_populates="feedbacks")
 
-    def __repr__(self):
-        return f"<CapsuleFeedback(capsule_id={self.capsule_id}, rating={self.rating})>"
+    __repr_fields__ = ("capsule_id", "rating")
 
     def calculate_preference_deltas(self) -> tuple[float | None, float | None]:
         """

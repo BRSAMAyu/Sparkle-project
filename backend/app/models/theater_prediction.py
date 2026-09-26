@@ -92,8 +92,4 @@ class TheaterPrediction(BaseModel):
 
     user = relationship("User")
 
-    def __repr__(self) -> str:
-        return (
-            f"<TheaterPrediction(id={self.id}, prediction_id={self.prediction_id}, "
-            f"topic={self.topic!r}, accuracy_status={self.accuracy_status})>"
-        )
+    __repr_fields__ = ("prediction_id", "accuracy_status")

@@ -62,8 +62,7 @@ class BackgroundTask(BaseModel):
     external_task_id: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    def __repr__(self):
-        return f"<BackgroundTask(id={self.id}, type={self.task_type}, status={self.status})>"
+    __repr_fields__ = ("task_type", "status")
 
     def to_dict(self):
         """Convert to dictionary for API responses"""

@@ -204,8 +204,7 @@ class AgentRun(BaseModel):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
-    def __repr__(self) -> str:
-        return f"<AgentRun(id={self.id}, status={self.status}, kind={self.kind})>"
+    __repr_fields__ = ("status", "kind")
 
 
 class AgentRunTransition(BaseModel):

@@ -29,7 +29,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 
 from app.db.session import Base
-from app.models.base import GUID, BaseModel
+from app.models.base import GUID, BaseModel, SafeReprMixin
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
@@ -60,7 +60,7 @@ class CollaborativeGalaxy(BaseModel):
     permissions = relationship("GalaxyUserPermission", back_populates="galaxy", cascade="all, delete-orphan")
 
 
-class GalaxyUserPermission(Base):
+class GalaxyUserPermission(SafeReprMixin, Base):
     """
     协作星图用户权限表
     """
@@ -80,7 +80,7 @@ class GalaxyUserPermission(Base):
     user = relationship("User")
 
 
-class CRDTSnapshot(Base):
+class CRDTSnapshot(SafeReprMixin, Base):
     """
     CRDT 状态快照表
     存储 Yjs 文档的二进制状态
@@ -95,7 +95,7 @@ class CRDTSnapshot(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
 
-class CRDTOperationLog(Base):
+class CRDTOperationLog(SafeReprMixin, Base):
     """
     协作操作日志表
     用于审计和冲突回溯
@@ -232,7 +232,7 @@ class NodeRelation(BaseModel):
     target_node = relationship("KnowledgeNode", foreign_keys=[target_node_id], back_populates="target_relations")
 
 
-class UserNodeStatus(Base):
+class UserNodeStatus(SafeReprMixin, Base):
     """
     用户节点状态表 (User Node Status)
     记录用户与星辰的关系 (掌握度、投入时间等)
@@ -284,8 +284,7 @@ class UserNodeStatus(Base):
     user = relationship("User", backref="node_statuses")
     node = relationship("KnowledgeNode", back_populates="user_statuses")
 
-    def __repr__(self):
-        return f"<UserNodeStatus(user_id={self.user_id}, node_id={self.node_id}, mastery={self.mastery_score})>"
+    __repr_fields__ = ("user_id", "node_id", "mastery_score")
 
 
 class StudyRecord(BaseModel):

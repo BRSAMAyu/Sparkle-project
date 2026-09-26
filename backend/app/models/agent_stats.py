@@ -8,10 +8,10 @@ from sqlalchemy import JSON, DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
-from app.models.base import GUID
+from app.models.base import GUID, SafeReprMixin
 
 
-class AgentExecutionStats(Base):
+class AgentExecutionStats(SafeReprMixin, Base):
     """Agent执行统计表"""
     __tablename__ = 'agent_execution_stats'
 
@@ -45,8 +45,7 @@ class AgentExecutionStats(Base):
         Index('ix_agent_stats_user_agent_type', 'user_id', 'agent_type'),
     )
 
-    def __repr__(self):
-        return f"<AgentExecutionStats(id={self.id}, user={self.user_id}, agent={self.agent_type}, duration={self.duration_ms}ms)>"
+    __repr_fields__ = ("user_id", "agent_type", "duration_ms")
 
 
 # Materialized View representation (read-only)

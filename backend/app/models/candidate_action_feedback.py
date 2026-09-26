@@ -11,12 +11,12 @@ from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import GUID, Base
+from app.models.base import GUID, Base, SafeReprMixin
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
-class CandidateActionFeedback(Base):
+class CandidateActionFeedback(SafeReprMixin, Base):
     """
     User feedback on candidate actions
 
@@ -44,12 +44,7 @@ class CandidateActionFeedback(Base):
     # Relationships
     user = relationship("User", back_populates="candidate_feedbacks")
 
-    def __repr__(self):
-        return (
-            f"<CandidateActionFeedback(id={self.id}, user_id={self.user_id}, "
-            f"action_type={self.action_type}, feedback_type={self.feedback_type}, "
-            f"executed={self.executed})>"
-        )
+    __repr_fields__ = ("user_id", "action_type", "feedback_type", "executed")
 
     def to_dict(self):
         """Convert to dictionary for JSON serialization"""

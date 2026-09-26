@@ -9,6 +9,7 @@ from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
+from app.models.base import SafeReprMixin
 
 
 def utc_now():
@@ -16,7 +17,7 @@ def utc_now():
     return datetime.now(UTC)
 
 
-class Subject(Base):
+class Subject(SafeReprMixin, Base):
     """
     学科标准表 - 解决数据污染问题
 
@@ -71,5 +72,4 @@ class Subject(Base):
         nullable=False
     )
 
-    def __repr__(self):
-        return f"<Subject(id={self.id}, name={self.name})>"
+    __repr_fields__ = ("name",)

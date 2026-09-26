@@ -59,8 +59,7 @@ class TaskFeedback(BaseModel):
     user = relationship("User", back_populates="task_feedbacks")
     task = relationship("Task", back_populates="feedbacks")
 
-    def __repr__(self):
-        return f"<TaskFeedback(task_id={self.task_id}, completion_quality={self.completion_quality})>"
+    __repr_fields__ = ("task_id", "completion_quality")
 
     def calculate_preference_deltas(self) -> tuple[float | None, float | None]:
         """

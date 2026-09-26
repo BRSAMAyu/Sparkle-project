@@ -108,8 +108,7 @@ class PlanState(BaseModel):
     plan = relationship("Plan", backref="plan_state", uselist=False)
     user = relationship("User", backref="plan_states")
 
-    def __repr__(self):
-        return f"<PlanState(plan_id={self.plan_id}, status={self.status}, version={self.version})>"
+    __repr_fields__ = ("plan_id", "status", "version")
 
     def to_dict(self):
         """Convert to dictionary for serialization"""

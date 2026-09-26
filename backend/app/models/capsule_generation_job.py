@@ -58,8 +58,7 @@ class CapsuleGenerationJob(BaseModel):
     # Relationships
     user = relationship("User", back_populates="capsule_generation_jobs")
 
-    def __repr__(self):
-        return f"<CapsuleGenerationJob(id={self.id}, status={self.status}, type={self.generation_type})>"
+    __repr_fields__ = ("status", "generation_type")
 
     @property
     def status_enum(self) -> JobStatus | None:

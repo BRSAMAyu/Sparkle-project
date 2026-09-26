@@ -13,10 +13,10 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
-from app.models.base import GUID
+from app.models.base import GUID, SafeReprMixin
 
 
-class SecurityAuditLog(Base):
+class SecurityAuditLog(SafeReprMixin, Base):
     """安全审计日志表"""
 
     __tablename__ = "security_audit_logs"
@@ -50,11 +50,10 @@ class SecurityAuditLog(Base):
     # 关系
     user = relationship("User", back_populates="security_audit_logs")
 
-    def __repr__(self):
-        return f"<SecurityAuditLog {self.event_type} {self.timestamp}>"
+    __repr_fields__ = ("event_type", "timestamp")
 
 
-class AdminAuditLog(Base):
+class AdminAuditLog(SafeReprMixin, Base):
     """Append-only audit trail for privileged API operations."""
 
     __tablename__ = "admin_audit_log"
@@ -114,11 +113,10 @@ class AdminAuditLog(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
-    def __repr__(self):
-        return f"<AdminAuditLog {self.category} {self.action} {self.outcome}>"
+    __repr_fields__ = ("category", "action", "outcome")
 
 
-class DataAccessLog(Base):
+class DataAccessLog(SafeReprMixin, Base):
     """数据访问日志表"""
     __tablename__ = "data_access_logs"
 
@@ -147,11 +145,10 @@ class DataAccessLog(Base):
     # 关系
     user = relationship("User", back_populates="data_access_logs")
 
-    def __repr__(self):
-        return f"<DataAccessLog {self.user_id} {self.resource_type}/{self.resource_id} {self.action}>"
+    __repr_fields__ = ("user_id", "resource_type", "resource_id", "action")
 
 
-class SystemConfigChangeLog(Base):
+class SystemConfigChangeLog(SafeReprMixin, Base):
     """系统配置变更日志表"""
     __tablename__ = "system_config_change_logs"
 
@@ -179,11 +176,10 @@ class SystemConfigChangeLog(Base):
     # 关系
     changer = relationship("User", back_populates="system_config_change_logs")
 
-    def __repr__(self):
-        return f"<SystemConfigChangeLog {self.config_key} {self.change_type}>"
+    __repr_fields__ = ("config_key", "change_type")
 
 
-class ComplianceCheckLog(Base):
+class ComplianceCheckLog(SafeReprMixin, Base):
     """合规性检查日志表"""
     __tablename__ = "compliance_check_logs"
 
@@ -210,8 +206,7 @@ class ComplianceCheckLog(Base):
     # 关系
     executor = relationship("User", back_populates="compliance_check_logs")
 
-    def __repr__(self):
-        return f"<ComplianceCheckLog {self.check_type} {self.status}>"
+    __repr_fields__ = ("check_type", "status")
 
 
 # 在User模型中添加关系（需要更新User模型）

@@ -9,10 +9,10 @@ from typing import Any
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import GUID, Base
+from app.models.base import GUID, Base, SafeReprMixin
 
 
-class UserToolHistory(Base):
+class UserToolHistory(SafeReprMixin, Base):
     """用户工具执行历史表
 
     用途:
@@ -67,10 +67,7 @@ class UserToolHistory(Base):
         Index('ix_user_tool_history_metrics', 'user_id', 'tool_name', 'success', 'created_at'),
     )
 
-    def __repr__(self):
-        return (f"<UserToolHistory(id={self.id}, user={self.user_id}, "
-                f"tool={self.tool_name}, success={self.success}, "
-                f"time={self.execution_time_ms}ms)>")
+    __repr_fields__ = ("user_id", "tool_name", "success", "execution_time_ms")
 
     def to_dict(self):
         return {

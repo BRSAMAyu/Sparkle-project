@@ -329,8 +329,7 @@ class User(BaseModel):
         lazy="dynamic",
     )
 
-    def __repr__(self):
-        return f"<User(username={self.username}, email={self.email})>"
+    __repr_fields__ = ("username", "email")
 
 
 class PushPreference(BaseModel):
@@ -359,8 +358,7 @@ class PushPreference(BaseModel):
     # 关系
     user = relationship("User", back_populates="push_preference")
 
-    def __repr__(self):
-        return f"<PushPreference(user_id={self.user_id}, timezone={self.timezone})>"
+    __repr_fields__ = ("user_id", "timezone")
 
 
 class UserDevice(BaseModel):
@@ -393,8 +391,7 @@ class UserDevice(BaseModel):
     # 元数据 (使用 device_metadata 避免 SQLAlchemy 保留字冲突)
     device_metadata: Mapped[Any] = mapped_column(JSON, nullable=True)  # 额外设备信息
 
-    def __repr__(self):
-        return f"<UserDevice(user_id={self.user_id}, platform={self.platform}, is_active={self.is_active})>"
+    __repr_fields__ = ("user_id", "platform", "is_active")
 
 
 class LoginAttempt(BaseModel):
@@ -411,8 +408,7 @@ class LoginAttempt(BaseModel):
     # 关系
     user = relationship("User", back_populates="login_attempts")
 
-    def __repr__(self):
-        return f"<LoginAttempt username={self.username} success={self.success} at={self.attempted_at}>"
+    __repr_fields__ = ("username", "success", "attempted_at")
 
 
 # 创建索引

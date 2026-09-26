@@ -75,8 +75,7 @@ class NextActionSelection(BaseModel):
     # 额外上下文信息
     context: Mapped[Any] = mapped_column(JSONCompat, nullable=True)  # 扩展信息
 
-    def __repr__(self):
-        return f"<NextActionSelection(user_id={self.user_id}, action_type={self.action_type}, selected={self.selected})>"
+    __repr_fields__ = ("user_id", "action_type", "selected")
 
     def to_dict(self) -> dict[str, Any]:
         """转换为字典格式"""

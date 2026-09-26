@@ -89,8 +89,7 @@ class MemoryEvolution(BaseModel):
     # Timestamp
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True, doc="创建时间")
 
-    def __repr__(self):
-        return f"<MemoryEvolution(id={self.id}, memory_id={self.memory_id}, change_reason={self.change_reason})>"
+    __repr_fields__ = ("memory_id", "change_reason")
 
 
 class EvolutionPrediction(BaseModel):
@@ -135,5 +134,4 @@ class EvolutionPrediction(BaseModel):
     actualized_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True, doc="实际发生时间")
     actualization_error: Mapped[float] = mapped_column(Float, nullable=True, doc="预测误差")
 
-    def __repr__(self):
-        return f"<EvolutionPrediction(id={self.id}, memory_id={self.memory_id}, type={self.prediction_type})>"
+    __repr_fields__ = ("memory_id", "prediction_type")

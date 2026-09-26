@@ -9,7 +9,7 @@ from sqlalchemy import DateTime, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import GUID, Base
+from app.models.base import GUID, Base, SafeReprMixin
 
 try:
     from sqlalchemy import JSON
@@ -21,7 +21,7 @@ except ImportError:
     JSONBCompat = JSON()
 
 
-class DistilledStrategyCacheEntry(Base):
+class DistilledStrategyCacheEntry(SafeReprMixin, Base):
     """Persisted L2 inference-cache record for a distilled strategy."""
 
     __tablename__ = "distilled_strategy_cache"

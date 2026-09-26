@@ -12,6 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
 from app.db.session import Base
+from app.models.base import SafeReprMixin
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 ArrayStringCompat = ARRAY(String).with_variant(JSON(), "sqlite")
@@ -43,7 +44,7 @@ ArrayUUIDCompat = ARRAY(UUID(as_uuid=True)).with_variant(_UUIDListJSON(), "sqlit
 ArrayTextCompat = ARRAY(Text).with_variant(JSON(), "sqlite")
 
 
-class ErrorRecord(Base):
+class ErrorRecord(SafeReprMixin, Base):
     """
     ErrorRecord - 错题本核心模型
     采用 "Flat Table" 设计，利用 PostgreSQL 的 JSONB 和 ARRAY 特性减少 JOIN 查询。

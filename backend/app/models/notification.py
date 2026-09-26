@@ -32,8 +32,7 @@ class Notification(BaseModel):
     # 关系
     user = relationship("User", backref="notifications")
 
-    def __repr__(self):
-        return f"<Notification(title={self.title}, user_id={self.user_id})>"
+    __repr_fields__ = ("title", "user_id")
 
 
 class PushHistory(BaseModel):
@@ -58,5 +57,4 @@ class PushHistory(BaseModel):
     # 关系
     user = relationship("User", backref="push_histories")
 
-    def __repr__(self):
-        return f"<PushHistory(user_id={self.user_id}, type={self.trigger_type}, status={self.status})>"
+    __repr_fields__ = ("user_id", "trigger_type", "status")

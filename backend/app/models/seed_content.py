@@ -140,8 +140,7 @@ class SeedLibrary(BaseModel):
         cascade="all, delete-orphan",
     )
 
-    def __repr__(self):
-        return f"<SeedLibrary(id={self.id}, name={self.name}, category={self.category})>"
+    __repr_fields__ = ("name", "category")
 
     @property
     def is_visible_to_public(self) -> bool:
@@ -235,8 +234,7 @@ class SeedItem(BaseModel):
     # 关系
     library = relationship("SeedLibrary", back_populates="items")
 
-    def __repr__(self):
-        return f"<SeedItem(id={self.id}, title={self.title}, type={self.item_type})>"
+    __repr_fields__ = ("title", "item_type")
 
     @property
     def is_few_shot_example(self) -> bool:
@@ -309,8 +307,7 @@ class UserLibrarySubscription(BaseModel):
     # 关系
     library = relationship("SeedLibrary", back_populates="subscriptions")
 
-    def __repr__(self):
-        return f"<UserLibrarySubscription(user_id={self.user_id}, library_id={self.library_id})>"
+    __repr_fields__ = ("user_id", "library_id")
 
     def mark_used(self) -> None:
         """标记为已使用"""
@@ -355,8 +352,4 @@ class SeedLibraryRating(HardDeleteBaseModel):
 
     library = relationship("SeedLibrary", back_populates="ratings")
 
-    def __repr__(self):
-        return (
-            f"<SeedLibraryRating(user_id={self.user_id}, "
-            f"library_id={self.library_id}, score={self.score})>"
-        )
+    __repr_fields__ = ("user_id", "library_id", "score")

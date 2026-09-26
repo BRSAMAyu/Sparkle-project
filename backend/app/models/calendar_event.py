@@ -72,8 +72,7 @@ class CalendarEvent(BaseModel):
     task = relationship("Task", backref="calendar_event")
     plan = relationship("Plan", backref="calendar_events")
 
-    def __repr__(self):
-        return f"<CalendarEvent(title={self.title}, start_time={self.start_time})>"
+    __repr_fields__ = ("title", "start_time")
 
     @property
     def duration_minutes(self) -> int:

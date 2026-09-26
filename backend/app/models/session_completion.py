@@ -7,10 +7,10 @@ from sqlalchemy import DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
-from app.models.base import GUID
+from app.models.base import GUID, SafeReprMixin
 
 
-class SessionCompletion(Base):
+class SessionCompletion(SafeReprMixin, Base):
     __tablename__ = "session_completions"
 
     session_id: Mapped[str] = mapped_column(String(255), primary_key=True)

@@ -29,5 +29,4 @@ class CapsuleFavorite(BaseModel):
     user = relationship("User", back_populates="capsule_favorites")
     capsule = relationship("CuriosityCapsule", back_populates="favorites")
 
-    def __repr__(self):
-        return f"<CapsuleFavorite(user_id={self.user_id}, capsule_id={self.capsule_id})>"
+    __repr_fields__ = ("user_id", "capsule_id")

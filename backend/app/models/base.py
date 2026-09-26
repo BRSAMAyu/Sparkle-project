@@ -5,10 +5,12 @@ Base Model Classes
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Any, TypeVar
+from typing import Any, ClassVar, TypeVar
 
-from sqlalchemy import DateTime, select
+from sqlalchemy import DateTime, exc, select
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -16,6 +18,51 @@ from sqlalchemy.types import CHAR, TypeDecorator
 
 from app.core.time_utils import utcnow as _utcnow
 from app.db.session import Base
+
+
+class SafeReprMixin:
+    """
+    IO-free ``__repr__`` for ORM models（V3-FIX-298 族防御加固）.
+
+    选型依据：SQLAlchemy 2.x 没有内置的 repr 生成控制——``MappedAsDataclass``
+    生成的 dataclass repr 会经描述符读取全部映射属性（含 lazy 关系），恰恰是
+    事故放大器而非防御。官方提供的"只读已加载值"机制是
+    ``inspect(instance).dict``（InstanceState.dict）：它绕过
+    InstrumentedAttribute 描述符直接读已加载值字典，因此本 mixin 的 repr
+
+    - 永不触发 lazy load / 过期属性刷新（greenlet 上下文外 DB IO）；
+    - 永不抛 MissingGreenlet / DetachedInstanceError；
+    - 对 expired / detached / expunged 实例退化为 ``id=?``（值未加载），
+      而不是毒化共享会话。
+
+    子类可用 ``__repr_fields__`` 追加标量字段（沿用旧手写 repr 的信息价值）；
+    仅渲染已加载值，未加载的渲染 ``?``。字段名与主键同名时跳过（主键已渲染）。
+    """
+
+    __repr_fields__: ClassVar[tuple[str, ...]] = ()
+
+    def __repr__(self) -> str:
+        cls_name = type(self).__name__
+        try:
+            state = sa_inspect(self)
+            if state is None:  # pragma: no cover - 非映射对象防御
+                return f"<{cls_name} (unmapped)>"
+        except exc.NoInspectionAvailable:  # pragma: no cover - 非映射对象防御
+            return f"<{cls_name} (unmapped)>"
+        loaded: Mapping[str, Any] = state.dict
+
+        parts: list[str] = []
+        seen: set[str] = set()
+        for column in state.mapper.primary_key:
+            name = column.key
+            seen.add(name)
+            parts.append(f"{name}={loaded[name]}" if name in loaded else f"{name}=?")
+        for name in self.__repr_fields__:
+            if name in seen:
+                continue
+            seen.add(name)
+            parts.append(f"{name}={loaded[name]}" if name in loaded else f"{name}=?")
+        return f"<{cls_name}({', '.join(parts)})>"
 
 
 class GUID(TypeDecorator):
@@ -88,7 +135,7 @@ class SoftDeleteMixin:
         return cls.deleted_at.isnot(None)
 
 
-class BaseModel(SoftDeleteMixin, Base):
+class BaseModel(SafeReprMixin, SoftDeleteMixin, Base):
     """
     Base model with common fields
     包含 id, created_at, updated_at, deleted_at 字段
@@ -110,9 +157,6 @@ class BaseModel(SoftDeleteMixin, Base):
         onupdate=_utcnow,
         nullable=False,
     )
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}(id={self.id})>"
 
     @classmethod
     async def get_by_id(
@@ -191,7 +235,7 @@ class BaseModel(SoftDeleteMixin, Base):
             await db.flush()
 
 
-class HardDeleteBaseModel(Base):
+class HardDeleteBaseModel(SafeReprMixin, Base):
     """
     不支持软删除的基础模型
     用于不需要软删除功能的表（如 IdempotencyKey, Job 等临时数据）
@@ -212,9 +256,6 @@ class HardDeleteBaseModel(Base):
         onupdate=_utcnow,
         nullable=False,
     )
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}(id={self.id})>"
 
     @classmethod
     async def get_by_id(

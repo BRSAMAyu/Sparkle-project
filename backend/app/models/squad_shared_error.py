@@ -74,8 +74,4 @@ class SquadSharedError(BaseModel):
         Index("idx_squad_shared_error_sharer", "sharer_id", "group_id"),
     )
 
-    def __repr__(self) -> str:  # noqa: D105
-        return (
-            f"<SquadSharedError(id={self.id}, group_id={self.group_id}, error_id={self.error_id}, "
-            f"sharer_id={self.sharer_id})>"
-        )
+    __repr_fields__ = ("group_id", "error_id", "sharer_id")

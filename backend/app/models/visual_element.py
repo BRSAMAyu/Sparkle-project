@@ -28,7 +28,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
-from app.models.base import GUID, BaseModel
+from app.models.base import GUID, BaseModel, SafeReprMixin
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
@@ -112,8 +112,7 @@ class VisualElement(BaseModel):
     season_start: Mapped[str] = mapped_column(String(10), nullable=True)  # "03-01" 表示3月1日开始
     season_end: Mapped[str] = mapped_column(String(10), nullable=True)  # "05-31" 表示5月31日结束
 
-    def __repr__(self):
-        return f"<VisualElement(id={self.id}, name={self.name}, type={self.element_type})>"
+    __repr_fields__ = ("name", "element_type")
 
     @staticmethod
     def _normalize_locale(locale: str | None) -> str | None:
@@ -144,7 +143,7 @@ class VisualElement(BaseModel):
         return self.description
 
 
-class UserVisualElement(Base):
+class UserVisualElement(SafeReprMixin, Base):
     """用户解锁的视觉元素记录"""
 
     __tablename__ = "user_visual_elements"
@@ -168,11 +167,10 @@ class UserVisualElement(Base):
     # 关系
     element = relationship("VisualElement")
 
-    def __repr__(self):
-        return f"<UserVisualElement(user_id={self.user_id}, element_id={self.element_id})>"
+    __repr_fields__ = ("user_id", "element_id")
 
 
-class UserVisualConfig(Base):
+class UserVisualConfig(SafeReprMixin, Base):
     """用户当前视觉配置（装备状态）"""
 
     __tablename__ = "user_visual_configs"
@@ -195,8 +193,7 @@ class UserVisualConfig(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
 
-    def __repr__(self):
-        return f"<UserVisualConfig(user_id={self.user_id}, bg={self.equipped_background_id})>"
+    __repr_fields__ = ("user_id", "equipped_background_id")
 
 
 # 创建索引

@@ -85,8 +85,7 @@ class PhotonTransactionHistory(BaseModel):
         Index("ix_photon_transaction_history_user_id_created_at", "user_id", "created_at"),
     )
 
-    def __repr__(self):
-        return f"<PhotonTransactionHistory(id={self.id}, user_id={self.user_id}, type={self.transaction_type}, amount={self.amount})>"
+    __repr_fields__ = ("user_id", "transaction_type", "amount")
 
 
 class ShopItem(BaseModel):
@@ -130,8 +129,7 @@ class ShopItem(BaseModel):
             return True
         return self.stock_quantity is not None and self.stock_quantity > 0
 
-    def __repr__(self):
-        return f"<ShopItem(id={self.id}, name={self.name}, type={self.item_type}, price={self.price_photons})>"
+    __repr_fields__ = ("name", "item_type", "price_photons")
 
 
 class ShopPurchase(BaseModel):
@@ -154,8 +152,7 @@ class ShopPurchase(BaseModel):
         Index("ix_shop_purchases_user_id_created_at", "user_id", "created_at"),
     )
 
-    def __repr__(self):
-        return f"<ShopPurchase(id={self.id}, user_id={self.user_id}, item_id={self.item_id}, price={self.price_paid})>"
+    __repr_fields__ = ("user_id", "item_id", "price_paid")
 
 
 class UserConsumable(BaseModel):
@@ -191,5 +188,4 @@ class UserConsumable(BaseModel):
         """是否有效（未过期且有库存）"""
         return not self.is_expired and self.quantity > 0
 
-    def __repr__(self):
-        return f"<UserConsumable(id={self.id}, user_id={self.user_id}, effect_type={self.effect_type}, quantity={self.quantity})>"
+    __repr_fields__ = ("user_id", "effect_type", "quantity")

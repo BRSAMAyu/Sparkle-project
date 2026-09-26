@@ -261,8 +261,7 @@ class Card(BaseModel):
         Index("ix_cards_type_status", "card_type", "lifecycle_status"),
     )
 
-    def __repr__(self):
-        return f"<Card(id={self.id}, type={self.card_type}, status={self.lifecycle_status})>"
+    __repr_fields__ = ("card_type", "lifecycle_status")
 
 
 # ---------------------------------------------------------------------------
@@ -295,8 +294,7 @@ class CardEdge(BaseModel):
         UniqueConstraint("from_card_id", "to_card_id", "edge_type", name="uq_card_edge_unique"),
     )
 
-    def __repr__(self):
-        return f"<CardEdge(from={self.from_card_id}, to={self.to_card_id}, type={self.edge_type})>"
+    __repr_fields__ = ("from_card_id", "to_card_id", "edge_type")
 
 
 # ---------------------------------------------------------------------------
@@ -338,8 +336,7 @@ class TaskOccurrence(BaseModel):
         Index("ix_occurrences_plan_date", "plan_card_id", "scheduled_for"),
     )
 
-    def __repr__(self):
-        return f"<TaskOccurrence(id={self.id}, series={self.series_card_id}, status={self.occurrence_status})>"
+    __repr_fields__ = ("series_card_id", "occurrence_status")
 
 
 # ---------------------------------------------------------------------------
@@ -376,8 +373,7 @@ class PlanningArtifact(BaseModel):
         UniqueConstraint("plan_card_id", "artifact_type", "version", name="uq_artifact_version"),
     )
 
-    def __repr__(self):
-        return f"<PlanningArtifact(id={self.id}, type={self.artifact_type}, v{self.version})>"
+    __repr_fields__ = ("artifact_type", "version")
 
 
 # ---------------------------------------------------------------------------
@@ -431,8 +427,7 @@ class InterventionRecord(BaseModel):
         Index("ix_intervention_outcome", "outcome_status", "outcome_window_days"),
     )
 
-    def __repr__(self):
-        return f"<InterventionRecord(id={self.id}, trigger={self.trigger_type}, status={self.acceptance_status})>"
+    __repr_fields__ = ("trigger_type", "acceptance_status")
 
 
 # ---------------------------------------------------------------------------
@@ -458,8 +453,7 @@ class CardSnapshot(BaseModel):
         Index("ix_card_snapshots_owner_type", "source_owner_id", "source_card_type"),
     )
 
-    def __repr__(self):
-        return f"<CardSnapshot(id={self.id}, root={self.root_card_id}, type={self.source_card_type})>"
+    __repr_fields__ = ("root_card_id", "source_card_type")
 
 
 # ---------------------------------------------------------------------------
@@ -498,8 +492,7 @@ class CardShareRecord(BaseModel):
         Index("ix_card_share_owner_scope", "shared_by_user_id", "scope"),
     )
 
-    def __repr__(self):
-        return f"<CardShareRecord(id={self.id}, scope={self.scope}, permission={self.permission})>"
+    __repr_fields__ = ("scope", "permission")
 
 
 # ---------------------------------------------------------------------------
@@ -524,5 +517,4 @@ class CardAdoptionRecord(BaseModel):
 
     __table_args__ = (Index("ix_card_adoption_user_mode", "adopter_user_id", "import_mode"),)
 
-    def __repr__(self):
-        return f"<CardAdoptionRecord(id={self.id}, mode={self.import_mode}, adopter={self.adopter_user_id})>"
+    __repr_fields__ = ("import_mode", "adopter_user_id")

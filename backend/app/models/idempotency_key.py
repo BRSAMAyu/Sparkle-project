@@ -10,10 +10,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.db.session import Base
-from app.models.base import GUID
+from app.models.base import GUID, SafeReprMixin
 
 
-class IdempotencyKey(Base):
+class IdempotencyKey(SafeReprMixin, Base):
     """
     幂等键记录表
     用于存储 API 请求的幂等性键和响应缓存
@@ -38,8 +38,7 @@ class IdempotencyKey(Base):
     # 关系
     user = relationship("User")
 
-    def __repr__(self):
-        return f"<IdempotencyKey(key={self.key})>"
+    __repr_fields__ = ("key",)
 
 
 # 复合索引：用于清理过期记录

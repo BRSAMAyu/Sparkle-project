@@ -49,8 +49,4 @@ class StuckJourneyCorrection(BaseModel):
     schema_version: Mapped[str] = mapped_column(String(32), nullable=False, default="")
     corrected_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
-    def __repr__(self) -> str:  # pragma: no cover - repr only
-        return (
-            f"<StuckJourneyCorrection(id={self.id}, user_id={self.user_id}, "
-            f"friction_type={self.friction_type}, surface={self.surface})>"
-        )
+    __repr_fields__ = ("user_id", "friction_type", "surface")

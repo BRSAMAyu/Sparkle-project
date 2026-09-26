@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
-from app.models.base import GUID, BaseModel
+from app.models.base import GUID, BaseModel, SafeReprMixin
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
@@ -93,7 +93,7 @@ Index("idx_unresolved_conflicts_user_status", UnresolvedConflict.user_id, Unreso
 Index("idx_unresolved_conflicts_user_conflict_key", UnresolvedConflict.user_id, UnresolvedConflict.conflict_key)
 
 
-class RoutingDecisionLog(Base):
+class RoutingDecisionLog(SafeReprMixin, Base):
     __tablename__ = "routing_decision_log"
 
     decision_id: Mapped[Any] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4, nullable=False)

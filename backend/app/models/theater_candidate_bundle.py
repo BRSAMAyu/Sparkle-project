@@ -40,8 +40,4 @@ class TheaterCandidateBundle(BaseModel):
 
     user = relationship("User")
 
-    def __repr__(self) -> str:
-        return (
-            f"<TheaterCandidateBundle(id={self.id}, prediction_id={self.prediction_id}, "
-            f"mode={self.target_resolution_mode}, status={self.status})>"
-        )
+    __repr_fields__ = ("prediction_id", "target_resolution_mode", "status")

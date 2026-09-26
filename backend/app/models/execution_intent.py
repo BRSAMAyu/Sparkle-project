@@ -164,8 +164,7 @@ class ExecutionIntent(BaseModel):
         Index("idx_exec_intent_external_run", "external_run_id"),
     )
 
-    def __repr__(self):
-        return f"<ExecutionIntent(task_id={self.task_id}, status={self.status}, executor={self.executor})>"
+    __repr_fields__ = ("task_id", "status", "executor")
 
     def to_dict(self) -> dict:
         return {

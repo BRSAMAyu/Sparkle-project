@@ -199,8 +199,7 @@ class Task(BaseModel):
         lazy="dynamic",
     )
 
-    def __repr__(self):
-        return f"<Task(title={self.title}, status={self.status})>"
+    __repr_fields__ = ("title", "status")
 
     @property
     def action_plan(self) -> dict | None:
@@ -249,8 +248,7 @@ class SubTask(BaseModel):
     # 关系
     parent_task = relationship("Task", back_populates="subtasks")
 
-    def __repr__(self):
-        return f"<SubTask(title={self.title}, status={self.status})>"
+    __repr_fields__ = ("title", "status")
 
 
 # SubTask 索引

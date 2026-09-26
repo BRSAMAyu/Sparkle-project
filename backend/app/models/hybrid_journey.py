@@ -84,8 +84,4 @@ class HybridJourneyArtifact(BaseModel):
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
-    def __repr__(self) -> str:  # pragma: no cover - repr only
-        return (
-            f"<HybridJourneyArtifact(id={self.id}, run_id={self.run_id}, "
-            f"stage={self.stage}, kind={self.artifact_kind})>"
-        )
+    __repr_fields__ = ("run_id", "stage", "artifact_kind")

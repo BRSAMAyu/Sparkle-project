@@ -47,5 +47,4 @@ class UserDailyMetric(BaseModel):
         UniqueConstraint('user_id', 'date', name='uq_user_daily_metric'),
     )
 
-    def __repr__(self):
-        return f"<UserDailyMetric(user_id={self.user_id}, date={self.date})>"
+    __repr_fields__ = ("user_id", "date")

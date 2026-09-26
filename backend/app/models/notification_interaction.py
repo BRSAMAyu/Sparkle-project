@@ -9,10 +9,10 @@ from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
-from app.models.base import GUID
+from app.models.base import GUID, SafeReprMixin
 
 
-class NotificationInteraction(Base):
+class NotificationInteraction(SafeReprMixin, Base):
     """
     Notification Interaction Model
 
@@ -32,11 +32,10 @@ class NotificationInteraction(Base):
     # Relationship
     user = relationship("User", backref="notification_interactions")
 
-    def __repr__(self):
-        return f"<NotificationInteraction(user_id={self.user_id}, type={self.notification_type}, action={self.action_type})>"
+    __repr_fields__ = ("user_id", "notification_type", "action_type")
 
 
-class NotificationPreferences(Base):
+class NotificationPreferences(SafeReprMixin, Base):
     """
     User Notification Preferences
 
@@ -58,5 +57,4 @@ class NotificationPreferences(Base):
     # Relationship
     user = relationship("User", backref="notification_preferences")
 
-    def __repr__(self):
-        return f"<NotificationPreferences(user_id={self.user_id}, level={self.notification_level})>"
+    __repr_fields__ = ("user_id", "notification_level")

@@ -53,5 +53,4 @@ class RedeemCode(BaseModel):
 
     __table_args__ = (Index("idx_redeem_codes_batch", "batch_id", "created_at"),)
 
-    def __repr__(self):
-        return f"<RedeemCode(prefix={self.code_prefix}, batch={self.batch_id}, used={self.used_count}/{self.max_uses})>"
+    __repr_fields__ = ("code_prefix", "batch_id", "used_count", "max_uses")

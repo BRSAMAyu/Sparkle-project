@@ -104,8 +104,7 @@ class ChatMessage(BaseModel):
     user = relationship("User", back_populates="chat_messages")
     task = relationship("Task", back_populates="chat_messages")
 
-    def __repr__(self):
-        return f"<ChatMessage(role={self.role}, session_id={self.session_id})>"
+    __repr_fields__ = ("role", "session_id")
 
 
 class ChatSession(BaseModel):
@@ -124,8 +123,7 @@ class ChatSession(BaseModel):
 
     user = relationship("User", back_populates="chat_sessions")
 
-    def __repr__(self):
-        return f"<ChatSession(id={self.id}, user_id={self.user_id})>"
+    __repr_fields__ = ("user_id",)
 
 
 class TokenUsage(BaseModel):
@@ -163,8 +161,7 @@ class TokenUsage(BaseModel):
     # 关系
     user = relationship("User", back_populates="token_usage")
 
-    def __repr__(self):
-        return f"<TokenUsage(user_id={self.user_id}, tokens={self.total_tokens}, cost={self.cost})>"
+    __repr_fields__ = ("user_id", "total_tokens", "cost")
 
 
 # 创建索引

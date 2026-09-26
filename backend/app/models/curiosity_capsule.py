@@ -65,8 +65,7 @@ class CuriosityCapsule(BaseModel):
     feedbacks = relationship("CapsuleFeedback", back_populates="capsule", cascade="all, delete-orphan")
     favorites = relationship("CapsuleFavorite", back_populates="capsule", cascade="all, delete-orphan")
 
-    def __repr__(self):
-        return f"<CuriosityCapsule(title={self.title}, user_id={self.user_id}, depth_level={self.depth_level})>"
+    __repr_fields__ = ("title", "user_id", "depth_level")
 
     @property
     def depth_level_value(self) -> str:

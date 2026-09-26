@@ -64,8 +64,4 @@ class StudyRoomSession(BaseModel):
         Index("idx_study_room_user_entered", "user_id", "entered_at"),
     )
 
-    def __repr__(self) -> str:  # noqa: D105
-        return (
-            f"<StudyRoomSession(id={self.id}, group_id={self.group_id}, user_id={self.user_id}, "
-            f"entered_at={self.entered_at}, exited_at={self.exited_at})>"
-        )
+    __repr_fields__ = ("group_id", "user_id", "entered_at", "exited_at")

@@ -63,8 +63,7 @@ class Job(BaseModel):
     # 关系
     user = relationship("User", backref="jobs")
 
-    def __repr__(self):
-        return f"<Job(id={self.id}, type={self.type}, status={self.status})>"
+    __repr_fields__ = ("type", "status")
 
 # 索引
 Index("idx_jobs_user_id", Job.user_id)

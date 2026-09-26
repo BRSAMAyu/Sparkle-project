@@ -114,8 +114,7 @@ class ABExperiment(BaseModel):
         post_update=True
     )
 
-    def __repr__(self):
-        return f"<ABExperiment(id={self.id}, name={self.name}, status={self.status})>"
+    __repr_fields__ = ("name", "status")
 
 
 class ABExperimentVariant(BaseModel):
@@ -174,8 +173,7 @@ class ABExperimentVariant(BaseModel):
         cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
-        return f"<ABExperimentVariant(id={self.id}, name={self.variant_name}, is_control={self.is_control})>"
+    __repr_fields__ = ("variant_name", "is_control")
 
 
 class ABExperimentMetric(BaseModel):
@@ -232,8 +230,7 @@ class ABExperimentMetric(BaseModel):
     experiment = relationship("ABExperiment", back_populates="metrics")
     variant = relationship("ABExperimentVariant", back_populates="metrics")
 
-    def __repr__(self):
-        return f"<ABExperimentMetric(id={self.id}, name={self.metric_name}, value={self.metric_value})>"
+    __repr_fields__ = ("metric_name", "metric_value")
 
 
 class ABExperimentAssignment(BaseModel):
@@ -283,5 +280,4 @@ class ABExperimentAssignment(BaseModel):
     experiment = relationship("ABExperiment", back_populates="assignments")
     variant = relationship("ABExperimentVariant", back_populates="assignments")
 
-    def __repr__(self):
-        return f"<ABExperimentAssignment(id={self.id}, user_id={self.user_id}, variant_id={self.variant_id})>"
+    __repr_fields__ = ("user_id", "variant_id")

@@ -132,11 +132,4 @@ class PlanExecutionRecord(BaseModel):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
-    def __repr__(self):
-        return (
-            f"<PlanExecutionRecord("
-            f"plan_id={self.plan_id}, "
-            f"status={self.validation_status}, "
-            f"score={self.quality_score:.2f}"
-            f")>"
-        )
+    __repr_fields__ = ("plan_id", "validation_status")

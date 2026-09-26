@@ -26,8 +26,7 @@ class TaskDocument(BaseModel):
     task = relationship("Task", back_populates="document_links")
     file = relationship("StoredFile")
 
-    def __repr__(self) -> str:
-        return f"<TaskDocument(task_id={self.task_id}, file_id={self.file_id}, linked_by={self.linked_by})>"
+    __repr_fields__ = ("task_id", "file_id", "linked_by")
 
 
 Index("idx_task_documents_task_created", TaskDocument.task_id, TaskDocument.created_at)

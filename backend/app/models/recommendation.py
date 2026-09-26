@@ -181,8 +181,7 @@ class UserLearningProfile(BaseModel):
     # 关系
     user = relationship("User", foreign_keys=[user_id])
 
-    def __repr__(self):
-        return f"<UserLearningProfile(user_id={self.user_id}, cluster={self.cluster_id})>"
+    __repr_fields__ = ("user_id", "cluster_id")
 
 
 class RecommendationCache(BaseModel):

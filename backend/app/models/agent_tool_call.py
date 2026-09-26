@@ -106,8 +106,4 @@ class AgentToolCall(BaseModel):
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
-    def __repr__(self) -> str:
-        return (
-            f"<AgentToolCall(id={self.id}, tool={self.tool_name}, "
-            f"status={self.status}, key={self.idempotency_key})>"
-        )
+    __repr_fields__ = ("tool_name", "status", "idempotency_key")

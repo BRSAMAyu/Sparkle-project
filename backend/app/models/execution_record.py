@@ -65,11 +65,7 @@ class ExecutionRecord(BaseModel):
         Index("idx_exec_record_created", "created_at"),
     )
 
-    def __repr__(self):
-        return (
-            f"<ExecutionRecord(intent_id={self.execution_intent_id}, "
-            f"trust={self.trust_level}, score={self.quality_score})>"
-        )
+    __repr_fields__ = ("execution_intent_id", "trust_level", "quality_score")
 
     def to_dict(self) -> dict:
         return {

@@ -142,8 +142,7 @@ class Achievement(BaseModel):
     # 关系
     children = relationship("Achievement", backref="parent", remote_side="Achievement.id")
 
-    def __repr__(self):
-        return f"<Achievement(id={self.id}, name={self.name}, rarity={self.rarity})>"
+    __repr_fields__ = ("name", "rarity")
 
     @staticmethod
     def _normalize_locale(locale: str | None) -> str | None:
@@ -204,10 +203,7 @@ class UserAchievement(BaseModel):
     # 关系
     achievement = relationship("Achievement")
 
-    def __repr__(self):
-        return (
-            f"<UserAchievement(user_id={self.user_id}, achievement_id={self.achievement_id}, progress={self.progress})>"
-        )
+    __repr_fields__ = ("user_id", "achievement_id", "progress")
 
 
 class UserStreakStats(BaseModel):
@@ -235,8 +231,7 @@ class UserStreakStats(BaseModel):
     # 最长连胜记录
     longest_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
-    def __repr__(self):
-        return f"<UserStreakStats(user_id={self.user_id}, current_streak={self.current_streak})>"
+    __repr_fields__ = ("user_id", "current_streak")
 
 
 class UserStreakDay(BaseModel):
@@ -258,8 +253,7 @@ class UserStreakDay(BaseModel):
 
     user = relationship("User")
 
-    def __repr__(self):
-        return f"<UserStreakDay(user_id={self.user_id}, day={self.day}, status={self.status})>"
+    __repr_fields__ = ("user_id", "day", "status")
 
 
 class SparkContract(BaseModel):
@@ -291,8 +285,7 @@ class SparkContract(BaseModel):
     failed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     failure_reason: Mapped[str] = mapped_column(String(200), nullable=True)
 
-    def __repr__(self):
-        return f"<SparkContract(user_id={self.user_id}, status={self.status}, progress={self.current_days}/{self.target_days})>"
+    __repr_fields__ = ("user_id", "status", "current_days", "target_days")
 
 
 class GalaxySkin(BaseModel):
@@ -316,8 +309,7 @@ class GalaxySkin(BaseModel):
     rarity: Mapped[AchievementRarity] = mapped_column(Enum(AchievementRarity), default=AchievementRarity.RARE, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
-    def __repr__(self):
-        return f"<GalaxySkin(id={self.id}, name={self.name}, rarity={self.rarity})>"
+    __repr_fields__ = ("name", "rarity")
 
 
 class UserGalaxySkin(BaseModel):
@@ -338,8 +330,7 @@ class UserGalaxySkin(BaseModel):
     # 关系
     skin = relationship("GalaxySkin")
 
-    def __repr__(self):
-        return f"<UserGalaxySkin(user_id={self.user_id}, skin_id={self.skin_id}, is_equipped={self.is_equipped})>"
+    __repr_fields__ = ("user_id", "skin_id", "is_equipped")
 
 
 class StudyBuddy(BaseModel):
@@ -358,8 +349,7 @@ class StudyBuddy(BaseModel):
     mutual_study_days: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     last_mutual_study_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
-    def __repr__(self):
-        return f"<StudyBuddy(user1={self.user1_id}, user2={self.user2_id}, strength={self.connection_strength})>"
+    __repr_fields__ = ("user1_id", "user2_id", "connection_strength")
 
 
 class UserTitle(BaseModel):
@@ -381,8 +371,7 @@ class UserTitle(BaseModel):
     is_equipped: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     unlocked_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
-    def __repr__(self):
-        return f"<UserTitle(user_id={self.user_id}, title={self.title_name}, is_equipped={self.is_equipped})>"
+    __repr_fields__ = ("user_id", "title_name", "is_equipped")
 
 
 # 创建索引
