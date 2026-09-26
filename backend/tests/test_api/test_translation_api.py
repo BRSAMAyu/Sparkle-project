@@ -19,7 +19,16 @@ USER_ID = str(uuid4())
 
 @pytest.fixture
 def mock_db():
-    return MagicMock(spec=AsyncSession)
+    # V3-FIX-121：X-09/FIX-40（0c0e08ef）把端点从直调 tool.execute 收编进 ToolExecutor
+    # 统一入口后，executor 对带 tool_call_id 的调用一读幂等账本（_find_ledger_row）。
+    # MagicMock(spec=AsyncSession) 的 execute 是 AsyncMock，await 后的子对象
+    # scalar_one_or_none() 返回未 await 的 coroutine → 'coroutine' object has no
+    # attribute 'args_hash'。桩升级为账本读契约：execute → scalar_one_or_none()=None。
+    db = MagicMock(spec=AsyncSession)
+    ledger_result = MagicMock()
+    ledger_result.scalar_one_or_none.return_value = None
+    db.execute = AsyncMock(return_value=ledger_result)
+    return db
 
 
 @pytest.fixture

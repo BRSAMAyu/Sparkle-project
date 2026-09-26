@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -27,6 +28,9 @@ class _FakeWebSocket:
         self.accepted = False
         self.sent: list[str] = []
         self.user_id: str | None = None
+        # V3-FIX-121：ConnectionManager 把 user_id 统一挂 websocket.state
+        # （app/core/websocket.py:199/220），替身补 state 面对齐 starlette 动态属性语义。
+        self.state = SimpleNamespace(user_id=None)
 
     async def accept(self):
         self.accepted = True

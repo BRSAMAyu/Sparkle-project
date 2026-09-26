@@ -53,15 +53,22 @@ def test_celery_schedule_runs_l4_reflection_and_decay_jobs():
     setup_periodic_tasks(sender)
 
     assert "run-daily-goal-reflections-every-day" in sender.names
-    assert "spine-expire-stale-states-every-6h" in sender.names
-    assert "spine-auto-deprecate-skills-every-day" in sender.names
-    assert "apply-memory-decay-every-day" in sender.names
+    # V3-FIX-121：EI-08（a8937be9）删除 interval 版双频条目——spine expire /
+    # auto-deprecate / memory-decay 只在 celery_app.conf.beat_schedule 注册。
+    from app.core.celery_app import celery_app
+
+    beat_names = set(celery_app.conf.beat_schedule or {})
+    assert "spine-expire-stale-states" in beat_names
+    assert "spine-auto-deprecate-skills" in beat_names
+    assert "memory-decay" in beat_names
+    assert "apply-memory-decay-every-day" not in sender.names
 
 
 def test_skill_contraindications_block_inapplicable_reuse():
     skill = SkillEntry(
         skill_id="skill-1",
-        scope="personal",
+        # V3-FIX-121：scope 须在 8-stage 词表内（validate_extraction invalid_scope 门）
+        scope="personal_live",
         source_policy_key="repair_knowledge_gap",
         strategy={"intervention_summary": "先诊断前置缺口"},
         applicable_when={"goal_mode": "exam"},

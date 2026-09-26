@@ -987,7 +987,9 @@ async def test_v210_spine_start_aurora_core_session():
         user_id="u1",
         goal_summary="7天计网先过",
         current_plan_summary="第3天 TCP",
-        wake_reason="consecutive_strategy_failure",
+        # V3-FIX-121：L3 引擎 validate_entry 白名单键为复数 consecutive_strategy_failures，
+        # 单数旧词面被「Unrecognized wake reason」门拒——断言对齐白名单键。
+        wake_reason="consecutive_strategy_failures",
     )
     assert result is not None
     assert result["status"] == "active"
@@ -1004,7 +1006,9 @@ async def test_v210_spine_close_aurora_session():
         user_id="u1",
         goal_summary="test",
         current_plan_summary="",
-        wake_reason="test",
+        # V3-FIX-121：wake_reason 须命中 L3 白名单（user_explicit_wake→deep_review），
+        # 旧探针词面 "test" 被门拒返回 None。
+        wake_reason="user_explicit_wake",
     )
     session_id = session["agenda"]["session_id"]
 
@@ -1890,12 +1894,14 @@ def test_v216_domain_pack_fallback():
 
 
 def test_v216_list_domain_packs():
-    """P3-2: list_domain_packs returns 3 unique packs."""
+    """P3-2: list_domain_packs 覆盖 3 个首发 pack，且各 domain 唯一。"""
     from app.signals.domain_pack import list_domain_packs
     packs = list_domain_packs()
-    assert len(packs) == 3
-    domains = {p.domain for p in packs}
-    assert domains == {"exam_sprint", "job_search_interview", "project_delivery"}
+    domains = [p.domain for p in packs]
+    # V3-FIX-121：首发 3 包为契约下限；注册表后续批次扩展（fitness/research），
+    # 断言改为「首发域全在册 + domain 唯一」而非钉死总数。
+    assert {"exam_sprint", "job_search_interview", "project_delivery"} <= set(domains)
+    assert len(domains) == len(set(domains))
 
 
 def test_v216_get_node_schema_for_goal():

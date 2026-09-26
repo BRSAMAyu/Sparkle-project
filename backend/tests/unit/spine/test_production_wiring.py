@@ -1927,6 +1927,7 @@ def _make_lifecycle_skill(
     effective_count: int = 5,
     sample_size: int = 6,
     applicable_when: dict | None = None,
+    contraindications: list[str] | None = None,
 ):
     from app.signals.types import SkillEntry
 
@@ -1938,6 +1939,7 @@ def _make_lifecycle_skill(
         applicable_when=applicable_when or {"goal_mode": "exam_rescue", "state_key": "knowledge_transfer"},
         evidence={"effective_count": effective_count, "total_observed": sample_size, "avg_confidence": 0.84},
         privacy={"contains_personal_data": scope == "personal", "shareable": scope != "personal"},
+        contraindications=contraindications or [],
         effective_count=effective_count,
         sample_size=sample_size,
     )
@@ -1968,9 +1970,11 @@ def test_find_applicable_skills_by_scope():
 
     manager = SkillLifecycleManager(FakeRedis())
     skills = [
+        # V3-FIX-121：8-stage lifecycle scope 词表（personal_live rank 2 < cohort_live rank 5 < system rank 6），
+        # 旧词面 personal/cohort 不在 _SCOPE_RANK 内（rank 99 沉底）。
         _make_lifecycle_skill(skill_id="skill_system", scope="system", effective_count=12),
-        _make_lifecycle_skill(skill_id="skill_personal", scope="personal", effective_count=3),
-        _make_lifecycle_skill(skill_id="skill_cohort", scope="cohort", effective_count=9),
+        _make_lifecycle_skill(skill_id="skill_personal", scope="personal_live", effective_count=3),
+        _make_lifecycle_skill(skill_id="skill_cohort", scope="cohort_live", effective_count=9),
     ]
 
     applicable = manager.find_applicable_skills(
@@ -2065,7 +2069,11 @@ def test_validate_extraction_valid():
     from app.signals.skill_lifecycle import SkillLifecycleManager
 
     manager = SkillLifecycleManager(FakeRedis())
-    skill = _make_lifecycle_skill()
+    # V3-FIX-121：校验契约——scope 须在 8-stage 词表内、须声明 contraindications
+    skill = _make_lifecycle_skill(
+        scope="personal_live",
+        contraindications=["user_declined_similar_strategy"],
+    )
 
     result = manager.validate_extraction(skill)
 
@@ -2213,17 +2221,20 @@ async def test_promote_skill_personal_to_cohort():
 
     redis = FakeRedis()
     manager = SkillLifecycleManager(redis)
-    skill = _skill_lifecycle_entry(effective_count=10, avg_confidence=0.81)
+    # V3-FIX-121：8-stage 晋升链 personal_live → cohort_candidate（阈值 eff>=10, conf>=0.8）
+    skill = _skill_lifecycle_entry(
+        effective_count=12, avg_confidence=0.81, scope="personal_live",
+    )
     await manager.store_skill("u1", skill)
 
-    promoted = await manager.promote_skill("u1", skill.skill_id, "cohort")
+    promoted = await manager.promote_skill("u1", skill.skill_id, "cohort_candidate")
 
     assert promoted is not None
-    assert promoted.scope == "cohort"
-    assert promoted.evidence["promoted_from"] == "personal"
+    assert promoted.scope == "cohort_candidate"
+    assert promoted.evidence["promoted_from"] == "personal_live"
     stored = await manager.get_skill(skill.skill_id)
     assert stored is not None
-    assert stored.scope == "cohort"
+    assert stored.scope == "cohort_candidate"
 
 
 @pytest.mark.asyncio
@@ -2233,15 +2244,18 @@ async def test_promote_skill_insufficient_evidence():
 
     redis = FakeRedis()
     manager = SkillLifecycleManager(redis)
-    skill = _skill_lifecycle_entry(effective_count=9, avg_confidence=0.79)
+    # V3-FIX-121：同链阻断面——personal_live → cohort_candidate，eff=9 < 10 阈值
+    skill = _skill_lifecycle_entry(
+        effective_count=9, avg_confidence=0.79, scope="personal_live",
+    )
     await manager.store_skill("u1", skill)
 
-    promoted = await manager.promote_skill("u1", skill.skill_id, "cohort")
+    promoted = await manager.promote_skill("u1", skill.skill_id, "cohort_candidate")
 
     assert promoted is None
     stored = await manager.get_skill(skill.skill_id)
     assert stored is not None
-    assert stored.scope == "personal"
+    assert stored.scope == "personal_live"
 
 
 @pytest.mark.asyncio
@@ -2251,9 +2265,10 @@ async def test_promote_skill_cohort_to_system():
 
     redis = FakeRedis()
     manager = SkillLifecycleManager(redis)
+    # V3-FIX-121：8-stage 晋升链 cohort_live → system（阈值 eff>=50, conf>=0.85）
     skill = _skill_lifecycle_entry(
         skill_id="skill_life_system",
-        scope="cohort",
+        scope="cohort_live",
         effective_count=50,
         sample_size=55,
         avg_confidence=0.86,
@@ -2313,9 +2328,11 @@ async def test_auto_deprecate_healthy_skill():
 
     redis = FakeRedis()
     manager = SkillLifecycleManager(redis)
+    # V3-FIX-121：时间戳动态生成——skill 须在 30 天新鲜窗口内（硬编码日期会随墙钟过期）
+    recent = (datetime.now(UTC) - timedelta(days=1)).isoformat().replace("+00:00", "Z")
     skill = _skill_lifecycle_entry(
         evidence_extra={
-            "effective_count_updated_at": "2026-04-20T00:00:00Z",
+            "effective_count_updated_at": recent,
             "recent_outcomes": ["effective", "effective", "insufficient", "effective", "effective"],
         },
     )
@@ -3180,11 +3197,16 @@ async def test_weekly_summary():
 
     redis = FakeRedis()
     service = GrowthChronicleService(redis)
+
+    def _iso(hours_ago: float) -> str:
+        # V3-FIX-121：周报窗口为「最近 7 天」，时间戳须动态生成（硬编码日期会随墙钟过期）
+        return (datetime.now(UTC) - timedelta(hours=hours_ago)).isoformat()
+
     await service.add_entry("u1", ChronicleEntry(
         entry_id="chron_week_1",
         user_id="u1",
         entry_type="milestone",
-        timestamp="2026-04-27T10:00:00+00:00",
+        timestamp=_iso(2),
         title="里程碑：连续完成复习",
         narrative="你连续完成了复习任务。",
         evidence_refs=["or_1"],
@@ -3194,7 +3216,7 @@ async def test_weekly_summary():
         entry_id="chron_week_2",
         user_id="u1",
         entry_type="turning_point",
-        timestamp="2026-04-27T11:00:00+00:00",
+        timestamp=_iso(1),
         title="转折点：纠正了系统判断",
         narrative="你纠正了系统判断。",
         evidence_refs=["corr_1"],

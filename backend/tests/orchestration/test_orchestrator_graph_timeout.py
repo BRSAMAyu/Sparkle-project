@@ -105,10 +105,15 @@ async def test_graph_timeout_drains_already_generated_deltas(orchestrator_factor
 
     real_execute_graph = orchestrator._execute_graph
 
-    async def execute_graph_with_pending_delta(*, state, user_id, queue, result_holder):
+    async def execute_graph_with_pending_delta(*, state, user_id, queue, result_holder, frame_identity=None):
+        # V3-FIX-121：B-02 MIDSTREAM-HEARTBEAT（982b4380）后 process_stream 以
+        # frame_identity= 调 _execute_graph（心跳帧身份补全）——替身签名同步，
+        # 旧签名 TypeError 会让图阶段转 INTERNAL 错误、排水断言失真。
         # Emulate one delta the graph already produced before the timeout fired.
         await orchestrator._enqueue_stream_response(queue, agent_service_pb2.ChatResponse(delta="已生成的部分内容"))
-        async for item in real_execute_graph(state=state, user_id=user_id, queue=queue, result_holder=result_holder):
+        async for item in real_execute_graph(
+            state=state, user_id=user_id, queue=queue, result_holder=result_holder, frame_identity=frame_identity
+        ):
             yield item
 
     orchestrator._execute_graph = execute_graph_with_pending_delta

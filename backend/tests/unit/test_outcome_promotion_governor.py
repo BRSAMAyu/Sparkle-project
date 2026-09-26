@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -180,13 +181,18 @@ async def test_outcome_promotion_governor_blocks_conflicting_profile_promotion()
 @pytest.mark.asyncio
 async def test_outcome_promotion_governor_synthesizes_profile_ledger_into_profile_learning() -> None:
     user_id = uuid4()
+    # V3-FIX-121：账本时间戳动态生成（_freshness_status 以墙钟比 freshness_deadline，
+    # 硬编码 2026-04/05 日期随日历过期 → 全部判 stale 拒绝，无 profile 提名）。
+    _base = datetime.now(UTC)
+    _recorded = [(_base - timedelta(minutes=30)).isoformat(), (_base - timedelta(minutes=20)).isoformat(), (_base - timedelta(minutes=10)).isoformat()]
+    _deadline = [(_base + timedelta(days=30)).isoformat(), (_base + timedelta(days=30)).isoformat(), (_base + timedelta(days=30)).isoformat()]
     governor = OutcomePromotionGovernor(db=object(), redis=None)
     governor.preference_service = _PreferenceServiceStub(
         inferred={
             PROFILE_OUTCOME_LEDGER_KEY: [
                 {
                     "record_id": "profile-1",
-                    "recorded_at": "2026-04-05T09:00:00",
+                    "recorded_at": _recorded[0],
                     "source_family": "behavioral_outcome",
                     "source_id": "bo-1",
                     "evidence_level": "Behavioral Signal",
@@ -208,12 +214,12 @@ async def test_outcome_promotion_governor_synthesizes_profile_ledger_into_profil
                     "session_id": "",
                     "plan_id": None,
                     "intervention_id": "iv-1",
-                    "freshness_deadline": "2026-05-05T09:00:00",
+                    "freshness_deadline": _deadline[0],
                     "metadata": {"persist_profile_ledger": True},
                 },
                 {
                     "record_id": "profile-2",
-                    "recorded_at": "2026-04-05T10:00:00",
+                    "recorded_at": _recorded[1],
                     "source_family": "behavioral_outcome",
                     "source_id": "bo-2",
                     "evidence_level": "Behavioral Signal",
@@ -235,12 +241,12 @@ async def test_outcome_promotion_governor_synthesizes_profile_ledger_into_profil
                     "session_id": "",
                     "plan_id": None,
                     "intervention_id": "iv-2",
-                    "freshness_deadline": "2026-05-05T10:00:00",
+                    "freshness_deadline": _deadline[1],
                     "metadata": {"persist_profile_ledger": True},
                 },
                 {
                     "record_id": "profile-3",
-                    "recorded_at": "2026-04-05T11:00:00",
+                    "recorded_at": _recorded[2],
                     "source_family": "behavioral_outcome",
                     "source_id": "bo-3",
                     "evidence_level": "Behavioral Signal",
@@ -262,7 +268,7 @@ async def test_outcome_promotion_governor_synthesizes_profile_ledger_into_profil
                     "session_id": "",
                     "plan_id": None,
                     "intervention_id": "iv-3",
-                    "freshness_deadline": "2026-05-05T11:00:00",
+                    "freshness_deadline": _deadline[2],
                     "metadata": {"persist_profile_ledger": True},
                 },
             ]

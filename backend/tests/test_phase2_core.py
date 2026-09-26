@@ -193,6 +193,11 @@ async def test_user_service():
     mock_user.registration_source = "email"
     mock_user.timezone = "Asia/Shanghai"
     mock_user.persona_type = "explorer"
+    # V3-FIX-121：is_pro 判据演进（V3-FIX-02/D17，flame_level 永久禁作权益判据，
+    # 判级归一 core/entitlement）——pro 用户以 entitlement 字面授予，flame_level
+    # 保留仅为展示层字段。
+    mock_user.entitlement = "pro"
+    mock_user.entitlement_expires_at = None
 
     # Mock the execute result
     mock_result = MagicMock()
@@ -219,7 +224,8 @@ async def test_user_service():
         assert context is not None
         assert context.user_id == str(user_id)
         assert context.nickname == "Test User"
-        assert context.is_pro is True  # flame_level >= 3
+        # V3-FIX-121：is_pro 由 entitlement 判级（V3-FIX-02/D17），非 flame_level
+        assert context.is_pro is True
 
     print("✅ User Service test passed")
 

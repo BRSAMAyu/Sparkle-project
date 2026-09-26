@@ -79,7 +79,9 @@ async def _swallow_spawn(coro, **_kwargs) -> None:
 
 def _close_background_task(coro):
     coro.close()
-    return SimpleNamespace(cancel=lambda: None)
+    # V3-FIX-121：trigger_replanning 对后台 replan 任务接线 add_done_callback 异常日志
+    # （_log_replan_exception），替身补齐 Task 面而非只留 cancel。
+    return SimpleNamespace(cancel=lambda: None, add_done_callback=lambda cb: None)
 
 
 async def _drain_single_update(redis_client: RecordingRedis, user_id: str, expected_type: str) -> dict:

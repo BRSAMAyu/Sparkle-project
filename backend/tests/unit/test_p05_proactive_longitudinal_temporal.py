@@ -31,6 +31,19 @@ from tests.proactive_longitudinal.engine import PersonaWorld
 from tests.proactive_longitudinal.persona import build_population, with_decision_script
 
 
+@pytest.fixture(autouse=True)
+def _no_quiet_hours_by_default(monkeypatch: pytest.MonkeyPatch):
+    """P-06 时钟无关性约定（与 test_comeback_nudge_task / test_notification_burden_24h_clock
+    同款）：本文件钉的是 P-03 抑制与 P-04 授权在纵向时间线的交互，quiet 窗行为由
+    test_notification_burden_p06 确定性穷举；平台基线 quiet 在此默认关——真实任务以
+    挂钟取 reference_time，CI 恰落在上海 22:00–08:00 窗内时全部生成被 quiet 短路
+    （V3-FIX-121：run 36198488067 四例 reason=notification_burden 的根因），属测试
+    未控时钟面，非产品回归。"""
+    from app.aurora.proactive import config as proactive_config
+
+    monkeypatch.setattr(proactive_config, "PROACTIVE_QUIET_HOURS_ENABLED", False)
+
+
 def _persona(
     arc_prefix: str,
     *,

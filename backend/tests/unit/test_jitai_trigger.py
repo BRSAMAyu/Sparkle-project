@@ -7,9 +7,9 @@ import pytest
 
 from app.config import settings
 from app.core.cache import cache_service
-from app.services.aurora_stage27_foresight_kill_switch_service import AuroraStage27ForesightKillSwitchService
 from app.schemas.foresight import Deviation
-from app.services.jitai_trigger_service import JITAITrigger, TEMPLATE_REGISTRY
+from app.services.aurora_stage27_foresight_kill_switch_service import AuroraStage27ForesightKillSwitchService
+from app.services.jitai_trigger_service import TEMPLATE_REGISTRY, JITAITrigger
 
 
 def _deviation(
@@ -117,7 +117,38 @@ async def test_jitai_budget_usage_increments_after_live_trigger() -> None:
 
 
 @pytest.mark.asyncio
-async def test_jitai_shadow_mode_can_be_reached_by_misfire_auto_downgrade() -> None:
+async def test_jitai_shadow_mode_can_be_reached_by_misfire_auto_downgrade(monkeypatch) -> None:
+    # V3-FIX-121：本测试两个状态面须分别处理——
+    # ① JITAI 计数器：须走本地态（cache_service.redis=None，文件级 autouse 桩），
+    #    redis 面按「模拟日期」算 TTL，真实挂钟（9 月）对 4 月键得负 TTL 被 1s
+    #    钳制，event_bus 发布重试（~1.6s/次）期间键全部过期 → 降级判定恒 0 速率；
+    # ② kill_switch：redis=None 时 write_mode fail-safe 忽略写入（"write ignored"），
+    #    set/get 永远落 settings 默认 "live"，断言观察不到降级。
+    # → 对 kill_switch 的 read_mode/write_mode 缝面挂 dict 后备存储（保持服务
+    #   判定逻辑原样），JITAI 计数面维持本地态。
+    import app.services.aurora_stage27_foresight_kill_switch_service as ks_mod
+    from app.core.kill_switch import normalize_mode
+    from app.core.kill_switch import read_mode as real_read_mode
+
+    switch_store: dict[str, str] = {}
+
+    async def fake_write_mode(*, redis_client, prefix, binding, mode, record_gauge=True):
+        normalized = normalize_mode(
+            mode, allowed_modes=binding.allowed_modes, fallback=binding.fallback_mode
+        )
+        switch_store[f"{prefix}{binding.redis_key}"] = normalized
+        return normalized
+
+    async def fake_read_mode(*, redis_client, prefix, binding, record_gauge=True):
+        key = f"{prefix}{binding.redis_key}"
+        if key in switch_store:
+            return switch_store[key]
+        return await real_read_mode(
+            redis_client=None, prefix=prefix, binding=binding, record_gauge=False
+        )
+
+    monkeypatch.setattr(ks_mod, "write_mode", fake_write_mode)
+    monkeypatch.setattr(ks_mod, "read_mode", fake_read_mode)
     _clear_local_state()
     kill_switch = AuroraStage27ForesightKillSwitchService()
     await kill_switch.set_mode("live")

@@ -150,9 +150,14 @@ class _StrKeyRedis:
     """Redis stub mimicking decode_responses=True: scan_iter yields str keys."""
 
     def __init__(self) -> None:
+        # V3-FIX-121：get_top_users 以真实墙钟做 0 <= days_ago < days 过滤，
+        # 日期键须动态生成（硬编码写作日 2026-09-17 会随日历滑出 7 天窗）。
+        from datetime import date
+
+        today = date.today().isoformat()
         self.values: dict[str, str] = {
-            "user:daily_tokens:user-a:2026-09-17": "120",
-            "user:daily_tokens:user-b:2026-09-17": "30",
+            f"user:daily_tokens:user-a:{today}": "120",
+            f"user:daily_tokens:user-b:{today}": "30",
         }
 
     async def scan_iter(self, match: str | None = None):

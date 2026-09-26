@@ -192,7 +192,10 @@ async def test_circuit_breaker_saves_state_on_redis_failure():
 
     breaker = CircuitBreaker(
         name="test_breaker",
-        config=CircuitBreakerConfig(timeout_ms=100),
+        # V3-FIX-121：RB-04（d3225a61）后单次失败不再跳闸（速率面 min_samples≥3
+        # 防瞬态误开）——本测试钉的是「save_state 失败不阻断本地跳闸」契约，
+        # 以 failure_threshold=1 走连续失败路径保留原意图。
+        config=CircuitBreakerConfig(timeout_ms=100, failure_threshold=1),
         redis_client=mock_redis,
     )
 

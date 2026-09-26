@@ -21,6 +21,16 @@ app.include_router(router, prefix="/api/v1")
 @pytest.mark.asyncio
 async def test_working_memory_session_api_round_trip(db_session, monkeypatch) -> None:
     monkeypatch.setattr(settings, "ENABLE_MEMORY_PANEL", True, raising=False)
+    # V3-FIX-121：端点读侧是 WorkingMemoryService(cache_service.redis)（memory.py:418），
+    # 测试先前裸构造 WorkingMemoryService() 写进实例本地 dict——写读两侧存储后端
+    # 不同必空。挂 async fakeredis 让写读共享同一后端（round trip 判据才成立）。
+    import fakeredis.aioredis
+
+    import app.api.v1.memory as memory_module
+
+    fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    monkeypatch.setattr(memory_module.cache_service, "redis", fake_redis)
+    wm_service = WorkingMemoryService(fake_redis)
     user_id = uuid4()
     session_id = uuid4()
     user = User(
@@ -42,7 +52,7 @@ async def test_working_memory_session_api_round_trip(db_session, monkeypatch) ->
     )
     await db_session.commit()
 
-    wm = WorkingMemoryService()
+    wm = wm_service
     entry = await wm.upsert_entry(
         user_id=str(user_id),
         session_id=str(session_id),

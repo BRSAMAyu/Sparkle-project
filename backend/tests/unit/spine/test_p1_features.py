@@ -302,38 +302,49 @@ async def test_self_model_outcome_insufficient(self_model_svc):
 
 @pytest.mark.asyncio
 async def test_self_model_confidence_adjustment(self_model_svc):
-    """策略有效时置信度上升，无效时下降。"""
+    """有效结果归因 effective（置信度上调），无效结果归因 insufficient。"""
     claim = await self_model_svc.record_claim(
         user_id="u1",
         claim="初始策略",
         confidence=0.50,
         scope="current_sprint",
     )
-    # 有效结果 → 置信度上升
-    await self_model_svc.record_outcome(
+    # 有效结果 → 归因 effective，confidence_delta > 0
+    # （V3-FIX-121：SelfModel 已演进为 Aurora 委托——record_outcome 返回归因结构，
+    # get_active_claims 返回 Aurora readout 转换的 claims，不再回放 record_claim 存储。）
+    outcome = await self_model_svc.record_outcome(
         user_id="u1",
         directive_id="dir_010",
         claim_id=claim.claim_id,
         expected_outcome="ok",
         actual_outcome={"completed": True, "user_feedback": ""},
     )
+    assert outcome.attribution["effect"] == "effective"
+    assert outcome.attribution["confidence_delta"] > 0
+    assert outcome.next_policy_suggestion == "maintain_current_strategy"
+
+    # deprecated shim 契约：get_active_claims 返回 Aurora assumptions 转换的 claims
     claims = await self_model_svc.get_active_claims("u1")
-    updated = [c for c in claims if c.claim_id == claim.claim_id][0]
-    assert updated.confidence > 0.50
-    assert updated.outcome == "effective"
+    assert claims, "Aurora readout 应转换为至少一条 claim"
+    assert all(c.claim_id.startswith("aurora:") for c in claims)
+    assert all(0.0 <= c.confidence <= 1.0 for c in claims)
 
 
 @pytest.mark.asyncio
 async def test_self_model_get_active_claims(self_model_svc):
-    """获取用户活跃 claims。"""
+    """获取用户活跃 claims（shim 契约：Aurora known_assumptions 列表转换）。"""
     await self_model_svc.record_claim(
         user_id="u2", claim="c1", confidence=0.5, scope="strategy",
     )
     await self_model_svc.record_claim(
         user_id="u2", claim="c2", confidence=0.6, scope="current_sprint",
     )
+    # V3-FIX-121：Aurora readout 的 known_assumptions（列表）→ aurora:* / user_pair claims，
+    # record_claim 存储不再出现在 get_active_claims 返回中。
     claims = await self_model_svc.get_active_claims("u2")
-    assert len(claims) == 2
+    assert len(claims) >= 1
+    assert all(c.claim_id.startswith("aurora:") for c in claims)
+    assert all(c.scope == "user_pair" for c in claims)
 
 
 @pytest.mark.asyncio
@@ -559,7 +570,8 @@ def test_recall_to_actionable_signal(recall_detector):
     signal = recall_detector.to_actionable_signal(trigger)
     assert signal.state_key == "recall_needed"
     assert signal.claim == "pre_exam_silence"
-    assert signal.confidence == 0.80
+    # V3-FIX-121：评分契约演进为 ML blend——_blend = 0.7*rule(0.95, 考前≤1天) + 0.3*ml(无 ranker 中性 0.5)
+    assert signal.confidence == pytest.approx(0.7 * 0.95 + 0.3 * 0.5)
 
 
 def test_recall_cooldown(recall_detector):

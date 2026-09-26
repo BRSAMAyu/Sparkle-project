@@ -144,6 +144,10 @@ async def test_accept_template_endpoint_creates_task():
         started_at=None,
         confirmed_at=None,
         completed_at=None,
+        # V3-FIX-121：TaskDetail 契约含 paused_at/paused_reason（Task 模型同列），
+        # 桩补齐响应 schema 必填面。
+        paused_at=None,
+        paused_reason=None,
         actual_minutes=None,
         user_note=None,
         knowledge_node_id=uuid4(),

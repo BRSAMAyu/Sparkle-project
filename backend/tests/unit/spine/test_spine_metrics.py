@@ -329,8 +329,10 @@ async def test_response_directive_avoid_and_acknowledge_optional():
     assert "策略调整指令" in prompt
     assert "稳定、直接" in prompt
     assert "适中" in prompt
-    assert "避免" not in prompt
-    assert "必须承认" not in prompt
+    # V3-FIX-121：指令块空列表时省略对应行（prompts.py:1624/1626 渲染 "- 避免："/"- 必须承认："）；
+    # 基础反模式护栏含「避免匹配」文案，须按行前缀精确断言而非全文子串。
+    assert "- 避免：" not in prompt
+    assert "- 必须承认：" not in prompt
     assert "可操作选项" not in prompt
 
 

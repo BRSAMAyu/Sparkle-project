@@ -22,8 +22,19 @@ def _skip_without_redis(redis_client):
 
 @pytest.fixture
 async def bus(redis_client):
-    """Create an EventBus connected to the real Redis instance."""
-    return EventBus(redis_url=redis_client.connection_pool.connection_kwargs.get("url", "redis://localhost:6379/0"))
+    """Create an EventBus connected to the SAME isolated test DB as redis_client.
+
+    V3-FIX-121：connection_kwargs 里没有 "url" 键（from_url 已解析为 host/port/db），
+    旧 .get("url", 默认 db0) 让 bus 写默认库、测试从隔离库（TEST_REDIS_DB，默认 15）
+    读——写读异库恒空。改为按连接参数重建同库 URL。
+    """
+    kwargs = redis_client.connection_pool.connection_kwargs
+    host = kwargs.get("host", "localhost")
+    port = kwargs.get("port", 6379)
+    db = kwargs.get("db", 0)
+    password = kwargs.get("password")
+    auth = f":{password}@" if password else ""
+    return EventBus(redis_url=f"redis://{auth}{host}:{port}/{db}")
 
 
 @pytest.fixture

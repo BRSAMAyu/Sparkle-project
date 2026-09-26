@@ -1,7 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -849,8 +849,14 @@ async def test_freeform_prediction_persists_candidate_bundle(db_session, test_us
 
 
 @pytest.mark.asyncio
-@patch("app.services.embedding_service.embedding_service.get_embedding", new_callable=AsyncMock, return_value=[0.1] * 1024)
-async def test_promote_theater_node_to_galaxy_updates_bundle_and_cache(db_session, test_user):
+async def test_promote_theater_node_to_galaxy_updates_bundle_and_cache(db_session, test_user, monkeypatch):
+    # V3-FIX-121：@patch 装饰器会把 mock 注入第一个位置参数槽、遮蔽 db_session fixture
+    # （RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' never awaited）——
+    # 改 monkeypatch 函数属性注入，签名保持纯 fixture。
+    monkeypatch.setattr(
+        "app.services.embedding_service.embedding_service.get_embedding",
+        AsyncMock(return_value=[0.1] * 1024),
+    )
     parent = KnowledgeNode(
         name="Transformer",
         description="现有星图节点",
@@ -965,8 +971,12 @@ async def test_promote_theater_node_to_galaxy_updates_bundle_and_cache(db_sessio
 
 
 @pytest.mark.asyncio
-@patch("app.services.embedding_service.embedding_service.get_embedding", new_callable=AsyncMock, return_value=[0.1] * 1024)
 async def test_promote_theater_node_rolls_back_when_bundle_update_fails(db_session, test_user, monkeypatch):
+    # V3-FIX-121：同上——@patch 装饰器注入槽位冲突，改 monkeypatch 函数属性注入。
+    monkeypatch.setattr(
+        "app.services.embedding_service.embedding_service.get_embedding",
+        AsyncMock(return_value=[0.1] * 1024),
+    )
     parent = KnowledgeNode(
         name="Transformer",
         description="现有星图节点",

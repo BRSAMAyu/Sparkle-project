@@ -317,12 +317,21 @@ class TestEndToEndSignalPipeline:
             assert raw is not None
 
     @pytest.mark.asyncio
-    async def test_multiple_signals_same_user(self, orchestrator, redis):
+    async def test_multiple_signals_same_user(self, orchestrator, redis, monkeypatch):
         signals = [
             _make_signal(state_key=f"signal_{i}", claim=f"Claim {i}")
             for i in range(5)
         ]
         orchestrator.policy_engine.evaluate = AsyncMock(return_value=None)
+        # V3-FIX-121：P1-11 起 _run_signal_pipeline 注入 L0 规则信号——quiet_hours
+        # （UTC 22:00–08:00）命中时额外 upsert quiet_hours_active 状态（ttl 2h），
+        # 挂钟在窗内即 6 条。本测试钉「5 输入信号→5 状态」，quiet 面显式关断
+        # 保持时钟无关（与 p05 quiet fixture 同律）。
+        from unittest.mock import AsyncMock as _AsyncMock
+
+        monkeypatch.setattr(
+            orchestrator.l0_engine, "evaluate_quiet_hours", _AsyncMock(return_value=False)
+        )
 
         for signal in signals:
             await orchestrator._run_signal_pipeline(user_id="u1", signal=signal)

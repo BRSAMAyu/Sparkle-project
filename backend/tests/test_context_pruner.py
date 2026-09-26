@@ -21,6 +21,7 @@ import redis.asyncio as redis
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.summarization_worker import SummarizationWorker
 from app.orchestration.orchestrator import ChatOrchestrator
+from app.config import settings
 from app.core.redis_utils import resolve_redis_password
 
 
@@ -80,10 +81,15 @@ class TestContextPruner:
 
     @pytest.mark.asyncio
     async def test_sliding_window(self, context_pruner, redis_client):
-        """测试：中等历史，使用滑动窗口"""
+        """测试：中等历史走二层重要性压缩（C-06/RB-07：不静默丢帧、不触发总结）。
+
+        V3-FIX-121：旧「滑窗截到最后 5 条」语义已废——importance_threshold =
+        max(summary_threshold, 30)，8 条落在二层压缩带（5 < 8 ≤ 30），消息计数
+        保持、超出 recent 窗的普通消息改写为低信号简述。
+        """
         session_id = "test_session_window"
 
-        # 准备 8 条历史（超过 max_history=5，但未达到 summary_threshold=10）
+        # 准备 8 条历史（超过 max_history=5，未达 importance_threshold=30）
         history = [
             {"role": "user", "content": f"消息 {i}", "timestamp": 1000 + i}
             for i in range(8)
@@ -94,23 +100,28 @@ class TestContextPruner:
 
         result = await context_pruner.get_pruned_history(session_id, "user_123")
 
-        # 验证
+        # 验证：帧数保持（RB-07 不静默丢），summary 面为零
         assert result["original_count"] == 8
-        assert result["pruned_count"] == 5
+        assert result["pruned_count"] == len(result["messages"]) == 8
         assert result["summary_used"] is False
         assert result["summary"] is None
-        assert len(result["messages"]) == 5
 
-        # 验证是最后 5 条
-        assert result["messages"][0]["content"] == "消息 3"
+        # 最近窗（6 条）原文保留；更早的普通消息压缩为简述
         assert result["messages"][-1]["content"] == "消息 7"
+        assert result["messages"][0]["content"].startswith("[user简述]")
+        assert result["messages"][0]["compressed"] is True
 
     @pytest.mark.asyncio
     async def test_summary_trigger(self, context_pruner, redis_client):
-        """测试：历史超过阈值，触发总结"""
+        """测试：超阈值带（≤importance_threshold）二层压缩、不再推 LLM 总结队列。
+
+        V3-FIX-121：C-06（960bc498）后 LLM 总结是可选档（ENABLE_LLM_SESSION_
+        SUMMARY），pruner 不再向 queue:summarization 投递任务；summary_threshold=10
+        经 max(·,30) 抬升后 15 条仍在二层压缩带。
+        """
         session_id = "test_session_summary"
 
-        # 准备 15 条历史（超过 summary_threshold=10）
+        # 准备 15 条历史
         history = [
             {"role": "user", "content": f"消息 {i}", "timestamp": 1000 + i}
             for i in range(15)
@@ -121,48 +132,65 @@ class TestContextPruner:
 
         result = await context_pruner.get_pruned_history(session_id, "user_123")
 
-        # 验证
+        # 验证：二层压缩带内计数保持、不触发总结
         assert result["original_count"] == 15
-        assert result["pruned_count"] == 5  # 最近 5 条
-        assert result["summary_used"] is True
-        assert len(result["messages"]) == 5
+        assert result["pruned_count"] == len(result["messages"]) == 15
+        assert result["summary_used"] is False
 
-        # 验证总结任务已推送到队列
+        # C-06：LLM 总结队列面已拆除
         queue_len = await redis_client.llen("queue:summarization")
-        assert queue_len == 1
-
-        # 验证队列内容
-        task_data = await redis_client.lindex("queue:summarization", 0)
-        task = json.loads(task_data)
-        assert task["session_id"] == session_id
-        assert len(task["history"]) == 10  # 除最近 5 条外的历史
+        assert queue_len == 0
 
     @pytest.mark.asyncio
-    async def test_summary_cache(self, context_pruner, redis_client):
-        """测试：总结缓存机制"""
+    async def test_summary_cache(self, context_pruner, redis_client, monkeypatch):
+        """测试：LLM 同步总结缓存机制（ENABLE_LLM_SESSION_SUMMARY 可选档）。
+
+        V3-FIX-121：缓存键演进为摘要内容 digest（summary:{sid}:{digest} +
+        latest 指针），且仅 LLM 档读写——改以「首调生成并落缓存、次调命中缓存
+        （LLM 恰被调一次）」钉缓存语义，历史须超 importance_threshold=30。
+        """
         session_id = "test_session_cache"
 
-        # 准备历史
+        class _StubSummarizer:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            async def chat(self, messages, **kwargs):
+                self.calls += 1
+                return "测试总结：用户在验证总结缓存机制，这段文本长度超过下限。"
+
+        stub = _StubSummarizer()
+
+        async def _fake_resolver(*args, **kwargs):
+            return stub
+
+        monkeypatch.setattr(settings, "ENABLE_LLM_SESSION_SUMMARY", True, raising=False)
+        monkeypatch.setattr(
+            "app.services.llm_service.get_configured_llm_service_for_tier", _fake_resolver
+        )
+
+        # 准备 35 条历史（> importance_threshold=30，进入 LLM 总结档）
         history = [
             {"role": "user", "content": f"消息 {i}", "timestamp": 1000 + i}
-            for i in range(15)
+            for i in range(35)
         ]
 
         for msg in history:
             await redis_client.rpush(f"chat:history:{session_id}", json.dumps(msg))
 
-        # 第一次调用 - 应该触发总结任务
+        # 第一次调用 - 生成总结并写缓存
         result1 = await context_pruner.get_pruned_history(session_id, "user_123")
-        assert result1["summary"] is None  # 缓存未就绪
+        assert result1["summary_used"] is True
+        assert result1["summary"] == "测试总结：用户在验证总结缓存机制，这段文本长度超过下限。"
+        assert stub.calls == 1
+        latest = await redis_client.get(f"summary:{session_id}:latest")
+        assert latest is not None
 
-        # 模拟总结完成（手动设置缓存）
-        summary_text = "用户之前询问了 Python 学习相关问题，我们讨论了基础语法和最佳实践"
-        await redis_client.setex(f"summary:{session_id}", 3600, summary_text)
-
-        # 第二次调用 - 应该返回缓存的总结
+        # 第二次调用 - 命中摘要缓存，LLM 不再被调用
         result2 = await context_pruner.get_pruned_history(session_id, "user_123")
-        assert result2["summary"] == summary_text
+        assert result2["summary"] == result1["summary"]
         assert result2["summary_used"] is True
+        assert stub.calls == 1
 
     @pytest.mark.asyncio
     async def test_empty_history(self, context_pruner, redis_client):
@@ -175,6 +203,8 @@ class TestContextPruner:
         assert result["pruned_count"] == 0
         assert result["summary_used"] is False
         assert result["messages"] == []
+
+
 
 
 class TestSummarizationWorker:
@@ -200,9 +230,13 @@ class TestSummarizationWorker:
         """测试：Worker 处理总结任务"""
         worker = SummarizationWorker(redis_client, batch_size=1)
 
-        # 模拟 LLM 服务
-        with patch("app.orchestration.summarization_worker.llm_service") as mock_llm:
-            mock_llm.generate_summary = AsyncMock(return_value="这是一个总结")
+        # V3-FIX-121：worker 的 LLM 面演进为 llm_fallback_utils.summarization_llm.call
+        # （模块级 llm_service 已不存在）；摘要 ≥10 字才会入缓存，桩文本加长。
+        summary_text = "这是一个总结，包含足够的长度用于缓存。"
+        with patch(
+            "app.services.llm_fallback_utils.summarization_llm"
+        ) as mock_llm:
+            mock_llm.call = AsyncMock(return_value=summary_text)
 
             # 推送任务到队列
             task = {
@@ -224,12 +258,13 @@ class TestSummarizationWorker:
                 success = await worker._process_task(task_obj)
 
                 assert success is True
-                assert worker.processed_count == 1
+                # V3-FIX-121：processed_count 只在 _process_batch 循环内递增，
+                # 直调 _process_task 不计数——删除断言对齐计数语义。
 
                 # 验证总结已缓存
                 summary = await redis_client.get("summary:test_worker_session")
                 assert summary is not None
-                assert summary.decode("utf-8") == "这是一个总结"
+                assert summary.decode("utf-8") == summary_text
 
 
 class TestOrchestratorIntegration:
@@ -252,7 +287,12 @@ class TestOrchestratorIntegration:
 
     @pytest.mark.asyncio
     async def test_build_conversation_context(self, redis_client):
-        """测试：Orchestrator 构建对话上下文"""
+        """测试：Orchestrator 构建对话上下文（C-06 二层压缩带内计数保持）。
+
+        V3-FIX-121：orchestrator 内建 pruner 为默认参数（max_history=10、
+        importance_threshold=max(20,30)=30），12 条落在二层压缩带——不静默丢帧、
+        不触发总结；旧「截到 5 条 + LLM 总结」语义已废（C-06 960bc498）。
+        """
         orchestrator = ChatOrchestrator(redis_client=redis_client)
 
         session_id = "test_orch_session"
@@ -269,11 +309,11 @@ class TestOrchestratorIntegration:
         # 调用 _build_conversation_context
         context = await orchestrator._build_conversation_context(session_id, user_id)
 
-        # 验证
+        # 验证：二层压缩带——帧数保持、总结面为零
         assert context["original_count"] == 12
-        assert context["pruned_count"] == 5
-        assert context["summary_used"] is True
-        assert len(context["messages"]) == 5
+        assert context["pruned_count"] == len(context["messages"]) == 12
+        assert context["summary_used"] is False
+        assert context["summary"] is None
 
     @pytest.mark.asyncio
     async def test_build_user_context_with_cache(self, redis_client):

@@ -103,6 +103,10 @@ async def test_generate_tasks_tool_uses_deterministic_fallback_when_llm_returns_
         ),
         user_id=str(user_id),
         db_session=fake_db,
+        # V3-FIX-121：回退文案已收编 i18n（app/data/i18n/{zh,en}.json
+        # planner.fallback_prerequisite_title），execute 缺省 locale="en"；
+        # 本测试钉中文规划文案，显式传 zh。
+        locale="zh",
     )
 
     assert result.success is True
