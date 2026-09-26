@@ -165,12 +165,23 @@ jobs:
           RULE_GUARD_DIFF_BASE: ${{ github.event.before || github.sha }}
         run: bash scripts/run_all_rule_guards.sh --jobs 4
 
-  # ==================== JOB 2: BACKEND TEST ====================
+  # ==================== JOB 2: BACKEND TEST (3-shard) ====================
+  # wt592 落地 wt577 提案（v3-output/WT577-PROFILE/report.md §5.2）：文件粒度
+  # LPT 三分静态清单（scripts/ci/backend_tests_shards.txt，数据源 run
+  # 36253679384 / job 108452479615，逐文件时长与 pytest 自报总时长 5043.68s
+  # 对平），预估每片 ~28.4m pytest 墙钟（现状单 job 84m）+ ~6m 环境步。
+  # fail-fast: false——一片红不取消其他片，两片并行取证不留观测空窗；
+  # coverage 按片唯一 COVERAGE_FILE 上传，由 backend-test-coverage 合并后
+  # 统一跑契约门与阈值。
   backend-test:
-    name: Backend Tests
+    name: Backend Tests (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
     needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       redis:
         image: redis:alpine
@@ -201,6 +212,8 @@ jobs:
       - name: Generate Go Proto Code
         run: make proto-tools-build && make proto-gen
 
+      # wt577 免费项备忘：Go test -race（~2-3m）可拆独立并行 job，三片各省一份
+      # 关键路径；涉及新 job 块（>5 行改动），wt592 不做，留待独立卡。
       - name: Go Test with Coverage
         working-directory: backend/gateway
         # -race needs cgo (default enabled on ubuntu runners). -timeout is an
@@ -260,6 +273,9 @@ jobs:
       # 「表来自迁移、fixture 不建表」（tests/integration/conftest.py），首次完整
       # 全量跑（run 36178015150）暴露 ~70 例 relation "users" does not exist——
       # 非测试或产品回归，是 ci.yml 缺迁移步骤的环境面缺口。此步补齐。
+      # 分片注意（wt577 §5.5 迹象 4）：本步连同 AGE 容器/init 每片原样复制、
+      # 各自独立 upgrade head；分片不改变迁移单头性（wt539/wt544 撞号教训——
+      # 不因分片拆迁移、不加第二迁移头）。
       - name: Apply database migrations (test schema parity)
         run: |
           cd backend
@@ -274,43 +290,113 @@ jobs:
           pip install grpcio-tools
           PYTHON_BIN=python3 bash scripts/generate_python_protos.sh
 
-      - name: Python Test with Coverage
-        env:
-          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
-          REDIS_URL: redis://localhost:6379/0
-          TESTING: 'true'
+      # 静态清单（可复现优先，可 review diff）：从 scripts/ci/backend_tests_shards.txt
+      # 取本片文件集（文件粒度 LPT 装箱 + 有状态钉扎，钉扎理由逐条见清单头注释）。
+      # 清单并集必须等于 backend/tests 全量可收集集——
+      # `python3 scripts/ci/backend_test_shards.py verify` 校验零遗漏零重复；
+      # 新增/删除测试文件后需重跑 generate 并 diff review。
+      - name: Resolve shard test file list (static manifest)
         run: |
-          pytest backend/tests -v --cov=backend/app --cov-report=xml --timeout=300 --timeout-method=thread
+          python3 scripts/ci/backend_test_shards.py emit \
+            --shard "${{ matrix.shard }}" \
+            --manifest scripts/ci/backend_tests_shards.txt \
+            --out .pytest-shard-files.txt
+          echo "shard ${{ matrix.shard }}: $(grep -c '^backend/tests/' .pytest-shard-files.txt) test files"
 
-      - name: Aurora Golden Text Snapshot Tests
+      # --cov-report=（空值）：只写数据文件不出报告，报告由 backend-test-coverage
+      # 对三片合并后统一产出；COVERAGE_FILE 按片唯一（upload-artifact v4 禁重名）。
+      # 去重（wt577 §5.0 免费项①，只去重不改语义）：golden / contract / workflow
+      # / proto 序列化契约文件本就落在该片清单内，不再像旧单 job 那样全量扫后
+      # 又用专用步重跑第二遍（ci.yml 旧 :285-299、:313）。
+      - name: Python Test with Coverage (shard ${{ matrix.shard }})
         env:
           DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
           REDIS_URL: redis://localhost:6379/0
           TESTING: 'true'
+          COVERAGE_FILE: /tmp/cov/.coverage.${{ matrix.shard }}
         run: |
-          pytest backend/tests/golden -v
+          mkdir -p /tmp/cov
+          pytest -v $(tr '\n' ' ' < .pytest-shard-files.txt) --cov=backend/app --cov-report= --timeout=300 --timeout-method=thread
 
-      - name: Python Contract and Workflow Risk Suites
-        env:
-          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
-          REDIS_URL: redis://localhost:6379/0
-          TESTING: 'true'
+      # if: always()：片红也上传已写盘的部分数据供取证（WT572 观测失明教训）；
+      # 合并侧仍要求全片绿才继续跑契约门与阈值。
+      - name: Upload shard coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-cov-shard-${{ matrix.shard }}
+          path: /tmp/cov/.coverage.${{ matrix.shard }}
+          if-no-files-found: warn
+          retention-days: 1
+
+  # ==================== JOB 2A: BACKEND COVERAGE MERGE ====================
+  # 三片 coverage 合并 + 原属 Backend Tests 的契约门与 Python 阈值检查（每项
+  # 只跑一次，不随片三倍付费）。矩阵任何一片非绿 → 首步直接红：needs +
+  # if: always() + 显式 result 检查，红不可被吞（wt577 §5.0）。
+  backend-test-coverage:
+    name: Backend Coverage Merge & Contract Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [backend-test]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require all backend test shards green
+        if: needs.backend-test.result != 'success'
         run: |
-          pytest backend/tests/contract backend/tests/workflow -v
+          echo "::error title=Backend Tests shard not green::needs.backend-test.result=${{ needs.backend-test.result }}；拒绝合并 coverage 与放行契约门，避免片红被吞。"
+          exit 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Python Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Python Dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y liblzo2-dev
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
+
+      # 契约门（OpenAPI 快照导出 / fixture replay）经 subprocess 导入 app，需要
+      # gitignored 生成物 backend/app/gen 先行再生（与分片内同形制）。
+      - name: Generate Python Proto Code
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" backend/app/gen
+          pip install grpcio-tools
+          PYTHON_BIN=python3 bash scripts/generate_python_protos.sh
+
+      - name: Download shard coverage data
+        uses: actions/download-artifact@v4
+        with:
+          pattern: backend-cov-shard-*
+          merge-multiple: true
+          path: coverage-shards
+
+      # combine 收拢 .coverage.<shard> → .coverage → coverage.xml；仓库无
+      # .coveragerc/[tool.coverage] 自定义（wt577 已核），hosted runner 检出路径
+      # 一致，无需 [paths] 重映射。
+      - name: Merge shard coverage into coverage.xml
+        run: |
+          ls -la coverage-shards
+          python -m coverage combine coverage-shards
+          python -m coverage xml
+          python -m coverage report | tail -n 8
 
       - name: OpenAPI Contract Check
         run: python3 scripts/check_openapi_contract.py
 
       - name: Proto Contract Check
         run: python3 scripts/check_proto_contract.py
-
-      - name: Proto Serialization Contract
-        env:
-          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
-          REDIS_URL: redis://localhost:6379/0
-          TESTING: 'true'
-        run: |
-          pytest backend/tests/contract/test_proto_serialization_contract.py backend/tests/contract/test_json_wire_format_contract.py -v
 
       - name: Dependency Contract Check
         run: python3 scripts/check_dependency_contract.py
@@ -321,7 +407,7 @@ jobs:
       - name: Backend Fixture Replay Gate
         run: python3 scripts/replay_backend_contract_fixtures.py
 
-      - name: Enforce Python Coverage Threshold
+      - name: Enforce Python Coverage Threshold (merged across shards)
         run: |
           python3 scripts/check_coverage_thresholds.py \
             --kind python \
@@ -333,7 +419,7 @@ jobs:
     name: Journey Smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [all-rule-guards, backend-test]
+    needs: [all-rule-guards, backend-test, backend-test-coverage]
     services:
       redis:
         image: redis:alpine
@@ -370,7 +456,7 @@ jobs:
     name: Simulation Benchmark
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: backend-test
+    needs: [backend-test, backend-test-coverage]
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
@@ -679,7 +765,7 @@ jobs:
     name: Build Artifacts
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    needs: [all-rule-guards, backend-test, flutter-test, security-scan, db-schema-check, proto-check]
+    needs: [all-rule-guards, backend-test, backend-test-coverage, flutter-test, security-scan, db-schema-check, proto-check]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
     permissions:
       contents: read

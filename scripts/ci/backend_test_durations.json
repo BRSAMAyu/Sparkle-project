@@ -1,0 +1,5295 @@
+{
+ "files": {
+  "backend/tests/agents/graph/nodes/test_deep_analyst.py": {
+   "secs": 0.013,
+   "tests": 1
+  },
+  "backend/tests/agents/graph/nodes/test_error_analyst.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/agents/test_enhanced_orchestrator.py": {
+   "secs": 0.154,
+   "tests": 12
+  },
+  "backend/tests/ai_face_eval/test_ai_face_eval_gate.py": {
+   "secs": 0.103,
+   "tests": 25
+  },
+  "backend/tests/api/test_accountability_system_api.py": {
+   "secs": 25.027,
+   "tests": 13
+  },
+  "backend/tests/api/test_achievement_api.py": {
+   "secs": 1.629,
+   "tests": 7
+  },
+  "backend/tests/api/test_agent_graph_api.py": {
+   "secs": 0.018,
+   "tests": 2
+  },
+  "backend/tests/api/test_audit_aurora_effectiveness_api.py": {
+   "secs": 2.806,
+   "tests": 2
+  },
+  "backend/tests/api/test_audit_pack_quality_api.py": {
+   "secs": 0.045,
+   "tests": 1
+  },
+  "backend/tests/api/test_aurora_calibration_cards_api.py": {
+   "secs": 2.979,
+   "tests": 2
+  },
+  "backend/tests/api/test_aurora_daily_startup_api.py": {
+   "secs": 0.207,
+   "tests": 3
+  },
+  "backend/tests/api/test_aurora_telemetry_api.py": {
+   "secs": 1.449,
+   "tests": 1
+  },
+  "backend/tests/api/test_auth_login_empty_credentials.py": {
+   "secs": 2.782,
+   "tests": 7
+  },
+  "backend/tests/api/test_blocked_users_api.py": {
+   "secs": 1.632,
+   "tests": 1
+  },
+  "backend/tests/api/test_calendar_api.py": {
+   "secs": 3.04,
+   "tests": 2
+  },
+  "backend/tests/api/test_capsules_api.py": {
+   "secs": 5.498,
+   "tests": 3
+  },
+  "backend/tests/api/test_capsules_stats_window.py": {
+   "secs": 4.249,
+   "tests": 3
+  },
+  "backend/tests/api/test_chat_legacy_user_context.py": {
+   "secs": 3.718,
+   "tests": 2
+  },
+  "backend/tests/api/test_client_telemetry_api.py": {
+   "secs": 0.05,
+   "tests": 3
+  },
+  "backend/tests/api/test_cognitive_api.py": {
+   "secs": 5.561,
+   "tests": 1
+  },
+  "backend/tests/api/test_comeback_replan_cache_invalidation.py": {
+   "secs": 1.89,
+   "tests": 1
+  },
+  "backend/tests/api/test_community_accountability_new_guest_500.py": {
+   "secs": 0.05,
+   "tests": 2
+  },
+  "backend/tests/api/test_community_accountability_route_shadowing.py": {
+   "secs": 0.03,
+   "tests": 2
+  },
+  "backend/tests/api/test_community_feed_cohort_filter.py": {
+   "secs": 0.057,
+   "tests": 8
+  },
+  "backend/tests/api/test_community_group_file_sharing_api.py": {
+   "secs": 3.999,
+   "tests": 2
+  },
+  "backend/tests/api/test_current_goal_id_goal_space.py": {
+   "secs": 13.685,
+   "tests": 9
+  },
+  "backend/tests/api/test_equipment_api.py": {
+   "secs": 4.624,
+   "tests": 3
+  },
+  "backend/tests/api/test_exam_sprint_api.py": {
+   "secs": 9.823,
+   "tests": 7
+  },
+  "backend/tests/api/test_executions_api.py": {
+   "secs": 0.386,
+   "tests": 5
+  },
+  "backend/tests/api/test_experiments_api_access.py": {
+   "secs": 4.194,
+   "tests": 3
+  },
+  "backend/tests/api/test_experiments_slug_uuid_bridge.py": {
+   "secs": 8.377,
+   "tests": 5
+  },
+  "backend/tests/api/test_friend_match_api.py": {
+   "secs": 3.52,
+   "tests": 2
+  },
+  "backend/tests/api/test_galaxy_graph_shield_invalidation.py": {
+   "secs": 4.536,
+   "tests": 3
+  },
+  "backend/tests/api/test_group_directory_api.py": {
+   "secs": 3.653,
+   "tests": 2
+  },
+  "backend/tests/api/test_group_discovery_cohort_filter.py": {
+   "secs": 8.032,
+   "tests": 7
+  },
+  "backend/tests/api/test_group_file_trust_level_pg_enum_regression.py": {
+   "secs": 1.81,
+   "tests": 5
+  },
+  "backend/tests/api/test_group_knowledge_api.py": {
+   "secs": 3.468,
+   "tests": 2
+  },
+  "backend/tests/api/test_growth_api.py": {
+   "secs": 8.551,
+   "tests": 6
+  },
+  "backend/tests/api/test_insights_evidence_cards_api.py": {
+   "secs": 7.184,
+   "tests": 5
+  },
+  "backend/tests/api/test_insights_understanding_depth_api.py": {
+   "secs": 5.412,
+   "tests": 4
+  },
+  "backend/tests/api/test_insights_understanding_dimensions_api.py": {
+   "secs": 5.599,
+   "tests": 4
+  },
+  "backend/tests/api/test_internal_api_fail_closed.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/api/test_kill_switch_readiness_endpoint.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/api/test_leaderboard_self_anchor_api.py": {
+   "secs": 5.773,
+   "tests": 4
+  },
+  "backend/tests/api/test_marketplace_api.py": {
+   "secs": 2.865,
+   "tests": 2
+  },
+  "backend/tests/api/test_monitoring_presence_api.py": {
+   "secs": 6.99,
+   "tests": 5
+  },
+  "backend/tests/api/test_no_unregistered_routers.py": {
+   "secs": 0.024,
+   "tests": 3
+  },
+  "backend/tests/api/test_notification_preferences_unified.py": {
+   "secs": 10.109,
+   "tests": 7
+  },
+  "backend/tests/api/test_notification_suggestion_action.py": {
+   "secs": 7.032,
+   "tests": 5
+  },
+  "backend/tests/api/test_p2_06_source_and_directive_audit.py": {
+   "secs": 7.38,
+   "tests": 4
+  },
+  "backend/tests/api/test_photons_api.py": {
+   "secs": 0.163,
+   "tests": 6
+  },
+  "backend/tests/api/test_plan_confirm_api.py": {
+   "secs": 8.934,
+   "tests": 6
+  },
+  "backend/tests/api/test_plans_api.py": {
+   "secs": 29.158,
+   "tests": 20
+  },
+  "backend/tests/api/test_post_comments_cohort_filter.py": {
+   "secs": 0.01,
+   "tests": 2
+  },
+  "backend/tests/api/test_post_interaction_cohort_guard.py": {
+   "secs": 0.015,
+   "tests": 3
+  },
+  "backend/tests/api/test_profile_transparency_api.py": {
+   "secs": 16.607,
+   "tests": 11
+  },
+  "backend/tests/api/test_r2_route_shadowing_fixes.py": {
+   "secs": 0.473,
+   "tests": 6
+  },
+  "backend/tests/api/test_recommendation_feedback_api.py": {
+   "secs": 3.432,
+   "tests": 2
+  },
+  "backend/tests/api/test_release_approvals_authz.py": {
+   "secs": 14.254,
+   "tests": 10
+  },
+  "backend/tests/api/test_s03_surface_convergence.py": {
+   "secs": 9.428,
+   "tests": 4
+  },
+  "backend/tests/api/test_s04_community_outcome_evidence.py": {
+   "secs": 8.046,
+   "tests": 4
+  },
+  "backend/tests/api/test_s05_community_reconnect_retract_two_account_e2e.py": {
+   "secs": 49.666,
+   "tests": 30
+  },
+  "backend/tests/api/test_safe_experiments_api.py": {
+   "secs": 1.424,
+   "tests": 1
+  },
+  "backend/tests/api/test_shop_api.py": {
+   "secs": 0.068,
+   "tests": 3
+  },
+  "backend/tests/api/test_slo_auto_degrade_api.py": {
+   "secs": 0.212,
+   "tests": 23
+  },
+  "backend/tests/api/test_statistics_api.py": {
+   "secs": 1.431,
+   "tests": 1
+  },
+  "backend/tests/api/test_stuck_journey_api.py": {
+   "secs": 13.182,
+   "tests": 9
+  },
+  "backend/tests/api/test_sweep4_postcommit_broadcast_best_effort.py": {
+   "secs": 2.824,
+   "tests": 2
+  },
+  "backend/tests/api/test_task_complete_and_update_api.py": {
+   "secs": 6.607,
+   "tests": 4
+  },
+  "backend/tests/api/test_task_complete_galaxy_outbox.py": {
+   "secs": 6.778,
+   "tests": 4
+  },
+  "backend/tests/api/test_task_feedback_async_reflection.py": {
+   "secs": 3.687,
+   "tests": 3
+  },
+  "backend/tests/api/test_task_feedback_submit_api.py": {
+   "secs": 3.673,
+   "tests": 3
+  },
+  "backend/tests/api/test_task_guidance_api.py": {
+   "secs": 2.98,
+   "tests": 2
+  },
+  "backend/tests/api/test_task_priority_reasoning_api.py": {
+   "secs": 3.074,
+   "tests": 2
+  },
+  "backend/tests/api/test_task_quick_actions_api.py": {
+   "secs": 14.4,
+   "tests": 8
+  },
+  "backend/tests/api/test_visual_elements_api.py": {
+   "secs": 6.874,
+   "tests": 5
+  },
+  "backend/tests/api/test_vocabulary_api.py": {
+   "secs": 0.426,
+   "tests": 10
+  },
+  "backend/tests/api/test_wt392_r2v3_galaxy_shield_gaps.py": {
+   "secs": 3.288,
+   "tests": 2
+  },
+  "backend/tests/api/test_wt396_f6_kick_publish_failure.py": {
+   "secs": 3.013,
+   "tests": 3
+  },
+  "backend/tests/api/test_wt420_postcommit_broadcast_family_residual.py": {
+   "secs": 11.821,
+   "tests": 7
+  },
+  "backend/tests/api/test_wt434_warn_persistence_mute_expiry.py": {
+   "secs": 7.049,
+   "tests": 5
+  },
+  "backend/tests/aurora/test_async_substrate_tasks.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/aurora/test_comeback_context.py": {
+   "secs": 18.41,
+   "tests": 13
+  },
+  "backend/tests/aurora/test_continuous_learning_phase_a.py": {
+   "secs": 5.694,
+   "tests": 8
+  },
+  "backend/tests/aurora/test_daily_startup_message.py": {
+   "secs": 10.01,
+   "tests": 7
+  },
+  "backend/tests/aurora/test_deterministic_performance_baseline.py": {
+   "secs": 0.181,
+   "tests": 2
+  },
+  "backend/tests/aurora/test_h6_dialogue_quality_audit.py": {
+   "secs": 2.93,
+   "tests": 4
+  },
+  "backend/tests/aurora/test_inflight_wake_suppression.py": {
+   "secs": 12.909,
+   "tests": 9
+  },
+  "backend/tests/aurora/test_j07_comeback_recovery.py": {
+   "secs": 15.895,
+   "tests": 11
+  },
+  "backend/tests/aurora/test_migration_cutover.py": {
+   "secs": 0.021,
+   "tests": 7
+  },
+  "backend/tests/aurora/test_notification_burden_24h_clock.py": {
+   "secs": 7.133,
+   "tests": 5
+  },
+  "backend/tests/aurora/test_notification_burden_p06.py": {
+   "secs": 22.874,
+   "tests": 19
+  },
+  "backend/tests/aurora/test_observability_baseline.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/aurora/test_policy_and_decision_fns.py": {
+   "secs": 0.026,
+   "tests": 11
+  },
+  "backend/tests/aurora/test_proactive_autoexec.py": {
+   "secs": 0.131,
+   "tests": 43
+  },
+  "backend/tests/aurora/test_proactive_event_pipeline.py": {
+   "secs": 0.468,
+   "tests": 125
+  },
+  "backend/tests/aurora/test_proactive_relevance.py": {
+   "secs": 0.227,
+   "tests": 79
+  },
+  "backend/tests/aurora/test_prompt_leakage_fix.py": {
+   "secs": 0.034,
+   "tests": 12
+  },
+  "backend/tests/aurora/test_reference_flow_harness.py": {
+   "secs": 0.009,
+   "tests": 4
+  },
+  "backend/tests/aurora/test_reference_flows_live.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/aurora/test_review_focus_enrichment.py": {
+   "secs": 0.023,
+   "tests": 11
+  },
+  "backend/tests/aurora/test_scenario_packs.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/aurora/test_seed_bridge.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/aurora/test_shadow_comparison.py": {
+   "secs": 0.062,
+   "tests": 3
+  },
+  "backend/tests/aurora/test_signal_pipeline.py": {
+   "secs": 0.024,
+   "tests": 5
+  },
+  "backend/tests/aurora/test_stage4_eval_guardrails.py": {
+   "secs": 0.041,
+   "tests": 7
+  },
+  "backend/tests/aurora/test_stimulation_policy.py": {
+   "secs": 1.33,
+   "tests": 7
+  },
+  "backend/tests/aurora/test_ws6_profile_mirror.py": {
+   "secs": 0.01,
+   "tests": 4
+  },
+  "backend/tests/benchmark/test_llm_service_bench.py": {
+   "secs": 0.018,
+   "tests": 12
+  },
+  "backend/tests/benchmark/test_orchestrator_bench.py": {
+   "secs": 0.016,
+   "tests": 11
+  },
+  "backend/tests/benchmark/test_python_core_bench.py": {
+   "secs": 0.022,
+   "tests": 15
+  },
+  "backend/tests/benchmark/test_statistics_performance.py": {
+   "secs": 0.018,
+   "tests": 12
+  },
+  "backend/tests/benchmark/test_tool_registry_bench.py": {
+   "secs": 0.018,
+   "tests": 13
+  },
+  "backend/tests/benchmark/test_transparency_performance.py": {
+   "secs": 0.016,
+   "tests": 11
+  },
+  "backend/tests/benchmark/test_vector_search_bench.py": {
+   "secs": 0.02,
+   "tests": 14
+  },
+  "backend/tests/chaos/test_minio_resilience.py": {
+   "secs": 0.256,
+   "tests": 18
+  },
+  "backend/tests/chaos/test_service_resilience.py": {
+   "secs": 0.005,
+   "tests": 3
+  },
+  "backend/tests/context_eval/test_context_eval_gate.py": {
+   "secs": 0.223,
+   "tests": 17
+  },
+  "backend/tests/contract/test_api_health_contract.py": {
+   "secs": 0.115,
+   "tests": 4
+  },
+  "backend/tests/contract/test_api_router_openapi_contract.py": {
+   "secs": 23.476,
+   "tests": 3
+  },
+  "backend/tests/contract/test_aurora_decision_contract.py": {
+   "secs": 0.063,
+   "tests": 30
+  },
+  "backend/tests/contract/test_coverage_thresholds_script.py": {
+   "secs": 0.011,
+   "tests": 4
+  },
+  "backend/tests/contract/test_decision_context_contract.py": {
+   "secs": 10.227,
+   "tests": 21
+  },
+  "backend/tests/contract/test_event_registry_contract.py": {
+   "secs": 0.251,
+   "tests": 34
+  },
+  "backend/tests/contract/test_experience_memory_contract.py": {
+   "secs": 0.089,
+   "tests": 40
+  },
+  "backend/tests/contract/test_grpc_roundtrip_contract.py": {
+   "secs": 0.021,
+   "tests": 10
+  },
+  "backend/tests/contract/test_intervention_catalog_contract.py": {
+   "secs": 0.063,
+   "tests": 29
+  },
+  "backend/tests/contract/test_intervention_lifecycle_contract.py": {
+   "secs": 0.11,
+   "tests": 53
+  },
+  "backend/tests/contract/test_joint_decision_contract.py": {
+   "secs": 0.02,
+   "tests": 10
+  },
+  "backend/tests/contract/test_json_wire_format_contract.py": {
+   "secs": 0.009,
+   "tests": 4
+  },
+  "backend/tests/contract/test_policy_patch_contract.py": {
+   "secs": 0.083,
+   "tests": 39
+  },
+  "backend/tests/contract/test_proto_contract_script.py": {
+   "secs": 0.034,
+   "tests": 5
+  },
+  "backend/tests/contract/test_proto_serialization_contract.py": {
+   "secs": 0.01,
+   "tests": 5
+  },
+  "backend/tests/contract/test_state_manager_contract.py": {
+   "secs": 0.023,
+   "tests": 4
+  },
+  "backend/tests/contract/test_telemetry_boundary_contract.py": {
+   "secs": 0.819,
+   "tests": 4
+  },
+  "backend/tests/contract/test_websocket_proto_contract.py": {
+   "secs": 0.01,
+   "tests": 5
+  },
+  "backend/tests/core/test_agent_profiles_catalog.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/core/test_b01_ws_turn_creates_chat_session_header.py": {
+   "secs": 4.32,
+   "tests": 4
+  },
+  "backend/tests/core/test_background_tasks.py": {
+   "secs": 0.103,
+   "tests": 13
+  },
+  "backend/tests/core/test_batch_llm_provider_switch.py": {
+   "secs": 0.205,
+   "tests": 24
+  },
+  "backend/tests/core/test_bert_intent_classifier.py": {
+   "secs": 0.058,
+   "tests": 39
+  },
+  "backend/tests/core/test_celery_beat_registration_guard.py": {
+   "secs": 0.015,
+   "tests": 2
+  },
+  "backend/tests/core/test_celery_dispatch_async.py": {
+   "secs": 5.014,
+   "tests": 3
+  },
+  "backend/tests/core/test_celery_node_embedding_stamp.py": {
+   "secs": 0.054,
+   "tests": 2
+  },
+  "backend/tests/core/test_celery_route_beat_hygiene.py": {
+   "secs": 0.587,
+   "tests": 3
+  },
+  "backend/tests/core/test_db_session_context.py": {
+   "secs": 0.048,
+   "tests": 5
+  },
+  "backend/tests/core/test_economy_metrics_snapshot_beat.py": {
+   "secs": 0.008,
+   "tests": 4
+  },
+  "backend/tests/core/test_event_bus_lifespan_shutdown.py": {
+   "secs": 0.009,
+   "tests": 3
+  },
+  "backend/tests/core/test_ff_convergence_sites.py": {
+   "secs": 0.138,
+   "tests": 11
+  },
+  "backend/tests/core/test_lifespan_event_bus_redis_unavailable.py": {
+   "secs": 0.512,
+   "tests": 2
+  },
+  "backend/tests/core/test_llm_router_glm_thinking.py": {
+   "secs": 0.446,
+   "tests": 6
+  },
+  "backend/tests/core/test_llm_router_policy.py": {
+   "secs": 0.016,
+   "tests": 7
+  },
+  "backend/tests/core/test_llm_router_qwen.py": {
+   "secs": 0.079,
+   "tests": 25
+  },
+  "backend/tests/core/test_llm_router_xiaomi_lane_gate.py": {
+   "secs": 0.026,
+   "tests": 8
+  },
+  "backend/tests/core/test_minimax_batch_routing.py": {
+   "secs": 0.111,
+   "tests": 20
+  },
+  "backend/tests/core/test_plan_context.py": {
+   "secs": 0.063,
+   "tests": 11
+  },
+  "backend/tests/core/test_policy_task_event_loop.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/core/test_pool_governance_v3fix156.py": {
+   "secs": 0.455,
+   "tests": 5
+  },
+  "backend/tests/core/test_rate_limit_real_ip.py": {
+   "secs": 0.014,
+   "tests": 6
+  },
+  "backend/tests/core/test_rb06_followup_no_midstream_commit.py": {
+   "secs": 0.014,
+   "tests": 4
+  },
+  "backend/tests/core/test_request_coalescing.py": {
+   "secs": 0.992,
+   "tests": 11
+  },
+  "backend/tests/core/test_shutdown_invalidation_drain_wiring.py": {
+   "secs": 0.077,
+   "tests": 2
+  },
+  "backend/tests/core/test_sse_heartbeat.py": {
+   "secs": 0.644,
+   "tests": 6
+  },
+  "backend/tests/core/test_sse_seq_monotonic.py": {
+   "secs": 0.022,
+   "tests": 6
+  },
+  "backend/tests/core/test_trace_spine.py": {
+   "secs": 0.103,
+   "tests": 15
+  },
+  "backend/tests/core/test_user_session_cleanup_beat.py": {
+   "secs": 0.008,
+   "tests": 4
+  },
+  "backend/tests/core/test_workers_package_location.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/e2e/test_achievement_unlock_e2e.py": {
+   "secs": 10.812,
+   "tests": 7
+  },
+  "backend/tests/e2e/test_e2e_integration.py": {
+   "secs": 0.069,
+   "tests": 21
+  },
+  "backend/tests/e2e/test_execution_feedback_loop.py": {
+   "secs": 7.968,
+   "tests": 7
+  },
+  "backend/tests/golden/test_aurora_experience_golden.py": {
+   "secs": 0.031,
+   "tests": 5
+  },
+  "backend/tests/golden/test_north_star_wvpl_golden.py": {
+   "secs": 2.972,
+   "tests": 3
+  },
+  "backend/tests/golden/test_q02_golden_service_layer.py": {
+   "secs": 4.475,
+   "tests": 3
+  },
+  "backend/tests/integration/test_ab_test_lifecycle.py": {
+   "secs": 0.012,
+   "tests": 8
+  },
+  "backend/tests/integration/test_achievement_progress_context.py": {
+   "secs": 0.118,
+   "tests": 1
+  },
+  "backend/tests/integration/test_adaptive_replanning_integration.py": {
+   "secs": 2.382,
+   "tests": 9
+  },
+  "backend/tests/integration/test_auth_flow_integration.py": {
+   "secs": 5.149,
+   "tests": 25
+  },
+  "backend/tests/integration/test_auto_seeding_workflow.py": {
+   "secs": 0.011,
+   "tests": 8
+  },
+  "backend/tests/integration/test_belief_shadow_real_redis.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/integration/test_cache_consistency_integration.py": {
+   "secs": 3.369,
+   "tests": 15
+  },
+  "backend/tests/integration/test_capsule_ai_personalization.py": {
+   "secs": 0.125,
+   "tests": 1
+  },
+  "backend/tests/integration/test_chat_mode_workflows.py": {
+   "secs": 0.009,
+   "tests": 1
+  },
+  "backend/tests/integration/test_checkpoint_nudge_runtime.py": {
+   "secs": 0.389,
+   "tests": 1
+  },
+  "backend/tests/integration/test_community_integration.py": {
+   "secs": 23.041,
+   "tests": 13
+  },
+  "backend/tests/integration/test_error_book_galaxy_mastery_sync.py": {
+   "secs": 40.3,
+   "tests": 21
+  },
+  "backend/tests/integration/test_error_link_mastery_e2e.py": {
+   "secs": 4.03,
+   "tests": 2
+  },
+  "backend/tests/integration/test_event_bus_e2e.py": {
+   "secs": 0.137,
+   "tests": 9
+  },
+  "backend/tests/integration/test_event_pipeline_integration.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/integration/test_full_orchestration_flow.py": {
+   "secs": 0.274,
+   "tests": 10
+  },
+  "backend/tests/integration/test_grpc_streaming_integration.py": {
+   "secs": 0.027,
+   "tests": 16
+  },
+  "backend/tests/integration/test_ltm_e2e.py": {
+   "secs": 0.381,
+   "tests": 2
+  },
+  "backend/tests/integration/test_memory_evolution_workflow.py": {
+   "secs": 0.01,
+   "tests": 7
+  },
+  "backend/tests/integration/test_north_star_journey.py": {
+   "secs": 5.602,
+   "tests": 12
+  },
+  "backend/tests/integration/test_p0_fixes_validation.py": {
+   "secs": 0.52,
+   "tests": 5
+  },
+  "backend/tests/integration/test_phase5_orchestrator_north_star_acceptance.py": {
+   "secs": 2.323,
+   "tests": 2
+  },
+  "backend/tests/integration/test_photon_concurrency.py": {
+   "secs": 2.508,
+   "tests": 1
+  },
+  "backend/tests/integration/test_plan_outcome_evaluator.py": {
+   "secs": 0.009,
+   "tests": 4
+  },
+  "backend/tests/integration/test_plan_state_jsonb_pg.py": {
+   "secs": 0.688,
+   "tests": 3
+  },
+  "backend/tests/integration/test_preference_to_plan_e2e.py": {
+   "secs": 3.482,
+   "tests": 7
+  },
+  "backend/tests/integration/test_redis_failure_scenarios.py": {
+   "secs": 0.056,
+   "tests": 10
+  },
+  "backend/tests/integration/test_shop_acceptance.py": {
+   "secs": 1.238,
+   "tests": 7
+  },
+  "backend/tests/integration/test_shop_end_to_end.py": {
+   "secs": 3.126,
+   "tests": 11
+  },
+  "backend/tests/integration/test_shop_purchase_idempotency.py": {
+   "secs": 4.85,
+   "tests": 2
+  },
+  "backend/tests/integration/test_spine_directive_e2e.py": {
+   "secs": 0.448,
+   "tests": 14
+  },
+  "backend/tests/integration/test_spine_e2e.py": {
+   "secs": 0.543,
+   "tests": 9
+  },
+  "backend/tests/integration/test_stage35_error_journey_smoke.py": {
+   "secs": 1.789,
+   "tests": 1
+  },
+  "backend/tests/integration/test_stage35_journey_smoke.py": {
+   "secs": 2.241,
+   "tests": 1
+  },
+  "backend/tests/integration/test_stage38_event_publishers.py": {
+   "secs": 1.819,
+   "tests": 3
+  },
+  "backend/tests/integration/test_stage38_journey_subscribers.py": {
+   "secs": 5.219,
+   "tests": 3
+  },
+  "backend/tests/integration/test_task_manager_integration.py": {
+   "secs": 17.627,
+   "tests": 21
+  },
+  "backend/tests/integration/test_thermodynamics_demo_scenario.py": {
+   "secs": 2.0,
+   "tests": 1
+  },
+  "backend/tests/integration/test_websocket_full_stack.py": {
+   "secs": 0.021,
+   "tests": 14
+  },
+  "backend/tests/integration/test_x09_crash_recovery_e2e.py": {
+   "secs": 5.78,
+   "tests": 1
+  },
+  "backend/tests/load/test_performance_load.py": {
+   "secs": 124.831,
+   "tests": 24
+  },
+  "backend/tests/manual_rag_test.py": {
+   "secs": 4.269,
+   "tests": 1
+  },
+  "backend/tests/memory_eval/test_memory_eval_gate.py": {
+   "secs": 8.69,
+   "tests": 7
+  },
+  "backend/tests/northstar_eval/test_gain_ab.py": {
+   "secs": 4.663,
+   "tests": 5
+  },
+  "backend/tests/northstar_eval/test_grade_ab.py": {
+   "secs": 0.029,
+   "tests": 8
+  },
+  "backend/tests/northstar_eval/test_northstar_eval_gate.py": {
+   "secs": 0.069,
+   "tests": 12
+  },
+  "backend/tests/northstar_eval/test_real_drive_unit.py": {
+   "secs": 0.082,
+   "tests": 40
+  },
+  "backend/tests/northstar_eval/test_sidecar_journey.py": {
+   "secs": 0.182,
+   "tests": 1
+  },
+  "backend/tests/orchestration/test_chat_modes_expert.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/orchestration/test_correction_priority_over_planning.py": {
+   "secs": 2.005,
+   "tests": 7
+  },
+  "backend/tests/orchestration/test_execution_engine_multi_agent_workflow_ids.py": {
+   "secs": 0.004,
+   "tests": 1
+  },
+  "backend/tests/orchestration/test_fsm_state_real.py": {
+   "secs": 0.02,
+   "tests": 5
+  },
+  "backend/tests/orchestration/test_mode_workflow_config.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/orchestration/test_multi_agent_adapter.py": {
+   "secs": 0.023,
+   "tests": 3
+  },
+  "backend/tests/orchestration/test_orchestrator_adaptive_strategy.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/orchestration/test_orchestrator_circuit_breaker.py": {
+   "secs": 0.018,
+   "tests": 5
+  },
+  "backend/tests/orchestration/test_orchestrator_graph_timeout.py": {
+   "secs": 0.495,
+   "tests": 2
+  },
+  "backend/tests/orchestration/test_orchestrator_process_stream_integration.py": {
+   "secs": 4.32,
+   "tests": 25
+  },
+  "backend/tests/orchestration/test_orchestrator_state_transitions.py": {
+   "secs": 1.833,
+   "tests": 26
+  },
+  "backend/tests/orchestration/test_planning_workflow.py": {
+   "secs": 7.721,
+   "tests": 33
+  },
+  "backend/tests/orchestration/test_planning_workflow_cold_start.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/orchestration/test_r2_orchestration_fixes.py": {
+   "secs": 2.78,
+   "tests": 10
+  },
+  "backend/tests/orchestration/test_response_builder_semantic_meta.py": {
+   "secs": 0.008,
+   "tests": 2
+  },
+  "backend/tests/orchestration/test_round1_p2_fixes.py": {
+   "secs": 0.418,
+   "tests": 18
+  },
+  "backend/tests/orchestration/test_run_ledger.py": {
+   "secs": 0.011,
+   "tests": 3
+  },
+  "backend/tests/orchestration/test_sidecar_fasttrack_multiturn_keys.py": {
+   "secs": 0.075,
+   "tests": 5
+  },
+  "backend/tests/orchestration/test_statechart_engine.py": {
+   "secs": 0.268,
+   "tests": 38
+  },
+  "backend/tests/orchestration/test_sufficiency_preflight_resilience.py": {
+   "secs": 0.225,
+   "tests": 5
+  },
+  "backend/tests/orchestration/test_tool_result_error_sanitization.py": {
+   "secs": 0.025,
+   "tests": 2
+  },
+  "backend/tests/performance/test_celery_stress.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/phase5/test_circuit_breaker.py": {
+   "secs": 2.524,
+   "tests": 6
+  },
+  "backend/tests/phase5/test_document_quality.py": {
+   "secs": 0.035,
+   "tests": 14
+  },
+  "backend/tests/phase5/test_hyde_rag.py": {
+   "secs": 4.754,
+   "tests": 5
+  },
+  "backend/tests/profile/eval/test_profile_eval_llm_judge.py": {
+   "secs": 0.014,
+   "tests": 3
+  },
+  "backend/tests/profile/eval/test_profile_eval_skeleton.py": {
+   "secs": 0.01,
+   "tests": 4
+  },
+  "backend/tests/profile/test_intervention_verification_loop.py": {
+   "secs": 2.952,
+   "tests": 2
+  },
+  "backend/tests/q04_personal_redteam/test_q04_redteam_final.py": {
+   "secs": 15.874,
+   "tests": 10
+  },
+  "backend/tests/schemas/test_cognitive_schema.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/schemas/test_community_schema.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/security/test_permission_isolation.py": {
+   "secs": 0.012,
+   "tests": 6
+  },
+  "backend/tests/security/test_q05_redteam_final.py": {
+   "secs": 52.979,
+   "tests": 43
+  },
+  "backend/tests/security/test_security.py": {
+   "secs": 0.115,
+   "tests": 35
+  },
+  "backend/tests/services/galaxy/test_delete_correction_consistency.py": {
+   "secs": 14.021,
+   "tests": 9
+  },
+  "backend/tests/services/galaxy/test_mastery_evidence.py": {
+   "secs": 0.135,
+   "tests": 32
+  },
+  "backend/tests/services/galaxy/test_outcome_absorption.py": {
+   "secs": 23.65,
+   "tests": 15
+  },
+  "backend/tests/services/galaxy/test_outcome_read_model_visibility.py": {
+   "secs": 5.861,
+   "tests": 5
+  },
+  "backend/tests/services/galaxy/test_retrieval_service.py": {
+   "secs": 0.17,
+   "tests": 26
+  },
+  "backend/tests/services/galaxy/test_review_urgency_service.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/services/galaxy/test_stats_service.py": {
+   "secs": 0.071,
+   "tests": 14
+  },
+  "backend/tests/services/galaxy/test_title_sanitizer.py": {
+   "secs": 0.073,
+   "tests": 34
+  },
+  "backend/tests/services/stt/providers/test_bailian_provider.py": {
+   "secs": 0.032,
+   "tests": 7
+  },
+  "backend/tests/services/stt/providers/test_base.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/services/stt/providers/test_xunfei_provider.py": {
+   "secs": 0.009,
+   "tests": 2
+  },
+  "backend/tests/services/stt/providers/test_zhipu_provider.py": {
+   "secs": 0.035,
+   "tests": 4
+  },
+  "backend/tests/services/test_accountability_mvp_service.py": {
+   "secs": 2.673,
+   "tests": 2
+  },
+  "backend/tests/services/test_achievement_engine_aliases.py": {
+   "secs": 0.016,
+   "tests": 4
+  },
+  "backend/tests/services/test_achievement_reward_observability.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/services/test_adaptive_replanner_seed_cohort_filter.py": {
+   "secs": 0.015,
+   "tests": 2
+  },
+  "backend/tests/services/test_agent_grpc_service_chat_modes.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/services/test_candidate_generation_service.py": {
+   "secs": 0.069,
+   "tests": 18
+  },
+  "backend/tests/services/test_capability_registry_phase_e.py": {
+   "secs": 0.019,
+   "tests": 2
+  },
+  "backend/tests/services/test_capability_registry_service.py": {
+   "secs": 0.035,
+   "tests": 3
+  },
+  "backend/tests/services/test_cognitive_service.py": {
+   "secs": 0.038,
+   "tests": 3
+  },
+  "backend/tests/services/test_cognitive_service_core.py": {
+   "secs": 46.188,
+   "tests": 31
+  },
+  "backend/tests/services/test_collaborative_similar_users_join_binding.py": {
+   "secs": 0.04,
+   "tests": 2
+  },
+  "backend/tests/services/test_commitment_parser.py": {
+   "secs": 0.011,
+   "tests": 5
+  },
+  "backend/tests/services/test_consumer_exception_propagation.py": {
+   "secs": 0.023,
+   "tests": 3
+  },
+  "backend/tests/services/test_custom_expert_service.py": {
+   "secs": 2.74,
+   "tests": 2
+  },
+  "backend/tests/services/test_dashboard_service.py": {
+   "secs": 0.1,
+   "tests": 9
+  },
+  "backend/tests/services/test_dictionary_package_service.py": {
+   "secs": 0.008,
+   "tests": 2
+  },
+  "backend/tests/services/test_draft_knowledge_nodes_fallback_linkage.py": {
+   "secs": 1.417,
+   "tests": 1
+  },
+  "backend/tests/services/test_embedding_fail_closed.py": {
+   "secs": 0.058,
+   "tests": 17
+  },
+  "backend/tests/services/test_error_book_service.py": {
+   "secs": 0.131,
+   "tests": 9
+  },
+  "backend/tests/services/test_error_loop.py": {
+   "secs": 0.622,
+   "tests": 3
+  },
+  "backend/tests/services/test_error_pattern_template_service.py": {
+   "secs": 0.032,
+   "tests": 6
+  },
+  "backend/tests/services/test_event_idempotency_isolation.py": {
+   "secs": 12.598,
+   "tests": 9
+  },
+  "backend/tests/services/test_evidence_pack_sse.py": {
+   "secs": 0.009,
+   "tests": 1
+  },
+  "backend/tests/services/test_exam_sprint_dashboard_service.py": {
+   "secs": 0.023,
+   "tests": 2
+  },
+  "backend/tests/services/test_expansion_service.py": {
+   "secs": 12.078,
+   "tests": 8
+  },
+  "backend/tests/services/test_experience_memory_projector.py": {
+   "secs": 31.362,
+   "tests": 22
+  },
+  "backend/tests/services/test_feature_extraction_service.py": {
+   "secs": 0.033,
+   "tests": 16
+  },
+  "backend/tests/services/test_friction_chat_wiring.py": {
+   "secs": 46.863,
+   "tests": 76
+  },
+  "backend/tests/services/test_friend_match_public_candidates_cohort_filter.py": {
+   "secs": 0.031,
+   "tests": 3
+  },
+  "backend/tests/services/test_galaxy_contribution_stats.py": {
+   "secs": 1.369,
+   "tests": 1
+  },
+  "backend/tests/services/test_galaxy_learning_graph_operational.py": {
+   "secs": 3.043,
+   "tests": 2
+  },
+  "backend/tests/services/test_galaxy_node_sources.py": {
+   "secs": 4.116,
+   "tests": 3
+  },
+  "backend/tests/services/test_goal_strategy_services.py": {
+   "secs": 6.847,
+   "tests": 6
+  },
+  "backend/tests/services/test_guest_seed_example_marker.py": {
+   "secs": 12.651,
+   "tests": 3
+  },
+  "backend/tests/services/test_guest_seed_savepoint.py": {
+   "secs": 4.985,
+   "tests": 3
+  },
+  "backend/tests/services/test_guest_seed_service.py": {
+   "secs": 17.674,
+   "tests": 4
+  },
+  "backend/tests/services/test_human_eval_review_service.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/services/test_ingestion_service.py": {
+   "secs": 0.008,
+   "tests": 2
+  },
+  "backend/tests/services/test_intervention_lifecycle_service.py": {
+   "secs": 42.887,
+   "tests": 29
+  },
+  "backend/tests/services/test_j08_goal_trajectory.py": {
+   "secs": 11.264,
+   "tests": 7
+  },
+  "backend/tests/services/test_leaderboard_family_cohort_filter.py": {
+   "secs": 0.037,
+   "tests": 8
+  },
+  "backend/tests/services/test_leaderboard_global_cohort_filter.py": {
+   "secs": 0.028,
+   "tests": 3
+  },
+  "backend/tests/services/test_leaderboard_global_join.py": {
+   "secs": 0.029,
+   "tests": 3
+  },
+  "backend/tests/services/test_llm_factory_isolation.py": {
+   "secs": 0.024,
+   "tests": 5
+  },
+  "backend/tests/services/test_memory_subject_type_extraction.py": {
+   "secs": 2.894,
+   "tests": 2
+  },
+  "backend/tests/services/test_mimo_integration.py": {
+   "secs": 0.029,
+   "tests": 12
+  },
+  "backend/tests/services/test_minimax_provider.py": {
+   "secs": 0.081,
+   "tests": 15
+  },
+  "backend/tests/services/test_north_star_metrics_service.py": {
+   "secs": 4.289,
+   "tests": 3
+  },
+  "backend/tests/services/test_north_star_wvpl_service.py": {
+   "secs": 16.946,
+   "tests": 13
+  },
+  "backend/tests/services/test_ocr_service.py": {
+   "secs": 0.02,
+   "tests": 6
+  },
+  "backend/tests/services/test_omnibar_service.py": {
+   "secs": 0.018,
+   "tests": 3
+  },
+  "backend/tests/services/test_ontology_fallback_punct_lines.py": {
+   "secs": 0.008,
+   "tests": 2
+  },
+  "backend/tests/services/test_outcome_ledger_service.py": {
+   "secs": 76.145,
+   "tests": 53
+  },
+  "backend/tests/services/test_persona_service.py": {
+   "secs": 1.383,
+   "tests": 3
+  },
+  "backend/tests/services/test_plan_advisory_lock_sql.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/services/test_plan_review_service.py": {
+   "secs": 1.029,
+   "tests": 7
+  },
+  "backend/tests/services/test_plan_state_service.py": {
+   "secs": 0.29,
+   "tests": 21
+  },
+  "backend/tests/services/test_policy_compiler.py": {
+   "secs": 15.046,
+   "tests": 11
+  },
+  "backend/tests/services/test_policy_ir_schema.py": {
+   "secs": 0.196,
+   "tests": 7
+  },
+  "backend/tests/services/test_policy_patch_service.py": {
+   "secs": 54.721,
+   "tests": 39
+  },
+  "backend/tests/services/test_policy_scheduler.py": {
+   "secs": 12.302,
+   "tests": 8
+  },
+  "backend/tests/services/test_policy_scheduler_budget.py": {
+   "secs": 7.138,
+   "tests": 3
+  },
+  "backend/tests/services/test_policy_scheduler_partner_consent.py": {
+   "secs": 4.478,
+   "tests": 3
+  },
+  "backend/tests/services/test_post_commit_retrieval_invalidation.py": {
+   "secs": 7.221,
+   "tests": 6
+  },
+  "backend/tests/services/test_predictive_realtime_degrade.py": {
+   "secs": 0.016,
+   "tests": 4
+  },
+  "backend/tests/services/test_profile_context_service.py": {
+   "secs": 7.018,
+   "tests": 4
+  },
+  "backend/tests/services/test_rag_indexing_service.py": {
+   "secs": 0.057,
+   "tests": 8
+  },
+  "backend/tests/services/test_rag_router.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/services/test_retrieval_cache.py": {
+   "secs": 0.032,
+   "tests": 2
+  },
+  "backend/tests/services/test_semantic_cache_generic_factory.py": {
+   "secs": 0.064,
+   "tests": 4
+  },
+  "backend/tests/services/test_semantic_cache_lock_fallback_threshold.py": {
+   "secs": 0.242,
+   "tests": 2
+  },
+  "backend/tests/services/test_semantic_cache_pydantic_payload.py": {
+   "secs": 0.088,
+   "tests": 7
+  },
+  "backend/tests/services/test_semantic_cache_service.py": {
+   "secs": 0.136,
+   "tests": 6
+  },
+  "backend/tests/services/test_semantic_cache_version_isolation.py": {
+   "secs": 0.102,
+   "tests": 5
+  },
+  "backend/tests/services/test_signal_generation_service.py": {
+   "secs": 0.03,
+   "tests": 14
+  },
+  "backend/tests/services/test_simulation_runner.py": {
+   "secs": 1.718,
+   "tests": 3
+  },
+  "backend/tests/services/test_source_lifecycle.py": {
+   "secs": 4.363,
+   "tests": 3
+  },
+  "backend/tests/services/test_stt_service.py": {
+   "secs": 0.075,
+   "tests": 14
+  },
+  "backend/tests/services/test_task_default_plan_link.py": {
+   "secs": 24.233,
+   "tests": 12
+  },
+  "backend/tests/services/test_translation_service.py": {
+   "secs": 0.247,
+   "tests": 20
+  },
+  "backend/tests/services/test_translation_signals.py": {
+   "secs": 0.02,
+   "tests": 2
+  },
+  "backend/tests/services/test_tts_service.py": {
+   "secs": 0.036,
+   "tests": 6
+  },
+  "backend/tests/services/test_understanding_calibration_service.py": {
+   "secs": 8.754,
+   "tests": 12
+  },
+  "backend/tests/services/test_understanding_dimensions_service.py": {
+   "secs": 13.897,
+   "tests": 11
+  },
+  "backend/tests/services/test_unified_analysis_service.py": {
+   "secs": 0.006,
+   "tests": 1
+  },
+  "backend/tests/services/test_user_search_cohort_filter.py": {
+   "secs": 0.029,
+   "tests": 3
+  },
+  "backend/tests/services/test_visual_element_service.py": {
+   "secs": 0.013,
+   "tests": 2
+  },
+  "backend/tests/services/test_vocabulary_service.py": {
+   "secs": 0.099,
+   "tests": 21
+  },
+  "backend/tests/services/test_within_category_preference_service.py": {
+   "secs": 0.013,
+   "tests": 2
+  },
+  "backend/tests/services/test_x08_outcome_ledger_gj.py": {
+   "secs": 11.361,
+   "tests": 6
+  },
+  "backend/tests/test_action_plan_v3_integration.py": {
+   "secs": 7.255,
+   "tests": 25
+  },
+  "backend/tests/test_agent_stats_integration.py": {
+   "secs": 1.443,
+   "tests": 2
+  },
+  "backend/tests/test_analytics_service.py": {
+   "secs": 1.951,
+   "tests": 1
+  },
+  "backend/tests/test_api/test_error_book_api.py": {
+   "secs": 0.085,
+   "tests": 3
+  },
+  "backend/tests/test_api/test_error_pattern_template_api.py": {
+   "secs": 0.07,
+   "tests": 4
+  },
+  "backend/tests/test_api/test_galaxy_contribution_stats_api.py": {
+   "secs": 1.499,
+   "tests": 1
+  },
+  "backend/tests/test_api/test_galaxy_document_attachments_api.py": {
+   "secs": 2.898,
+   "tests": 2
+  },
+  "backend/tests/test_api/test_galaxy_node_history_api.py": {
+   "secs": 1.405,
+   "tests": 1
+  },
+  "backend/tests/test_api/test_task_document_api.py": {
+   "secs": 3.017,
+   "tests": 2
+  },
+  "backend/tests/test_api/test_translation_api.py": {
+   "secs": 0.549,
+   "tests": 2
+  },
+  "backend/tests/test_av_kill_switch_guard.py": {
+   "secs": 0.028,
+   "tests": 7
+  },
+  "backend/tests/test_cognitive_loop.py": {
+   "secs": 11.991,
+   "tests": 7
+  },
+  "backend/tests/test_community_e2e.py": {
+   "secs": 23.97,
+   "tests": 14
+  },
+  "backend/tests/test_community_security.py": {
+   "secs": 0.126,
+   "tests": 12
+  },
+  "backend/tests/test_context_manager.py": {
+   "secs": 1.371,
+   "tests": 3
+  },
+  "backend/tests/test_context_pruner.py": {
+   "secs": 0.153,
+   "tests": 8
+  },
+  "backend/tests/test_contextual_chunk_enrichment.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/test_db_partitioning.py": {
+   "secs": 0.105,
+   "tests": 2
+  },
+  "backend/tests/test_document_feedback_loop.py": {
+   "secs": 9.201,
+   "tests": 6
+  },
+  "backend/tests/test_dual_core_router_kill_switch.py": {
+   "secs": 0.023,
+   "tests": 6
+  },
+  "backend/tests/test_e2e/translation_e2e_test.py": {
+   "secs": 5.061,
+   "tests": 4
+  },
+  "backend/tests/test_event_bus_shutdown.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/test_exam_intent_detection.py": {
+   "secs": 0.025,
+   "tests": 9
+  },
+  "backend/tests/test_f16_galaxy_weak_node_injection.py": {
+   "secs": 0.036,
+   "tests": 11
+  },
+  "backend/tests/test_fv22_resource_quality.py": {
+   "secs": 9.683,
+   "tests": 20
+  },
+  "backend/tests/test_galaxy_bootstrap_seed_weights.py": {
+   "secs": 0.021,
+   "tests": 8
+  },
+  "backend/tests/test_graph_monitor_probes.py": {
+   "secs": 0.183,
+   "tests": 18
+  },
+  "backend/tests/test_graph_rag.py": {
+   "secs": 0.169,
+   "tests": 39
+  },
+  "backend/tests/test_graph_reasoning.py": {
+   "secs": 0.037,
+   "tests": 3
+  },
+  "backend/tests/test_langgraph_planner_timeout.py": {
+   "secs": 0.022,
+   "tests": 6
+  },
+  "backend/tests/test_leaderboard_percentile_guard.py": {
+   "secs": 0.026,
+   "tests": 5
+  },
+  "backend/tests/test_llm_parser.py": {
+   "secs": 0.107,
+   "tests": 50
+  },
+  "backend/tests/test_llm_service_streaming.py": {
+   "secs": 0.687,
+   "tests": 6
+  },
+  "backend/tests/test_m2_stream_variance_guards.py": {
+   "secs": 0.932,
+   "tests": 7
+  },
+  "backend/tests/test_migrations.py": {
+   "secs": 0.868,
+   "tests": 7
+  },
+  "backend/tests/test_migrations_single_head.py": {
+   "secs": 0.144,
+   "tests": 2
+  },
+  "backend/tests/test_orchestrator_fsm.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/test_orchestrator_init.py": {
+   "secs": 0.022,
+   "tests": 2
+  },
+  "backend/tests/test_orchestrator_simple.py": {
+   "secs": 0.231,
+   "tests": 3
+  },
+  "backend/tests/test_phase2_core.py": {
+   "secs": 0.063,
+   "tests": 7
+  },
+  "backend/tests/test_phase2_integration.py": {
+   "secs": 2.007,
+   "tests": 3
+  },
+  "backend/tests/test_phase4_galaxy_services.py": {
+   "secs": 0.43,
+   "tests": 24
+  },
+  "backend/tests/test_plan_execution_validation.py": {
+   "secs": 5.53,
+   "tests": 12
+  },
+  "backend/tests/test_plan_progress_update.py": {
+   "secs": 9.089,
+   "tests": 5
+  },
+  "backend/tests/test_plan_task_service_production.py": {
+   "secs": 69.842,
+   "tests": 55
+  },
+  "backend/tests/test_plan_task_tools_production.py": {
+   "secs": 58.83,
+   "tests": 72
+  },
+  "backend/tests/test_planning_hitl_chain.py": {
+   "secs": 10.23,
+   "tests": 11
+  },
+  "backend/tests/test_preference_consumer_safety.py": {
+   "secs": 0.011,
+   "tests": 5
+  },
+  "backend/tests/test_rag_retrieval.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/test_rebuild_embedding_index_n3.py": {
+   "secs": 0.019,
+   "tests": 3
+  },
+  "backend/tests/test_report_reason_enum_sync.py": {
+   "secs": 0.018,
+   "tests": 4
+  },
+  "backend/tests/test_s04_community_feedback_evidence.py": {
+   "secs": 12.463,
+   "tests": 9
+  },
+  "backend/tests/test_shop_seed_startup.py": {
+   "secs": 0.019,
+   "tests": 3
+  },
+  "backend/tests/test_stream_heartbeat.py": {
+   "secs": 2.726,
+   "tests": 7
+  },
+  "backend/tests/test_trace_timeline_script.py": {
+   "secs": 0.022,
+   "tests": 5
+  },
+  "backend/tests/test_user_service_get_by_email.py": {
+   "secs": 1.445,
+   "tests": 1
+  },
+  "backend/tests/test_v2_agent_integration.py": {
+   "secs": 0.008,
+   "tests": 1
+  },
+  "backend/tests/test_validation_e2e.py": {
+   "secs": 0.014,
+   "tests": 4
+  },
+  "backend/tests/test_vector_search.py": {
+   "secs": 0.023,
+   "tests": 2
+  },
+  "backend/tests/tools/test_companion_tools.py": {
+   "secs": 0.032,
+   "tests": 7
+  },
+  "backend/tests/tools/test_error_tools.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/tools/test_growth_tools.py": {
+   "secs": 11.501,
+   "tests": 15
+  },
+  "backend/tests/tools/test_plan_state_tools.py": {
+   "secs": 0.085,
+   "tests": 9
+  },
+  "backend/tests/unit/consumers/test_stage34_journey_consumers.py": {
+   "secs": 6.406,
+   "tests": 8
+  },
+  "backend/tests/unit/orchestrator/mixins/test_context_builder_mixin.py": {
+   "secs": 0.044,
+   "tests": 7
+  },
+  "backend/tests/unit/orchestrator/mixins/test_execution_engine_mixin.py": {
+   "secs": 0.102,
+   "tests": 10
+  },
+  "backend/tests/unit/orchestrator/mixins/test_observability_mixin.py": {
+   "secs": 0.054,
+   "tests": 15
+  },
+  "backend/tests/unit/orchestrator/mixins/test_persistence_layer_mixin.py": {
+   "secs": 0.046,
+   "tests": 10
+  },
+  "backend/tests/unit/orchestrator/mixins/test_response_builder_mixin.py": {
+   "secs": 0.05,
+   "tests": 17
+  },
+  "backend/tests/unit/orchestrator/mixins/test_routing_engine_dual_core.py": {
+   "secs": 0.271,
+   "tests": 21
+  },
+  "backend/tests/unit/orchestrator/mixins/test_routing_engine_mixin.py": {
+   "secs": 0.025,
+   "tests": 9
+  },
+  "backend/tests/unit/orchestrator/mixins/test_routing_engine_stage4.py": {
+   "secs": 0.053,
+   "tests": 10
+  },
+  "backend/tests/unit/orchestrator/mixins/test_session_state_mixin.py": {
+   "secs": 0.046,
+   "tests": 8
+  },
+  "backend/tests/unit/orchestrator/mixins/test_validation_engine_mixin.py": {
+   "secs": 0.018,
+   "tests": 4
+  },
+  "backend/tests/unit/orchestrator/test_insight_baseline_audit.py": {
+   "secs": 0.112,
+   "tests": 5
+  },
+  "backend/tests/unit/orchestrator/test_phase_a_durability_pack.py": {
+   "secs": 0.103,
+   "tests": 9
+  },
+  "backend/tests/unit/services/test_agent_grpc_service.py": {
+   "secs": 0.09,
+   "tests": 5
+  },
+  "backend/tests/unit/services/test_arbitration_service.py": {
+   "secs": 0.072,
+   "tests": 25
+  },
+  "backend/tests/unit/services/test_capsule_favorite_service.py": {
+   "secs": 1.451,
+   "tests": 1
+  },
+  "backend/tests/unit/services/test_capsule_favorite_service_stage34.py": {
+   "secs": 4.04,
+   "tests": 3
+  },
+  "backend/tests/unit/services/test_capsule_share_service.py": {
+   "secs": 4.203,
+   "tests": 3
+  },
+  "backend/tests/unit/services/test_community_advanced_access.py": {
+   "secs": 5.546,
+   "tests": 4
+  },
+  "backend/tests/unit/services/test_grpc_service_registration.py": {
+   "secs": 0.026,
+   "tests": 4
+  },
+  "backend/tests/unit/services/test_insight_gap_detector.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/services/test_insight_prediction_service.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/services/test_profile_event_consumer.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/services/test_profile_truth_compiler.py": {
+   "secs": 0.021,
+   "tests": 7
+  },
+  "backend/tests/unit/services/test_tool_history_service.py": {
+   "secs": 4.231,
+   "tests": 3
+  },
+  "backend/tests/unit/services/test_user_insight_calibration_service.py": {
+   "secs": 1.329,
+   "tests": 1
+  },
+  "backend/tests/unit/services/test_user_insight_compiler.py": {
+   "secs": 6.59,
+   "tests": 5
+  },
+  "backend/tests/unit/services/test_user_insight_compiler_stage34.py": {
+   "secs": 1.338,
+   "tests": 1
+  },
+  "backend/tests/unit/services/test_user_projection_contract.py": {
+   "secs": 0.012,
+   "tests": 5
+  },
+  "backend/tests/unit/spine/test_advanced_features.py": {
+   "secs": 1.128,
+   "tests": 138
+  },
+  "backend/tests/unit/spine/test_audit_and_vision.py": {
+   "secs": 0.214,
+   "tests": 3
+  },
+  "backend/tests/unit/spine/test_bridge_and_wiring.py": {
+   "secs": 0.824,
+   "tests": 72
+  },
+  "backend/tests/unit/spine/test_continuous_improvement.py": {
+   "secs": 0.071,
+   "tests": 21
+  },
+  "backend/tests/unit/spine/test_crisis_mode_fsm.py": {
+   "secs": 0.013,
+   "tests": 4
+  },
+  "backend/tests/unit/spine/test_e2e_pipeline.py": {
+   "secs": 1.41,
+   "tests": 12
+  },
+  "backend/tests/unit/spine/test_e2e_scenarios.py": {
+   "secs": 0.335,
+   "tests": 10
+  },
+  "backend/tests/unit/spine/test_fv21_recall_ml.py": {
+   "secs": 0.119,
+   "tests": 54
+  },
+  "backend/tests/unit/spine/test_intervention_episode_wiring.py": {
+   "secs": 0.488,
+   "tests": 24
+  },
+  "backend/tests/unit/spine/test_layers.py": {
+   "secs": 3.066,
+   "tests": 89
+  },
+  "backend/tests/unit/spine/test_notification.py": {
+   "secs": 0.956,
+   "tests": 76
+  },
+  "backend/tests/unit/spine/test_p0_features.py": {
+   "secs": 0.077,
+   "tests": 35
+  },
+  "backend/tests/unit/spine/test_p1_features.py": {
+   "secs": 0.125,
+   "tests": 49
+  },
+  "backend/tests/unit/spine/test_pipeline_integration.py": {
+   "secs": 1.24,
+   "tests": 22
+  },
+  "backend/tests/unit/spine/test_policy_engine.py": {
+   "secs": 0.021,
+   "tests": 6
+  },
+  "backend/tests/unit/spine/test_production_directives.py": {
+   "secs": 0.198,
+   "tests": 71
+  },
+  "backend/tests/unit/spine/test_production_wiring.py": {
+   "secs": 0.919,
+   "tests": 167
+  },
+  "backend/tests/unit/spine/test_skill_lifecycle.py": {
+   "secs": 0.148,
+   "tests": 71
+  },
+  "backend/tests/unit/spine/test_specialized_features.py": {
+   "secs": 4.418,
+   "tests": 59
+  },
+  "backend/tests/unit/spine/test_spine_metrics.py": {
+   "secs": 3.637,
+   "tests": 58
+  },
+  "backend/tests/unit/spine/test_types_and_detectors.py": {
+   "secs": 0.128,
+   "tests": 21
+  },
+  "backend/tests/unit/spine/test_v2_features.py": {
+   "secs": 0.196,
+   "tests": 48
+  },
+  "backend/tests/unit/test_a01_aurora_decision_l2_wiring.py": {
+   "secs": 0.127,
+   "tests": 15
+  },
+  "backend/tests/unit/test_a02_intervention_policy_engine.py": {
+   "secs": 0.264,
+   "tests": 77
+  },
+  "backend/tests/unit/test_a03_friction_diagnosis.py": {
+   "secs": 17.58,
+   "tests": 112
+  },
+  "backend/tests/unit/test_a04_joint_decision.py": {
+   "secs": 0.289,
+   "tests": 86
+  },
+  "backend/tests/unit/test_a04_joint_factor_projection.py": {
+   "secs": 0.091,
+   "tests": 37
+  },
+  "backend/tests/unit/test_a04_l2_joint_spine_wiring.py": {
+   "secs": 0.045,
+   "tests": 7
+  },
+  "backend/tests/unit/test_a06_calibration_receipt.py": {
+   "secs": 0.052,
+   "tests": 25
+  },
+  "backend/tests/unit/test_a06_gj08_calibration_journey.py": {
+   "secs": 20.644,
+   "tests": 17
+  },
+  "backend/tests/unit/test_a06_receipt_respond.py": {
+   "secs": 20.822,
+   "tests": 13
+  },
+  "backend/tests/unit/test_a08_aurora_ablation_contract.py": {
+   "secs": 44.188,
+   "tests": 13
+  },
+  "backend/tests/unit/test_ab_test_framework.py": {
+   "secs": 0.049,
+   "tests": 4
+  },
+  "backend/tests/unit/test_ab_test_statistics.py": {
+   "secs": 0.045,
+   "tests": 10
+  },
+  "backend/tests/unit/test_absence_detector.py": {
+   "secs": 0.031,
+   "tests": 13
+  },
+  "backend/tests/unit/test_accountability_achievement_service_timezone.py": {
+   "secs": 1.387,
+   "tests": 1
+  },
+  "backend/tests/unit/test_accountability_api_helpers.py": {
+   "secs": 2.789,
+   "tests": 4
+  },
+  "backend/tests/unit/test_accountability_reminder_cadence.py": {
+   "secs": 4.397,
+   "tests": 3
+  },
+  "backend/tests/unit/test_accountability_struggle_signal.py": {
+   "secs": 4.254,
+   "tests": 3
+  },
+  "backend/tests/unit/test_achievement_contract_weekend.py": {
+   "secs": 0.106,
+   "tests": 23
+  },
+  "backend/tests/unit/test_achievement_engine_phase3.py": {
+   "secs": 29.944,
+   "tests": 19
+  },
+  "backend/tests/unit/test_achievement_engine_regression.py": {
+   "secs": 4.56,
+   "tests": 5
+  },
+  "backend/tests/unit/test_achievement_event_consumer.py": {
+   "secs": 8.835,
+   "tests": 5
+  },
+  "backend/tests/unit/test_achievement_event_publishers.py": {
+   "secs": 0.004,
+   "tests": 1
+  },
+  "backend/tests/unit/test_achievement_observability_api.py": {
+   "secs": 0.011,
+   "tests": 2
+  },
+  "backend/tests/unit/test_achievement_system_alignment.py": {
+   "secs": 12.9,
+   "tests": 11
+  },
+  "backend/tests/unit/test_achievement_transparency_meta.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_action_allocation_eval.py": {
+   "secs": 0.058,
+   "tests": 8
+  },
+  "backend/tests/unit/test_action_allocation_guard.py": {
+   "secs": 0.085,
+   "tests": 38
+  },
+  "backend/tests/unit/test_action_allocation_policy.py": {
+   "secs": 3.862,
+   "tests": 66
+  },
+  "backend/tests/unit/test_action_command_service.py": {
+   "secs": 40.172,
+   "tests": 29
+  },
+  "backend/tests/unit/test_action_plan_contract.py": {
+   "secs": 0.066,
+   "tests": 29
+  },
+  "backend/tests/unit/test_action_plan_migration_sqlite.py": {
+   "secs": 0.074,
+   "tests": 3
+  },
+  "backend/tests/unit/test_action_proposals_api.py": {
+   "secs": 24.592,
+   "tests": 16
+  },
+  "backend/tests/unit/test_active_probe_policy.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_adaptive_replanner_cognitive_trigger.py": {
+   "secs": 0.007,
+   "tests": 1
+  },
+  "backend/tests/unit/test_adaptive_replanner_evolution.py": {
+   "secs": 0.06,
+   "tests": 9
+  },
+  "backend/tests/unit/test_adaptive_replanner_stage34.py": {
+   "secs": 0.046,
+   "tests": 7
+  },
+  "backend/tests/unit/test_admin_audit.py": {
+   "secs": 0.015,
+   "tests": 3
+  },
+  "backend/tests/unit/test_agent_profiles.py": {
+   "secs": 0.009,
+   "tests": 2
+  },
+  "backend/tests/unit/test_agent_run_service.py": {
+   "secs": 45.962,
+   "tests": 32
+  },
+  "backend/tests/unit/test_aggregator_backed_social_context_provider.py": {
+   "secs": 36.017,
+   "tests": 26
+  },
+  "backend/tests/unit/test_aggregator_schema_v1_10.py": {
+   "secs": 4.056,
+   "tests": 3
+  },
+  "backend/tests/unit/test_aggregator_schema_v1_11.py": {
+   "secs": 1.421,
+   "tests": 2
+  },
+  "backend/tests/unit/test_aggregator_schema_v1_12.py": {
+   "secs": 1.46,
+   "tests": 2
+  },
+  "backend/tests/unit/test_aggregator_schema_v1_5.py": {
+   "secs": 2.877,
+   "tests": 3
+  },
+  "backend/tests/unit/test_aggregator_schema_v1_6.py": {
+   "secs": 4.121,
+   "tests": 3
+  },
+  "backend/tests/unit/test_aggregator_schema_v1_7.py": {
+   "secs": 4.199,
+   "tests": 3
+  },
+  "backend/tests/unit/test_aggregator_schema_v1_8.py": {
+   "secs": 4.136,
+   "tests": 3
+  },
+  "backend/tests/unit/test_aggregator_schema_v1_9.py": {
+   "secs": 4.178,
+   "tests": 3
+  },
+  "backend/tests/unit/test_ai_opaque_markers.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/unit/test_ai_ops_dashboard.py": {
+   "secs": 4.087,
+   "tests": 5
+  },
+  "backend/tests/unit/test_ai_semantic_control_inventory.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_ai_strategy_renderer.py": {
+   "secs": 0.011,
+   "tests": 5
+  },
+  "backend/tests/unit/test_alembic_chain_linearity.py": {
+   "secs": 3.562,
+   "tests": 3
+  },
+  "backend/tests/unit/test_analysis_orchestrator.py": {
+   "secs": 0.004,
+   "tests": 1
+  },
+  "backend/tests/unit/test_attractor_cold_start.py": {
+   "secs": 5.014,
+   "tests": 3
+  },
+  "backend/tests/unit/test_aurora_bayesian_learner.py": {
+   "secs": 0.031,
+   "tests": 4
+  },
+  "backend/tests/unit/test_aurora_closed_loop.py": {
+   "secs": 4.402,
+   "tests": 4
+  },
+  "backend/tests/unit/test_aurora_config_consistency.py": {
+   "secs": 0.026,
+   "tests": 1
+  },
+  "backend/tests/unit/test_aurora_confirm_bridge.py": {
+   "secs": 0.407,
+   "tests": 17
+  },
+  "backend/tests/unit/test_aurora_control_surface_service.py": {
+   "secs": 0.01,
+   "tests": 2
+  },
+  "backend/tests/unit/test_aurora_core_session_entry.py": {
+   "secs": 4.449,
+   "tests": 9
+  },
+  "backend/tests/unit/test_aurora_correction_payload.py": {
+   "secs": 0.01,
+   "tests": 4
+  },
+  "backend/tests/unit/test_aurora_effectiveness_report.py": {
+   "secs": 8.476,
+   "tests": 6
+  },
+  "backend/tests/unit/test_aurora_language_principles.py": {
+   "secs": 0.033,
+   "tests": 10
+  },
+  "backend/tests/unit/test_aurora_memory_naturalization.py": {
+   "secs": 1.433,
+   "tests": 3
+  },
+  "backend/tests/unit/test_aurora_runtime_checkpoint_service.py": {
+   "secs": 13.41,
+   "tests": 9
+  },
+  "backend/tests/unit/test_aurora_runtime_decision_loop.py": {
+   "secs": 0.396,
+   "tests": 91
+  },
+  "backend/tests/unit/test_aurora_runtime_planning.py": {
+   "secs": 0.087,
+   "tests": 12
+  },
+  "backend/tests/unit/test_aurora_runtime_self_model.py": {
+   "secs": 0.048,
+   "tests": 9
+  },
+  "backend/tests/unit/test_aurora_runtime_telemetry.py": {
+   "secs": 2.885,
+   "tests": 4
+  },
+  "backend/tests/unit/test_aurora_runtime_v1.py": {
+   "secs": 10.213,
+   "tests": 15
+  },
+  "backend/tests/unit/test_aurora_runtime_wake_policy.py": {
+   "secs": 0.043,
+   "tests": 10
+  },
+  "backend/tests/unit/test_aurora_runtime_write_pipeline.py": {
+   "secs": 0.009,
+   "tests": 1
+  },
+  "backend/tests/unit/test_aurora_sleep_guard_user_timezone.py": {
+   "secs": 2.769,
+   "tests": 2
+  },
+  "backend/tests/unit/test_aurora_spine_policy_feedback.py": {
+   "secs": 0.046,
+   "tests": 2
+  },
+  "backend/tests/unit/test_aurora_write_pipeline.py": {
+   "secs": 5.455,
+   "tests": 5
+  },
+  "backend/tests/unit/test_auth_refresh_rotation.py": {
+   "secs": 0.136,
+   "tests": 10
+  },
+  "backend/tests/unit/test_auth_session_touch.py": {
+   "secs": 0.022,
+   "tests": 5
+  },
+  "backend/tests/unit/test_b2_criteria_status_endpoint.py": {
+   "secs": 0.036,
+   "tests": 4
+  },
+  "backend/tests/unit/test_batch_capacity_fault_chain.py": {
+   "secs": 0.637,
+   "tests": 16
+  },
+  "backend/tests/unit/test_batch_worklane.py": {
+   "secs": 4.496,
+   "tests": 33
+  },
+  "backend/tests/unit/test_bayesian_kill_switch.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/test_bayesian_rollback_parity.py": {
+   "secs": 0.012,
+   "tests": 2
+  },
+  "backend/tests/unit/test_bayesian_router_integration.py": {
+   "secs": 0.018,
+   "tests": 4
+  },
+  "backend/tests/unit/test_behavior_driven_push.py": {
+   "secs": 0.053,
+   "tests": 13
+  },
+  "backend/tests/unit/test_behavior_pattern_decay.py": {
+   "secs": 2.82,
+   "tests": 2
+  },
+  "backend/tests/unit/test_behavior_signal_collector.py": {
+   "secs": 0.108,
+   "tests": 11
+  },
+  "backend/tests/unit/test_behavioral_outcome_tracker.py": {
+   "secs": 0.008,
+   "tests": 1
+  },
+  "backend/tests/unit/test_belief_fusion_engine.py": {
+   "secs": 0.137,
+   "tests": 19
+  },
+  "backend/tests/unit/test_belief_observation_models.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_belief_recovery_simulator.py": {
+   "secs": 0.066,
+   "tests": 4
+  },
+  "backend/tests/unit/test_belief_trace_inspector.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/test_bh_guard_registered.py": {
+   "secs": 0.04,
+   "tests": 4
+  },
+  "backend/tests/unit/test_bi_hardcoded_secrets_guard.py": {
+   "secs": 50.049,
+   "tests": 9
+  },
+  "backend/tests/unit/test_bias_unify_cold_start.py": {
+   "secs": 4.216,
+   "tests": 3
+  },
+  "backend/tests/unit/test_big_five_model.py": {
+   "secs": 0.013,
+   "tests": 6
+  },
+  "backend/tests/unit/test_billing_worker.py": {
+   "secs": 0.063,
+   "tests": 3
+  },
+  "backend/tests/unit/test_bottleneck_analyzer.py": {
+   "secs": 0.017,
+   "tests": 5
+  },
+  "backend/tests/unit/test_budget_tuning_service.py": {
+   "secs": 1.321,
+   "tests": 1
+  },
+  "backend/tests/unit/test_c01_outcome_tracker_wiring.py": {
+   "secs": 0.548,
+   "tests": 4
+  },
+  "backend/tests/unit/test_c03_adaptive_replanner_wiring.py": {
+   "secs": 0.025,
+   "tests": 2
+  },
+  "backend/tests/unit/test_c03_multi_agent_spine_context.py": {
+   "secs": 0.011,
+   "tests": 2
+  },
+  "backend/tests/unit/test_c06_context_budget_compaction.py": {
+   "secs": 0.089,
+   "tests": 20
+  },
+  "backend/tests/unit/test_cache_distributed_lock.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/unit/test_cache_local_cleanup.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/unit/test_cache_security_prefix_failclosed.py": {
+   "secs": 0.022,
+   "tests": 7
+  },
+  "backend/tests/unit/test_calendar_service.py": {
+   "secs": 1.398,
+   "tests": 1
+  },
+  "backend/tests/unit/test_calibration_receipt.py": {
+   "secs": 0.023,
+   "tests": 6
+  },
+  "backend/tests/unit/test_capability_lane.py": {
+   "secs": 0.206,
+   "tests": 61
+  },
+  "backend/tests/unit/test_capability_requirement_compiler.py": {
+   "secs": 0.013,
+   "tests": 5
+  },
+  "backend/tests/unit/test_capability_selection_policy.py": {
+   "secs": 0.154,
+   "tests": 8
+  },
+  "backend/tests/unit/test_card_operations_service.py": {
+   "secs": 12.128,
+   "tests": 7
+  },
+  "backend/tests/unit/test_card_protocol_phase1.py": {
+   "secs": 9.12,
+   "tests": 6
+  },
+  "backend/tests/unit/test_card_protocol_phase3.py": {
+   "secs": 5.715,
+   "tests": 4
+  },
+  "backend/tests/unit/test_card_protocol_phase4.py": {
+   "secs": 4.891,
+   "tests": 3
+  },
+  "backend/tests/unit/test_card_protocol_phaseb.py": {
+   "secs": 13.303,
+   "tests": 8
+  },
+  "backend/tests/unit/test_card_protocol_phasec.py": {
+   "secs": 5.402,
+   "tests": 3
+  },
+  "backend/tests/unit/test_celery_task_reminders_disabled.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_changepoint_pelt.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_chat_signal_collector.py": {
+   "secs": 0.035,
+   "tests": 13
+  },
+  "backend/tests/unit/test_chat_signal_collector_profile_loop.py": {
+   "secs": 3.546,
+   "tests": 2
+  },
+  "backend/tests/unit/test_checkpoint_b1_personalization.py": {
+   "secs": 3.067,
+   "tests": 3
+  },
+  "backend/tests/unit/test_checkpoint_nudge_lagging_local.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_checkpoint_nudge_p3b.py": {
+   "secs": 5.905,
+   "tests": 3
+  },
+  "backend/tests/unit/test_checkpoint_nudge_trigger_day_local.py": {
+   "secs": 5.459,
+   "tests": 3
+  },
+  "backend/tests/unit/test_ci_guard_runner.py": {
+   "secs": 0.872,
+   "tests": 4
+  },
+  "backend/tests/unit/test_citation_markers.py": {
+   "secs": 0.042,
+   "tests": 16
+  },
+  "backend/tests/unit/test_cognitive_service_regression.py": {
+   "secs": 0.033,
+   "tests": 8
+  },
+  "backend/tests/unit/test_cognitive_stream_sentiment_intercept.py": {
+   "secs": 0.023,
+   "tests": 5
+  },
+  "backend/tests/unit/test_coldstart_service.py": {
+   "secs": 6.271,
+   "tests": 5
+  },
+  "backend/tests/unit/test_coldstart_skip_path.py": {
+   "secs": 3.255,
+   "tests": 2
+  },
+  "backend/tests/unit/test_com011_similar_goal_pursuers.py": {
+   "secs": 3.205,
+   "tests": 10
+  },
+  "backend/tests/unit/test_comeback_nudge_burden_p06.py": {
+   "secs": 0.024,
+   "tests": 2
+  },
+  "backend/tests/unit/test_comeback_nudge_task.py": {
+   "secs": 0.101,
+   "tests": 7
+  },
+  "backend/tests/unit/test_community_context_privacy_boundary.py": {
+   "secs": 12.402,
+   "tests": 16
+  },
+  "backend/tests/unit/test_community_privacy_fv05.py": {
+   "secs": 6.036,
+   "tests": 4
+  },
+  "backend/tests/unit/test_community_service_group_tasks.py": {
+   "secs": 0.006,
+   "tests": 1
+  },
+  "backend/tests/unit/test_community_shared_errors.py": {
+   "secs": 15.739,
+   "tests": 15
+  },
+  "backend/tests/unit/test_community_signal_kill_switch.py": {
+   "secs": 0.049,
+   "tests": 11
+  },
+  "backend/tests/unit/test_community_squad_mvp.py": {
+   "secs": 11.629,
+   "tests": 12
+  },
+  "backend/tests/unit/test_community_study_room.py": {
+   "secs": 17.565,
+   "tests": 17
+  },
+  "backend/tests/unit/test_community_template_injection.py": {
+   "secs": 0.039,
+   "tests": 12
+  },
+  "backend/tests/unit/test_community_ws_session_lifecycle.py": {
+   "secs": 0.009,
+   "tests": 3
+  },
+  "backend/tests/unit/test_companion_constitution_artifacts.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/unit/test_companion_state_service.py": {
+   "secs": 0.054,
+   "tests": 12
+  },
+  "backend/tests/unit/test_confidence_cap_enforcement.py": {
+   "secs": 0.008,
+   "tests": 4
+  },
+  "backend/tests/unit/test_confidence_proxy_registry.py": {
+   "secs": 0.028,
+   "tests": 8
+  },
+  "backend/tests/unit/test_confirmation_gate_messaging.py": {
+   "secs": 0.223,
+   "tests": 4
+  },
+  "backend/tests/unit/test_conflict_resolution_context.py": {
+   "secs": 7.231,
+   "tests": 23
+  },
+  "backend/tests/unit/test_conflict_resolver_categories.py": {
+   "secs": 85.073,
+   "tests": 64
+  },
+  "backend/tests/unit/test_conflict_resolver_epistemic_guard.py": {
+   "secs": 4.259,
+   "tests": 3
+  },
+  "backend/tests/unit/test_conflict_resolver_service.py": {
+   "secs": 15.538,
+   "tests": 11
+  },
+  "backend/tests/unit/test_constitutional_drift_firewall.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_consume_loop_auto_restart.py": {
+   "secs": 0.446,
+   "tests": 5
+  },
+  "backend/tests/unit/test_content_quality_evaluator.py": {
+   "secs": 0.054,
+   "tests": 6
+  },
+  "backend/tests/unit/test_context_budget_manager.py": {
+   "secs": 0.007,
+   "tests": 1
+  },
+  "backend/tests/unit/test_context_budget_scheduler.py": {
+   "secs": 1.304,
+   "tests": 1
+  },
+  "backend/tests/unit/test_context_builder_aurora_relationship_label.py": {
+   "secs": 0.016,
+   "tests": 5
+  },
+  "backend/tests/unit/test_context_cache_versioning.py": {
+   "secs": 21.738,
+   "tests": 24
+  },
+  "backend/tests/unit/test_context_focusing.py": {
+   "secs": 2.199,
+   "tests": 20
+  },
+  "backend/tests/unit/test_context_funnel.py": {
+   "secs": 0.057,
+   "tests": 27
+  },
+  "backend/tests/unit/test_context_hard_filter_wiring.py": {
+   "secs": 1.493,
+   "tests": 7
+  },
+  "backend/tests/unit/test_context_manager_community_context.py": {
+   "secs": 1.475,
+   "tests": 1
+  },
+  "backend/tests/unit/test_context_overdue_summary_local_day.py": {
+   "secs": 2.757,
+   "tests": 2
+  },
+  "backend/tests/unit/test_context_pack.py": {
+   "secs": 10.322,
+   "tests": 7
+  },
+  "backend/tests/unit/test_context_pack_conflicts.py": {
+   "secs": 1.578,
+   "tests": 1
+  },
+  "backend/tests/unit/test_context_pack_feedback.py": {
+   "secs": 1.417,
+   "tests": 1
+  },
+  "backend/tests/unit/test_context_pack_personalized_ranking.py": {
+   "secs": 1.462,
+   "tests": 1
+  },
+  "backend/tests/unit/test_context_pack_ranking.py": {
+   "secs": 4.302,
+   "tests": 3
+  },
+  "backend/tests/unit/test_context_pack_rollout.py": {
+   "secs": 1.479,
+   "tests": 1
+  },
+  "backend/tests/unit/test_context_pack_sources.py": {
+   "secs": 5.825,
+   "tests": 4
+  },
+  "backend/tests/unit/test_context_pack_surface_observability.py": {
+   "secs": 2.93,
+   "tests": 2
+  },
+  "backend/tests/unit/test_context_ranker.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_context_retrieval_pipeline.py": {
+   "secs": 0.071,
+   "tests": 29
+  },
+  "backend/tests/unit/test_context_retrieval_pipeline_perf.py": {
+   "secs": 2.308,
+   "tests": 1
+  },
+  "backend/tests/unit/test_context_source_contract.py": {
+   "secs": 4.547,
+   "tests": 12
+  },
+  "backend/tests/unit/test_context_sources.py": {
+   "secs": 2.829,
+   "tests": 34
+  },
+  "backend/tests/unit/test_contextual_bandit.py": {
+   "secs": 0.025,
+   "tests": 2
+  },
+  "backend/tests/unit/test_conversation_memory_prompt.py": {
+   "secs": 0.013,
+   "tests": 3
+  },
+  "backend/tests/unit/test_core_metrics.py": {
+   "secs": 0.056,
+   "tests": 22
+  },
+  "backend/tests/unit/test_core_security.py": {
+   "secs": 3.747,
+   "tests": 27
+  },
+  "backend/tests/unit/test_cost_controller.py": {
+   "secs": 0.121,
+   "tests": 18
+  },
+  "backend/tests/unit/test_cost_prediction_accuracy.py": {
+   "secs": 0.01,
+   "tests": 5
+  },
+  "backend/tests/unit/test_counterfactual_production.py": {
+   "secs": 4.144,
+   "tests": 4
+  },
+  "backend/tests/unit/test_cp01_confirm_migration_sqlite.py": {
+   "secs": 0.07,
+   "tests": 3
+  },
+  "backend/tests/unit/test_credential_routing.py": {
+   "secs": 0.462,
+   "tests": 10
+  },
+  "backend/tests/unit/test_d01_notification_fatigue.py": {
+   "secs": 0.044,
+   "tests": 6
+  },
+  "backend/tests/unit/test_d02_photon_spine.py": {
+   "secs": 0.01,
+   "tests": 4
+  },
+  "backend/tests/unit/test_d03_understanding_migration_sqlite.py": {
+   "secs": 0.084,
+   "tests": 4
+  },
+  "backend/tests/unit/test_d08_flywheel_contract.py": {
+   "secs": 3.668,
+   "tests": 7
+  },
+  "backend/tests/unit/test_daily_sprint_reminder.py": {
+   "secs": 0.035,
+   "tests": 4
+  },
+  "backend/tests/unit/test_daily_task_selection_local_today.py": {
+   "secs": 2.974,
+   "tests": 2
+  },
+  "backend/tests/unit/test_dailyflow_p2_capsule_today_window.py": {
+   "secs": 5.583,
+   "tests": 4
+  },
+  "backend/tests/unit/test_dailyflow_p2_context_line_ttl.py": {
+   "secs": 0.025,
+   "tests": 2
+  },
+  "backend/tests/unit/test_dailyflow_p2_task_type_aliases.py": {
+   "secs": 0.035,
+   "tests": 15
+  },
+  "backend/tests/unit/test_dailyflow_p2_today_filter.py": {
+   "secs": 1.405,
+   "tests": 4
+  },
+  "backend/tests/unit/test_dashboard_router_wall_lookback_local.py": {
+   "secs": 2.824,
+   "tests": 2
+  },
+  "backend/tests/unit/test_data_minimization.py": {
+   "secs": 0.766,
+   "tests": 7
+  },
+  "backend/tests/unit/test_dcomm2_photon_redeem_pro.py": {
+   "secs": 44.336,
+   "tests": 11
+  },
+  "backend/tests/unit/test_deep_analysis_tier_routing.py": {
+   "secs": 0.05,
+   "tests": 6
+  },
+  "backend/tests/unit/test_deviation_detector.py": {
+   "secs": 0.013,
+   "tests": 6
+  },
+  "backend/tests/unit/test_discovery_target_date_local_today.py": {
+   "secs": 4.465,
+   "tests": 3
+  },
+  "backend/tests/unit/test_distilled_strategy_store_contract.py": {
+   "secs": 12.092,
+   "tests": 3
+  },
+  "backend/tests/unit/test_distributed_lock.py": {
+   "secs": 1.436,
+   "tests": 5
+  },
+  "backend/tests/unit/test_distributed_lock_real_redis.py": {
+   "secs": 1.747,
+   "tests": 8
+  },
+  "backend/tests/unit/test_doc_context_kill_switch.py": {
+   "secs": 0.012,
+   "tests": 3
+  },
+  "backend/tests/unit/test_document_security_fixes.py": {
+   "secs": 0.285,
+   "tests": 22
+  },
+  "backend/tests/unit/test_done_tail_latency.py": {
+   "secs": 1.268,
+   "tests": 2
+  },
+  "backend/tests/unit/test_dual_core_decision_bench.py": {
+   "secs": 0.01,
+   "tests": 5
+  },
+  "backend/tests/unit/test_dual_core_router.py": {
+   "secs": 0.039,
+   "tests": 17
+  },
+  "backend/tests/unit/test_dual_core_router_real_engine.py": {
+   "secs": 0.127,
+   "tests": 26
+  },
+  "backend/tests/unit/test_due_soon_days_left_local_day.py": {
+   "secs": 5.678,
+   "tests": 4
+  },
+  "backend/tests/unit/test_e07_adaptive_routing.py": {
+   "secs": 0.078,
+   "tests": 19
+  },
+  "backend/tests/unit/test_e07_health_hysteresis.py": {
+   "secs": 0.051,
+   "tests": 13
+  },
+  "backend/tests/unit/test_economy_metrics_snapshot.py": {
+   "secs": 4.12,
+   "tests": 5
+  },
+  "backend/tests/unit/test_entity_cards.py": {
+   "secs": 0.023,
+   "tests": 10
+  },
+  "backend/tests/unit/test_episodic_user_scope_guard.py": {
+   "secs": 0.027,
+   "tests": 1
+  },
+  "backend/tests/unit/test_equipment_service.py": {
+   "secs": 4.321,
+   "tests": 3
+  },
+  "backend/tests/unit/test_erridemconc_mastery_audit_idem_unique_migration_sqlite.py": {
+   "secs": 0.091,
+   "tests": 4
+  },
+  "backend/tests/unit/test_error_book_mastery_sync_service.py": {
+   "secs": 0.405,
+   "tests": 39
+  },
+  "backend/tests/unit/test_error_book_subject_normalization.py": {
+   "secs": 0.074,
+   "tests": 31
+  },
+  "backend/tests/unit/test_error_knowledge_linker.py": {
+   "secs": 14.28,
+   "tests": 13
+  },
+  "backend/tests/unit/test_error_mastery_concurrency.py": {
+   "secs": 16.392,
+   "tests": 4
+  },
+  "backend/tests/unit/test_error_mastery_idempotency.py": {
+   "secs": 10.29,
+   "tests": 8
+  },
+  "backend/tests/unit/test_error_mastery_loop.py": {
+   "secs": 7.408,
+   "tests": 13
+  },
+  "backend/tests/unit/test_error_replan_bridge.py": {
+   "secs": 13.291,
+   "tests": 8
+  },
+  "backend/tests/unit/test_error_replan_bridge_stage34.py": {
+   "secs": 4.276,
+   "tests": 3
+  },
+  "backend/tests/unit/test_error_taxonomy.py": {
+   "secs": 0.039,
+   "tests": 19
+  },
+  "backend/tests/unit/test_errorbook_review_500_fix.py": {
+   "secs": 0.032,
+   "tests": 7
+  },
+  "backend/tests/unit/test_event_ack2_reliability.py": {
+   "secs": 0.095,
+   "tests": 12
+  },
+  "backend/tests/unit/test_event_ack_reliability.py": {
+   "secs": 0.129,
+   "tests": 17
+  },
+  "backend/tests/unit/test_event_bus_first_deploy.py": {
+   "secs": 6.686,
+   "tests": 3
+  },
+  "backend/tests/unit/test_event_bus_group_scoped_idempotency.py": {
+   "secs": 0.134,
+   "tests": 5
+  },
+  "backend/tests/unit/test_event_bus_lag_monitor.py": {
+   "secs": 0.012,
+   "tests": 3
+  },
+  "backend/tests/unit/test_event_bus_real_redis.py": {
+   "secs": 0.076,
+   "tests": 6
+  },
+  "backend/tests/unit/test_event_bus_regression.py": {
+   "secs": 0.084,
+   "tests": 3
+  },
+  "backend/tests/unit/test_event_bus_reliability.py": {
+   "secs": 0.631,
+   "tests": 4
+  },
+  "backend/tests/unit/test_eventbus_publish_purity_and_plan_fallback_softdelete.py": {
+   "secs": 1.689,
+   "tests": 3
+  },
+  "backend/tests/unit/test_eventbus_subscribe_raise.py": {
+   "secs": 0.021,
+   "tests": 3
+  },
+  "backend/tests/unit/test_evidence_calibration.py": {
+   "secs": 0.019,
+   "tests": 8
+  },
+  "backend/tests/unit/test_evidence_health.py": {
+   "secs": 1.373,
+   "tests": 1
+  },
+  "backend/tests/unit/test_evidence_resolve.py": {
+   "secs": 4.223,
+   "tests": 3
+  },
+  "backend/tests/unit/test_evidence_scoring.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/unit/test_exam_sprint_days_left_local.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/unit/test_exam_sprint_diagnose_api.py": {
+   "secs": 1.695,
+   "tests": 1
+  },
+  "backend/tests/unit/test_exam_sprint_diagnostic_service.py": {
+   "secs": 9.936,
+   "tests": 8
+  },
+  "backend/tests/unit/test_exam_sprint_intake_concurrency.py": {
+   "secs": 8.454,
+   "tests": 3
+  },
+  "backend/tests/unit/test_exam_sprint_intake_service.py": {
+   "secs": 18.713,
+   "tests": 11
+  },
+  "backend/tests/unit/test_exam_sprint_policy.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/unit/test_exam_sprint_review_service.py": {
+   "secs": 23.678,
+   "tests": 15
+  },
+  "backend/tests/unit/test_execution_ingestor_confirm_reject.py": {
+   "secs": 10.442,
+   "tests": 7
+  },
+  "backend/tests/unit/test_execution_intent_model.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_execution_profile_service.py": {
+   "secs": 0.004,
+   "tests": 1
+  },
+  "backend/tests/unit/test_execution_run_producer.py": {
+   "secs": 8.317,
+   "tests": 6
+  },
+  "backend/tests/unit/test_execution_service_health.py": {
+   "secs": 2.86,
+   "tests": 3
+  },
+  "backend/tests/unit/test_executor_execution_observer.py": {
+   "secs": 1.527,
+   "tests": 2
+  },
+  "backend/tests/unit/test_executor_tool_locale_signature.py": {
+   "secs": 0.011,
+   "tests": 3
+  },
+  "backend/tests/unit/test_experience_actuator.py": {
+   "secs": 8.563,
+   "tests": 6
+  },
+  "backend/tests/unit/test_experience_readouts_criterion_label.py": {
+   "secs": 0.026,
+   "tests": 12
+  },
+  "backend/tests/unit/test_f821_undefined_name_bugfix.py": {
+   "secs": 0.04,
+   "tests": 8
+  },
+  "backend/tests/unit/test_failure_semantics.py": {
+   "secs": 0.127,
+   "tests": 47
+  },
+  "backend/tests/unit/test_fake_vs_prod_redis.py": {
+   "secs": 0.234,
+   "tests": 9
+  },
+  "backend/tests/unit/test_feedback_adjustment_delete_task.py": {
+   "secs": 0.277,
+   "tests": 2
+  },
+  "backend/tests/unit/test_first_action_edit_atomicity.py": {
+   "secs": 2.838,
+   "tests": 2
+  },
+  "backend/tests/unit/test_first_action_study_minutes_coerce.py": {
+   "secs": 8.428,
+   "tests": 6
+  },
+  "backend/tests/unit/test_first_text_chunk_delivery.py": {
+   "secs": 0.008,
+   "tests": 1
+  },
+  "backend/tests/unit/test_five_layer_learning_contract.py": {
+   "secs": 0.011,
+   "tests": 5
+  },
+  "backend/tests/unit/test_flutter_spine_status_band.py": {
+   "secs": 0.057,
+   "tests": 26
+  },
+  "backend/tests/unit/test_focus_heatmap_service.py": {
+   "secs": 1.355,
+   "tests": 1
+  },
+  "backend/tests/unit/test_focus_service_memory.py": {
+   "secs": 9.564,
+   "tests": 6
+  },
+  "backend/tests/unit/test_focus_signal_processor.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_focus_signal_window_local.py": {
+   "secs": 1.367,
+   "tests": 1
+  },
+  "backend/tests/unit/test_follow_up_question_templates.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/unit/test_foresight_kill_switch.py": {
+   "secs": 5.473,
+   "tests": 4
+  },
+  "backend/tests/unit/test_foresight_snapshot_schema.py": {
+   "secs": 6.942,
+   "tests": 5
+  },
+  "backend/tests/unit/test_fsm_context_guardrails.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_full_score_closeout_wiring.py": {
+   "secs": 0.019,
+   "tests": 6
+  },
+  "backend/tests/unit/test_g05_cached_singleflight.py": {
+   "secs": 0.133,
+   "tests": 3
+  },
+  "backend/tests/unit/test_g05_crdt_concurrent_first_connect.py": {
+   "secs": 0.031,
+   "tests": 1
+  },
+  "backend/tests/unit/test_g05_crdt_restore_binary_safety.py": {
+   "secs": 0.015,
+   "tests": 2
+  },
+  "backend/tests/unit/test_g05_keyword_jsonpath_asyncpg.py": {
+   "secs": 0.232,
+   "tests": 1
+  },
+  "backend/tests/unit/test_g05_search_embedding_degrade.py": {
+   "secs": 2.775,
+   "tests": 2
+  },
+  "backend/tests/unit/test_g13_learning_style_persistence.py": {
+   "secs": 0.032,
+   "tests": 10
+  },
+  "backend/tests/unit/test_g14_recurring_error_patterns.py": {
+   "secs": 2.846,
+   "tests": 3
+  },
+  "backend/tests/unit/test_galaxy_document_review_api.py": {
+   "secs": 1.636,
+   "tests": 1
+  },
+  "backend/tests/unit/test_galaxy_grpc_cached_graph.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/test_galaxy_grpc_search_recommended_user_status.py": {
+   "secs": 0.021,
+   "tests": 6
+  },
+  "backend/tests/unit/test_galaxy_grpc_user_status.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/unit/test_galaxy_service_audit_idem_duplicate.py": {
+   "secs": 16.144,
+   "tests": 4
+  },
+  "backend/tests/unit/test_generation_reasoning_progress.py": {
+   "secs": 0.029,
+   "tests": 3
+  },
+  "backend/tests/unit/test_glm_batch_adaptive.py": {
+   "secs": 0.014,
+   "tests": 4
+  },
+  "backend/tests/unit/test_goal_backfill_boundary.py": {
+   "secs": 0.044,
+   "tests": 6
+  },
+  "backend/tests/unit/test_goal_detail_route_shadowing.py": {
+   "secs": 2.405,
+   "tests": 11
+  },
+  "backend/tests/unit/test_goal_quality_evaluator.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_goal_realization_experience_packets.py": {
+   "secs": 0.008,
+   "tests": 3
+  },
+  "backend/tests/unit/test_goal_router_progress_projection.py": {
+   "secs": 0.008,
+   "tests": 4
+  },
+  "backend/tests/unit/test_goal_today_view.py": {
+   "secs": 1.478,
+   "tests": 14
+  },
+  "backend/tests/unit/test_graphrag_cache_key.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/unit/test_graphrag_hybrid_retrieval.py": {
+   "secs": 0.017,
+   "tests": 4
+  },
+  "backend/tests/unit/test_graphrag_trace_store.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/unit/test_grounding_validator_knowledge_readiness.py": {
+   "secs": 1.396,
+   "tests": 1
+  },
+  "backend/tests/unit/test_growth_bottleneck_recent_completion.py": {
+   "secs": 7.143,
+   "tests": 5
+  },
+  "backend/tests/unit/test_growth_dashboard_focus_window_local.py": {
+   "secs": 4.368,
+   "tests": 3
+  },
+  "backend/tests/unit/test_growth_dashboard_service.py": {
+   "secs": 0.019,
+   "tests": 4
+  },
+  "backend/tests/unit/test_growth_signal_contract.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/unit/test_growth_streak_local_clock.py": {
+   "secs": 4.364,
+   "tests": 3
+  },
+  "backend/tests/unit/test_gseed_guest_seed_retype_migration_sqlite.py": {
+   "secs": 0.049,
+   "tests": 3
+  },
+  "backend/tests/unit/test_guest_access_ttl_refresh.py": {
+   "secs": 0.079,
+   "tests": 11
+  },
+  "backend/tests/unit/test_h02_aurora_spine_feedback.py": {
+   "secs": 0.017,
+   "tests": 5
+  },
+  "backend/tests/unit/test_hybrid_run_steps.py": {
+   "secs": 15.734,
+   "tests": 12
+  },
+  "backend/tests/unit/test_hybrid_run_steps_api.py": {
+   "secs": 7.264,
+   "tests": 5
+  },
+  "backend/tests/unit/test_idempotency_middleware.py": {
+   "secs": 0.015,
+   "tests": 1
+  },
+  "backend/tests/unit/test_idiographic_kill_switch.py": {
+   "secs": 0.019,
+   "tests": 3
+  },
+  "backend/tests/unit/test_idiographic_prompt_injection.py": {
+   "secs": 0.015,
+   "tests": 2
+  },
+  "backend/tests/unit/test_inferred_preference_decay_service.py": {
+   "secs": 2.865,
+   "tests": 2
+  },
+  "backend/tests/unit/test_ingestion_api.py": {
+   "secs": 0.025,
+   "tests": 2
+  },
+  "backend/tests/unit/test_intakeidx_plans_sprint_goal_unique_migration_sqlite.py": {
+   "secs": 0.05,
+   "tests": 2
+  },
+  "backend/tests/unit/test_intervention_context_persistence.py": {
+   "secs": 1.446,
+   "tests": 1
+  },
+  "backend/tests/unit/test_intervention_feedback_binding_service.py": {
+   "secs": 8.622,
+   "tests": 6
+  },
+  "backend/tests/unit/test_intervention_feedback_idempotency.py": {
+   "secs": 0.01,
+   "tests": 1
+  },
+  "backend/tests/unit/test_intervention_language_templates.py": {
+   "secs": 0.138,
+   "tests": 3
+  },
+  "backend/tests/unit/test_intervention_lifecycle_migration_sqlite.py": {
+   "secs": 0.087,
+   "tests": 3
+  },
+  "backend/tests/unit/test_intervention_outcome_tracker.py": {
+   "secs": 13.996,
+   "tests": 8
+  },
+  "backend/tests/unit/test_intervention_service.py": {
+   "secs": 1.408,
+   "tests": 4
+  },
+  "backend/tests/unit/test_intervention_strategy_learner.py": {
+   "secs": 7.337,
+   "tests": 5
+  },
+  "backend/tests/unit/test_inventory_consumable_effect_wiring.py": {
+   "secs": 5.661,
+   "tests": 4
+  },
+  "backend/tests/unit/test_j04_first_action_chain.py": {
+   "secs": 11.71,
+   "tests": 8
+  },
+  "backend/tests/unit/test_j05_stuck_journey_migration_sqlite.py": {
+   "secs": 0.065,
+   "tests": 3
+  },
+  "backend/tests/unit/test_j06_hybrid_journey.py": {
+   "secs": 9.884,
+   "tests": 5
+  },
+  "backend/tests/unit/test_j06_hybrid_journey_migration_sqlite.py": {
+   "secs": 0.074,
+   "tests": 4
+  },
+  "backend/tests/unit/test_jitai_budget_cooldown.py": {
+   "secs": 0.851,
+   "tests": 4
+  },
+  "backend/tests/unit/test_jitai_template_no_llm.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/unit/test_jitai_trigger.py": {
+   "secs": 1.096,
+   "tests": 8
+  },
+  "backend/tests/unit/test_jpush_sender_service.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/unit/test_k6_silent_exception_fix.py": {
+   "secs": 0.017,
+   "tests": 1
+  },
+  "backend/tests/unit/test_k8_silent_exception_fix.py": {
+   "secs": 0.016,
+   "tests": 1
+  },
+  "backend/tests/unit/test_kill_switch_core.py": {
+   "secs": 0.038,
+   "tests": 15
+  },
+  "backend/tests/unit/test_kill_switch_readiness.py": {
+   "secs": 0.017,
+   "tests": 6
+  },
+  "backend/tests/unit/test_knowledge_service_semantic_search.py": {
+   "secs": 0.008,
+   "tests": 1
+  },
+  "backend/tests/unit/test_langgraph_planner_circuit_breaker.py": {
+   "secs": 0.033,
+   "tests": 5
+  },
+  "backend/tests/unit/test_langgraph_planner_synthesized_plan.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/test_laplace_noise_utility.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/unit/test_layer_conflict_resolver.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/unit/test_learning_assets.py": {
+   "secs": 0.128,
+   "tests": 35
+  },
+  "backend/tests/unit/test_learning_async_save_tracking.py": {
+   "secs": 0.017,
+   "tests": 2
+  },
+  "backend/tests/unit/test_learning_cutover_audit.py": {
+   "secs": 0.009,
+   "tests": 2
+  },
+  "backend/tests/unit/test_learning_path_task_fallback.py": {
+   "secs": 0.018,
+   "tests": 3
+  },
+  "backend/tests/unit/test_llm_cost_monitoring.py": {
+   "secs": 0.061,
+   "tests": 9
+  },
+  "backend/tests/unit/test_llm_dispatcher_quota.py": {
+   "secs": 0.052,
+   "tests": 4
+  },
+  "backend/tests/unit/test_llm_explicit_temperature.py": {
+   "secs": 0.015,
+   "tests": 3
+  },
+  "backend/tests/unit/test_llm_extractor_service.py": {
+   "secs": 0.018,
+   "tests": 4
+  },
+  "backend/tests/unit/test_llm_fallback_wrapper_falsy_fallback.py": {
+   "secs": 4.553,
+   "tests": 11
+  },
+  "backend/tests/unit/test_llm_health_dual_source_reset.py": {
+   "secs": 0.07,
+   "tests": 7
+  },
+  "backend/tests/unit/test_llm_json_call_list_contract.py": {
+   "secs": 0.025,
+   "tests": 8
+  },
+  "backend/tests/unit/test_llm_output_validator.py": {
+   "secs": 0.693,
+   "tests": 47
+  },
+  "backend/tests/unit/test_llm_output_validator_lexicon_fp.py": {
+   "secs": 0.124,
+   "tests": 54
+  },
+  "backend/tests/unit/test_llm_output_validator_math_fp.py": {
+   "secs": 0.098,
+   "tests": 38
+  },
+  "backend/tests/unit/test_llm_output_validator_ops_fp.py": {
+   "secs": 0.054,
+   "tests": 23
+  },
+  "backend/tests/unit/test_llm_prediction_routing.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/unit/test_llm_quota.py": {
+   "secs": 0.356,
+   "tests": 34
+  },
+  "backend/tests/unit/test_llm_router_free_tier.py": {
+   "secs": 0.062,
+   "tests": 14
+  },
+  "backend/tests/unit/test_llm_router_health_tracking.py": {
+   "secs": 0.03,
+   "tests": 11
+  },
+  "backend/tests/unit/test_llm_safety.py": {
+   "secs": 0.421,
+   "tests": 33
+  },
+  "backend/tests/unit/test_llm_safety_adversarial.py": {
+   "secs": 0.271,
+   "tests": 48
+  },
+  "backend/tests/unit/test_llm_same_tier_fallback.py": {
+   "secs": 0.435,
+   "tests": 6
+  },
+  "backend/tests/unit/test_llm_security_wrapper.py": {
+   "secs": 0.011,
+   "tests": 2
+  },
+  "backend/tests/unit/test_llm_security_wrapper_forwarding.py": {
+   "secs": 0.081,
+   "tests": 18
+  },
+  "backend/tests/unit/test_llm_service_security.py": {
+   "secs": 0.048,
+   "tests": 2
+  },
+  "backend/tests/unit/test_llm_tier_fallback_order.py": {
+   "secs": 0.014,
+   "tests": 5
+  },
+  "backend/tests/unit/test_llm_timeout_fallback.py": {
+   "secs": 0.008,
+   "tests": 4
+  },
+  "backend/tests/unit/test_llm_wrapper_signature_contract.py": {
+   "secs": 0.089,
+   "tests": 34
+  },
+  "backend/tests/unit/test_logging_file_sink.py": {
+   "secs": 0.116,
+   "tests": 11
+  },
+  "backend/tests/unit/test_loguru_exc_info_migration.py": {
+   "secs": 0.405,
+   "tests": 3
+  },
+  "backend/tests/unit/test_ltm_health_snapshot.py": {
+   "secs": 1.366,
+   "tests": 1
+  },
+  "backend/tests/unit/test_ltm_release_gate.py": {
+   "secs": 2.749,
+   "tests": 2
+  },
+  "backend/tests/unit/test_ltm_rollout_service.py": {
+   "secs": 4.034,
+   "tests": 3
+  },
+  "backend/tests/unit/test_m02_dual_core_spine_states.py": {
+   "secs": 0.014,
+   "tests": 6
+  },
+  "backend/tests/unit/test_marketplace_service.py": {
+   "secs": 5.415,
+   "tests": 4
+  },
+  "backend/tests/unit/test_measurement_calibration.py": {
+   "secs": 0.03,
+   "tests": 8
+  },
+  "backend/tests/unit/test_memory_admin_api.py": {
+   "secs": 11.044,
+   "tests": 8
+  },
+  "backend/tests/unit/test_memory_api.py": {
+   "secs": 4.25,
+   "tests": 3
+  },
+  "backend/tests/unit/test_memory_conflict_resolver.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/unit/test_memory_daily_summary_job.py": {
+   "secs": 1.479,
+   "tests": 1
+  },
+  "backend/tests/unit/test_memory_declared_fact_capture.py": {
+   "secs": 11.446,
+   "tests": 18
+  },
+  "backend/tests/unit/test_memory_episodic_governance_api.py": {
+   "secs": 7.052,
+   "tests": 6
+  },
+  "backend/tests/unit/test_memory_epistemic_contract.py": {
+   "secs": 0.161,
+   "tests": 12
+  },
+  "backend/tests/unit/test_memory_eval_service.py": {
+   "secs": 4.926,
+   "tests": 1
+  },
+  "backend/tests/unit/test_memory_evolution.py": {
+   "secs": 0.072,
+   "tests": 7
+  },
+  "backend/tests/unit/test_memory_export_api.py": {
+   "secs": 2.827,
+   "tests": 2
+  },
+  "backend/tests/unit/test_memory_inference_write_guard.py": {
+   "secs": 9.857,
+   "tests": 8
+  },
+  "backend/tests/unit/test_memory_inferred_chinese_commitment.py": {
+   "secs": 0.042,
+   "tests": 16
+  },
+  "backend/tests/unit/test_memory_inferred_write_lane.py": {
+   "secs": 11.16,
+   "tests": 7
+  },
+  "backend/tests/unit/test_memory_inferred_write_lane_queue.py": {
+   "secs": 0.011,
+   "tests": 1
+  },
+  "backend/tests/unit/test_memory_invalidation_pipeline.py": {
+   "secs": 25.882,
+   "tests": 20
+  },
+  "backend/tests/unit/test_memory_jobs.py": {
+   "secs": 5.684,
+   "tests": 4
+  },
+  "backend/tests/unit/test_memory_naive_utc_write.py": {
+   "secs": 0.015,
+   "tests": 7
+  },
+  "backend/tests/unit/test_memory_prefilter_integration.py": {
+   "secs": 9.967,
+   "tests": 7
+  },
+  "backend/tests/unit/test_memory_provenance_api.py": {
+   "secs": 31.436,
+   "tests": 21
+  },
+  "backend/tests/unit/test_memory_rank_policy_service.py": {
+   "secs": 2.841,
+   "tests": 2
+  },
+  "backend/tests/unit/test_memory_retrieval_prefilter.py": {
+   "secs": 0.149,
+   "tests": 61
+  },
+  "backend/tests/unit/test_memory_revival_capture.py": {
+   "secs": 5.546,
+   "tests": 5
+  },
+  "backend/tests/unit/test_memory_revival_slim_and_grounding.py": {
+   "secs": 0.033,
+   "tests": 9
+  },
+  "backend/tests/unit/test_memory_service.py": {
+   "secs": 4.344,
+   "tests": 5
+  },
+  "backend/tests/unit/test_memory_service_gating.py": {
+   "secs": 2.771,
+   "tests": 2
+  },
+  "backend/tests/unit/test_memory_service_reads.py": {
+   "secs": 1.477,
+   "tests": 1
+  },
+  "backend/tests/unit/test_memory_service_regression.py": {
+   "secs": 1.513,
+   "tests": 3
+  },
+  "backend/tests/unit/test_memory_settings_api.py": {
+   "secs": 4.214,
+   "tests": 3
+  },
+  "backend/tests/unit/test_memory_storage_gate.py": {
+   "secs": 8.576,
+   "tests": 52
+  },
+  "backend/tests/unit/test_memory_storage_gate_eval.py": {
+   "secs": 0.022,
+   "tests": 3
+  },
+  "backend/tests/unit/test_memory_unresolved_conflicts_api.py": {
+   "secs": 1.428,
+   "tests": 1
+  },
+  "backend/tests/unit/test_memory_use_selfcheck.py": {
+   "secs": 0.087,
+   "tests": 38
+  },
+  "backend/tests/unit/test_memory_use_selfcheck_opbench.py": {
+   "secs": 0.121,
+   "tests": 48
+  },
+  "backend/tests/unit/test_memory_use_selfcheck_wiring.py": {
+   "secs": 8.421,
+   "tests": 9
+  },
+  "backend/tests/unit/test_memory_v3_migration_sqlite.py": {
+   "secs": 0.165,
+   "tests": 1
+  },
+  "backend/tests/unit/test_memory_working_memory_api.py": {
+   "secs": 1.476,
+   "tests": 1
+  },
+  "backend/tests/unit/test_metacog_hint_user_scope_guard.py": {
+   "secs": 0.029,
+   "tests": 1
+  },
+  "backend/tests/unit/test_metacog_not_router.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/unit/test_metacognition_kill_switch.py": {
+   "secs": 1.347,
+   "tests": 3
+  },
+  "backend/tests/unit/test_metacognition_service.py": {
+   "secs": 4.222,
+   "tests": 3
+  },
+  "backend/tests/unit/test_metering_model_attribution.py": {
+   "secs": 0.019,
+   "tests": 7
+  },
+  "backend/tests/unit/test_milestone_command_path.py": {
+   "secs": 6.074,
+   "tests": 4
+  },
+  "backend/tests/unit/test_minimax_rpm_gate.py": {
+   "secs": 0.886,
+   "tests": 19
+  },
+  "backend/tests/unit/test_mintfix_contract_stake_escrow.py": {
+   "secs": 43.216,
+   "tests": 11
+  },
+  "backend/tests/unit/test_mirofish_phase0_acceptance.py": {
+   "secs": 0.079,
+   "tests": 5
+  },
+  "backend/tests/unit/test_mirofish_wiring_finish.py": {
+   "secs": 2.626,
+   "tests": 33
+  },
+  "backend/tests/unit/test_multi_agent_spine_context.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/unit/test_multi_dimensional_learner_contract.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/unit/test_multi_intent_service.py": {
+   "secs": 0.047,
+   "tests": 2
+  },
+  "backend/tests/unit/test_nbp1_ws_turn_memory_capture.py": {
+   "secs": 2.899,
+   "tests": 9
+  },
+  "backend/tests/unit/test_nbp6_declared_fact_projection_latency.py": {
+   "secs": 5.645,
+   "tests": 4
+  },
+  "backend/tests/unit/test_no_direct_tracker_import_from_orchestrator.py": {
+   "secs": 0.06,
+   "tests": 2
+  },
+  "backend/tests/unit/test_node_sector_backfill_dedup.py": {
+   "secs": 27.187,
+   "tests": 7
+  },
+  "backend/tests/unit/test_non_exam_crisis_mode.py": {
+   "secs": 0.071,
+   "tests": 34
+  },
+  "backend/tests/unit/test_north_star_wvpl_api.py": {
+   "secs": 4.455,
+   "tests": 3
+  },
+  "backend/tests/unit/test_notification_service_preferences.py": {
+   "secs": 5.61,
+   "tests": 5
+  },
+  "backend/tests/unit/test_nudge_channel_delivery.py": {
+   "secs": 0.107,
+   "tests": 14
+  },
+  "backend/tests/unit/test_o03_adversarial_security.py": {
+   "secs": 93.821,
+   "tests": 222
+  },
+  "backend/tests/unit/test_o04_entitlement_flame_decouple.py": {
+   "secs": 0.135,
+   "tests": 12
+  },
+  "backend/tests/unit/test_o07_budget_matrix_and_ux.py": {
+   "secs": 7.323,
+   "tests": 25
+  },
+  "backend/tests/unit/test_o07_cost_redis_bounded_degrade.py": {
+   "secs": 0.062,
+   "tests": 9
+  },
+  "backend/tests/unit/test_o07_p2dispatch_choke_wiring.py": {
+   "secs": 0.721,
+   "tests": 14
+  },
+  "backend/tests/unit/test_o07_queue_backpressure.py": {
+   "secs": 0.051,
+   "tests": 15
+  },
+  "backend/tests/unit/test_observation_firewall.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_ope_gatekeeper.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_openclaw_admin_api.py": {
+   "secs": 20.373,
+   "tests": 15
+  },
+  "backend/tests/unit/test_openclaw_gateway_ws.py": {
+   "secs": 0.016,
+   "tests": 4
+  },
+  "backend/tests/unit/test_openclaw_phase0.py": {
+   "secs": 0.016,
+   "tests": 8
+  },
+  "backend/tests/unit/test_openclaw_phase1.py": {
+   "secs": 3.071,
+   "tests": 10
+  },
+  "backend/tests/unit/test_openclaw_phase2.py": {
+   "secs": 26.252,
+   "tests": 9
+  },
+  "backend/tests/unit/test_openclaw_phase3.py": {
+   "secs": 13.255,
+   "tests": 9
+  },
+  "backend/tests/unit/test_openclaw_phase4.py": {
+   "secs": 36.311,
+   "tests": 26
+  },
+  "backend/tests/unit/test_openclaw_phase5_10_followup.py": {
+   "secs": 6.509,
+   "tests": 4
+  },
+  "backend/tests/unit/test_openclaw_ssrf.py": {
+   "secs": 1.375,
+   "tests": 6
+  },
+  "backend/tests/unit/test_orchestrator_evolution_context.py": {
+   "secs": 2.694,
+   "tests": 6
+  },
+  "backend/tests/unit/test_orchestrator_execution_feedback_wiring.py": {
+   "secs": 0.014,
+   "tests": 4
+  },
+  "backend/tests/unit/test_orchestrator_real_engine.py": {
+   "secs": 11.151,
+   "tests": 42
+  },
+  "backend/tests/unit/test_orchestrator_request_scoping.py": {
+   "secs": 0.017,
+   "tests": 3
+  },
+  "backend/tests/unit/test_orchestrator_stream_queue.py": {
+   "secs": 0.011,
+   "tests": 4
+  },
+  "backend/tests/unit/test_outcome_evidence_adapter.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/unit/test_outcome_learning_service.py": {
+   "secs": 0.01,
+   "tests": 4
+  },
+  "backend/tests/unit/test_outcome_ledger_contract.py": {
+   "secs": 0.085,
+   "tests": 39
+  },
+  "backend/tests/unit/test_outcome_promotion_governor.py": {
+   "secs": 0.016,
+   "tests": 4
+  },
+  "backend/tests/unit/test_outcome_promotion_governor_phase_e.py": {
+   "secs": 0.011,
+   "tests": 3
+  },
+  "backend/tests/unit/test_p04_auto_execution_permissions.py": {
+   "secs": 15.085,
+   "tests": 11
+  },
+  "backend/tests/unit/test_p05_proactive_longitudinal_temporal.py": {
+   "secs": 15.391,
+   "tests": 5
+  },
+  "backend/tests/unit/test_p2_signal_processors.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/unit/test_pack_quality_analysis_task.py": {
+   "secs": 0.008,
+   "tests": 1
+  },
+  "backend/tests/unit/test_past_session_memory_ranking.py": {
+   "secs": 0.015,
+   "tests": 4
+  },
+  "backend/tests/unit/test_perceptible_intelligence.py": {
+   "secs": 10.917,
+   "tests": 11
+  },
+  "backend/tests/unit/test_persdyn_attractor_service.py": {
+   "secs": 11.726,
+   "tests": 9
+  },
+  "backend/tests/unit/test_persdyn_mood_valence_guard.py": {
+   "secs": 0.063,
+   "tests": 2
+  },
+  "backend/tests/unit/test_persdyn_reference_day_local.py": {
+   "secs": 2.786,
+   "tests": 2
+  },
+  "backend/tests/unit/test_persdyn_user_isolation.py": {
+   "secs": 6.314,
+   "tests": 4
+  },
+  "backend/tests/unit/test_persistent_bayesian_learner_contract.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/test_persistent_bayesian_learner_multidim.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/unit/test_persistent_bayesian_sqam_scale.py": {
+   "secs": 0.039,
+   "tests": 2
+  },
+  "backend/tests/unit/test_persona_tool.py": {
+   "secs": 0.004,
+   "tests": 1
+  },
+  "backend/tests/unit/test_phase0_production_hardening.py": {
+   "secs": 0.198,
+   "tests": 6
+  },
+  "backend/tests/unit/test_phase2_intervention_pipeline.py": {
+   "secs": 22.31,
+   "tests": 19
+  },
+  "backend/tests/unit/test_phase_b_prompt_sections.py": {
+   "secs": 0.038,
+   "tests": 3
+  },
+  "backend/tests/unit/test_phase_b_revision_summary.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/unit/test_phase_d_discovery_pipeline.py": {
+   "secs": 4.998,
+   "tests": 3
+  },
+  "backend/tests/unit/test_phase_e_planning_loop.py": {
+   "secs": 6.678,
+   "tests": 3
+  },
+  "backend/tests/unit/test_phase_sketch_cursor_local_today.py": {
+   "secs": 4.048,
+   "tests": 2
+  },
+  "backend/tests/unit/test_photon_combo_effect_gate.py": {
+   "secs": 17.324,
+   "tests": 12
+  },
+  "backend/tests/unit/test_photon_idem_daily_first_concurrency.py": {
+   "secs": 24.029,
+   "tests": 6
+  },
+  "backend/tests/unit/test_photon_redeem_pro_status.py": {
+   "secs": 48.071,
+   "tests": 12
+  },
+  "backend/tests/unit/test_photon_service.py": {
+   "secs": 17.175,
+   "tests": 12
+  },
+  "backend/tests/unit/test_photon_service_simple.py": {
+   "secs": 0.014,
+   "tests": 6
+  },
+  "backend/tests/unit/test_photon_stream_audit_ledger.py": {
+   "secs": 10.214,
+   "tests": 7
+  },
+  "backend/tests/unit/test_photonidem_daily_first_idem_unique_migration_sqlite.py": {
+   "secs": 0.076,
+   "tests": 4
+  },
+  "backend/tests/unit/test_pii_redaction.py": {
+   "secs": 0.04,
+   "tests": 16
+  },
+  "backend/tests/unit/test_plan_adjustment_applier.py": {
+   "secs": 0.687,
+   "tests": 35
+  },
+  "backend/tests/unit/test_plan_adjustment_lookahead_local.py": {
+   "secs": 1.424,
+   "tests": 1
+  },
+  "backend/tests/unit/test_plan_archive_days_ahead_local_day.py": {
+   "secs": 3.426,
+   "tests": 2
+  },
+  "backend/tests/unit/test_plan_day_cursor_local_today.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_plan_execution_record_intent_unique.py": {
+   "secs": 0.387,
+   "tests": 3
+  },
+  "backend/tests/unit/test_plan_health_cooldown_dedup.py": {
+   "secs": 0.051,
+   "tests": 3
+  },
+  "backend/tests/unit/test_plan_health_signal_service.py": {
+   "secs": 0.072,
+   "tests": 16
+  },
+  "backend/tests/unit/test_plan_model_schema.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_plan_outcome_service.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/test_plan_quality_contract.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/unit/test_plan_quality_gate.py": {
+   "secs": 0.038,
+   "tests": 11
+  },
+  "backend/tests/unit/test_plan_replan_local_today.py": {
+   "secs": 6.556,
+   "tests": 4
+  },
+  "backend/tests/unit/test_plan_review_service_breaker.py": {
+   "secs": 0.011,
+   "tests": 2
+  },
+  "backend/tests/unit/test_plan_state_service_jsonb.py": {
+   "secs": 0.177,
+   "tests": 4
+  },
+  "backend/tests/unit/test_planlink_backfill_migration_sqlite.py": {
+   "secs": 0.095,
+   "tests": 4
+  },
+  "backend/tests/unit/test_planning_benchmark_service.py": {
+   "secs": 0.021,
+   "tests": 5
+  },
+  "backend/tests/unit/test_planning_deadline_days_local.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/unit/test_planning_material_anchors.py": {
+   "secs": 1.387,
+   "tests": 3
+  },
+  "backend/tests/unit/test_planning_strategy_compiler.py": {
+   "secs": 0.02,
+   "tests": 9
+  },
+  "backend/tests/unit/test_policy_kill_switch.py": {
+   "secs": 1.341,
+   "tests": 3
+  },
+  "backend/tests/unit/test_policy_patch_migration_sqlite.py": {
+   "secs": 0.068,
+   "tests": 3
+  },
+  "backend/tests/unit/test_predictive_focus_window_local.py": {
+   "secs": 4.263,
+   "tests": 3
+  },
+  "backend/tests/unit/test_predictive_service_extension.py": {
+   "secs": 5.405,
+   "tests": 4
+  },
+  "backend/tests/unit/test_predictive_service_productization.py": {
+   "secs": 0.014,
+   "tests": 4
+  },
+  "backend/tests/unit/test_preference_consumption_service.py": {
+   "secs": 2.815,
+   "tests": 2
+  },
+  "backend/tests/unit/test_preference_service_concurrency.py": {
+   "secs": 6.519,
+   "tests": 3
+  },
+  "backend/tests/unit/test_preference_supersede_revive.py": {
+   "secs": 5.846,
+   "tests": 9
+  },
+  "backend/tests/unit/test_privacy_community_production.py": {
+   "secs": 0.011,
+   "tests": 4
+  },
+  "backend/tests/unit/test_privacy_kill_switch_gauge.py": {
+   "secs": 0.01,
+   "tests": 4
+  },
+  "backend/tests/unit/test_proactive_intervention.py": {
+   "secs": 0.028,
+   "tests": 4
+  },
+  "backend/tests/unit/test_proactive_suggestion_concurrent_merge.py": {
+   "secs": 8.003,
+   "tests": 3
+  },
+  "backend/tests/unit/test_proactive_suggestion_feedback.py": {
+   "secs": 8.914,
+   "tests": 12
+  },
+  "backend/tests/unit/test_proactive_suggestion_feedback_honesty.py": {
+   "secs": 1.391,
+   "tests": 3
+  },
+  "backend/tests/unit/test_probe_validation.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_process_scaffolding_trigger.py": {
+   "secs": 2.923,
+   "tests": 2
+  },
+  "backend/tests/unit/test_prodfix1_monitor_and_userstate.py": {
+   "secs": 5.937,
+   "tests": 8
+  },
+  "backend/tests/unit/test_prodfix4_security_alert_cooldown.py": {
+   "secs": 0.041,
+   "tests": 4
+  },
+  "backend/tests/unit/test_profile_write_service.py": {
+   "secs": 3.24,
+   "tests": 2
+  },
+  "backend/tests/unit/test_progress_narrative_service.py": {
+   "secs": 9.836,
+   "tests": 7
+  },
+  "backend/tests/unit/test_prompt_plan_context.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/unit/test_prompt_preference_scalar_render.py": {
+   "secs": 0.019,
+   "tests": 9
+  },
+  "backend/tests/unit/test_prompt_signal_closure.py": {
+   "secs": 0.065,
+   "tests": 12
+  },
+  "backend/tests/unit/test_prompt_token_estimation.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_prompts_safe_format.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_proto_dual_stack_service.py": {
+   "secs": 0.008,
+   "tests": 4
+  },
+  "backend/tests/unit/test_proto_python_parity.py": {
+   "secs": 0.012,
+   "tests": 6
+  },
+  "backend/tests/unit/test_push_content_parsing.py": {
+   "secs": 0.234,
+   "tests": 8
+  },
+  "backend/tests/unit/test_push_default_coverage.py": {
+   "secs": 3.216,
+   "tests": 2
+  },
+  "backend/tests/unit/test_push_delivery_service.py": {
+   "secs": 5.419,
+   "tests": 4
+  },
+  "backend/tests/unit/test_push_policy_compiler.py": {
+   "secs": 0.017,
+   "tests": 7
+  },
+  "backend/tests/unit/test_push_quiet_hours.py": {
+   "secs": 0.009,
+   "tests": 4
+  },
+  "backend/tests/unit/test_push_recall_policy_guards.py": {
+   "secs": 0.044,
+   "tests": 4
+  },
+  "backend/tests/unit/test_push_tz_naive_utc.py": {
+   "secs": 6.685,
+   "tests": 4
+  },
+  "backend/tests/unit/test_q06_resilience_fastfail.py": {
+   "secs": 1.052,
+   "tests": 17
+  },
+  "backend/tests/unit/test_quota_lua_cwd.py": {
+   "secs": 0.012,
+   "tests": 1
+  },
+  "backend/tests/unit/test_r2p306_noop_throttle.py": {
+   "secs": 1.156,
+   "tests": 5
+  },
+  "backend/tests/unit/test_rag_cite_chain.py": {
+   "secs": 0.039,
+   "tests": 7
+  },
+  "backend/tests/unit/test_rate_limit_lua.py": {
+   "secs": 0.024,
+   "tests": 2
+  },
+  "backend/tests/unit/test_rd01_redeem_loop.py": {
+   "secs": 48.317,
+   "tests": 19
+  },
+  "backend/tests/unit/test_redis_checkpointer_allowlist.py": {
+   "secs": 0.042,
+   "tests": 5
+  },
+  "backend/tests/unit/test_redis_fixture_isolation.py": {
+   "secs": 0.034,
+   "tests": 7
+  },
+  "backend/tests/unit/test_reflection_agent_chat_binding.py": {
+   "secs": 0.049,
+   "tests": 2
+  },
+  "backend/tests/unit/test_reflection_agent_phase62.py": {
+   "secs": 0.004,
+   "tests": 1
+  },
+  "backend/tests/unit/test_reflection_agent_user_id.py": {
+   "secs": 0.014,
+   "tests": 4
+  },
+  "backend/tests/unit/test_reflection_context_injection.py": {
+   "secs": 8.175,
+   "tests": 6
+  },
+  "backend/tests/unit/test_reflection_kill_switch.py": {
+   "secs": 4.147,
+   "tests": 4
+  },
+  "backend/tests/unit/test_reflection_rule_y_gate.py": {
+   "secs": 2.767,
+   "tests": 4
+  },
+  "backend/tests/unit/test_reflection_trigger_extension.py": {
+   "secs": 4.122,
+   "tests": 8
+  },
+  "backend/tests/unit/test_regime_change_detector.py": {
+   "secs": 0.005,
+   "tests": 2
+  },
+  "backend/tests/unit/test_release_approval_service.py": {
+   "secs": 7.093,
+   "tests": 5
+  },
+  "backend/tests/unit/test_release_flag_authority.py": {
+   "secs": 19.844,
+   "tests": 15
+  },
+  "backend/tests/unit/test_report_reason_enum.py": {
+   "secs": 0.008,
+   "tests": 4
+  },
+  "backend/tests/unit/test_request_context_middleware.py": {
+   "secs": 0.014,
+   "tests": 2
+  },
+  "backend/tests/unit/test_request_validator_quota_flag.py": {
+   "secs": 0.004,
+   "tests": 1
+  },
+  "backend/tests/unit/test_request_validator_sql_fp.py": {
+   "secs": 0.152,
+   "tests": 59
+  },
+  "backend/tests/unit/test_research_consent_tracker.py": {
+   "secs": 5.731,
+   "tests": 5
+  },
+  "backend/tests/unit/test_response_feedback_service.py": {
+   "secs": 5.574,
+   "tests": 5
+  },
+  "backend/tests/unit/test_retrieval_fallback.py": {
+   "secs": 0.037,
+   "tests": 5
+  },
+  "backend/tests/unit/test_retrieval_intent_classifier.py": {
+   "secs": 0.082,
+   "tests": 27
+  },
+  "backend/tests/unit/test_retrieval_keyword_search.py": {
+   "secs": 0.009,
+   "tests": 1
+  },
+  "backend/tests/unit/test_review_error_skips_reflection.py": {
+   "secs": 0.012,
+   "tests": 4
+  },
+  "backend/tests/unit/test_review_reflection_fix_r2.py": {
+   "secs": 0.071,
+   "tests": 9
+  },
+  "backend/tests/unit/test_review_skip_logic.py": {
+   "secs": 0.012,
+   "tests": 6
+  },
+  "backend/tests/unit/test_reviewer_agent_phase62.py": {
+   "secs": 0.018,
+   "tests": 2
+  },
+  "backend/tests/unit/test_reviewer_agent_timeout_diagnostics.py": {
+   "secs": 0.074,
+   "tests": 4
+  },
+  "backend/tests/unit/test_reviewer_system_error_no_user_trailer.py": {
+   "secs": 0.017,
+   "tests": 7
+  },
+  "backend/tests/unit/test_rolling_correlator.py": {
+   "secs": 0.008,
+   "tests": 4
+  },
+  "backend/tests/unit/test_route_adapter.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_route_history_performance.py": {
+   "secs": 2.804,
+   "tests": 1
+  },
+  "backend/tests/unit/test_route_history_read_api.py": {
+   "secs": 8.236,
+   "tests": 6
+  },
+  "backend/tests/unit/test_route_history_service.py": {
+   "secs": 6.897,
+   "tests": 5
+  },
+  "backend/tests/unit/test_router_absolute_quality.py": {
+   "secs": 0.048,
+   "tests": 21
+  },
+  "backend/tests/unit/test_router_context_reader.py": {
+   "secs": 1.342,
+   "tests": 1
+  },
+  "backend/tests/unit/test_router_node_learning_integration.py": {
+   "secs": 0.017,
+   "tests": 4
+  },
+  "backend/tests/unit/test_router_sufficiency_branch.py": {
+   "secs": 0.014,
+   "tests": 6
+  },
+  "backend/tests/unit/test_routing_mdp_bridge.py": {
+   "secs": 0.01,
+   "tests": 4
+  },
+  "backend/tests/unit/test_routing_outcome_backfill.py": {
+   "secs": 2.733,
+   "tests": 2
+  },
+  "backend/tests/unit/test_routing_profile_service.py": {
+   "secs": 2.877,
+   "tests": 2
+  },
+  "backend/tests/unit/test_routing_reward_model.py": {
+   "secs": 0.011,
+   "tests": 5
+  },
+  "backend/tests/unit/test_rule_ab_context_sufficiency_never_branch.py": {
+   "secs": 0.143,
+   "tests": 3
+  },
+  "backend/tests/unit/test_rule_ab_whitelist_enforcement.py": {
+   "secs": 0.03,
+   "tests": 9
+  },
+  "backend/tests/unit/test_rule_ae_rewrite.py": {
+   "secs": 0.015,
+   "tests": 4
+  },
+  "backend/tests/unit/test_rule_ag_guard.py": {
+   "secs": 0.016,
+   "tests": 4
+  },
+  "backend/tests/unit/test_rule_ah_dimension_registry.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/unit/test_rule_ah_guard.py": {
+   "secs": 0.026,
+   "tests": 1
+  },
+  "backend/tests/unit/test_rule_ai_policy_purity.py": {
+   "secs": 0.028,
+   "tests": 2
+  },
+  "backend/tests/unit/test_rule_aj_rewrite.py": {
+   "secs": 0.019,
+   "tests": 4
+  },
+  "backend/tests/unit/test_rule_aj_user_id_isolation.py": {
+   "secs": 5.59,
+   "tests": 4
+  },
+  "backend/tests/unit/test_rule_ak_algorithm_constraint.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/unit/test_rule_al_not_router.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/unit/test_rule_am_rewrite.py": {
+   "secs": 0.021,
+   "tests": 4
+  },
+  "backend/tests/unit/test_rule_an_full_scan.py": {
+   "secs": 0.107,
+   "tests": 3
+  },
+  "backend/tests/unit/test_rule_ao_diagnostic_ban.py": {
+   "secs": 0.022,
+   "tests": 9
+  },
+  "backend/tests/unit/test_rule_as_guard.py": {
+   "secs": 0.261,
+   "tests": 4
+  },
+  "backend/tests/unit/test_rule_at_guard.py": {
+   "secs": 5.6,
+   "tests": 2
+  },
+  "backend/tests/unit/test_rule_az_guard.py": {
+   "secs": 0.032,
+   "tests": 2
+  },
+  "backend/tests/unit/test_rule_ba_guard.py": {
+   "secs": 0.031,
+   "tests": 2
+  },
+  "backend/tests/unit/test_rule_k_write_path_guard.py": {
+   "secs": 0.026,
+   "tests": 4
+  },
+  "backend/tests/unit/test_rule_y_guard.py": {
+   "secs": 0.017,
+   "tests": 4
+  },
+  "backend/tests/unit/test_rule_z_guard.py": {
+   "secs": 0.008,
+   "tests": 2
+  },
+  "backend/tests/unit/test_rule_z_social_cross_user_guard.py": {
+   "secs": 0.029,
+   "tests": 2
+  },
+  "backend/tests/unit/test_run_projection_consumer.py": {
+   "secs": 8.476,
+   "tests": 6
+  },
+  "backend/tests/unit/test_run_sqam_suite_integration.py": {
+   "secs": 0.485,
+   "tests": 1
+  },
+  "backend/tests/unit/test_run_state_machine.py": {
+   "secs": 0.244,
+   "tests": 104
+  },
+  "backend/tests/unit/test_run_step_projection.py": {
+   "secs": 15.952,
+   "tests": 11
+  },
+  "backend/tests/unit/test_runs_api.py": {
+   "secs": 14.142,
+   "tests": 10
+  },
+  "backend/tests/unit/test_runs_api_hardening.py": {
+   "secs": 5.561,
+   "tests": 4
+  },
+  "backend/tests/unit/test_safe_error_messages.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/unit/test_safe_experiment_platform.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/unit/test_scaffolding_combine_matrix.py": {
+   "secs": 0.023,
+   "tests": 9
+  },
+  "backend/tests/unit/test_scaffolding_fsm.py": {
+   "secs": 1.42,
+   "tests": 1
+  },
+  "backend/tests/unit/test_scaffolding_no_direct_tracker_import.py": {
+   "secs": 0.028,
+   "tests": 2
+  },
+  "backend/tests/unit/test_scaffolding_srl_extend.py": {
+   "secs": 8.4,
+   "tests": 6
+  },
+  "backend/tests/unit/test_scenario_pack_names_zh.py": {
+   "secs": 0.007,
+   "tests": 3
+  },
+  "backend/tests/unit/test_scene_auto_downgrade.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/test_scene_cluster_algorithm_constraint.py": {
+   "secs": 1.57,
+   "tests": 3
+  },
+  "backend/tests/unit/test_scene_cluster_incremental.py": {
+   "secs": 12.53,
+   "tests": 8
+  },
+  "backend/tests/unit/test_scene_idempotency.py": {
+   "secs": 3.308,
+   "tests": 4
+  },
+  "backend/tests/unit/test_scene_kill_switch.py": {
+   "secs": 1.449,
+   "tests": 3
+  },
+  "backend/tests/unit/test_scene_model.py": {
+   "secs": 1.373,
+   "tests": 4
+  },
+  "backend/tests/unit/test_scene_quality_score.py": {
+   "secs": 8.469,
+   "tests": 6
+  },
+  "backend/tests/unit/test_scene_router_zero_hit.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/unit/test_scene_title_rule_based.py": {
+   "secs": 2.849,
+   "tests": 3
+  },
+  "backend/tests/unit/test_scene_user_isolation.py": {
+   "secs": 5.587,
+   "tests": 4
+  },
+  "backend/tests/unit/test_scheduler_execution_tick_log.py": {
+   "secs": 0.013,
+   "tests": 1
+  },
+  "backend/tests/unit/test_scheduler_push_kill_switch.py": {
+   "secs": 0.019,
+   "tests": 3
+  },
+  "backend/tests/unit/test_scheduler_service_offline_queue_cleanup.py": {
+   "secs": 0.01,
+   "tests": 2
+  },
+  "backend/tests/unit/test_security_audit_insert.py": {
+   "secs": 23.678,
+   "tests": 6
+  },
+  "backend/tests/unit/test_seed_content_content_backfill.py": {
+   "secs": 0.164,
+   "tests": 22
+  },
+  "backend/tests/unit/test_seed_library_service.py": {
+   "secs": 0.25,
+   "tests": 24
+  },
+  "backend/tests/unit/test_seed_library_stage22.py": {
+   "secs": 4.515,
+   "tests": 3
+  },
+  "backend/tests/unit/test_self_evolution_service.py": {
+   "secs": 0.031,
+   "tests": 7
+  },
+  "backend/tests/unit/test_selfcheck_continuation_opening.py": {
+   "secs": 0.034,
+   "tests": 16
+  },
+  "backend/tests/unit/test_selfcheck_domain_gloss.py": {
+   "secs": 0.019,
+   "tests": 9
+  },
+  "backend/tests/unit/test_semantic_state_primitives.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/unit/test_session_feedback_adaptation.py": {
+   "secs": 0.028,
+   "tests": 11
+  },
+  "backend/tests/unit/test_session_mood_continuity.py": {
+   "secs": 0.024,
+   "tests": 5
+  },
+  "backend/tests/unit/test_session_recovery_persistence.py": {
+   "secs": 2.743,
+   "tests": 2
+  },
+  "backend/tests/unit/test_share_card_service.py": {
+   "secs": 5.272,
+   "tests": 3
+  },
+  "backend/tests/unit/test_shop_entry_gate.py": {
+   "secs": 19.084,
+   "tests": 4
+  },
+  "backend/tests/unit/test_shop_service.py": {
+   "secs": 0.463,
+   "tests": 4
+  },
+  "backend/tests/unit/test_signal_adaptation.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/unit/test_signal_inventory.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/unit/test_signal_spine.py": {
+   "secs": 17.655,
+   "tests": 960
+  },
+  "backend/tests/unit/test_sim_real_diagnostics.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/unit/test_situation_brief.py": {
+   "secs": 0.215,
+   "tests": 13
+  },
+  "backend/tests/unit/test_skill_extract_service.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/unit/test_skill_schema_contract.py": {
+   "secs": 0.006,
+   "tests": 3
+  },
+  "backend/tests/unit/test_skill_selection_aggregator_integration.py": {
+   "secs": 1.387,
+   "tests": 1
+  },
+  "backend/tests/unit/test_skill_selection_service.py": {
+   "secs": 4.154,
+   "tests": 3
+  },
+  "backend/tests/unit/test_skill_share_service.py": {
+   "secs": 2.687,
+   "tests": 2
+  },
+  "backend/tests/unit/test_skill_store_service.py": {
+   "secs": 2.958,
+   "tests": 2
+  },
+  "backend/tests/unit/test_skills_api.py": {
+   "secs": 1.598,
+   "tests": 1
+  },
+  "backend/tests/unit/test_smart_schedule_service.py": {
+   "secs": 4.225,
+   "tests": 3
+  },
+  "backend/tests/unit/test_social_kill_switch.py": {
+   "secs": 2.827,
+   "tests": 2
+  },
+  "backend/tests/unit/test_social_namespace_isolation.py": {
+   "secs": 1.477,
+   "tests": 2
+  },
+  "backend/tests/unit/test_social_signal_relevance.py": {
+   "secs": 2.834,
+   "tests": 3
+  },
+  "backend/tests/unit/test_soul_compiler.py": {
+   "secs": 0.012,
+   "tests": 5
+  },
+  "backend/tests/unit/test_soul_drift_evaluator.py": {
+   "secs": 0.009,
+   "tests": 3
+  },
+  "backend/tests/unit/test_source_state_backfill.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/unit/test_source_state_encoder.py": {
+   "secs": 0.008,
+   "tests": 4
+  },
+  "backend/tests/unit/test_spaced_repetition_reminder.py": {
+   "secs": 7.005,
+   "tests": 5
+  },
+  "backend/tests/unit/test_spaced_repetition_reminder_window.py": {
+   "secs": 0.009,
+   "tests": 4
+  },
+  "backend/tests/unit/test_spine_dedup_regression.py": {
+   "secs": 0.331,
+   "tests": 18
+  },
+  "backend/tests/unit/test_spine_degradation_metrics.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_spine_event_bridge.py": {
+   "secs": 0.036,
+   "tests": 9
+  },
+  "backend/tests/unit/test_spine_orchestrator.py": {
+   "secs": 1.412,
+   "tests": 47
+  },
+  "backend/tests/unit/test_spine_resilience.py": {
+   "secs": 0.152,
+   "tests": 23
+  },
+  "backend/tests/unit/test_sprint_galaxy_mastery.py": {
+   "secs": 7.611,
+   "tests": 4
+  },
+  "backend/tests/unit/test_sprint_pack_loader.py": {
+   "secs": 0.109,
+   "tests": 41
+  },
+  "backend/tests/unit/test_sprint_pack_registry.py": {
+   "secs": 0.012,
+   "tests": 2
+  },
+  "backend/tests/unit/test_sprint_strategy_window_local.py": {
+   "secs": 5.567,
+   "tests": 4
+  },
+  "backend/tests/unit/test_sprint_task_ledger.py": {
+   "secs": 1.448,
+   "tests": 5
+  },
+  "backend/tests/unit/test_sqam_jitai_all_dims.py": {
+   "secs": 0.012,
+   "tests": 3
+  },
+  "backend/tests/unit/test_sqam_persdyn_all_dims.py": {
+   "secs": 4.262,
+   "tests": 3
+  },
+  "backend/tests/unit/test_sqam_predictive_all_dims.py": {
+   "secs": 2.834,
+   "tests": 4
+  },
+  "backend/tests/unit/test_sqrejoin_group_member_unique_migration_sqlite.py": {
+   "secs": 0.14,
+   "tests": 4
+  },
+  "backend/tests/unit/test_squad_rejoin_group_member_unique.py": {
+   "secs": 15.346,
+   "tests": 7
+  },
+  "backend/tests/unit/test_srl_auto_downgrade.py": {
+   "secs": 0.017,
+   "tests": 4
+  },
+  "backend/tests/unit/test_srl_coldstart_from_traits.py": {
+   "secs": 0.009,
+   "tests": 4
+  },
+  "backend/tests/unit/test_srl_event_consume.py": {
+   "secs": 7.037,
+   "tests": 5
+  },
+  "backend/tests/unit/test_srl_event_publish.py": {
+   "secs": 0.02,
+   "tests": 4
+  },
+  "backend/tests/unit/test_srl_evidence_id_format.py": {
+   "secs": 10.799,
+   "tests": 8
+  },
+  "backend/tests/unit/test_srl_force_reset_confidence_cap.py": {
+   "secs": 2.667,
+   "tests": 2
+  },
+  "backend/tests/unit/test_srl_kill_switch.py": {
+   "secs": 0.014,
+   "tests": 4
+  },
+  "backend/tests/unit/test_srl_phase_model.py": {
+   "secs": 0.01,
+   "tests": 5
+  },
+  "backend/tests/unit/test_srl_phase_tracker.py": {
+   "secs": 15.352,
+   "tests": 11
+  },
+  "backend/tests/unit/test_srl_router_zero_hit.py": {
+   "secs": 0.033,
+   "tests": 2
+  },
+  "backend/tests/unit/test_srl_transition_matrix.py": {
+   "secs": 0.03,
+   "tests": 12
+  },
+  "backend/tests/unit/test_srl_user_isolation.py": {
+   "secs": 4.372,
+   "tests": 4
+  },
+  "backend/tests/unit/test_stage18_kill_switch.py": {
+   "secs": 0.013,
+   "tests": 3
+  },
+  "backend/tests/unit/test_stage19_kill_switch.py": {
+   "secs": 0.012,
+   "tests": 3
+  },
+  "backend/tests/unit/test_stage21_kill_switch.py": {
+   "secs": 0.012,
+   "tests": 3
+  },
+  "backend/tests/unit/test_stage33_journey_events.py": {
+   "secs": 3.143,
+   "tests": 4
+  },
+  "backend/tests/unit/test_stage33_kill_switch.py": {
+   "secs": 0.026,
+   "tests": 7
+  },
+  "backend/tests/unit/test_stage34_kill_switch.py": {
+   "secs": 0.009,
+   "tests": 2
+  },
+  "backend/tests/unit/test_stage35_journey_smoke_helpers.py": {
+   "secs": 0.012,
+   "tests": 4
+  },
+  "backend/tests/unit/test_stage35_kill_switch.py": {
+   "secs": 0.009,
+   "tests": 2
+  },
+  "backend/tests/unit/test_stage37_llm_safety_kill_switch.py": {
+   "secs": 0.051,
+   "tests": 7
+  },
+  "backend/tests/unit/test_stage38_d3_persistence.py": {
+   "secs": 4.282,
+   "tests": 4
+  },
+  "backend/tests/unit/test_stage38_kill_switch.py": {
+   "secs": 0.025,
+   "tests": 6
+  },
+  "backend/tests/unit/test_stage38_perf_capacity.py": {
+   "secs": 0.016,
+   "tests": 2
+  },
+  "backend/tests/unit/test_stage39_kill_switch.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/unit/test_stage39_prompt_sections.py": {
+   "secs": 0.015,
+   "tests": 2
+  },
+  "backend/tests/unit/test_stage39_rule_guards.py": {
+   "secs": 0.162,
+   "tests": 4
+  },
+  "backend/tests/unit/test_stage40_calendar_kill_switch.py": {
+   "secs": 0.012,
+   "tests": 3
+  },
+  "backend/tests/unit/test_stage5_intervention_language_contract.py": {
+   "secs": 0.025,
+   "tests": 3
+  },
+  "backend/tests/unit/test_stage9_utilization_metrics.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/unit/test_stage_events_e03.py": {
+   "secs": 4.208,
+   "tests": 6
+  },
+  "backend/tests/unit/test_standard_workflow_executable_plan_fallback.py": {
+   "secs": 0.007,
+   "tests": 2
+  },
+  "backend/tests/unit/test_standard_workflow_feedback_binding_state.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_standard_workflow_file_context.py": {
+   "secs": 0.024,
+   "tests": 6
+  },
+  "backend/tests/unit/test_standard_workflow_generation_routing.py": {
+   "secs": 0.157,
+   "tests": 30
+  },
+  "backend/tests/unit/test_startup_smoke.py": {
+   "secs": 0.025,
+   "tests": 12
+  },
+  "backend/tests/unit/test_state_aggregator_emotion_telemetry_filter.py": {
+   "secs": 5.591,
+   "tests": 4
+  },
+  "backend/tests/unit/test_state_aggregator_service.py": {
+   "secs": 10.781,
+   "tests": 8
+  },
+  "backend/tests/unit/test_state_estimator_service.py": {
+   "secs": 0.003,
+   "tests": 1
+  },
+  "backend/tests/unit/test_state_estimator_telemetry_bounds.py": {
+   "secs": 0.039,
+   "tests": 9
+  },
+  "backend/tests/unit/test_state_manager_concurrency.py": {
+   "secs": 0.051,
+   "tests": 10
+  },
+  "backend/tests/unit/test_state_manager_real_redis.py": {
+   "secs": 0.119,
+   "tests": 8
+  },
+  "backend/tests/unit/test_statistics_daily_alignment.py": {
+   "secs": 2.736,
+   "tests": 2
+  },
+  "backend/tests/unit/test_statistics_local_timezone_boundary.py": {
+   "secs": 5.674,
+   "tests": 4
+  },
+  "backend/tests/unit/test_streak_quality_service.py": {
+   "secs": 3.132,
+   "tests": 15
+  },
+  "backend/tests/unit/test_structured_cognitive_adjustments.py": {
+   "secs": 0.015,
+   "tests": 7
+  },
+  "backend/tests/unit/test_struggle_signal_aggregator.py": {
+   "secs": 4.262,
+   "tests": 3
+  },
+  "backend/tests/unit/test_struggle_today_window_local.py": {
+   "secs": 4.257,
+   "tests": 3
+  },
+  "backend/tests/unit/test_sufficiency_aggregator_integration.py": {
+   "secs": 1.401,
+   "tests": 1
+  },
+  "backend/tests/unit/test_sufficiency_checker_llm_fallback.py": {
+   "secs": 0.013,
+   "tests": 4
+  },
+  "backend/tests/unit/test_sufficiency_judge_schema.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/unit/test_sufficiency_judge_service.py": {
+   "secs": 0.009,
+   "tests": 3
+  },
+  "backend/tests/unit/test_t311_l0_rules.py": {
+   "secs": 0.052,
+   "tests": 11
+  },
+  "backend/tests/unit/test_t312_l1_response_directive.py": {
+   "secs": 0.021,
+   "tests": 6
+  },
+  "backend/tests/unit/test_t313_l2_intervention.py": {
+   "secs": 0.173,
+   "tests": 25
+  },
+  "backend/tests/unit/test_t314_l3_full_core.py": {
+   "secs": 0.403,
+   "tests": 62
+  },
+  "backend/tests/unit/test_t315_317_l4_energy_cost.py": {
+   "secs": 0.161,
+   "tests": 43
+  },
+  "backend/tests/unit/test_t32_aurora_spine_confluence.py": {
+   "secs": 0.269,
+   "tests": 33
+  },
+  "backend/tests/unit/test_t33_predicted_reply_correction.py": {
+   "secs": 0.694,
+   "tests": 39
+  },
+  "backend/tests/unit/test_t34_status_band_preferences.py": {
+   "secs": 0.386,
+   "tests": 36
+  },
+  "backend/tests/unit/test_t6_slo_metrics.py": {
+   "secs": 0.487,
+   "tests": 19
+  },
+  "backend/tests/unit/test_task_assistant_dormant.py": {
+   "secs": 0.11,
+   "tests": 20
+  },
+  "backend/tests/unit/test_task_card_generator.py": {
+   "secs": 0.009,
+   "tests": 2
+  },
+  "backend/tests/unit/test_task_feedback_service_phase4.py": {
+   "secs": 5.645,
+   "tests": 4
+  },
+  "backend/tests/unit/test_task_galaxy_coupling.py": {
+   "secs": 10.373,
+   "tests": 9
+  },
+  "backend/tests/unit/test_task_guide_enricher.py": {
+   "secs": 0.016,
+   "tests": 3
+  },
+  "backend/tests/unit/test_task_paused_columns.py": {
+   "secs": 0.015,
+   "tests": 7
+  },
+  "backend/tests/unit/test_task_priority_reasoning_local_today.py": {
+   "secs": 2.797,
+   "tests": 2
+  },
+  "backend/tests/unit/test_task_priority_service.py": {
+   "secs": 8.561,
+   "tests": 6
+  },
+  "backend/tests/unit/test_task_reflection_service.py": {
+   "secs": 4.685,
+   "tests": 3
+  },
+  "backend/tests/unit/test_task_service.py": {
+   "secs": 0.632,
+   "tests": 16
+  },
+  "backend/tests/unit/test_task_snooze_due_date_local_day.py": {
+   "secs": 2.776,
+   "tests": 2
+  },
+  "backend/tests/unit/test_task_status_enum.py": {
+   "secs": 0.012,
+   "tests": 6
+  },
+  "backend/tests/unit/test_template_service.py": {
+   "secs": 0.046,
+   "tests": 1
+  },
+  "backend/tests/unit/test_theater_idor.py": {
+   "secs": 4.372,
+   "tests": 3
+  },
+  "backend/tests/unit/test_theater_seed_and_accuracy.py": {
+   "secs": 31.357,
+   "tests": 48
+  },
+  "backend/tests/unit/test_today_focus_task_local_day.py": {
+   "secs": 2.869,
+   "tests": 2
+  },
+  "backend/tests/unit/test_today_view_local_date_boundary.py": {
+   "secs": 6.97,
+   "tests": 5
+  },
+  "backend/tests/unit/test_token_revocation_retirement.py": {
+   "secs": 0.015,
+   "tests": 4
+  },
+  "backend/tests/unit/test_tool_executor_observability.py": {
+   "secs": 0.061,
+   "tests": 3
+  },
+  "backend/tests/unit/test_tool_preference_router.py": {
+   "secs": 0.055,
+   "tests": 9
+  },
+  "backend/tests/unit/test_tool_registry_concurrency.py": {
+   "secs": 0.064,
+   "tests": 14
+  },
+  "backend/tests/unit/test_trace_compaction_daily.py": {
+   "secs": 0.033,
+   "tests": 7
+  },
+  "backend/tests/unit/test_tracing_export_config.py": {
+   "secs": 0.028,
+   "tests": 13
+  },
+  "backend/tests/unit/test_tracker_concurrent_user_isolation.py": {
+   "secs": 4.036,
+   "tests": 3
+  },
+  "backend/tests/unit/test_traits_auto_downgrade.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/test_traits_kill_switch.py": {
+   "secs": 0.013,
+   "tests": 4
+  },
+  "backend/tests/unit/test_traits_router_zero_hit.py": {
+   "secs": 0.006,
+   "tests": 2
+  },
+  "backend/tests/unit/test_transparency_generator.py": {
+   "secs": 0.022,
+   "tests": 10
+  },
+  "backend/tests/unit/test_ttft_cfg_thinking_and_budget.py": {
+   "secs": 0.216,
+   "tests": 14
+  },
+  "backend/tests/unit/test_understanding_depth_metric_service.py": {
+   "secs": 4.328,
+   "tests": 12
+  },
+  "backend/tests/unit/test_understanding_depth_migration_sqlite.py": {
+   "secs": 0.052,
+   "tests": 2
+  },
+  "backend/tests/unit/test_understanding_dimensions_contract.py": {
+   "secs": 0.069,
+   "tests": 31
+  },
+  "backend/tests/unit/test_unified_intent_router_fast_path.py": {
+   "secs": 0.004,
+   "tests": 2
+  },
+  "backend/tests/unit/test_unified_intent_router_fast_path_first_message.py": {
+   "secs": 0.012,
+   "tests": 5
+  },
+  "backend/tests/unit/test_unified_intent_router_helpers.py": {
+   "secs": 0.024,
+   "tests": 11
+  },
+  "backend/tests/unit/test_unified_intent_router_routing.py": {
+   "secs": 0.011,
+   "tests": 5
+  },
+  "backend/tests/unit/test_url_guard_trusted_hosts.py": {
+   "secs": 0.017,
+   "tests": 8
+  },
+  "backend/tests/unit/test_user_context_preference_rendering.py": {
+   "secs": 0.02,
+   "tests": 8
+  },
+  "backend/tests/unit/test_user_service.py": {
+   "secs": 4.307,
+   "tests": 8
+  },
+  "backend/tests/unit/test_user_session_cleanup_task.py": {
+   "secs": 0.231,
+   "tests": 5
+  },
+  "backend/tests/unit/test_user_state_model.py": {
+   "secs": 0.017,
+   "tests": 7
+  },
+  "backend/tests/unit/test_user_state_model_audit.py": {
+   "secs": 0.043,
+   "tests": 1
+  },
+  "backend/tests/unit/test_user_state_schema_contract.py": {
+   "secs": 0.017,
+   "tests": 8
+  },
+  "backend/tests/unit/test_user_strategy_state_service.py": {
+   "secs": 5.687,
+   "tests": 4
+  },
+  "backend/tests/unit/test_ux_envelope.py": {
+   "secs": 0.039,
+   "tests": 11
+  },
+  "backend/tests/unit/test_v3_fix112_113_seed_fence_variants.py": {
+   "secs": 0.018,
+   "tests": 8
+  },
+  "backend/tests/unit/test_v3_fix146_147_negation_scope.py": {
+   "secs": 0.055,
+   "tests": 22
+  },
+  "backend/tests/unit/test_v3_fix148_fence_unicode_tolerance.py": {
+   "secs": 0.016,
+   "tests": 7
+  },
+  "backend/tests/unit/test_v3_fix155_stream_eof_sentinel.py": {
+   "secs": 4.502,
+   "tests": 10
+  },
+  "backend/tests/unit/test_v3_fix166_length_truncation_family.py": {
+   "secs": 6.42,
+   "tests": 12
+  },
+  "backend/tests/unit/test_v3_fix217_error_handler_uid.py": {
+   "secs": 12.059,
+   "tests": 8
+  },
+  "backend/tests/unit/test_v3_fix223_ledger_gate_attribution.py": {
+   "secs": 13.077,
+   "tests": 10
+  },
+  "backend/tests/unit/test_v3_fix231_ve_gate_contract_single_authority.py": {
+   "secs": 11.444,
+   "tests": 3
+  },
+  "backend/tests/unit/test_v3_fix40_ledger_same_txn.py": {
+   "secs": 9.188,
+   "tests": 6
+  },
+  "backend/tests/unit/test_v3_fix53_chat_stream_route_sse.py": {
+   "secs": 6.473,
+   "tests": 4
+  },
+  "backend/tests/unit/test_v3_fix53_tool_call_stream_correlation.py": {
+   "secs": 0.122,
+   "tests": 5
+  },
+  "backend/tests/unit/test_v3_fix54_document_delete_route.py": {
+   "secs": 16.273,
+   "tests": 3
+  },
+  "backend/tests/unit/test_v3_fix55_guest_seed_observability.py": {
+   "secs": 3.292,
+   "tests": 2
+  },
+  "backend/tests/unit/test_v3_fix57_tool_continuation_empty_retry.py": {
+   "secs": 6.392,
+   "tests": 3
+  },
+  "backend/tests/unit/test_v3_fix62_log_no_exception_text.py": {
+   "secs": 0.014,
+   "tests": 1
+  },
+  "backend/tests/unit/test_v3_fix68_seed_prompt_fence.py": {
+   "secs": 3.226,
+   "tests": 8
+  },
+  "backend/tests/unit/test_v3_fix70_deny_quiet_gate.py": {
+   "secs": 7.139,
+   "tests": 8
+  },
+  "backend/tests/unit/test_verification_loop.py": {
+   "secs": 0.095,
+   "tests": 22
+  },
+  "backend/tests/unit/test_version_conflict_service.py": {
+   "secs": 0.026,
+   "tests": 8
+  },
+  "backend/tests/unit/test_visual_elements_gate.py": {
+   "secs": 11.188,
+   "tests": 3
+  },
+  "backend/tests/unit/test_websocket_offline_push.py": {
+   "secs": 1.454,
+   "tests": 2
+  },
+  "backend/tests/unit/test_weekly_digest_service.py": {
+   "secs": 0.046,
+   "tests": 3
+  },
+  "backend/tests/unit/test_weekly_growth_narrative_task.py": {
+   "secs": 0.022,
+   "tests": 3
+  },
+  "backend/tests/unit/test_weekly_stats_behavior_clock_local.py": {
+   "secs": 2.828,
+   "tests": 2
+  },
+  "backend/tests/unit/test_workflow_experience_phase62.py": {
+   "secs": 0.012,
+   "tests": 4
+  },
+  "backend/tests/unit/test_working_memory_aggregator_integration.py": {
+   "secs": 1.397,
+   "tests": 1
+  },
+  "backend/tests/unit/test_working_memory_consolidation.py": {
+   "secs": 4.225,
+   "tests": 3
+  },
+  "backend/tests/unit/test_working_memory_rejection_guard.py": {
+   "secs": 0.01,
+   "tests": 3
+  },
+  "backend/tests/unit/test_working_memory_schema_contract.py": {
+   "secs": 0.002,
+   "tests": 1
+  },
+  "backend/tests/unit/test_working_memory_service.py": {
+   "secs": 0.062,
+   "tests": 5
+  },
+  "backend/tests/unit/test_wt348_goal_progress_caliber_probe.py": {
+   "secs": 2.784,
+   "tests": 2
+  },
+  "backend/tests/unit/test_wt349_attr_defined_defects.py": {
+   "secs": 0.025,
+   "tests": 9
+  },
+  "backend/tests/unit/test_wt355_hunt_r2_review_probe.py": {
+   "secs": 2.817,
+   "tests": 4
+  },
+  "backend/tests/unit/test_wt360_goal_progress_consumer_fix.py": {
+   "secs": 5.693,
+   "tests": 4
+  },
+  "backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py": {
+   "secs": 4.793,
+   "tests": 3
+  },
+  "backend/tests/unit/test_wt380_tier_collapse.py": {
+   "secs": 0.029,
+   "tests": 8
+  },
+  "backend/tests/unit/test_wt392_r2v3_review.py": {
+   "secs": 9.389,
+   "tests": 11
+  },
+  "backend/tests/unit/test_wt396_f5_milestone_join_gap.py": {
+   "secs": 10.77,
+   "tests": 6
+  },
+  "backend/tests/unit/test_wt396_f7_eval_bus_isolation.py": {
+   "secs": 2.097,
+   "tests": 1
+  },
+  "backend/tests/unit/test_wt422_kill_switch_celery_face_matrix.py": {
+   "secs": 0.052,
+   "tests": 10
+  },
+  "backend/tests/unit/test_x03b_migration_sqlite.py": {
+   "secs": 0.02,
+   "tests": 2
+  },
+  "backend/tests/unit/test_x04_action_flow.py": {
+   "secs": 27.881,
+   "tests": 21
+  },
+  "backend/tests/unit/test_x05b_e2e_execution_projection.py": {
+   "secs": 3.493,
+   "tests": 1
+  },
+  "backend/tests/unit/test_x06_run_budget.py": {
+   "secs": 19.34,
+   "tests": 29
+  },
+  "backend/tests/unit/test_x06_tool_call_safety.py": {
+   "secs": 22.792,
+   "tests": 33
+  },
+  "backend/tests/unit/test_x07_p21_counter_unification.py": {
+   "secs": 11.089,
+   "tests": 8
+  },
+  "backend/tests/unit/test_x07_run_steps_migration_sqlite.py": {
+   "secs": 0.031,
+   "tests": 2
+  },
+  "backend/tests/unit/test_x08_outcome_capture.py": {
+   "secs": 0.029,
+   "tests": 13
+  },
+  "backend/tests/unit/test_x09_failure_recovery.py": {
+   "secs": 49.69,
+   "tests": 26
+  },
+  "backend/tests/v3_action_eval/test_x10_action_eval_gate.py": {
+   "secs": 22.4,
+   "tests": 12
+  },
+  "backend/tests/v3_scenario_eval/test_v3_scenario_eval_gate.py": {
+   "secs": 0.361,
+   "tests": 27
+  },
+  "backend/tests/workflow/test_contract_fixture_replay.py": {
+   "secs": 0.004,
+   "tests": 1
+  },
+  "backend/tests/workflow/test_orchestrator_resilience_workflow.py": {
+   "secs": 61.921,
+   "tests": 3
+  }
+ },
+ "meta": {
+  "collection_secs": 76.106272,
+  "extracted_by": "scripts/devtools/ci_suite_profile.py",
+  "note": "Per-file durations from GitHub Actions run 36253679384 (run #525, main@cfaefe63) Backend Tests job 108452479615; account-reconciled against pytest self-reported 5043.68s (see v3-output/WT577-PROFILE/report.md §0).",
+  "pytest_reported_total_secs": 5043.68,
+  "source_commit": "cfaefe63",
+  "source_job": 108452479615,
+  "source_run": 36253679384,
+  "tail_secs": 0.095435,
+  "total_test_secs": 4967.52944
+ }
+}
