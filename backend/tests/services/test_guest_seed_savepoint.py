@@ -5,16 +5,19 @@
 - seed 内部的 sync_achievement_definitions 自行 commit，产生"已提交的部分种子"
   （调用方回滚也无法撤销）。
 
-修复后：seed 全程包在 begin_nested()（SAVEPOINT）里，失败回滚到 SAVEPOINT 并
-降级为告警（种子是 best-effort 演示数据，不阻断登录）；sync_achievement_definitions
-支持 commit=False 保留调用者事务。
+修复后：seed 全程包在 begin_nested()（SAVEPOINT）里，失败回滚到 SAVEPOINT，
+sync_achievement_definitions 支持 commit=False 保留调用者事务。
+V3-FIX-286 起：失败不再吞光——SAVEPOINT 回滚后上抛 GuestSeedError 供调用方
+记观测面（guest_login 捕获后保持非致命 200），但隔离语义不变：上抛的异常
+绝不毒化外层事务。
 """
 
+import pytest
 from sqlalchemy import func, select
 
 from app.models import Achievement, User, UserAchievement
 from app.services import guest_seed_service as gss
-from app.services.guest_seed_service import seed_guest_user_data
+from app.services.guest_seed_service import GuestSeedError, seed_guest_user_data
 
 
 def _make_guest(username: str) -> User:
@@ -30,7 +33,7 @@ def _make_guest(username: str) -> User:
 
 
 async def test_guest_seed_failure_does_not_poison_login_transaction(db_session, monkeypatch):
-    """种子中途失败：不抛出、外层事务可用、无部分种子残留。"""
+    """种子中途失败：上抛 GuestSeedError（V3-FIX-286 可见）、外层事务可用、无部分种子残留。"""
     guest = _make_guest("guest_seed_boom")
     db_session.add(guest)
     await db_session.flush()
@@ -41,8 +44,9 @@ async def test_guest_seed_failure_does_not_poison_login_transaction(db_session, 
     # _ensure_achievements 已跑完后才轮到 _ensure_galaxy_skins —— 制造"部分种子已写入"的现场
     monkeypatch.setattr(gss, "_ensure_galaxy_skins", _boom)
 
-    # 修复后：失败被 SAVEPOINT 吸收，登录事务不毒化
-    await seed_guest_user_data(db_session, guest)
+    # V3-FIX-286：失败被 SAVEPOINT 吸收后如实上抛（不再吞光），登录事务不毒化
+    with pytest.raises(GuestSeedError):
+        await seed_guest_user_data(db_session, guest)
 
     # 外层事务仍然可用：用户行随本次 commit 落库
     await db_session.commit()

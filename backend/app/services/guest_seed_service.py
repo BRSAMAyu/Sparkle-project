@@ -1590,7 +1590,9 @@ _SEED_DEMO_NODES = [
 #
 # 裁决 B（事务语境）：auth 端点经 get_db 成功路径统一 commit——清洗在转正
 # 事务内以 SAVEPOINT（begin_nested）隔离 best-effort 执行，与
-# seed_guest_user_data 同型；失败仅告警，转正不受影响，无后置任务窗口。
+# seed_guest_user_data 同型（V3-FIX-286 起种子失败改上抛 GuestSeedError 由
+# auth 记观测面，本清洗链仍吞异常仅告警+全 0 返回，非致命语义不变），
+# 无后置任务窗口。
 #
 # 裁决 C（好友侧）：spark_friend_* 是跨访客共享的全局 catalog
 # （_ensure_demo_user 复用同一批行），删除会破坏其他在途访客的演示体验；
@@ -1652,16 +1654,33 @@ _SEED_NODE_MASTERY_SIGNATURES: dict[str, tuple[int, int, int]] = {
 _SEED_WRITE_WINDOW = timedelta(minutes=10)
 
 
+class GuestSeedError(RuntimeError):
+    """Guest 演示种子内部失败（V3-FIX-286）。
+
+    FIX-13（09-19）起种子包在 SAVEPOINT 内吞异常仅告警——失败对调用方
+    无痕，导致 FIX-55 的观测面（seed_status / GUEST_SEED_TOTAL）对种子
+    内部失败恒报成功。现改为 SAVEPOINT 回滚后上抛本异常：隔离语义不变
+    （不毒化调用方事务），「失败是否致命」的裁决上移给调用方——
+    guest_login 的 except 链保持非致命 200 语义（V3-FIX-55 口径）。
+    注意：FIX-257 的转正清洗链（cleanup_guest_seed_statistics_for_upgrade）
+    不走本异常——其吞异常 + 返回全 0 计数已自带结构化表意，保持原样。
+    """
+
+
 async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     """
     Seed demo data for a new guest user.
     Idempotent — safe to call multiple times (checks before inserting).
 
-    事务隔离（V3-FIX-13 / D-12）：整段种子包在 begin_nested()（SAVEPOINT）里。
-    任一步失败只回滚到 SAVEPOINT 并降级为告警，不会毒化调用方的登录事务
-    （用户行照常落库、登录照常完成）。种子是 best-effort 演示数据。
+    事务隔离（V3-FIX-13 / D-12）：整段种子包在 begin_nested()（SAVEPOINT）里，
+    任一步失败只回滚到 SAVEPOINT，不会毒化调用方的登录事务（用户行照常落库）。
+    种子是 best-effort 演示数据。
+
+    失败可见（V3-FIX-286）：SAVEPOINT 回滚后上抛 :class:`GuestSeedError`
+    （不再吞光——那会让 auth 侧 seed_status/GUEST_SEED_TOTAL 对内部失败
+    恒报成功）；调用方负责捕获并保持非致命语义。
     """
-    # SAVEPOINT 回滚会把 user 置为过期；日志所需字段先取纯值，避免回滚后同步上下文懒加载
+    # SAVEPOINT 回滚会把 user 置为过期；日志/异常所需字段先取纯值，避免回滚后同步上下文懒加载
     user_id = user.id
     username = user.username
     try:
@@ -1672,6 +1691,10 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             f"Guest seed failed; rolled back to SAVEPOINT (login unaffected) "
             f"user_id={user_id} username={username}: {exc}"
         )
+        raise GuestSeedError(
+            f"guest demo seed failed (rolled back to SAVEPOINT, user_id={user_id}): "
+            f"{type(exc).__name__}: {exc}"
+        ) from exc
 
 
 async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:

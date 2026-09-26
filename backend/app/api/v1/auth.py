@@ -977,19 +977,50 @@ async def guest_login(
 
         # 为新游客播种演示数据，确保完整体验
         # 先 commit 用户保证用户存在，再 seed 演示数据
-        # V3-FIX-55：播种结果落观测面——GUEST_SEED_TOTAL 计数 + seed_status 回传，
-        # 失败不再只留日志静默（客户端/运维可见「演示数据未种上」）。
+        # V3-FIX-55：播种结果落观测面——GUEST_SEED_TOTAL 计数 + seed_status 回传。
+        # V3-FIX-286：seed_guest_user_data 内部失败不再吞光（FIX-13 吞光期观测面
+        # 对种子内部失败恒报 success），SAVEPOINT 隔离回滚后上抛 GuestSeedError——
+        # 种子失败不阻断登录的非致命语义不变，但 seed_status 如实报 failed+原因。
+        from app.services.guest_seed_service import GuestSeedError, seed_guest_user_data
+
         seed_status = "failed"
+        seed_failure: str | None = None
         try:
-            from app.services.guest_seed_service import seed_guest_user_data
             await seed_guest_user_data(db, user)
             await db.commit()
             await db.refresh(user)
             GUEST_SEED_TOTAL.labels(outcome="success").inc()
             seed_status = "seeded"
+        except GuestSeedError as seed_err:
+            # 种子内部失败：SAVEPOINT 已回滚种子写入、事务仍健康（用户行待提交）。
+            # 「失败重试一次」语义在此真实生效——FIX-13 吞光期本路径不可达，
+            # 旧注释「Rollback everything (including failed seed data)」系死注释；
+            # 再败则仅提交用户行，登录照常 200（非致命）。
+            logger.warning(f"Guest seed failed (non-fatal), retrying once: {seed_err}")
+            try:
+                await seed_guest_user_data(db, user)
+                await db.commit()
+                await db.refresh(user)
+                GUEST_SEED_TOTAL.labels(outcome="success").inc()
+                seed_status = "seeded"
+            except GuestSeedError as retry_seed_err:
+                logger.error(f"Guest seed retry also failed (non-fatal, committing user alone): {retry_seed_err}")
+                # 事务经 SAVEPOINT 隔离仍健康，用户行照常落库
+                await db.commit()
+                await db.refresh(user)
+                GUEST_SEED_TOTAL.labels(outcome="failure").inc()
+                seed_status = "failed"
+                seed_failure = str(retry_seed_err)[:200]
+            except Exception as retry_err:
+                logger.error(f"Guest seed retry also failed (non-fatal, user exists): {retry_err}")
+                # Don't raise — user can still use the app without demo data
+                GUEST_SEED_TOTAL.labels(outcome="failure").inc()
+                seed_status = "failed"
         except Exception as e:
-            logger.warning(f"Guest seed failed on first attempt, committing user and retrying: {e}")
-            # Rollback everything (including failed seed data), then save user alone
+            # 仅 commit/refresh 等事务级失败可达此处（种子失败已改走 GuestSeedError
+            # 分支）：回滚弃掉整个事务（含未提交用户行），单独重交用户行，
+            # 再在新事务重试种子一次（原重试链路的真实语义）。
+            logger.warning(f"Guest seed transaction failed, committing user and retrying: {e}")
             await db.rollback()
             # Re-merge user into clean session and commit just the user
             db.add(user)
@@ -1009,16 +1040,30 @@ async def guest_login(
                 seed_status = "failed"
     else:
         # 已有访客账户 — 检查数据是否完整（seed 可能之前失败过）
-        from app.services.guest_seed_service import seed_guest_user_data
+        from app.services.guest_seed_service import GuestSeedError, seed_guest_user_data
+
         seed_status = "failed"
+        seed_failure = None  # str | None（新客分支已注解；同函数第二处赋值免 no-redef）
         try:
             await seed_guest_user_data(db, user)  # 幂等，已有数据会跳过
             await db.commit()
             await db.refresh(user)
             GUEST_SEED_TOTAL.labels(outcome="success").inc()
             seed_status = "reseeded"
+        except GuestSeedError as seed_err:
+            # V3-FIX-286：补种内部失败真实可见（FIX-13 吞光期观测面恒报
+            # reseeded）。SAVEPOINT 已隔离回滚、事务健康：提交（通常空转）
+            # 保会话一致，非致命放行，如实报 failed+原因。
+            logger.warning(f"Guest re-seed failed (non-fatal, user can still proceed): {seed_err}")
+            await db.commit()
+            await db.refresh(user)
+            GUEST_SEED_TOTAL.labels(outcome="failure").inc()
+            seed_status = "failed"
+            seed_failure = str(seed_err)[:200]
         except Exception as e:
-            logger.warning(f"Guest re-seed failed (non-fatal, user can still proceed): {e}")
+            # 仅 commit/refresh 等事务级失败可达此处（种子失败已改走
+            # GuestSeedError 分支）：回滚弃掉坏事务并重载用户，登录仍放行（非致命）。
+            logger.warning(f"Guest re-seed transaction failed (non-fatal, user can still proceed): {e}")
             GUEST_SEED_TOTAL.labels(outcome="failure").inc()
             try:
                 await db.rollback()
@@ -1032,7 +1077,7 @@ async def guest_login(
 
     logger.info("Guest login: user_id={}, new={}, seed_status={}", logsafe.user_id_hash(str(user.id)), is_new_guest, seed_status)
 
-    return {
+    payload: dict[str, Any] = {
         **await _issue_auth_tokens(
             db=db,
             user=user,
@@ -1046,6 +1091,10 @@ async def guest_login(
         },
         "seed_status": seed_status,
     }
+    # V3-FIX-286：失败原因随响应回传（客户端/运维可诊断「为什么没种上」），成功不带该键
+    if seed_failure:
+        payload["seed_failure_reason"] = seed_failure
+    return payload
 
 
 @router.post("/upgrade-guest", response_model=Any)
