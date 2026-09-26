@@ -30,7 +30,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plans => 'Plans';
 
   @override
-  String get galaxy => 'Galaxy';
+  String get galaxy => 'Star Map';
 
   @override
   String get login => 'Login';
@@ -152,7 +152,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sensoryHapticSubtitle =>
-      'Turn off haptics for achievements, galaxy interactions, and more';
+      'Turn off haptics for achievements, star map interactions, and more';
 
   @override
   String get sensoryAuroraLinkTitle => 'Aurora Sensory Link';
@@ -253,7 +253,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get difficulty => 'Difficulty';
 
   @override
-  String get exploreGalaxy => 'Explore Galaxy';
+  String get exploreGalaxy => 'Explore Star Map';
 
   @override
   String get searchNodes => 'Search Nodes';
@@ -1005,7 +1005,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatWelcome => 'Hello! How can I help you today?';
 
   @override
-  String get chatWelcomeSubtitle => 'I keep an eye on your learning — I\'ll speak up when I\'m confident, and ask when I\'m not.';
+  String get chatWelcomeSubtitle =>
+      'I keep an eye on your learning — I\'ll speak up when I\'m confident, and ask when I\'m not.';
 
   @override
   String get chatSuggestion1 => 'Help me plan my study';
@@ -1185,7 +1186,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementRewardTitle => 'Title';
 
   @override
-  String get achievementRewardSkin => 'Galaxy Skin';
+  String get achievementRewardSkin => 'Star Map Skin';
 
   @override
   String achievementRewardXp(Object count) {
@@ -2666,11 +2667,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Which subjects are my weakest right now?';
 
   @override
-  String get quickReplyExploreGalaxyLabel => 'Explore galaxy';
+  String get quickReplyExploreGalaxyLabel => 'Explore star map';
 
   @override
-  String get quickReplyExploreGalaxyMessage =>
-      'Take me to the knowledge galaxy.';
+  String get quickReplyExploreGalaxyMessage => 'Take me to the knowledge map.';
 
   @override
   String get quickReplyAddKnowledgeLabel => 'Add knowledge';
@@ -3004,7 +3004,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get intentTypeUnknown => 'Unknown';
 
   @override
-  String get intentAgentGalaxyGuide => 'Galaxy Guide';
+  String get intentAgentGalaxyGuide => 'Star Map Guide';
 
   @override
   String get intentAgentTimeTutor => 'Time Tutor';
@@ -4994,7 +4994,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your AI learning companion\nthat helps knowledge turn into momentum.';
 
   @override
-  String get onboardingFeatureGalaxy => 'Knowledge Galaxy';
+  String get onboardingFeatureGalaxy => 'Knowledge Map';
 
   @override
   String get onboardingFeatureGalaxyDesc => 'A visual map of what you know';
@@ -5021,7 +5021,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'A quick look at how Sparkle comes together';
 
   @override
-  String get onboardingGalaxyTitle => 'Knowledge Galaxy';
+  String get onboardingGalaxyTitle => 'Knowledge Map';
 
   @override
   String get onboardingGalaxyDescription =>
@@ -5205,7 +5205,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cognitiveSelectGalaxyNodes =>
-      'Select the nodes you want to review in Galaxy first';
+      'Select the nodes you want to review in the star map first';
 
   @override
   String get cognitiveTimeMachine => 'Knowledge Time Machine';
@@ -5678,7 +5678,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageRetrySend => 'Retry';
 
   @override
-  String get chatAgentNavigator => 'Galaxy Navigator';
+  String get chatAgentNavigator => 'Star Map Navigator';
 
   @override
   String get chatAgentExamStrategist => 'Exam Strategist';
@@ -9005,7 +9005,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyMaterialsHeroSubtitle =>
-      'Manage your notes, slides, and PDFs, see where they land in your galaxy, and track how often Aurora actually uses them.';
+      'Manage your notes, slides, and PDFs, see where they land in your star map, and track how often Aurora actually uses them.';
 
   @override
   String get studyMaterialsMetricDocs => 'documents';
@@ -9072,7 +9072,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyMaterialsUploadSuccess =>
-      'Upload started. We\'ll map it into your galaxy shortly.';
+      'Upload started. We\'ll map it into your star map shortly.';
 
   @override
   String get studyMaterialsDeleteTitle => 'Delete study material?';
@@ -9127,10 +9127,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyMaterialsNodesPending =>
-      'We\'re still mapping this material to your galaxy nodes.';
+      'We\'re still mapping this material to your star map nodes.';
 
   @override
-  String get studyMaterialsNodesEmpty => 'No galaxy nodes attached yet.';
+  String get studyMaterialsNodesEmpty => 'No star map nodes attached yet.';
 
   @override
   String get studyMaterialsTopChunksTitle => 'Most used excerpts';
@@ -9242,7 +9242,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyMaterialsEmptySubtitle =>
-      'Upload your first notes, slides, or textbook and Sparkle will turn them into a searchable knowledge galaxy.';
+      'Upload your first notes, slides, or textbook and Sparkle will turn them into a searchable knowledge map.';
 
   @override
   String get studyMaterialsResetFilters => 'Reset filters';
@@ -9410,7 +9410,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String galaxyA11yCanvasSummary(int nodeCount, int domainCount) {
-    return 'Knowledge galaxy: $nodeCount nodes across $domainCount domains';
+    return 'Knowledge map: $nodeCount nodes across $domainCount domains';
   }
 
   @override
@@ -9432,7 +9432,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyA11yNavigationHint =>
-      'Navigate the knowledge galaxy with gestures';
+      'Navigate the knowledge map with gestures';
 
   @override
   String galaxyA11yNodeImportance(Object arg0) {
@@ -9495,7 +9495,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyControlZoomOut => 'Zoom out';
 
   @override
-  String get galaxyEmptyTitle => 'Your galaxy is still waiting to be charted';
+  String get galaxyEmptyTitle => 'Your star map is still waiting to be charted';
 
   @override
   String get galaxyErrorConnectionFailed => 'Connection failed';
@@ -9504,7 +9504,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyErrorConnectionTimeout => 'Connection timed out';
 
   @override
-  String get galaxyErrorLoadFailed => 'Failed to load galaxy';
+  String get galaxyErrorLoadFailed => 'Failed to load the star map';
 
   @override
   String get galaxyErrorNetwork => 'Network error';
@@ -9570,14 +9570,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyLoadFailed => 'Load failed';
 
   @override
-  String get galaxyLoadFailedTitle => 'Galaxy failed to load';
+  String get galaxyLoadFailedTitle => 'Star map failed to load';
 
   @override
-  String get galaxyLoadingMessage =>
-      'Mapping your current knowledge constellation...';
+  String get galaxyLoadingMessage => 'Charting your knowledge map...';
 
   @override
-  String get galaxyLoadingTitle => 'Loading galaxy';
+  String get galaxyLoadingTitle => 'Loading the star map';
 
   @override
   String get galaxyInvalidNodeId => 'Invalid node ID';
@@ -9678,7 +9677,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxySearchTitle => 'Search galaxy';
+  String get galaxySearchTitle => 'Search the star map';
 
   @override
   String get galaxySectorArt => 'Art';
@@ -11020,7 +11019,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskDetailAiExpansionDescription =>
-      'Generate 3 candidate related nodes based on the current node. Choose 1 to 3 to write into the galaxy.';
+      'Generate 3 candidate related nodes based on the current node. Choose 1 to 3 to write into the knowledge map.';
 
   @override
   String get taskDetailGenerateCandidates => 'Generate candidate nodes';
@@ -11030,7 +11029,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskDetailNodeCleanedUp =>
-      'This node has been cleaned up. The galaxy will sync after the next refresh.';
+      'This node has been cleaned up. The star map will sync after the next refresh.';
 
   @override
   String get taskDetailRecentLearningPath => 'Recent Learning Path';
@@ -11090,7 +11089,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String taskDetailCandidatesAccepted(Object count) {
-    return '$count nodes added to galaxy.';
+    return '$count nodes added to the star map.';
   }
 
   @override
@@ -11114,7 +11113,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String taskDetailAcceptIntoGalaxy(Object count) {
-    return 'Add to galaxy ($count)';
+    return 'Add to star map ($count)';
   }
 
   @override
@@ -11366,7 +11365,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationSpacedRepetitionSubtitle =>
-      'Control Galaxy spaced repetition reminders';
+      'Control star map spaced repetition reminders';
 
   @override
   String get notificationWeeklyReport => 'Weekly Report';
@@ -13339,7 +13338,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get theaterWhatIfStart => 'Start what-if deduction';
 
   @override
-  String get theaterViewGalaxyRef => 'View galaxy reference';
+  String get theaterViewGalaxyRef => 'View star map reference';
 
   @override
   String get theaterNodeNotInWhatIfPath =>
@@ -13347,20 +13346,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get theaterNodeNoGalaxyRef =>
-      'This node is currently a free node in the theater with no navigable galaxy reference.';
+      'This node is currently a free node in the theater with no navigable star map reference.';
 
   @override
   String get theaterPromoteNodeFailed =>
-      'Failed to add to knowledge galaxy. Please try again later.';
+      'Failed to add to the knowledge map. Please try again later.';
 
   @override
   String theaterPromoteNodeCreated(Object nodeName) {
-    return 'Added 「$nodeName」to the knowledge galaxy. You can continue to refine the node content.';
+    return 'Added 「$nodeName」to the knowledge map. You can continue to refine the node content.';
   }
 
   @override
   String theaterPromoteNodeFound(Object nodeName) {
-    return 'Found 「$nodeName」in the knowledge galaxy. You can continue to refine the node content.';
+    return 'Found 「$nodeName」in the knowledge map. You can continue to refine the node content.';
   }
 
   @override
@@ -13467,10 +13466,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get theaterTopBarShare => 'Share deduction';
 
   @override
-  String get theaterTopBarNoGalaxyRef => 'No galaxy reference nodes available';
+  String get theaterTopBarNoGalaxyRef =>
+      'No star map reference nodes available';
 
   @override
-  String get theaterTopBarViewGalaxy => 'View knowledge galaxy';
+  String get theaterTopBarViewGalaxy => 'View knowledge map';
 
   @override
   String theaterTopBarTarget(Object name) {
@@ -13606,14 +13606,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get theaterGraphMainStage => 'Relationship graph main stage';
 
   @override
-  String get theaterGraphWithGalaxy => 'With galaxy references';
+  String get theaterGraphWithGalaxy => 'With star map references';
 
   @override
   String get theaterGraphStandalone => 'Standalone graph';
 
   @override
   String get theaterGraphInstructions =>
-      'Drag with one finger to pan, pinch to zoom, double-tap to reset. Tap a node to view details and add to the knowledge galaxy.';
+      'Drag with one finger to pan, pinch to zoom, double-tap to reset. Tap a node to view details and add to the knowledge map.';
 
   @override
   String get theaterCalibrationTitle => 'Calibration & Execution';
@@ -13629,7 +13629,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get theaterGotIt => 'Got it';
 
   @override
-  String get theaterSemanticMatchTitle => 'Free nodes and galaxy references';
+  String get theaterSemanticMatchTitle => 'Free nodes and star map references';
 
   @override
   String theaterSemanticMatchItem(Object freeform, Object galaxy) {
@@ -13766,13 +13766,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get theaterNodeGalaxySyncing => 'Syncing...';
 
   @override
-  String get theaterNodeOpenGalaxy => 'Open knowledge galaxy';
+  String get theaterNodeOpenGalaxy => 'Open knowledge map';
 
   @override
-  String get theaterNodeAddToGalaxy => 'Add to knowledge galaxy';
+  String get theaterNodeAddToGalaxy => 'Add to knowledge map';
 
   @override
-  String get theaterNodeSourceExplicit => 'Galaxy node';
+  String get theaterNodeSourceExplicit => 'Star map node';
 
   @override
   String get theaterNodeSourceHybrid => 'Reference mapping';
@@ -13785,11 +13785,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get theaterNodeBannerOpenGalaxy =>
-      'This node already corresponds to an official knowledge galaxy node. Open it directly to continue expanding.';
+      'This node already corresponds to an official knowledge map node. Open it directly to continue expanding.';
 
   @override
   String get theaterNodeBannerHasMapping =>
-      'This free node already has a galaxy reference. Adding will use the unified creation flow.';
+      'This free node already has a star map reference. Adding will use the unified creation flow.';
 
   @override
   String get theaterNodeBannerFreeform =>
@@ -17828,7 +17828,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportDiagnosisPanelEyebrow => 'Learning Diagnosis Panel';
 
   @override
-  String get reportOpenGalaxy => 'Open Knowledge Galaxy';
+  String get reportOpenGalaxy => 'Open Knowledge Map';
 
   @override
   String reportPrioritizeNode(Object nodeName) {
@@ -17910,7 +17910,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportAiAnalysisTitle => 'AI Analysis Report';
 
   @override
-  String get reportBackToGalaxy => 'Back to Galaxy';
+  String get reportBackToGalaxy => 'Back to Star Map';
 
   @override
   String get reportViewSprintHistory => 'View Sprint History';
@@ -18125,7 +18125,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportActionDescNoWeakness =>
-      'Visit Knowledge Galaxy to confirm your current structure, then generate more practice data for sharper suggestions.';
+      'Visit the knowledge map to confirm your current structure, then generate more practice data for sharper suggestions.';
 
   @override
   String reportActionDescWithWeakness(Object weakNode, Object strongNode) {
@@ -18381,7 +18381,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyDraftReviewPromptBody =>
-      'You decide what belongs in your galaxy. Approve, skip, merge, or rename each draft before it becomes part of your map.';
+      'You decide what belongs in your star map. Approve, skip, merge, or rename each draft before it becomes part of your map.';
 
   @override
   String get galaxyDraftReviewNow => 'Review now';
@@ -18400,8 +18400,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyDraftCompletionReady =>
-      'Ready to send them into your galaxy';
+  String get galaxyDraftCompletionReady => 'Ready to send them into your map';
 
   @override
   String get galaxyDraftLongPressHint =>
@@ -18447,7 +18446,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'When document processing finishes, draft knowledge stars will land here for your approval.';
 
   @override
-  String get galaxyDraftBackToGalaxy => 'Back to galaxy';
+  String get galaxyDraftBackToGalaxy => 'Back to your star map';
 
   @override
   String galaxyDraftCompletionTitle(Object accepted, Object total) {
@@ -18465,7 +18464,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String galaxyDraftCompletionSummary(Object accepted, Object total) {
-    return '$accepted of $total knowledge stars added to your galaxy!';
+    return '$accepted of $total knowledge stars added to your map!';
   }
 
   @override
@@ -18558,14 +18557,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyUploadTargetGalaxyCore => 'Galaxy core';
+  String get galaxyUploadTargetGalaxyCore => 'Entire map';
 
   @override
-  String get galaxyUploadTargetSelectedConstellation => 'this constellation';
+  String get galaxyUploadTargetSelectedConstellation => 'Selected domain';
 
   @override
   String get galaxyUploadAlreadyInProgress =>
-      'A study material is already joining your constellation.';
+      'A study material is already joining your map.';
 
   @override
   String get galaxyUploadStatusUploading => 'Uploading...';
@@ -18600,7 +18599,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyUploadFailedBody =>
-      'The document slipped out of the constellation before it could settle. Try again when you\'re ready.';
+      'The document slipped out of the star map before it could settle. Try again when you\'re ready.';
 
   @override
   String get galaxyUploadRetry => 'Retry upload';
@@ -19543,7 +19542,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simulationActionUserResponse => 'Your Response';
 
   @override
-  String get simulationSourceGalaxy => 'Knowledge Galaxy';
+  String get simulationSourceGalaxy => 'Knowledge Map';
 
   @override
   String get simulationSourceTasks => 'Task Records';
@@ -21842,7 +21841,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementCardVisualElement => 'Visual element';
 
   @override
-  String get achievementCardGalaxySkin => 'Galaxy skin';
+  String get achievementCardGalaxySkin => 'Star map skin';
 
   @override
   String get achievementCardAvatarBorder => 'Avatar border';
@@ -22769,7 +22768,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatExpertExamPredictor => 'Exam Predictor';
 
   @override
-  String get chatExpertGalaxyGuide => 'Galaxy Guide';
+  String get chatExpertGalaxyGuide => 'Star Map Guide';
 
   @override
   String get chatExpertMath => 'Math Expert';
@@ -22963,7 +22962,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatGraphContinueExplain => 'Continue explanation';
 
   @override
-  String get chatGraphGoToGalaxy => 'View in Galaxy';
+  String get chatGraphGoToGalaxy => 'View in Star Map';
 
   @override
   String get chatGraphNextStepDesc =>
@@ -23522,7 +23521,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chatRoundtableGalaxyNavigator => 'Galaxy Navigator';
+  String get chatRoundtableGalaxyNavigator => 'Star Map Navigator';
 
   @override
   String chatRoundtableHiddenTurns(Object count) {
@@ -27552,7 +27551,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyContribLoading =>
-      'Summarizing your contributions to the galaxy...';
+      'Summarizing your contributions to the star map...';
 
   @override
   String get galaxyContribError =>
@@ -27563,7 +27562,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyContribIntro =>
-      'After completing a study session, fixing an error, or correcting your understanding through conversation, your contributions to the galaxy will be recorded here.';
+      'After completing a study session, fixing an error, or correcting your understanding through conversation, your contributions to the star map will be recorded here.';
 
   @override
   String get galaxyContribFirstLight => 'First Activation';
@@ -27585,7 +27584,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyContribDetailIntro =>
-      'The galaxy records your first activations, error repairs, and conversation corrections.';
+      'The star map records your first activations, error repairs, and conversation corrections.';
 
   @override
   String get galaxyContribFirstLearnTitle => 'First Learning Activation';
@@ -27729,11 +27728,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyNodeUploadDateLabel => 'Uploaded on';
 
   @override
-  String get galaxySimSettings => 'Galaxy View Settings';
+  String get galaxySimSettings => 'Star Map View Settings';
 
   @override
   String get galaxySimSettingsDesc =>
-      'Adjust display density, force field parameters, and replay speed for a smoother galaxy browsing experience.';
+      'Adjust display density, force field parameters, and replay speed for a smoother star map browsing experience.';
 
   @override
   String get galaxySimResetDefault => 'Reset to Default';
@@ -27834,7 +27833,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyNoMasterySubtitle =>
-      'Complete a learning task or review a knowledge point first, then the galaxy will show real mastery data.';
+      'Complete a learning task or review a knowledge point first, then the star map will show real mastery data.';
 
   @override
   String get galaxyGoStudy => 'Go Study';
@@ -28286,7 +28285,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get planPortfolioGalaxySummary => 'Galaxy Mastery Summary';
+  String get planPortfolioGalaxySummary => 'Star Map Mastery Summary';
 
   @override
   String planPortfolioResultRating(int rating) {
@@ -28915,11 +28914,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Who is this for, how to use it, what to focus on.';
 
   @override
-  String get communityAddToGroupGalaxy => 'Add to Group Galaxy';
+  String get communityAddToGroupGalaxy => 'Add to Group Map';
 
   @override
   String get communityGalaxyIndexHint =>
-      'Make this file appear in the group knowledge galaxy index';
+      'Make this file appear in the group map index';
 
   @override
   String get communityMarkAsOfficial => 'Mark as Official';
@@ -29286,7 +29285,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get communityGroupGalaxy => 'Galaxy';
+  String get communityGroupGalaxy => 'Group Map';
 
   @override
   String get communityClickToPreview => 'Tap to preview and view details';
@@ -33731,7 +33730,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settBehaviorAccessibilityBody =>
-      'When you enable high contrast, reduced motion, or larger text, Sparkle applies those preferences across core learning surfaces, Galaxy, chat, and task execution so the interface stays readable, reachable, and lower load.';
+      'When you enable high contrast, reduced motion, or larger text, Sparkle applies those preferences across core learning surfaces, the knowledge map, chat, and task execution so the interface stays readable, reachable, and lower load.';
 
   @override
   String get settBehaviorEmotion => 'Emotion adaptive';
@@ -33755,7 +33754,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settBehaviorMaterialsBody =>
-      'Your study materials are used for retrieval, task suggestions, explanations, and Galaxy construction. They are not used for public community content or research analysis unless you explicitly allow that setting.';
+      'Your study materials are used for retrieval, task suggestions, explanations, and knowledge map construction. They are not used for public community content or research analysis unless you explicitly allow that setting.';
 
   @override
   String get settBehaviorResearch => 'Research participation';
@@ -37928,7 +37927,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auto_failedtosyncnodetoknowledgegal =>
-      'Failed to sync node to knowledge galaxy. You can try again later.';
+      'Failed to sync node to knowledge map. You can try again later.';
 
   @override
   String get auto_curiositycapsule => 'Curiosity capsule';

@@ -2003,7 +2003,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatWelcomeSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'今天想做点什么？'**
+  /// **'你的学习伙伴。我会看着你的进展，有把握时提醒你，拿不准时先问你。'**
   String get chatWelcomeSubtitle;
 
   /// No description provided for @chatSuggestion1.
@@ -9845,7 +9845,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatWelcomeTitle.
   ///
   /// In zh, this message translates to:
-  /// **'你好，我是你的 AI 导师'**
+  /// **'你好，我是 Aurora'**
   String get chatWelcomeTitle;
 
   /// No description provided for @chatQuickActionNewTask.
