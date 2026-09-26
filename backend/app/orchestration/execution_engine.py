@@ -199,6 +199,7 @@ class ExecutionEngineMixin:
     _sync_orchestration_trace: Callable[..., Any]
     _load_context_versions: Callable[..., Any]
     _stream_hitl_escalation: Callable[..., Any]
+    _stream_hitl_plan_confirmation: Callable[..., Any]
     _stream_discard_notice: Callable[..., Any]
 
     async def _maybe_short_circuit_bridge_tool(
@@ -2470,6 +2471,26 @@ class ExecutionEngineMixin:
                 await self.langgraph_breaker.on_failure("validation_failed")
                 route_decision.execution_mode = "direct"
                 return route_decision, None, snapshot, False
+            # wt596（F3）：确定性 HITL 闸门接线。validate_plan 的 requires_hitl /
+            # requires_confirmation 此前在主链被整段丢弃（仅消费 is_valid/failure_reason/
+            # warnings），confirm 级工具计划被静默放行进 DAG 自动执行。任一为真即
+            # queue HITL action + 流确认帧并终止主链（与 standard_workflow enforcing
+            # 语义一致）；置于 LLM plan review 之前，降级链/合成回退自动批准也无法绕过。
+            if getattr(validation_result, "requires_confirmation", False) or getattr(
+                validation_result, "requires_hitl", False
+            ):
+                logger.warning(
+                    "LangGraph plan requires confirmation (deterministic HITL gate): flags={}",
+                    validation_result.risk_flags,
+                )
+                await self._stream_hitl_plan_confirmation(
+                    executable_plan=executable_plan,
+                    snapshot=snapshot,
+                    user_id=str(user_id),
+                    risk_flags=validation_result.risk_flags,
+                    stream_callback=stream_callback,
+                )
+                return route_decision, executable_plan, snapshot, True
             if validation_result.warnings:
                 state.context_data["knowledge_readiness_warnings"] = validation_result.warnings
                 for warning in validation_result.warnings[:3]:

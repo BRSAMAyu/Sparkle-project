@@ -94,6 +94,50 @@ class ObservabilityMixin:
             metadata={"requires_hitl": "true", "action_id": action_id, "reason": "version_conflict"},
         ))
 
+    async def _stream_hitl_plan_confirmation(
+        self,
+        *,
+        executable_plan: ExecutablePlan,
+        snapshot: StateSnapshot | None,
+        user_id: str,
+        risk_flags: list[str],
+        stream_callback,
+    ) -> str:
+        """wt596（F3）：confirm 级计划（requires_hitl/requires_confirmation）的 HITL 拦截出口。
+
+        语义与 standard_workflow._queue_hitl_action 对齐（tool_name="__plan__"、
+        reason="risk_flags"、"高风险操作需要确认"），帧契约与 _stream_hitl_escalation
+        一致（requires_hitl=true + action_id + reason）；入队后由调用方终止主链，
+        计划不进入自动执行。
+        """
+        tool_calls_payload = [{"id": tc.id, "name": tc.name, "params": tc.params} for tc in executable_plan.tool_calls]
+        action_id = await pending_actions_store.save(
+            tool_name="__plan__",
+            arguments={
+                "plan_id": executable_plan.plan_id,
+                "snapshot_id": snapshot.snapshot_id if snapshot else None,
+                "tool_calls": tool_calls_payload,
+                "reason": "risk_flags",
+            },
+            user_id=user_id,
+            description="高风险操作需要确认",
+            preview_data={
+                "plan_id": executable_plan.plan_id,
+                "snapshot_id": snapshot.snapshot_id if snapshot else None,
+                "reason": "risk_flags",
+                "tool_calls": tool_calls_payload,
+            },
+        )
+        HITL_REQUESTED.labels(reason="risk_flags").inc()
+        await stream_callback(agent_service_pb2.ChatResponse(
+            delta=(
+                f"\n\n⚠️ 该操作需要确认才能执行: {', '.join(risk_flags)}\n"
+                f"action_id={action_id}"
+            ),
+            metadata={"requires_hitl": "true", "action_id": action_id, "reason": "risk_flags"},
+        ))
+        return action_id
+
     async def _stream_discard_notice(self, stream_callback) -> None:
         await stream_callback(agent_service_pb2.ChatResponse(
             delta="\n\n⚠️ 检测到状态变化，计划已过期。请重试。",
