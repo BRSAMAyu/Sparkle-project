@@ -173,6 +173,50 @@ class ModelHealthTracker:
         count = await cache_service.redis.get(f"{self.FAILURE_COUNT_PREFIX}{model_key}")
         return int(count) if count else 0
 
+    async def reset_health(self, model_key: str | None = None) -> int:
+        """清除 redis 健康态三族键（V3-FIX-81：双源复位出口的 redis 面）。
+
+        故障演练/排障的复位出口：与 router 内存复位配合使用（管理面
+        POST /admin/llm-health/reset 单出口同时清双源）。**只清键，不改
+        is_healthy/record_failure 的任何判定语义**（语义自然由键的消失恢复）。
+
+        Args:
+            model_key: 指定模型键（清该键三族键）；None = 全量扫清三族键。
+
+        Returns:
+            实际删除的 redis 键数量。
+        """
+        redis = cache_service.redis
+        if not redis:
+            return 0
+
+        if model_key is not None:
+            keys = [
+                f"{prefix}{model_key}"
+                for prefix in (
+                    self.FAILURE_COUNT_PREFIX,
+                    self.LAST_FAILURE_PREFIX,
+                    self.CIRCUIT_OPEN_PREFIX,
+                )
+            ]
+            deleted = int(await redis.delete(*keys))
+        else:
+            collected: list[str] = []
+            for prefix in (
+                self.FAILURE_COUNT_PREFIX,
+                self.LAST_FAILURE_PREFIX,
+                self.CIRCUIT_OPEN_PREFIX,
+            ):
+                async for key in redis.scan_iter(match=f"{prefix}*"):
+                    collected.append(str(key))
+            deleted = 0
+            for i in range(0, len(collected), 500):
+                deleted += int(await redis.delete(*collected[i : i + 500]))
+
+        if deleted:
+            logger.warning(f"[LLMHealthTracker] redis health keys cleared: {deleted} (V3-FIX-81)")
+        return deleted
+
 
 class LLMModelFallbackManager:
     """

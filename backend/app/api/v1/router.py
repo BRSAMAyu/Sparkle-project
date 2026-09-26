@@ -52,6 +52,7 @@ from app.api.v1 import (
     documents,
     error_book,
     event_bus_health,
+    llm_health_admin,
     events,
     exam_sprint,
     executions,
@@ -192,6 +193,7 @@ api_router.include_router(feedback_admin.router)
 api_router.include_router(audit.router, tags=["Audit"])
 api_router.include_router(dlq_admin.router, tags=["DLQ"])
 api_router.include_router(event_bus_health.router, prefix="/admin", tags=["Event Bus Health"])
+api_router.include_router(llm_health_admin.router, prefix="/admin", tags=["LLM Health Admin"])
 api_router.include_router(galaxy.router, tags=["galaxy"])
 api_router.include_router(goals.router, prefix="/goals", tags=["goals"])
 # FME Phase-1 — first-minute intent analysis; same /goals prefix as CRUD.

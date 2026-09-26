@@ -49,6 +49,30 @@ class RequestValidator:
         re.compile(r'onerror=', re.IGNORECASE),
     ]
 
+    # SQL 注入结构特征（V3-FIX-77：误判面消歧）。
+    # 历史规则为 `select `/`insert `/`update ` 等子串命中 + `\bkw\b.*?from\b`
+    # 跨任意距离匹配——英文学习材料普通词序（"update or weaken the memory
+    # ... from"、SQL 教学示例 "SELECT * FROM orders"）即触发拒答
+    # （Q-06 分层 bench 400 样本 4 条误判）。现改为「注入载荷的结构信号」
+    # 校验：恒真条件、注释截断、union select、高危 DDL 紧邻、引号后堆叠
+    # 语句、盲注利用函数。SQL 教学是学习域合法内容，裸 SQL 词序不再是
+    # 拒答依据；安全语义面以本结构集为准（不回退为关键词子串匹配）。
+    SQL_INJECTION_PATTERNS = [
+        # 恒真条件（认证绕过经典形态）：OR 1=1 / AND '1'='1
+        re.compile(r"\b(?:or|and)\s+['\"]?\d+['\"]?\s*=\s*['\"]?\d+\b", re.IGNORECASE),
+        # 引号后注释截断：admin'-- / '); /*
+        re.compile(r"['\"`]\s*(?:--|/\*)"),
+        # UNION SELECT 紧邻（联合查询注入）
+        re.compile(r"\bunion\s+(?:all\s+)?select\b", re.IGNORECASE),
+        # 高危 DDL 紧邻：DROP TABLE/DATABASE/SCHEMA、TRUNCATE TABLE
+        re.compile(r"\bdrop\s+(?:table|database|schema)\b", re.IGNORECASE),
+        re.compile(r"\btruncate\s+table\b", re.IGNORECASE),
+        # 引号后堆叠语句（载荷入点形态）：'; DROP TABLE users; --
+        re.compile(r"['\"`]\s*;\s*(?:select|insert|update|delete|drop|union)\b", re.IGNORECASE),
+        # 盲注/带外利用函数
+        re.compile(r"\b(?:xp_cmdshell|sleep\s*\(|benchmark\s*\(|load_file\s*\()", re.IGNORECASE),
+    ]
+
     def __init__(self, redis_client=None, daily_quota: int = 100000, enable_quota_check: bool = True):
         """
         初始化 RequestValidator
@@ -339,22 +363,18 @@ class RequestValidator:
         Returns:
             bool: 是否包含恶意内容
         """
-        text_lower = text.lower()
-
         # 检查敏感模式
         for pattern in self.SENSITIVE_PATTERNS:
             if pattern.search(text):
                 logger.warning(f"Detected potentially malicious content: {pattern.pattern}")
                 return True
 
-        # 检查 SQL 注入特征
-        sql_keywords = ['select ', 'insert ', 'update ', 'delete ', 'drop ', 'union ']
-        for keyword in sql_keywords:
-            if keyword in text_lower:
-                # 进一步检查是否是恶意意图
-                if re.search(rf'\b{keyword}\b.*?from\b', text_lower, re.IGNORECASE):
-                    logger.warning(f"Detected potential SQL injection: {keyword}")
-                    return True
+        # 检查 SQL 注入结构特征（V3-FIX-77：结构信号校验，不再按
+        # 「关键词子串 + 跨句 from」判定，消除英文学习内容误判拒答）
+        for pattern in self.SQL_INJECTION_PATTERNS:
+            if pattern.search(text):
+                logger.warning(f"Detected SQL injection structural pattern: {pattern.pattern}")
+                return True
 
         return False
 

@@ -351,6 +351,19 @@ class ModelHealthState:
                     f"Model entered probation after cooldown ({self.cooldown_seconds:.0f}s)"
                 )
 
+    def reset_to_healthy(self) -> None:
+        """管理面显式复位到 healthy（V3-FIX-81：双源复位出口的内存面）。
+
+        仅由 LLMRouter.reset_model_health 调用——排障/演练后的人为复位动作，
+        不改变 record_failure/record_success/check_recovery 的任何判定语义；
+        走 _transition 保留相变指标诚实性（unhealthy->healthy 照常计数）。
+        """
+        self.consecutive_failures = 0
+        self.consecutive_successes = 0
+        self.last_failure_at = None
+        self.cooldown_seconds = self.RECOVERY_SECONDS
+        self._transition("healthy")
+
 
 @dataclass
 class LLMSelection:
@@ -1698,6 +1711,37 @@ class LLMRouter:
         if not candidates:
             return candidates
         return sorted(candidates, key=self._health_rank)
+
+    def reset_model_health(self, model_key: str | None = None) -> list[str]:
+        """管理面显式复位内存健康态到 healthy（V3-FIX-81）。
+
+        排障/故障演练的复位出口：与 redis tracker 复位配合使用（管理面
+        POST /admin/llm-health/reset 单出口同时清双源）。**只补复位出口，
+        不改判定语义**——复位后 record_failure/report_model_failure 的既有
+        三相行为原样生效。
+
+        Args:
+            model_key: 指定模型键；None = 复位全部已登记模型的健康态。
+
+        Returns:
+            实际复位的 model_key 列表（未注册 key 不在列，无操作不造死键）。
+        """
+        with self._lock:
+            if model_key is not None:
+                # 未注册 key 无操作（不造死键，对齐 FIX-23 拒收语义）
+                targets = [model_key] if model_key in self._model_health else []
+            else:
+                targets = list(self._model_health)
+            for key in targets:
+                state = self._model_health.get(key)
+                if state is not None:
+                    state.reset_to_healthy()
+            if targets:
+                logger.warning(
+                    f"[LLMRouter] model health manually reset via admin exit: "
+                    f"{targets} (V3-FIX-81)"
+                )
+            return list(targets)
 
     @staticmethod
     def _normalize_agent_role(agent_role: AgentRole | str | Any) -> AgentRole:

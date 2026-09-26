@@ -11,6 +11,7 @@ import json
 import re
 import time
 import uuid
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any, Callable
 
@@ -35,6 +36,36 @@ from app.orchestration.statechart_engine import WorkflowState
 from app.orchestration.tool_result_extractor import ToolResultExtractor
 from app.orchestration.utilization_metrics import build_stage9_utilization_metrics
 from app.orchestration.ux_envelope import ux_envelope_builder
+
+# V3-FIX-80 计量归因显式标注：路由未归类时不再以 "default" 落账。
+# "default" 把「澄清门/模板直出（生成模型从未运行，0-token）」与「多代理流
+# 消耗了真实用量但未回填模型键」混成同一桶，分层成本账本对该面失明
+# （Q-06 复测 39/400 条 default：32 条 0-token + 7 条带 token 错挂）。
+METERING_MODEL_NO_GENERATION = "no_generation_model"  # 生成模型从未运行
+METERING_MODEL_UNATTRIBUTED = "unattributed_model"  # 有真实用量但无模型归因
+
+
+def resolve_metering_model_key(
+    context_data: Mapping[str, Any],
+    *,
+    has_real_usage: bool = False,
+) -> str:
+    """计量面模型归因补全（V3-FIX-80）。
+
+    - generation_model_key / model_used 在 → 真实模型键（既有行为不变）；
+    - 均缺且无真实用量帧（澄清门/模板直出）→ 显式 `no_generation_model`；
+    - 均缺但有真实用量（多代理流未回填模型键等盲区面）→ 显式
+      `unattributed_model`，让盲区可见、可被后续归因卡收敛。
+
+    任何路径都不再产生 "default"。
+    """
+    for key in ("generation_model_key", "model_used"):
+        value = context_data.get(key)
+        if value:
+            return str(value)
+    if has_real_usage:
+        return METERING_MODEL_UNATTRIBUTED
+    return METERING_MODEL_NO_GENERATION
 
 
 class ResponseBuilderMixin:
@@ -942,10 +973,9 @@ class ResponseBuilderMixin:
             "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
             "experiment_cohort": (user_context_payload or {}).get("experiment_cohort", ""),
         }
-        generation_model_key = str(
-            final_state.context_data.get("generation_model_key")
-            or final_state.context_data.get("model_used")
-            or "default"
+        generation_model_key = resolve_metering_model_key(
+            final_state.context_data,
+            has_real_usage=total_prompt_tokens > 0 or total_completion_tokens > 0,
         )
         generation_model_tier = str(
             final_state.context_data.get("generation_model_tier")
@@ -1387,10 +1417,9 @@ class ResponseBuilderMixin:
 
         if run_ledger is not None:
             estimated_cost = 0.0
-            model_key = str(
-                final_state.context_data.get("generation_model_key")
-                or final_state.context_data.get("model_used")
-                or "default"
+            model_key = resolve_metering_model_key(
+                final_state.context_data,
+                has_real_usage=total_prompt_tokens > 0 or total_completion_tokens > 0,
             )
             if self.token_tracker and total_prompt_tokens > 0:
                 try:
@@ -1585,7 +1614,12 @@ class ResponseBuilderMixin:
         if self.token_tracker:
             try:
                 context_data = final_state.context_data if final_state is not None else {}
-                model_key = str(context_data.get("generation_model_key") or context_data.get("model_used") or "default")
+                # V3-FIX-80：以真实用量帧区分「生成模型从未运行」与「有消耗
+                # 未归因」，均显式标注（合成 token 估算发生在其后，不计入判定）
+                model_key = resolve_metering_model_key(
+                    context_data,
+                    has_real_usage=total_prompt_tokens > 0 or total_completion_tokens > 0,
+                )
                 model_tier = str(
                     context_data.get("generation_model_tier")
                     or context_data.get("final_synthesis_model_tier")
