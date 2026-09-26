@@ -256,9 +256,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get masteryScore => 'Mastery';
 
   @override
-  String get reviewSuggestion => 'Review Suggestion';
-
-  @override
   String get aiTutor => 'AI Tutor';
 
   @override
@@ -891,9 +888,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementUnlocked => 'Achievement Unlocked!';
 
   @override
-  String get achievementLocked => 'Locked';
-
-  @override
   String get achievementProgress => 'Progress';
 
   @override
@@ -915,53 +909,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementTypeMilestone => 'Milestone';
 
   @override
-  String get achievementTypeChallenge => 'Challenge';
-
-  @override
   String get achievementTypeHidden => 'Hidden';
-
-  @override
-  String get achievementTypeSpecial => 'Special';
-
-  @override
-  String achievementPoints(Object points) {
-    return '$points points';
-  }
-
-  @override
-  String achievementEarned(Object date) {
-    return 'Earned on $date';
-  }
-
-  @override
-  String get achievementClose => 'Close';
 
   @override
   String get achievementShare => 'Share';
 
   @override
   String get achievementViewAll => 'View All';
-
-  @override
-  String get achievementNoUnlocked => 'No achievements unlocked yet';
-
-  @override
-  String get achievementKeepGoing => 'Keep going to unlock more!';
-
-  @override
-  String get achievementStatsTotal => 'Total';
-
-  @override
-  String get achievementStatsUnlocked => 'Unlocked';
-
-  @override
-  String get achievementStatsPoints => 'Points';
-
-  @override
-  String get achievementStatsStreak => 'Day Streak';
-
-  @override
-  String get achievementNew => 'New!';
 
   @override
   String get achievementSearch => 'Search achievements';
@@ -5719,125 +5673,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String errorBookTimeAgoDays(Object count) {
     return '$count days ago';
   }
-
-  @override
-  String get reviewModeToday => 'Today\'s Review';
-
-  @override
-  String get reviewModeTodayDesc => 'Complete all errors due today';
-
-  @override
-  String get reviewModeBySubject => 'By Subject';
-
-  @override
-  String get reviewModeBySubjectDesc => 'Select a subject for focused review';
-
-  @override
-  String get reviewModeWeakest => 'Weakest Areas';
-
-  @override
-  String get reviewModeWeakestDesc => 'Prioritize errors with lowest mastery';
-
-  @override
-  String get reviewModeRandom => 'Random Quiz';
-
-  @override
-  String get reviewModeRandomDesc => 'Randomly select errors to review';
-
-  @override
-  String reviewProgress(Object current, Object total) {
-    return 'Progress: $current/$total';
-  }
-
-  @override
-  String get reviewQuestion => 'Question';
-
-  @override
-  String get reviewYourAnswer => 'Your Answer';
-
-  @override
-  String get reviewCorrectAnswer => 'Correct Answer';
-
-  @override
-  String get reviewAIAnalysis => 'AI Analysis';
-
-  @override
-  String get reviewHideAnalysis => 'Hide';
-
-  @override
-  String get reviewViewAnalysis => 'View AI Analysis';
-
-  @override
-  String get reviewViewAnswer => 'View Answer';
-
-  @override
-  String get reviewViewAnswerHint =>
-      'Think about the answer first, then reveal';
-
-  @override
-  String reviewSubmitFailed(Object error) {
-    return 'Submit failed: $error';
-  }
-
-  @override
-  String get reviewNoErrorsToday => 'No errors need review today';
-
-  @override
-  String get reviewKeepGoing => 'Great job! Keep it up';
-
-  @override
-  String get reviewComplete => 'Review Complete!';
-
-  @override
-  String reviewTotalReviewed(Object count) {
-    return 'Reviewed $count questions this session';
-  }
-
-  @override
-  String get reviewResults => 'Review Results';
-
-  @override
-  String get reviewRemembered => 'Remembered';
-
-  @override
-  String get reviewFuzzy => 'Fuzzy';
-
-  @override
-  String get reviewForgotten => 'Forgotten';
-
-  @override
-  String get reviewEncourageExcellent => 'Excellent! Very solid mastery 🎉';
-
-  @override
-  String get reviewEncourageGood => 'Great! Keep up the momentum 💪';
-
-  @override
-  String get reviewEncourageFair => 'Good! More review will help 📚';
-
-  @override
-  String get reviewEncourageNeedsWork =>
-      'Keep going! Practice makes perfect 🌟';
-
-  @override
-  String get reviewBackToList => 'Back to List';
-
-  @override
-  String get reviewAnotherRound => 'Another Round';
-
-  @override
-  String get reviewConfirmExitTitle => 'Confirm Exit';
-
-  @override
-  String get reviewConfirmExitMessage => 'Review not completed. Exit anyway?';
-
-  @override
-  String get reviewContinue => 'Continue Review';
-
-  @override
-  String get reviewExit => 'Exit';
-
-  @override
-  String get reviewNoMatchingErrors => 'No matching errors found';
 
   @override
   String get communityTitle => 'Community';
@@ -11744,9 +11579,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardStartWithAI => 'Start with AI';
 
   @override
-  String get dashboardOpenTaskList => 'Open tasks';
-
-  @override
   String get dashboardDueToday => 'Due today';
 
   @override
@@ -11851,10 +11683,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String dashboardSprintDaysLeft(int days) {
     return '$days days left in sprint, today\'s tasks aligned';
   }
-
-  @override
-  String get dashboardWhatToPush =>
-      'What do you want to push forward most right now?';
 
   @override
   String get dashboardGoalExamSprint => 'Exam Sprint';
@@ -13475,11 +13303,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'The prediction is ready and waiting for a follow-up prompt.';
 
   @override
-  String predictedIntentConfidence(Object percent) {
-    return 'Confidence $percent%';
-  }
-
-  @override
   String get predictedIntentWhy => 'Why the system predicts this';
 
   @override
@@ -13491,150 +13314,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get predictedIntentError =>
       'Something went wrong while continuing. Please try again.';
-
-  @override
-  String get predictedActionResumePriority => 'Resume Priority Task';
-
-  @override
-  String get predictedActionStudyPlan => 'Build Study Plan';
-
-  @override
-  String get predictedActionDiagnose => 'Diagnose Issue';
-
-  @override
-  String get predictedActionCreateTask => 'Turn Into Task';
-
-  @override
-  String get predictedActionInstantResult => 'Instant Result';
-
-  @override
-  String get predictedActionReviewProgress => 'Review Progress';
-
-  @override
-  String get predictedActionPlanNext => 'Plan Next Step';
-
-  @override
-  String get predictedActionReflection => 'Quick Reflection';
-
-  @override
-  String get predictedActionDefault => 'Predicted Intent';
-
-  @override
-  String get predictedWindowNow => 'Right Now';
-
-  @override
-  String get predictedWindow30m => 'Next 30 Minutes';
-
-  @override
-  String get predictedWindow1h => 'Next Hour';
-
-  @override
-  String get predictedWindow2h => 'Next 2 Hours';
-
-  @override
-  String get predictedWindow6h => 'Next 6 Hours';
-
-  @override
-  String get predictedWindowToday => 'Later Today';
-
-  @override
-  String get predictedSourceLongRange => 'Long-Range Forecast';
-
-  @override
-  String get predictedSourceRules => 'Rules Fallback';
-
-  @override
-  String get predictedFreshnessJustNow => 'just now';
-
-  @override
-  String predictedFreshnessMinutes(Object count) {
-    return '$count min ago';
-  }
-
-  @override
-  String predictedFreshnessHours(Object count) {
-    return '$count hr ago';
-  }
-
-  @override
-  String predictedFreshnessDays(Object count) {
-    return '$count d ago';
-  }
-
-  @override
-  String get predictedCategoryPrefTitle => 'Recent same-category signal';
-
-  @override
-  String predictedCategoryPrefHint(Object category, Object tool) {
-    return 'Inside $category, recent results have more often favored \"$tool\" first.';
-  }
-
-  @override
-  String get predictedCategoryPrefCaveat =>
-      'Based only on recent results inside this request category. It does not mean Sparkle understands your whole workflow.';
-
-  @override
-  String get predictedCategoryPlan => 'planning requests';
-
-  @override
-  String get predictedCategoryTask => 'task requests';
-
-  @override
-  String get predictedCategoryFocus => 'focus-support requests';
-
-  @override
-  String get predictedCategoryGrowth => 'growth requests';
-
-  @override
-  String get predictedCategoryQuery => 'query requests';
-
-  @override
-  String get predictedCategoryKnowledge => 'knowledge requests';
-
-  @override
-  String get predictedCategoryReview => 'review requests';
-
-  @override
-  String get predictedCategoryResearch => 'research requests';
-
-  @override
-  String get predictedCategoryMemory => 'memory requests';
-
-  @override
-  String get predictedCategoryCognitive => 'cognitive requests';
-
-  @override
-  String get predictedCategoryDefault => 'similar requests';
-
-  @override
-  String get predictedToolCreatePlan => 'Create Plan';
-
-  @override
-  String get predictedToolGenerateTasks => 'Expand Plan Steps';
-
-  @override
-  String get predictedToolCreateTask => 'Create Task';
-
-  @override
-  String get predictedToolListTasks => 'List Tasks';
-
-  @override
-  String get predictedToolUpdateTask => 'Update Task';
-
-  @override
-  String get predictedToolQueryKnowledge => 'Query Knowledge';
-
-  @override
-  String get predictedToolExplainConcept => 'Explain Concept';
-
-  @override
-  String get predictedToolReviewProgress => 'Review Progress';
-
-  @override
-  String get predictedToolGenerateSummary => 'Generate Summary';
-
-  @override
-  String get predictedToolSuggestSchedule => 'Suggest Schedule';
 
   @override
   String get insightHubTitle => 'Learning Insights';
@@ -17987,9 +17666,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get achievementPrestigeLane => 'Prestige Lane';
-
-  @override
   String get weatherTitleSunny => 'Clear Skies';
 
   @override
@@ -18193,10 +17869,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get flashCapsuleTitle => 'Flash Capsule';
 
   @override
-  String get flashCapsuleSubtitle =>
-      'Capture fleeting doubts as error clues, reducing the loss of knowing something is wrong but not remembering it.';
-
-  @override
   String get flashCapsuleHistory => 'History Capsules';
 
   @override
@@ -18223,127 +17895,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get flashCapsuleSyncPending => 'Pending Sync';
 
   @override
-  String get flashCapsuleContent => 'Record Content';
-
-  @override
-  String get flashCapsuleContentSubtitle =>
-      'Select subject, error type, then add knowledge point and description.';
-
-  @override
-  String get flashCapsuleSubject => 'Subject';
-
-  @override
-  String get flashCapsuleSelectSubject => 'Select Subject';
-
-  @override
-  String get flashCapsuleKnowledgePoint => 'Knowledge Point';
-
-  @override
-  String get flashCapsuleKnowledgeHint =>
-      'e.g. Trigonometric derivatives, Newton\'s second law...';
-
-  @override
-  String get flashCapsuleErrorDesc => 'Error Description';
-
-  @override
-  String get flashCapsuleErrorHint =>
-      'Record how you got it wrong, where you got stuck, and how to avoid it next time.';
-
-  @override
-  String get flashCapsuleKpLength => 'Knowledge Point Length';
-
-  @override
-  String get flashCapsuleDescLength => 'Description Length';
-
-  @override
-  String get flashCapsuleCognitiveDim => 'Cognitive Dimension';
-
-  @override
-  String get flashCapsuleHistoryView => 'View History';
-
-  @override
-  String get flashCapsuleSaving => 'Saving...';
-
-  @override
-  String get flashCapsuleSave => 'Save Capsule';
-
-  @override
-  String flashCapsuleSubjectCount(Object count) {
-    return '$count subjects';
-  }
-
-  @override
-  String flashCapsuleHistoryCount(Object count) {
-    return '$count history capsules';
-  }
-
-  @override
-  String get flashCapsuleSaved => 'Capsule saved and synced to error book';
-
-  @override
-  String get flashCapsuleSavedNoSync =>
-      'Capsule saved, error book sync will retry later';
-
-  @override
-  String flashCapsuleSaveFailed(Object error) {
-    return 'Save failed: $error';
-  }
-
-  @override
-  String get flashCapsuleSyncFailed =>
-      'Fill in the knowledge point and error description';
-
-  @override
-  String get flashCapsuleSaveError => 'Capsule save failed, please retry later';
-
-  @override
-  String flashCapsuleLoadError(Object error) {
-    return 'Failed to load history capsules: $error';
-  }
-
-  @override
-  String get flashCapsuleErrorConcept => 'Concept Confusion';
-
-  @override
-  String get flashCapsuleErrorCalc => 'Calculation Error';
-
-  @override
-  String get flashCapsuleErrorReading => 'Reading Careless';
-
-  @override
-  String get flashCapsuleErrorMemory => 'Knowledge Forgetfulness';
-
-  @override
-  String get flashCapsuleErrorMethod => 'Wrong Method';
-
-  @override
-  String get flashCapsuleErrorOther => 'Other';
-
-  @override
-  String get flashCapsuleSubjectMath => 'Math';
-
-  @override
-  String get flashCapsuleSubjectPhysics => 'Physics';
-
-  @override
-  String get flashCapsuleSubjectChemistry => 'Chemistry';
-
-  @override
-  String get flashCapsuleSubjectBiology => 'Biology';
-
-  @override
-  String get flashCapsuleSubjectEnglish => 'English';
-
-  @override
-  String get flashCapsuleSubjectChinese => 'Chinese';
-
-  @override
-  String get flashCapsuleSubjectComputer => 'Computer Science';
-
-  @override
-  String get flashCapsuleSubjectOther => 'Other';
-
-  @override
   String get flashCapsuleTagFlash => 'Flash';
 
   @override
@@ -18353,130 +17904,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vocabularyLookupTitle => 'Word Lookup';
 
   @override
-  String get vocabularyLookupSubtitle =>
-      'Quick word meaning confirmation, example generation, and related word expansion. Results can be saved to your wordbook.';
-
-  @override
-  String get vocabularyLookupInput => 'Search Input';
-
-  @override
-  String get vocabularyLookupInputSubtitle =>
-      'Enter an English word and press Enter or tap Search. Oxford dictionary preferred, local offline packages take priority.';
-
-  @override
-  String get vocabularyLookupSearch => 'Search';
-
-  @override
-  String get vocabularyLookupInputHint => 'Enter an English word...';
-
-  @override
-  String get vocabularyLookupResults => 'Results';
-
-  @override
-  String get vocabularyLookupResultsSubtitle =>
-      'Meanings, examples, related words, and model-generated sentences.';
-
-  @override
-  String get vocabularyLookupStartTyping => 'Enter a word to start searching';
-
-  @override
-  String get vocabularyLookupTemporarilyFailed => 'Search temporarily failed';
-
-  @override
-  String get vocabularyLookupErrorDesc =>
-      'After searching, you can save to your wordbook and generate example sentences.';
-
-  @override
-  String get vocabularyLookupDefinitions => 'Definitions';
-
-  @override
-  String get vocabularyLookupDictExamples => 'Dictionary Examples';
-
-  @override
-  String get vocabularyLookupGeneratedExample => 'AI-Generated Example';
-
-  @override
-  String get vocabularyLookupRelatedWords => 'Related Words';
-
-  @override
-  String get vocabularyLookupInWordbook => 'In Wordbook';
-
-  @override
-  String get vocabularyLookupCanAdd => 'Addable to Wordbook';
-
-  @override
-  String get vocabularyLookupWaitingAssoc => 'Awaiting Related Words';
-
-  @override
-  String vocabularyLookupAssocCount(Object count) {
-    return '$count related words';
-  }
-
-  @override
-  String vocabularyLookupOfflineCount(Object count) {
-    return '$count offline dictionaries';
-  }
-
-  @override
-  String get vocabularyLookupNoOffline => 'No Offline Dictionary';
-
-  @override
-  String get vocabularyLookupManageOffline => 'Manage Offline Dictionary';
-
-  @override
-  String get vocabularyLookupDownloadOffline => 'Download Offline Dictionary';
-
-  @override
-  String get vocabularyLookupOfflinePackages => 'Offline Dictionary Packages';
-
-  @override
   String get vocabularyLookupOfflineDesc =>
       'Prefer local Oxford dictionary to reduce network dependency and cloud server load.';
-
-  @override
-  String get vocabularyLookupInstalled => 'Installed';
-
-  @override
-  String get vocabularyLookupPackageDesc =>
-      'Oxford preferred offline dictionary package';
-
-  @override
-  String vocabularyLookupEntryCount(Object count) {
-    return '$count entries';
-  }
-
-  @override
-  String vocabularyLookupSizeBytes(Object size) {
-    return '$size';
-  }
-
-  @override
-  String vocabularyLookupInstalledAt(Object date) {
-    return 'Installed $date';
-  }
-
-  @override
-  String get vocabularyLookupReDownload => 'Re-download';
-
-  @override
-  String get vocabularyLookupDownloadLocal => 'Download to Local';
-
-  @override
-  String get vocabularyLookupRemove => 'Remove';
-
-  @override
-  String get vocabularyLookupGenerateSentence => 'Generate Sentence';
-
-  @override
-  String get vocabularyLookupRemoveFromWordbook => 'Remove from Wordbook';
-
-  @override
-  String get vocabularyLookupAddToWordbook => 'Add to Wordbook';
-
-  @override
-  String vocabularyLookupPos(Object pos) {
-    return 'Part of Speech · $pos';
-  }
 
   @override
   String vocabularyLookupAddedToWordbook(Object word) {
@@ -18512,19 +17941,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get vocabularyLookupNoPackage =>
       'No downloadable offline dictionary packages available';
-
-  @override
-  String get vocabularyLookupDownloading => 'Downloading...';
-
-  @override
-  String vocabularyLookupPackageScope(Object scope) {
-    return '$scope';
-  }
-
-  @override
-  String vocabularyLookupPackageInstallDate(Object date) {
-    return 'Installed $date';
-  }
 
   @override
   String get entityCardActionLabel => 'Execute';
@@ -25467,9 +24883,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSavePreferences => 'Save Execution Preferences';
 
   @override
-  String get settingsSynced => 'Currently synced';
-
-  @override
   String taskMinutesUnit(Object minutes) {
     return '$minutes min';
   }
@@ -32306,70 +31719,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'One sentence works, e.g. \"Computer Networks final in 7 days, barely studied\"';
 
   @override
-  String get goalIntentTypeHere => 'Type here';
-
-  @override
   String get goalIntentUnderstanding => 'Understanding…';
 
   @override
-  String get goalIntentReadSituation => 'Let me read your situation';
-
-  @override
-  String get goalIntentSuggestedAction => 'A low-cost first step';
-
-  @override
-  String get goalIntentOrWrong => 'Or I got it wrong —';
-
-  @override
-  String goalIntentDaysLeft(Object days) {
-    return '$days days left';
-  }
-
-  @override
-  String goalIntentConfidence(Object percent) {
-    return '$percent% confidence';
-  }
-
-  @override
-  String get goalIntentExamRescue => 'Exam rescue';
-
-  @override
-  String get goalIntentExamPrep => 'Exam prep';
-
-  @override
-  String get goalIntentJobSprint => 'Job sprint';
-
-  @override
-  String get goalIntentProject => 'Project';
-
-  @override
-  String get goalIntentHabit => 'Habit';
-
-  @override
-  String get goalIntentKeepGoing => 'Keep going';
-
-  @override
-  String get goalWizardType => 'Type';
-
-  @override
-  String get goalWizardMotivation => 'Motivation';
-
-  @override
-  String get goalWizardTimeline => 'Timeline';
-
-  @override
-  String get goalWizardMilestones => 'Milestones';
-
-  @override
-  String get goalWizardConfirm => 'Confirm';
-
-  @override
   String get goalWizardTitle => 'Create goal';
-
-  @override
-  String goalWizardStepProgress(Object current, Object label, Object total) {
-    return 'Create goal, step $current of $total: $label';
-  }
 
   @override
   String get goalWizardBack => 'Back';
@@ -32384,15 +31737,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalWizardDecomposeFailed => 'Could not decompose this goal yet';
 
   @override
-  String get goalWizardCreated => 'Goal created';
-
-  @override
   String get goalWizardCreateFailed => 'Could not create this goal';
-
-  @override
-  String goalWizardProgressSemantics(Object current, Object total) {
-    return 'Progress: step $current of $total';
-  }
 
   @override
   String get goalWizardTypeAcademic => 'Academic';
@@ -32410,15 +31755,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalWizardTypeOther => 'Other';
 
   @override
-  String get goalWizardGoalTitle => 'Goal title';
-
-  @override
-  String get goalWizardWhyMatters => 'Why it matters';
-
-  @override
-  String get goalWizardDescription => 'Description';
-
-  @override
   String get goalWizardShortTerm => 'Short 7-30d';
 
   @override
@@ -32429,17 +31765,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalWizardRegenerate => 'Regenerate';
-
-  @override
-  String goalWizardMilestoneN(Object n) {
-    return 'Milestone $n';
-  }
-
-  @override
-  String get goalWizardOutcome => 'Outcome';
-
-  @override
-  String get goalWizardConfirmMilestones => 'Milestones';
 
   @override
   String get chatFailureOffline => 'Offline';
@@ -33150,10 +32475,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotEditorCollapse => 'Collapse';
 
   @override
-  String get dashboardAllSectionsVisible =>
-      'All sections start visible. Switch to hide, drag to reorder, tap to collapse low-glance sections into a 64px header.';
-
-  @override
   String get slotDailyBriefingTitle => 'Daily briefing';
 
   @override
@@ -33299,28 +32620,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardTopicTcpCongestion => 'TCP Congestion Control';
-
-  @override
-  String get dashboardSignalManyRecentTasks => 'Many recent tasks';
-
-  @override
-  String get dashboardSignalSomeIncomplete => 'Some incomplete tasks remain';
-
-  @override
-  String get dashboardSignalEveningInterrupted =>
-      'Evening study sessions are easily interrupted';
-
-  @override
-  String get dashboardSignalRecent24hActive => 'Active in the last 24 hours';
-
-  @override
-  String get dashboardSignalPriorityPending => 'Priority tasks still pending';
-
-  @override
-  String get dashboardLabelContinuePriority => 'Continue Priority Task';
-
-  @override
-  String get dashboardLabelStart25Min => 'Start a 25-min Focus';
 
   @override
   String multiAgentSwitchMode(String mode) {
@@ -33492,78 +32791,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communitySeeEmotionState => 'See my emotional / energy state';
-
-  @override
-  String get dashboardSprintTask1 =>
-      'Closed-book: TCP 3-way handshake & 4-way teardown';
-
-  @override
-  String get dashboardSprintTask2 => 'Correct 3 reliable transport mistakes';
-
-  @override
-  String get dashboardSprintTask3 => 'Review congestion control algorithms';
-
-  @override
-  String get dashboardSprintTask4 => 'Practice exam questions (chapter 3)';
-
-  @override
-  String get dashboardSprintTask5 => 'Review error correction techniques';
-
-  @override
-  String get dashboardGrowthSignalMorning =>
-      'Morning energy is high today, good for tackling difficult topics';
-
-  @override
-  String get dashboardGrowthSignalAfternoon =>
-      'Afternoon focus is stable, suitable for review';
-
-  @override
-  String get dashboardGrowthSignalEvening =>
-      'Evening is best for light review and planning';
-
-  @override
-  String get dashboardGrowthSignalWeekend =>
-      'Weekend momentum is slightly lower than weekdays';
-
-  @override
-  String get dashboardDropoutRiskSummary =>
-      'No significant dropout risk now, but it will rise if you skip two consecutive days of focus.';
-
-  @override
-  String get dashboardOptimalTimeSummary =>
-      '3–5 PM is your most stable study window; evenings are best for wrap-ups and reviews.';
-
-  @override
-  String get dashboardPredictionTitle =>
-      'Prediction: you\'ll continue pushing your most critical task';
-
-  @override
-  String get dashboardPredictionSummary =>
-      'Based on the last 24 hours, tackling your current priority task makes the most sense.';
-
-  @override
-  String get dashboardSuggestedPrompt =>
-      'Help me continue today\'s most critical task';
-
-  @override
-  String get dashboardRecent24hActive => 'Active in the last 24 hours';
-
-  @override
-  String get dashboardRecent7dStable => 'Steady progress over the past 7 days';
-
-  @override
-  String get dashboardProfileTendency =>
-      'You tend to pick up existing priority tasks';
-
-  @override
-  String get dashboardFocusNatural25 =>
-      'A 25-minute focused block feels natural first';
-
-  @override
-  String get dashboardContinuePriority => 'Continue Priority Task';
-
-  @override
-  String get dashboardStart25Min => 'Start a 25-min Focus';
 
   @override
   String get compactErrorLoadFailed => 'Failed to load';
@@ -34261,14 +33488,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardCommandCenterNow => 'Command Center';
 
   @override
-  String get dashboardCommandCenterNoTasks => 'No tasks today';
-
-  @override
-  String dashboardCommandCenterHealth(int percent) {
-    return '$percent% health';
-  }
-
-  @override
   String get todayCockpitEyebrowFresh => 'Most worth doing today';
 
   @override
@@ -34341,45 +33560,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String todayCockpitRunOngoingDetailed(String detail) {
     return 'Aurora is working: $detail';
-  }
-
-  @override
-  String get dashboardCcAllMapped => 'Today is mapped out';
-
-  @override
-  String get dashboardCcCheckPlan => 'Check today plan rhythm';
-
-  @override
-  String get dashboardCcSetGoal => 'Set a goal you can start today';
-
-  @override
-  String get dashboardCcHighPriority => 'High priority';
-
-  @override
-  String get dashboardCcPlanProgress =>
-      'Completing it updates your plan progress';
-
-  @override
-  String get dashboardCcWillBreakDown =>
-      'Sparkle will turn it into a next step, progress, and risk signal.';
-
-  @override
-  String dashboardRiskBottleneck(String topic) {
-    return 'Risk: $topic is slowing progress';
-  }
-
-  @override
-  String dashboardRiskDeadline(String label) {
-    return 'Risk: $label';
-  }
-
-  @override
-  String get dashboardRiskHealth =>
-      'Risk: plan health is low; recalibration may help';
-
-  @override
-  String dashboardGoalChipSelectGoal(String label) {
-    return 'Select goal: $label';
   }
 
   @override
@@ -36379,9 +35559,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalDetailNoTargetDate => 'No date set';
-
-  @override
-  String get goalDetailDue => 'Due';
 
   @override
   String goalDetailPartners(int count) {

@@ -78,7 +78,6 @@
   "searchNodes": "Search Nodes",
   "sparkNode": "Spark Node",
   "masteryScore": "Mastery",
-  "reviewSuggestion": "Review Suggestion",
   "aiTutor": "AI Tutor",
   "send": "Send",
   "typeMessage": "Type a message...",
@@ -280,7 +279,6 @@
   "chatWelcomeSubtitle": "I keep an eye on your learning — I'll speak up when I'm confident, and ask when I'm not.",
   "achievementTitle": "Achievements",
   "achievementUnlocked": "Achievement Unlocked!",
-  "achievementLocked": "Locked",
   "achievementProgress": "Progress",
   "achievementRarityCommon": "Common",
   "achievementRarityRare": "Rare",
@@ -288,21 +286,9 @@
   "achievementRarityLegendary": "Legendary",
   "achievementTypeStreak": "Streak",
   "achievementTypeMilestone": "Milestone",
-  "achievementTypeChallenge": "Challenge",
   "achievementTypeHidden": "Hidden",
-  "achievementTypeSpecial": "Special",
-  "achievementPoints": "{points} points",
-  "achievementEarned": "Earned on {date}",
-  "achievementClose": "Close",
   "achievementShare": "Share",
   "achievementViewAll": "View All",
-  "achievementNoUnlocked": "No achievements unlocked yet",
-  "achievementKeepGoing": "Keep going to unlock more!",
-  "achievementStatsTotal": "Total",
-  "achievementStatsUnlocked": "Unlocked",
-  "achievementStatsPoints": "Points",
-  "achievementStatsStreak": "Day Streak",
-  "achievementNew": "New!",
   "achievementSearch": "Search achievements",
   "achievementFilter": "Filter",
   "achievementFilterActive": "Filtering",
@@ -2311,67 +2297,6 @@
       }
     }
   },
-  "reviewModeToday": "Today's Review",
-  "reviewModeTodayDesc": "Complete all errors due today",
-  "reviewModeBySubject": "By Subject",
-  "reviewModeBySubjectDesc": "Select a subject for focused review",
-  "reviewModeWeakest": "Weakest Areas",
-  "reviewModeWeakestDesc": "Prioritize errors with lowest mastery",
-  "reviewModeRandom": "Random Quiz",
-  "reviewModeRandomDesc": "Randomly select errors to review",
-  "reviewProgress": "Progress: {current}/{total}",
-  "@reviewProgress": {
-    "placeholders": {
-      "current": {
-        "type": "Object"
-      },
-      "total": {
-        "type": "Object"
-      }
-    }
-  },
-  "reviewQuestion": "Question",
-  "reviewYourAnswer": "Your Answer",
-  "reviewCorrectAnswer": "Correct Answer",
-  "reviewAIAnalysis": "AI Analysis",
-  "reviewHideAnalysis": "Hide",
-  "reviewViewAnalysis": "View AI Analysis",
-  "reviewViewAnswer": "View Answer",
-  "reviewViewAnswerHint": "Think about the answer first, then reveal",
-  "reviewSubmitFailed": "Submit failed: {error}",
-  "@reviewSubmitFailed": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "reviewNoErrorsToday": "No errors need review today",
-  "reviewKeepGoing": "Great job! Keep it up",
-  "reviewComplete": "Review Complete!",
-  "reviewTotalReviewed": "Reviewed {count} questions this session",
-  "@reviewTotalReviewed": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "reviewResults": "Review Results",
-  "reviewRemembered": "Remembered",
-  "reviewFuzzy": "Fuzzy",
-  "reviewForgotten": "Forgotten",
-  "reviewEncourageExcellent": "Excellent! Very solid mastery 🎉",
-  "reviewEncourageGood": "Great! Keep up the momentum 💪",
-  "reviewEncourageFair": "Good! More review will help 📚",
-  "reviewEncourageNeedsWork": "Keep going! Practice makes perfect 🌟",
-  "reviewBackToList": "Back to List",
-  "reviewAnotherRound": "Another Round",
-  "reviewConfirmExitTitle": "Confirm Exit",
-  "reviewConfirmExitMessage": "Review not completed. Exit anyway?",
-  "reviewContinue": "Continue Review",
-  "reviewExit": "Exit",
-  "reviewNoMatchingErrors": "No matching errors found",
   "communityTitle": "Community",
   "communityDiscoverFriends": "Discover Friends",
   "communityCreateGroup": "Create Group",
@@ -4904,7 +4829,6 @@
   "dashboardSetFirstGoal": "Set your first goal",
   "dashboardSetFirstGoalSummary": "Tell me the one thing you want to move forward, and I will turn it into an actionable plan.",
   "dashboardStartWithAI": "Start with AI",
-  "dashboardOpenTaskList": "Open tasks",
   "dashboardDueToday": "Due today",
   "dashboardOverdueDays": "{days} days overdue",
   "@dashboardOverdueDays": {
@@ -5010,7 +4934,6 @@
       }
     }
   },
-  "dashboardWhatToPush": "What do you want to push forward most right now?",
   "dashboardGoalExamSprint": "Exam Sprint",
   "dashboardGoalLongTerm": "Long-term Study",
   "dashboardGoalProject": "Project Delivery",
@@ -5662,94 +5585,10 @@
   "predictedIntentSummary": "Based on your profile, the last 24 hours, and task rhythm",
   "predictedIntentSuggestedCont": "Suggested Continuation",
   "predictedIntentWaiting": "The prediction is ready and waiting for a follow-up prompt.",
-  "predictedIntentConfidence": "Confidence {percent}%",
-  "@predictedIntentConfidence": {
-    "placeholders": {
-      "percent": {
-        "type": "Object"
-      }
-    }
-  },
   "predictedIntentWhy": "Why the system predicts this",
   "predictedIntentContinuing": "Continuing...",
   "predictedIntentContinue": "Continue With This",
   "predictedIntentError": "Something went wrong while continuing. Please try again.",
-  "predictedActionResumePriority": "Resume Priority Task",
-  "predictedActionStudyPlan": "Build Study Plan",
-  "predictedActionDiagnose": "Diagnose Issue",
-  "predictedActionCreateTask": "Turn Into Task",
-  "predictedActionInstantResult": "Instant Result",
-  "predictedActionReviewProgress": "Review Progress",
-  "predictedActionPlanNext": "Plan Next Step",
-  "predictedActionReflection": "Quick Reflection",
-  "predictedActionDefault": "Predicted Intent",
-  "predictedWindowNow": "Right Now",
-  "predictedWindow30m": "Next 30 Minutes",
-  "predictedWindow1h": "Next Hour",
-  "predictedWindow2h": "Next 2 Hours",
-  "predictedWindow6h": "Next 6 Hours",
-  "predictedWindowToday": "Later Today",
-  "predictedSourceLongRange": "Long-Range Forecast",
-  "predictedSourceRules": "Rules Fallback",
-  "predictedFreshnessJustNow": "just now",
-  "predictedFreshnessMinutes": "{count} min ago",
-  "@predictedFreshnessMinutes": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "predictedFreshnessHours": "{count} hr ago",
-  "@predictedFreshnessHours": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "predictedFreshnessDays": "{count} d ago",
-  "@predictedFreshnessDays": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "predictedCategoryPrefTitle": "Recent same-category signal",
-  "predictedCategoryPrefHint": "Inside {category}, recent results have more often favored \"{tool}\" first.",
-  "@predictedCategoryPrefHint": {
-    "placeholders": {
-      "category": {
-        "type": "Object"
-      },
-      "tool": {
-        "type": "Object"
-      }
-    }
-  },
-  "predictedCategoryPrefCaveat": "Based only on recent results inside this request category. It does not mean Sparkle understands your whole workflow.",
-  "predictedCategoryPlan": "planning requests",
-  "predictedCategoryTask": "task requests",
-  "predictedCategoryFocus": "focus-support requests",
-  "predictedCategoryGrowth": "growth requests",
-  "predictedCategoryQuery": "query requests",
-  "predictedCategoryKnowledge": "knowledge requests",
-  "predictedCategoryReview": "review requests",
-  "predictedCategoryResearch": "research requests",
-  "predictedCategoryMemory": "memory requests",
-  "predictedCategoryCognitive": "cognitive requests",
-  "predictedCategoryDefault": "similar requests",
-  "predictedToolCreatePlan": "Create Plan",
-  "predictedToolGenerateTasks": "Expand Plan Steps",
-  "predictedToolCreateTask": "Create Task",
-  "predictedToolListTasks": "List Tasks",
-  "predictedToolUpdateTask": "Update Task",
-  "predictedToolQueryKnowledge": "Query Knowledge",
-  "predictedToolExplainConcept": "Explain Concept",
-  "predictedToolReviewProgress": "Review Progress",
-  "predictedToolGenerateSummary": "Generate Summary",
-  "predictedToolSuggestSchedule": "Suggest Schedule",
   "insightHubTitle": "Learning Insights",
   "insightHubFallbackSummary": "Reports and insights — now in one lighter learning flow.",
   "insightHubReport": "Learning Report",
@@ -8067,7 +7906,6 @@
   "simulationBubbleStance": "Stance {stance}",
   "simulationBubbleReply": "Replying to {speaker}",
   "simulationBubbleRound": "Round {round}",
-  "achievementPrestigeLane": "Prestige Lane",
   "weatherTitleSunny": "Clear Skies",
   "weatherTitleCloudy": "Misty",
   "weatherTitleRainy": "Stormy",
@@ -8128,7 +7966,6 @@
   "intentPredictionContinuePriority": "Continue Priority Task",
   "intentPrediction25Min": "25 min Focus",
   "flashCapsuleTitle": "Flash Capsule",
-  "flashCapsuleSubtitle": "Capture fleeting doubts as error clues, reducing the loss of knowing something is wrong but not remembering it.",
   "flashCapsuleHistory": "History Capsules",
   "flashCapsuleHistoryEmpty": "No flash capsules saved yet.",
   "flashCapsuleHistoryDesc": "Here are the flash capsules and thinking capsules you've saved.",
@@ -8137,81 +7974,10 @@
   "flashCapsuleUnnamed": "Unnamed Capsule",
   "flashCapsuleNoDesc": "No additional description",
   "flashCapsuleSyncPending": "Pending Sync",
-  "flashCapsuleContent": "Record Content",
-  "flashCapsuleContentSubtitle": "Select subject, error type, then add knowledge point and description.",
-  "flashCapsuleSubject": "Subject",
-  "flashCapsuleSelectSubject": "Select Subject",
-  "flashCapsuleKnowledgePoint": "Knowledge Point",
-  "flashCapsuleKnowledgeHint": "e.g. Trigonometric derivatives, Newton's second law...",
-  "flashCapsuleErrorDesc": "Error Description",
-  "flashCapsuleErrorHint": "Record how you got it wrong, where you got stuck, and how to avoid it next time.",
-  "flashCapsuleKpLength": "Knowledge Point Length",
-  "flashCapsuleDescLength": "Description Length",
-  "flashCapsuleCognitiveDim": "Cognitive Dimension",
-  "flashCapsuleHistoryView": "View History",
-  "flashCapsuleSaving": "Saving...",
-  "flashCapsuleSave": "Save Capsule",
-  "flashCapsuleSubjectCount": "{count} subjects",
-  "flashCapsuleHistoryCount": "{count} history capsules",
-  "flashCapsuleSaved": "Capsule saved and synced to error book",
-  "flashCapsuleSavedNoSync": "Capsule saved, error book sync will retry later",
-  "flashCapsuleSaveFailed": "Save failed: {error}",
-  "flashCapsuleSyncFailed": "Fill in the knowledge point and error description",
-  "flashCapsuleSaveError": "Capsule save failed, please retry later",
-  "flashCapsuleLoadError": "Failed to load history capsules: {error}",
-  "flashCapsuleErrorConcept": "Concept Confusion",
-  "flashCapsuleErrorCalc": "Calculation Error",
-  "flashCapsuleErrorReading": "Reading Careless",
-  "flashCapsuleErrorMemory": "Knowledge Forgetfulness",
-  "flashCapsuleErrorMethod": "Wrong Method",
-  "flashCapsuleErrorOther": "Other",
-  "flashCapsuleSubjectMath": "Math",
-  "flashCapsuleSubjectPhysics": "Physics",
-  "flashCapsuleSubjectChemistry": "Chemistry",
-  "flashCapsuleSubjectBiology": "Biology",
-  "flashCapsuleSubjectEnglish": "English",
-  "flashCapsuleSubjectChinese": "Chinese",
-  "flashCapsuleSubjectComputer": "Computer Science",
-  "flashCapsuleSubjectOther": "Other",
   "flashCapsuleTagFlash": "Flash",
   "flashCapsuleTagThink": "Think",
   "vocabularyLookupTitle": "Word Lookup",
-  "vocabularyLookupSubtitle": "Quick word meaning confirmation, example generation, and related word expansion. Results can be saved to your wordbook.",
-  "vocabularyLookupInput": "Search Input",
-  "vocabularyLookupInputSubtitle": "Enter an English word and press Enter or tap Search. Oxford dictionary preferred, local offline packages take priority.",
-  "vocabularyLookupSearch": "Search",
-  "vocabularyLookupInputHint": "Enter an English word...",
-  "vocabularyLookupResults": "Results",
-  "vocabularyLookupResultsSubtitle": "Meanings, examples, related words, and model-generated sentences.",
-  "vocabularyLookupStartTyping": "Enter a word to start searching",
-  "vocabularyLookupTemporarilyFailed": "Search temporarily failed",
-  "vocabularyLookupErrorDesc": "After searching, you can save to your wordbook and generate example sentences.",
-  "vocabularyLookupDefinitions": "Definitions",
-  "vocabularyLookupDictExamples": "Dictionary Examples",
-  "vocabularyLookupGeneratedExample": "AI-Generated Example",
-  "vocabularyLookupRelatedWords": "Related Words",
-  "vocabularyLookupInWordbook": "In Wordbook",
-  "vocabularyLookupCanAdd": "Addable to Wordbook",
-  "vocabularyLookupWaitingAssoc": "Awaiting Related Words",
-  "vocabularyLookupAssocCount": "{count} related words",
-  "vocabularyLookupOfflineCount": "{count} offline dictionaries",
-  "vocabularyLookupNoOffline": "No Offline Dictionary",
-  "vocabularyLookupManageOffline": "Manage Offline Dictionary",
-  "vocabularyLookupDownloadOffline": "Download Offline Dictionary",
-  "vocabularyLookupOfflinePackages": "Offline Dictionary Packages",
   "vocabularyLookupOfflineDesc": "Prefer local Oxford dictionary to reduce network dependency and cloud server load.",
-  "vocabularyLookupInstalled": "Installed",
-  "vocabularyLookupPackageDesc": "Oxford preferred offline dictionary package",
-  "vocabularyLookupEntryCount": "{count} entries",
-  "vocabularyLookupSizeBytes": "{size}",
-  "vocabularyLookupInstalledAt": "Installed {date}",
-  "vocabularyLookupReDownload": "Re-download",
-  "vocabularyLookupDownloadLocal": "Download to Local",
-  "vocabularyLookupRemove": "Remove",
-  "vocabularyLookupGenerateSentence": "Generate Sentence",
-  "vocabularyLookupRemoveFromWordbook": "Remove from Wordbook",
-  "vocabularyLookupAddToWordbook": "Add to Wordbook",
-  "vocabularyLookupPos": "Part of Speech · {pos}",
   "vocabularyLookupAddedToWordbook": "Added \"{word}\" to wordbook",
   "vocabularyLookupRemovedFromWordbook": "Removed \"{word}\" from wordbook",
   "vocabularyLookupEnterWord": "Please enter a word to search",
@@ -8220,9 +7986,6 @@
   "vocabularyLookupOfflineRemoved": "Offline dictionary package removed",
   "vocabularyLookupOfflineRemoveFailed": "Failed to remove offline dictionary package: {error}",
   "vocabularyLookupNoPackage": "No downloadable offline dictionary packages available",
-  "vocabularyLookupDownloading": "Downloading...",
-  "vocabularyLookupPackageScope": "{scope}",
-  "vocabularyLookupPackageInstallDate": "Installed {date}",
   "entityCardActionLabel": "Execute",
   "entityCardTitleFallback": "Unnamed Card",
   "entityCardEntityFallback": "Unnamed Entity",
@@ -8349,27 +8112,6 @@
       }
     }
   },
-  "@vocabularyLookupSizeBytes": {
-    "placeholders": {
-      "size": {
-        "type": "Object"
-      }
-    }
-  },
-  "@vocabularyLookupInstalledAt": {
-    "placeholders": {
-      "date": {
-        "type": "Object"
-      }
-    }
-  },
-  "@vocabularyLookupPos": {
-    "placeholders": {
-      "pos": {
-        "type": "Object"
-      }
-    }
-  },
   "@vocabularyLookupAddedToWordbook": {
     "placeholders": {
       "word": {
@@ -8380,20 +8122,6 @@
   "@vocabularyLookupRemovedFromWordbook": {
     "placeholders": {
       "word": {
-        "type": "Object"
-      }
-    }
-  },
-  "@flashCapsuleSaveFailed": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "@flashCapsuleLoadError": {
-    "placeholders": {
-      "error": {
         "type": "Object"
       }
     }
@@ -8415,41 +8143,6 @@
   "@simulationBubbleRound": {
     "placeholders": {
       "round": {
-        "type": "Object"
-      }
-    }
-  },
-  "@vocabularyLookupAssocCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "@vocabularyLookupOfflineCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "@vocabularyLookupEntryCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "@flashCapsuleSubjectCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "@flashCapsuleHistoryCount": {
-    "placeholders": {
-      "count": {
         "type": "Object"
       }
     }
@@ -11646,7 +11339,6 @@
   "settingsMonthlyLimit": "Monthly Limit",
   "settingsPreferencesSaved": "Execution preferences saved",
   "settingsSavePreferences": "Save Execution Preferences",
-  "settingsSynced": "Currently synced",
   "chatAchievementProgress": "{name} progress reached {percent}%",
   "chatActionAiExecutionSuggestion": "AI Execution Suggestion",
   "chatActionAiGeneratedPlan": "AI-generated task plan",
@@ -14475,48 +14167,22 @@
   "homeNoUrgentAction": "No urgent action is queued. Review, add context, or let Aurora reprioritize.",
   "goalIntentTitle": "Tell me what you want to achieve",
   "goalIntentHint": "One sentence works, e.g. \"Computer Networks final in 7 days, barely studied\"",
-  "goalIntentTypeHere": "Type here",
   "goalIntentUnderstanding": "Understanding…",
-  "goalIntentReadSituation": "Let me read your situation",
-  "goalIntentSuggestedAction": "A low-cost first step",
-  "goalIntentOrWrong": "Or I got it wrong —",
-  "goalIntentDaysLeft": "{days} days left",
-  "goalIntentConfidence": "{percent}% confidence",
-  "goalIntentExamRescue": "Exam rescue",
-  "goalIntentExamPrep": "Exam prep",
-  "goalIntentJobSprint": "Job sprint",
-  "goalIntentProject": "Project",
-  "goalIntentHabit": "Habit",
-  "goalIntentKeepGoing": "Keep going",
-  "goalWizardType": "Type",
-  "goalWizardMotivation": "Motivation",
-  "goalWizardTimeline": "Timeline",
-  "goalWizardMilestones": "Milestones",
-  "goalWizardConfirm": "Confirm",
   "goalWizardTitle": "Create goal",
-  "goalWizardStepProgress": "Create goal, step {current} of {total}: {label}",
   "goalWizardBack": "Back",
   "goalWizardCreate": "Create",
   "goalWizardContinue": "Continue",
   "goalWizardDecomposeFailed": "Could not decompose this goal yet",
-  "goalWizardCreated": "Goal created",
   "goalWizardCreateFailed": "Could not create this goal",
-  "goalWizardProgressSemantics": "Progress: step {current} of {total}",
   "goalWizardTypeAcademic": "Academic",
   "goalWizardTypeSkill": "Skill",
   "goalWizardTypeHabit": "Habit",
   "goalWizardTypeProject": "Project",
   "goalWizardTypeOther": "Other",
-  "goalWizardGoalTitle": "Goal title",
-  "goalWizardWhyMatters": "Why it matters",
-  "goalWizardDescription": "Description",
   "goalWizardShortTerm": "Short 7-30d",
   "goalWizardMediumTerm": "Medium 1-3m",
   "goalWizardLongTerm": "Long 3m+",
   "goalWizardRegenerate": "Regenerate",
-  "goalWizardMilestoneN": "Milestone {n}",
-  "goalWizardOutcome": "Outcome",
-  "goalWizardConfirmMilestones": "Milestones",
   "chatFailureOffline": "Offline",
   "chatFailureAuth": "Sign-in needed",
   "chatFailureServer": "Service issue",
@@ -14913,7 +14579,6 @@
   "dashboardLeanView": "Lean view",
   "slotEditorExpand": "Expand",
   "slotEditorCollapse": "Collapse",
-  "dashboardAllSectionsVisible": "All sections start visible. Switch to hide, drag to reorder, tap to collapse low-glance sections into a 64px header.",
   "slotDailyBriefingTitle": "Daily briefing",
   "slotDailyBriefingSubtitle": "Today's status, pace, focus",
   "slotMetricsRowTitle": "Key metrics",
@@ -14962,13 +14627,6 @@
   "notificationAchievementContent": "Congratulations! You've unlocked \"7-Day Learning Streak\"",
   "dashboardTopicReliableTransport": "Reliable Transport Layer",
   "dashboardTopicTcpCongestion": "TCP Congestion Control",
-  "dashboardSignalManyRecentTasks": "Many recent tasks",
-  "dashboardSignalSomeIncomplete": "Some incomplete tasks remain",
-  "dashboardSignalEveningInterrupted": "Evening study sessions are easily interrupted",
-  "dashboardSignalRecent24hActive": "Active in the last 24 hours",
-  "dashboardSignalPriorityPending": "Priority tasks still pending",
-  "dashboardLabelContinuePriority": "Continue Priority Task",
-  "dashboardLabelStart25Min": "Start a 25-min Focus",
   "multiAgentSwitchMode": "Switch to {mode} mode",
   "@multiAgentSwitchMode": {
     "placeholders": {
@@ -15110,26 +14768,6 @@
       }
     }
   },
-  "dashboardSprintTask1": "Closed-book: TCP 3-way handshake & 4-way teardown",
-  "dashboardSprintTask2": "Correct 3 reliable transport mistakes",
-  "dashboardSprintTask3": "Review congestion control algorithms",
-  "dashboardSprintTask4": "Practice exam questions (chapter 3)",
-  "dashboardSprintTask5": "Review error correction techniques",
-  "dashboardGrowthSignalMorning": "Morning energy is high today, good for tackling difficult topics",
-  "dashboardGrowthSignalAfternoon": "Afternoon focus is stable, suitable for review",
-  "dashboardGrowthSignalEvening": "Evening is best for light review and planning",
-  "dashboardGrowthSignalWeekend": "Weekend momentum is slightly lower than weekdays",
-  "dashboardDropoutRiskSummary": "No significant dropout risk now, but it will rise if you skip two consecutive days of focus.",
-  "dashboardOptimalTimeSummary": "3–5 PM is your most stable study window; evenings are best for wrap-ups and reviews.",
-  "dashboardPredictionTitle": "Prediction: you'll continue pushing your most critical task",
-  "dashboardPredictionSummary": "Based on the last 24 hours, tackling your current priority task makes the most sense.",
-  "dashboardSuggestedPrompt": "Help me continue today's most critical task",
-  "dashboardRecent24hActive": "Active in the last 24 hours",
-  "dashboardRecent7dStable": "Steady progress over the past 7 days",
-  "dashboardProfileTendency": "You tend to pick up existing priority tasks",
-  "dashboardFocusNatural25": "A 25-minute focused block feels natural first",
-  "dashboardContinuePriority": "Continue Priority Task",
-  "dashboardStart25Min": "Start a 25-min Focus",
   "compactErrorLoadFailed": "Failed to load",
   "compactErrorTapRetry": "Tap to retry",
   "celebrationDismiss": "Dismiss celebration",
@@ -15615,15 +15253,6 @@
   "dashboardErrorActionSignIn": "Sign in",
   "dashboardErrorActionRetryOnline": "Retry online",
   "dashboardCommandCenterNow": "Command Center",
-  "dashboardCommandCenterNoTasks": "No tasks today",
-  "dashboardCommandCenterHealth": "{percent}% health",
-  "@dashboardCommandCenterHealth": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
   "todayCockpitEyebrowFresh": "Most worth doing today",
   "todayCockpitEyebrowActive": "Keep going",
   "todayCockpitEyebrowStalled": "Clear the blocker first",
@@ -15683,37 +15312,6 @@
   "@todayCockpitRunOngoingDetailed": {
     "placeholders": {
       "detail": {
-        "type": "String"
-      }
-    }
-  },
-  "dashboardCcAllMapped": "Today is mapped out",
-  "dashboardCcCheckPlan": "Check today plan rhythm",
-  "dashboardCcSetGoal": "Set a goal you can start today",
-  "dashboardCcHighPriority": "High priority",
-  "dashboardCcPlanProgress": "Completing it updates your plan progress",
-  "dashboardCcWillBreakDown": "Sparkle will turn it into a next step, progress, and risk signal.",
-  "dashboardRiskBottleneck": "Risk: {topic} is slowing progress",
-  "@dashboardRiskBottleneck": {
-    "placeholders": {
-      "topic": {
-        "type": "String"
-      }
-    }
-  },
-  "dashboardRiskDeadline": "Risk: {label}",
-  "@dashboardRiskDeadline": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      }
-    }
-  },
-  "dashboardRiskHealth": "Risk: plan health is low; recalibration may help",
-  "dashboardGoalChipSelectGoal": "Select goal: {label}",
-  "@dashboardGoalChipSelectGoal": {
-    "placeholders": {
-      "label": {
         "type": "String"
       }
     }
@@ -16966,8 +16564,6 @@
   },
   "goalDetailNoTargetDate": "No date set",
   "@goalDetailNoTargetDate": {},
-  "goalDetailDue": "Due",
-  "@goalDetailDue": {},
   "@goalDetailEstimated": {},
   "goalDetailPartners": "{count} partners",
   "@goalDetailPartners": {

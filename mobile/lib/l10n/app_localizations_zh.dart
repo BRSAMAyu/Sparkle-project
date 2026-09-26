@@ -243,9 +243,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get masteryScore => '掌握度';
 
   @override
-  String get reviewSuggestion => '复习建议';
-
-  @override
   String get aiTutor => 'AI 导师';
 
   @override
@@ -861,9 +858,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get achievementUnlocked => '成就解锁！';
 
   @override
-  String get achievementLocked => '未解锁';
-
-  @override
   String get achievementProgress => '进度';
 
   @override
@@ -885,53 +879,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get achievementTypeMilestone => '里程碑';
 
   @override
-  String get achievementTypeChallenge => '挑战';
-
-  @override
   String get achievementTypeHidden => '隐藏';
-
-  @override
-  String get achievementTypeSpecial => '特殊';
-
-  @override
-  String achievementPoints(Object points) {
-    return '$points 积分';
-  }
-
-  @override
-  String achievementEarned(Object date) {
-    return '获得于 $date';
-  }
-
-  @override
-  String get achievementClose => '关闭';
 
   @override
   String get achievementShare => '分享';
 
   @override
   String get achievementViewAll => '查看全部';
-
-  @override
-  String get achievementNoUnlocked => '还没有解锁成就';
-
-  @override
-  String get achievementKeepGoing => '继续努力解锁更多成就！';
-
-  @override
-  String get achievementStatsTotal => '总数';
-
-  @override
-  String get achievementStatsUnlocked => '已解锁';
-
-  @override
-  String get achievementStatsPoints => '积分';
-
-  @override
-  String get achievementStatsStreak => '连续天数';
-
-  @override
-  String get achievementNew => '新！';
 
   @override
   String get achievementSearch => '搜索成就';
@@ -5477,123 +5431,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String errorBookTimeAgoDays(Object count) {
     return '$count天前';
   }
-
-  @override
-  String get reviewModeToday => '今日复习';
-
-  @override
-  String get reviewModeTodayDesc => '完成今天到期的所有错题';
-
-  @override
-  String get reviewModeBySubject => '按科目';
-
-  @override
-  String get reviewModeBySubjectDesc => '选择一个科目进行专项复习';
-
-  @override
-  String get reviewModeWeakest => '薄弱专攻';
-
-  @override
-  String get reviewModeWeakestDesc => '优先复习掌握度最低的错题';
-
-  @override
-  String get reviewModeRandom => '随机抽查';
-
-  @override
-  String get reviewModeRandomDesc => '随机抽取错题进行复习';
-
-  @override
-  String reviewProgress(Object current, Object total) {
-    return '进度: $current/$total';
-  }
-
-  @override
-  String get reviewQuestion => '题目';
-
-  @override
-  String get reviewYourAnswer => '你的答案';
-
-  @override
-  String get reviewCorrectAnswer => '正确答案';
-
-  @override
-  String get reviewAIAnalysis => 'AI 分析';
-
-  @override
-  String get reviewHideAnalysis => '隐藏';
-
-  @override
-  String get reviewViewAnalysis => '查看 AI 分析';
-
-  @override
-  String get reviewViewAnswer => '查看答案';
-
-  @override
-  String get reviewViewAnswerHint => '先思考答案，再点击查看';
-
-  @override
-  String reviewSubmitFailed(Object error) {
-    return '提交失败: $error';
-  }
-
-  @override
-  String get reviewNoErrorsToday => '暂无需要复习的错题';
-
-  @override
-  String get reviewKeepGoing => '做得很好！继续保持';
-
-  @override
-  String get reviewComplete => '复习完成！';
-
-  @override
-  String reviewTotalReviewed(Object count) {
-    return '本次共复习 $count 道题';
-  }
-
-  @override
-  String get reviewResults => '复习成果';
-
-  @override
-  String get reviewRemembered => '记住了';
-
-  @override
-  String get reviewFuzzy => '模糊';
-
-  @override
-  String get reviewForgotten => '忘记了';
-
-  @override
-  String get reviewEncourageExcellent => '太棒了！掌握得非常扎实 🎉';
-
-  @override
-  String get reviewEncourageGood => '很好！继续保持这个势头 💪';
-
-  @override
-  String get reviewEncourageFair => '不错！再多复习几次会更好 📚';
-
-  @override
-  String get reviewEncourageNeedsWork => '加油！多复习几次就能记住了 🌟';
-
-  @override
-  String get reviewBackToList => '返回列表';
-
-  @override
-  String get reviewAnotherRound => '再来一轮';
-
-  @override
-  String get reviewConfirmExitTitle => '确认退出';
-
-  @override
-  String get reviewConfirmExitMessage => '复习还未完成，确定要退出吗？';
-
-  @override
-  String get reviewContinue => '继续复习';
-
-  @override
-  String get reviewExit => '退出';
-
-  @override
-  String get reviewNoMatchingErrors => '没有符合条件的错题';
 
   @override
   String get communityTitle => '星火社群';
@@ -11257,9 +11094,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dashboardStartWithAI => '和 AI 定目标';
 
   @override
-  String get dashboardOpenTaskList => '查看任务列表';
-
-  @override
   String get dashboardDueToday => '今天截止';
 
   @override
@@ -11364,9 +11198,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String dashboardSprintDaysLeft(int days) {
     return '冲刺剩余 $days 天，已对齐今日任务';
   }
-
-  @override
-  String get dashboardWhatToPush => '你现在最想推进什么？';
 
   @override
   String get dashboardGoalExamSprint => '考试冲刺';
@@ -12913,11 +12744,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get predictedIntentWaiting => '预测结果已生成，等待可继续指令';
 
   @override
-  String predictedIntentConfidence(Object percent) {
-    return '可信度 $percent%';
-  }
-
-  @override
   String get predictedIntentWhy => '为什么这样预测';
 
   @override
@@ -12928,150 +12754,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get predictedIntentError => '继续对话时出现问题，请稍后重试';
-
-  @override
-  String get predictedActionResumePriority => '继续重点任务';
-
-  @override
-  String get predictedActionStudyPlan => '生成学习计划';
-
-  @override
-  String get predictedActionDiagnose => '问题诊断';
-
-  @override
-  String get predictedActionCreateTask => '落成任务';
-
-  @override
-  String get predictedActionInstantResult => '即时结果';
-
-  @override
-  String get predictedActionReviewProgress => '复盘进展';
-
-  @override
-  String get predictedActionPlanNext => '规划下一步';
-
-  @override
-  String get predictedActionReflection => '快速反思';
-
-  @override
-  String get predictedActionDefault => '预测意图';
-
-  @override
-  String get predictedWindowNow => '就是现在';
-
-  @override
-  String get predictedWindow30m => '未来 30 分钟';
-
-  @override
-  String get predictedWindow1h => '未来 1 小时';
-
-  @override
-  String get predictedWindow2h => '未来 2 小时';
-
-  @override
-  String get predictedWindow6h => '未来 6 小时';
-
-  @override
-  String get predictedWindowToday => '今天内';
-
-  @override
-  String get predictedSourceLongRange => '长期预测';
-
-  @override
-  String get predictedSourceRules => '规则兜底';
-
-  @override
-  String get predictedFreshnessJustNow => '刚刚更新';
-
-  @override
-  String predictedFreshnessMinutes(Object count) {
-    return '$count 分钟前';
-  }
-
-  @override
-  String predictedFreshnessHours(Object count) {
-    return '$count 小时前';
-  }
-
-  @override
-  String predictedFreshnessDays(Object count) {
-    return '$count 天前';
-  }
-
-  @override
-  String get predictedCategoryPrefTitle => '同类请求里的近期偏好';
-
-  @override
-  String predictedCategoryPrefHint(Object category, Object tool) {
-    return '在$category里，近期结果更常把「$tool」推到前面。';
-  }
-
-  @override
-  String get predictedCategoryPrefCaveat =>
-      '仅基于同类请求里的近期结果，不代表 Sparkle 理解了你的完整工作流。';
-
-  @override
-  String get predictedCategoryPlan => '规划类请求';
-
-  @override
-  String get predictedCategoryTask => '任务类请求';
-
-  @override
-  String get predictedCategoryFocus => '专注支持类请求';
-
-  @override
-  String get predictedCategoryGrowth => '成长推进类请求';
-
-  @override
-  String get predictedCategoryQuery => '查询类请求';
-
-  @override
-  String get predictedCategoryKnowledge => '知识类请求';
-
-  @override
-  String get predictedCategoryReview => '复盘类请求';
-
-  @override
-  String get predictedCategoryResearch => '研究类请求';
-
-  @override
-  String get predictedCategoryMemory => '记忆整理类请求';
-
-  @override
-  String get predictedCategoryCognitive => '认知整理类请求';
-
-  @override
-  String get predictedCategoryDefault => '同类请求';
-
-  @override
-  String get predictedToolCreatePlan => '生成计划';
-
-  @override
-  String get predictedToolGenerateTasks => '展开计划步骤';
-
-  @override
-  String get predictedToolCreateTask => '落成任务';
-
-  @override
-  String get predictedToolListTasks => '查看任务列表';
-
-  @override
-  String get predictedToolUpdateTask => '更新任务';
-
-  @override
-  String get predictedToolQueryKnowledge => '查询知识';
-
-  @override
-  String get predictedToolExplainConcept => '解释概念';
-
-  @override
-  String get predictedToolReviewProgress => '复盘进度';
-
-  @override
-  String get predictedToolGenerateSummary => '生成总结';
-
-  @override
-  String get predictedToolSuggestSchedule => '建议排期';
 
   @override
   String get insightHubTitle => '学习洞察';
@@ -17228,9 +16910,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get achievementPrestigeLane => '声望进阶线';
-
-  @override
   String get weatherTitleSunny => '晴空万里';
 
   @override
@@ -17421,9 +17100,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get flashCapsuleTitle => '闪念胶囊';
 
   @override
-  String get flashCapsuleSubtitle => '把一闪而过的疑点及时落地成错题线索，减少【知道有问题但没记住】的损耗。';
-
-  @override
   String get flashCapsuleHistory => '历史胶囊';
 
   @override
@@ -17448,122 +17124,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get flashCapsuleSyncPending => '待同步';
 
   @override
-  String get flashCapsuleContent => '记录内容';
-
-  @override
-  String get flashCapsuleContentSubtitle => '选择科目、错误类型，再补充知识点和描述。';
-
-  @override
-  String get flashCapsuleSubject => '科目';
-
-  @override
-  String get flashCapsuleSelectSubject => '选择科目';
-
-  @override
-  String get flashCapsuleKnowledgePoint => '知识点';
-
-  @override
-  String get flashCapsuleKnowledgeHint => '例如：三角函数求导、牛顿第二定律...';
-
-  @override
-  String get flashCapsuleErrorDesc => '错误描述';
-
-  @override
-  String get flashCapsuleErrorHint => '记录你是怎么错的、卡在什么地方、下次要如何避免。';
-
-  @override
-  String get flashCapsuleKpLength => '知识点长度';
-
-  @override
-  String get flashCapsuleDescLength => '描述长度';
-
-  @override
-  String get flashCapsuleCognitiveDim => '认知维度';
-
-  @override
-  String get flashCapsuleHistoryView => '查看历史';
-
-  @override
-  String get flashCapsuleSaving => '记录中...';
-
-  @override
-  String get flashCapsuleSave => '保存胶囊';
-
-  @override
-  String flashCapsuleSubjectCount(Object count) {
-    return '$count 个科目';
-  }
-
-  @override
-  String flashCapsuleHistoryCount(Object count) {
-    return '$count 条历史胶囊';
-  }
-
-  @override
-  String get flashCapsuleSaved => '已保存胶囊，并同步到错题本';
-
-  @override
-  String get flashCapsuleSavedNoSync => '胶囊已保存，错题本同步稍后重试';
-
-  @override
-  String flashCapsuleSaveFailed(Object error) {
-    return '记录失败: $error';
-  }
-
-  @override
-  String get flashCapsuleSyncFailed => '请补全知识点和错误描述';
-
-  @override
-  String get flashCapsuleSaveError => '胶囊保存失败，请稍后重试';
-
-  @override
-  String flashCapsuleLoadError(Object error) {
-    return '加载历史胶囊失败: $error';
-  }
-
-  @override
-  String get flashCapsuleErrorConcept => '概念混淆';
-
-  @override
-  String get flashCapsuleErrorCalc => '计算错误';
-
-  @override
-  String get flashCapsuleErrorReading => '审题不清';
-
-  @override
-  String get flashCapsuleErrorMemory => '知识遗忘';
-
-  @override
-  String get flashCapsuleErrorMethod => '方法不当';
-
-  @override
-  String get flashCapsuleErrorOther => '其他';
-
-  @override
-  String get flashCapsuleSubjectMath => '数学';
-
-  @override
-  String get flashCapsuleSubjectPhysics => '物理';
-
-  @override
-  String get flashCapsuleSubjectChemistry => '化学';
-
-  @override
-  String get flashCapsuleSubjectBiology => '生物';
-
-  @override
-  String get flashCapsuleSubjectEnglish => '英语';
-
-  @override
-  String get flashCapsuleSubjectChinese => '语文';
-
-  @override
-  String get flashCapsuleSubjectComputer => '计算机';
-
-  @override
-  String get flashCapsuleSubjectOther => '其他';
-
-  @override
   String get flashCapsuleTagFlash => '闪念';
 
   @override
@@ -17573,127 +17133,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get vocabularyLookupTitle => '查词';
 
   @override
-  String get vocabularyLookupSubtitle =>
-      '用来做快速词义确认、例句生成和关联词扩展，查询结果可以直接收进本地生词本。';
-
-  @override
-  String get vocabularyLookupInput => '查询输入';
-
-  @override
-  String get vocabularyLookupInputSubtitle =>
-      '输入英文单词后回车或点击查询。Oxford 词典优先，本地离线包会先于网络命中。';
-
-  @override
-  String get vocabularyLookupSearch => '查询';
-
-  @override
-  String get vocabularyLookupInputHint => '输入英文单词...';
-
-  @override
-  String get vocabularyLookupResults => '查询结果';
-
-  @override
-  String get vocabularyLookupResultsSubtitle => '词义、例句、关联词和模型生成句都在这里。';
-
-  @override
-  String get vocabularyLookupStartTyping => '输入单词开始查询';
-
-  @override
-  String get vocabularyLookupTemporarilyFailed => '查询暂时失败';
-
-  @override
-  String get vocabularyLookupErrorDesc => '查询完成后可以直接收藏到生词本，并继续生成例句。';
-
-  @override
-  String get vocabularyLookupDefinitions => '释义';
-
-  @override
-  String get vocabularyLookupDictExamples => '词典例句';
-
-  @override
-  String get vocabularyLookupGeneratedExample => '模型生成例句';
-
-  @override
-  String get vocabularyLookupRelatedWords => '关联词汇';
-
-  @override
-  String get vocabularyLookupInWordbook => '已在生词本中';
-
-  @override
-  String get vocabularyLookupCanAdd => '可加入生词本';
-
-  @override
-  String get vocabularyLookupWaitingAssoc => '等待关联词';
-
-  @override
-  String vocabularyLookupAssocCount(Object count) {
-    return '$count 个关联词';
-  }
-
-  @override
-  String vocabularyLookupOfflineCount(Object count) {
-    return '$count 个离线词典包';
-  }
-
-  @override
-  String get vocabularyLookupNoOffline => '未下载离线词典';
-
-  @override
-  String get vocabularyLookupManageOffline => '管理离线词典';
-
-  @override
-  String get vocabularyLookupDownloadOffline => '下载离线词典';
-
-  @override
-  String get vocabularyLookupOfflinePackages => '离线词典包';
-
-  @override
   String get vocabularyLookupOfflineDesc =>
       '优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。';
-
-  @override
-  String get vocabularyLookupInstalled => '已安装';
-
-  @override
-  String get vocabularyLookupPackageDesc => 'Oxford 优先离线词典包';
-
-  @override
-  String vocabularyLookupEntryCount(Object count) {
-    return '$count 词条';
-  }
-
-  @override
-  String vocabularyLookupSizeBytes(Object size) {
-    return '$size';
-  }
-
-  @override
-  String vocabularyLookupInstalledAt(Object date) {
-    return '安装于 $date';
-  }
-
-  @override
-  String get vocabularyLookupReDownload => '重新下载';
-
-  @override
-  String get vocabularyLookupDownloadLocal => '下载到本地';
-
-  @override
-  String get vocabularyLookupRemove => '移除';
-
-  @override
-  String get vocabularyLookupGenerateSentence => '生成例句';
-
-  @override
-  String get vocabularyLookupRemoveFromWordbook => '移出生词本';
-
-  @override
-  String get vocabularyLookupAddToWordbook => '加入生词本';
-
-  @override
-  String vocabularyLookupPos(Object pos) {
-    return '词性 · $pos';
-  }
 
   @override
   String vocabularyLookupAddedToWordbook(Object word) {
@@ -17726,19 +17167,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get vocabularyLookupNoPackage => '暂无可下载的离线词典包';
-
-  @override
-  String get vocabularyLookupDownloading => '下载中...';
-
-  @override
-  String vocabularyLookupPackageScope(Object scope) {
-    return '$scope';
-  }
-
-  @override
-  String vocabularyLookupPackageInstallDate(Object date) {
-    return '安装于 $date';
-  }
 
   @override
   String get entityCardActionLabel => '执行';
@@ -24429,9 +23857,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSavePreferences => '保存执行偏好';
 
   @override
-  String get settingsSynced => '当前已同步';
-
-  @override
   String taskMinutesUnit(Object minutes) {
     return '$minutes 分钟';
   }
@@ -30952,70 +30377,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get goalIntentHint => '一句话就好，比如「7天后计网考试基本没学想先别挂」';
 
   @override
-  String get goalIntentTypeHere => '在这里输入';
-
-  @override
   String get goalIntentUnderstanding => '正在理解…';
 
   @override
-  String get goalIntentReadSituation => '让我先看看你的情况';
-
-  @override
-  String get goalIntentSuggestedAction => '我建议先这样做';
-
-  @override
-  String get goalIntentOrWrong => '或者我猜错了——';
-
-  @override
-  String goalIntentDaysLeft(Object days) {
-    return '剩 $days 天';
-  }
-
-  @override
-  String goalIntentConfidence(Object percent) {
-    return '置信度 $percent%';
-  }
-
-  @override
-  String get goalIntentExamRescue => '考试抢救';
-
-  @override
-  String get goalIntentExamPrep => '考试备战';
-
-  @override
-  String get goalIntentJobSprint => '求职冲刺';
-
-  @override
-  String get goalIntentProject => '项目交付';
-
-  @override
-  String get goalIntentHabit => '习惯养成';
-
-  @override
-  String get goalIntentKeepGoing => '继续了解';
-
-  @override
-  String get goalWizardType => '类型';
-
-  @override
-  String get goalWizardMotivation => '动机';
-
-  @override
-  String get goalWizardTimeline => '时间';
-
-  @override
-  String get goalWizardMilestones => '拆解';
-
-  @override
-  String get goalWizardConfirm => '确认';
-
-  @override
   String get goalWizardTitle => '创建目标';
-
-  @override
-  String goalWizardStepProgress(Object current, Object label, Object total) {
-    return '创建目标，第 $current 步，共 $total 步：$label';
-  }
 
   @override
   String get goalWizardBack => '返回';
@@ -31030,15 +30395,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get goalWizardDecomposeFailed => '目标拆解失败，请稍后再试';
 
   @override
-  String get goalWizardCreated => '目标已创建';
-
-  @override
   String get goalWizardCreateFailed => '创建失败，请检查目标内容';
-
-  @override
-  String goalWizardProgressSemantics(Object current, Object total) {
-    return '进度：第 $current 步，共 $total 步';
-  }
 
   @override
   String get goalWizardTypeAcademic => '学术';
@@ -31056,15 +30413,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get goalWizardTypeOther => '其他';
 
   @override
-  String get goalWizardGoalTitle => '目标标题';
-
-  @override
-  String get goalWizardWhyMatters => '为什么重要';
-
-  @override
-  String get goalWizardDescription => '补充描述';
-
-  @override
   String get goalWizardShortTerm => '短期 7-30 天';
 
   @override
@@ -31075,17 +30423,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get goalWizardRegenerate => '重新生成';
-
-  @override
-  String goalWizardMilestoneN(Object n) {
-    return '里程碑 $n';
-  }
-
-  @override
-  String get goalWizardOutcome => '产出描述';
-
-  @override
-  String get goalWizardConfirmMilestones => '里程碑';
 
   @override
   String get chatFailureOffline => '离线了';
@@ -31771,10 +31108,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get slotEditorCollapse => '收起';
 
   @override
-  String get dashboardAllSectionsVisible =>
-      '所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。';
-
-  @override
   String get slotDailyBriefingTitle => '今日简报';
 
   @override
@@ -31917,27 +31250,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dashboardTopicTcpCongestion => 'TCP 拥塞控制';
-
-  @override
-  String get dashboardSignalManyRecentTasks => '近期任务较多';
-
-  @override
-  String get dashboardSignalSomeIncomplete => '存在少量未完成任务';
-
-  @override
-  String get dashboardSignalEveningInterrupted => '晚间学习容易被打断';
-
-  @override
-  String get dashboardSignalRecent24hActive => '最近24小时持续活跃';
-
-  @override
-  String get dashboardSignalPriorityPending => '当前仍有重点待办';
-
-  @override
-  String get dashboardLabelContinuePriority => '继续重点任务';
-
-  @override
-  String get dashboardLabelStart25Min => '先做 25 分钟';
 
   @override
   String multiAgentSwitchMode(String mode) {
@@ -32106,66 +31418,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communitySeeEmotionState => '看到我的情绪/能量状态';
-
-  @override
-  String get dashboardSprintTask1 => '闭卷默写 TCP 三次握手与四次挥手';
-
-  @override
-  String get dashboardSprintTask2 => '订正 3 道可靠传输错题';
-
-  @override
-  String get dashboardSprintTask3 => '复习拥塞控制算法';
-
-  @override
-  String get dashboardSprintTask4 => '练习第三章习题';
-
-  @override
-  String get dashboardSprintTask5 => '复习错题纠正技巧';
-
-  @override
-  String get dashboardGrowthSignalMorning => '今早能量高，适合攻克难点';
-
-  @override
-  String get dashboardGrowthSignalAfternoon => '下午专注力稳定，适合复习';
-
-  @override
-  String get dashboardGrowthSignalEvening => '晚上适合轻松复习和规划';
-
-  @override
-  String get dashboardGrowthSignalWeekend => '周末动能略低于工作日';
-
-  @override
-  String get dashboardDropoutRiskSummary => '当前没有明显流失风险，但如果连续两天没有专注记录，风险会抬升。';
-
-  @override
-  String get dashboardOptimalTimeSummary => '下午 3 点到 5 点是你最稳定的学习窗口，晚上适合做收尾与复盘。';
-
-  @override
-  String get dashboardPredictionTitle => '系统预测你接下来会继续推进最关键任务';
-
-  @override
-  String get dashboardPredictionSummary => '根据最近 24 小时的节奏，先推进当前重点任务最合适。';
-
-  @override
-  String get dashboardSuggestedPrompt => '帮我继续推进今天最关键的任务';
-
-  @override
-  String get dashboardRecent24hActive => '最近24小时持续活跃';
-
-  @override
-  String get dashboardRecent7dStable => '过去7天保持稳定推进';
-
-  @override
-  String get dashboardProfileTendency => '你更容易承接已有重点任务';
-
-  @override
-  String get dashboardFocusNatural25 => '先推进一个25分钟小段更自然';
-
-  @override
-  String get dashboardContinuePriority => '继续重点任务';
-
-  @override
-  String get dashboardStart25Min => '先做 25 分钟';
 
   @override
   String get compactErrorLoadFailed => '加载失败';
@@ -32835,14 +32087,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dashboardCommandCenterNow => '现在的指挥台';
 
   @override
-  String get dashboardCommandCenterNoTasks => '今天未排任务';
-
-  @override
-  String dashboardCommandCenterHealth(int percent) {
-    return '健康度 $percent%';
-  }
-
-  @override
   String get todayCockpitEyebrowFresh => '今天最值得做';
 
   @override
@@ -32915,42 +32159,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String todayCockpitRunOngoingDetailed(String detail) {
     return 'Aurora 正在推进：$detail';
-  }
-
-  @override
-  String get dashboardCcAllMapped => '今天的任务已经清楚了';
-
-  @override
-  String get dashboardCcCheckPlan => '先检查今天的计划节奏';
-
-  @override
-  String get dashboardCcSetGoal => '先定一个今天能开始的目标';
-
-  @override
-  String get dashboardCcHighPriority => '高优先级';
-
-  @override
-  String get dashboardCcPlanProgress => '完成后会更新计划进度';
-
-  @override
-  String get dashboardCcWillBreakDown => 'Sparkle 会把目标拆成下一步、进度和风险提醒。';
-
-  @override
-  String dashboardRiskBottleneck(String topic) {
-    return '风险：$topic 正在卡住进度';
-  }
-
-  @override
-  String dashboardRiskDeadline(String label) {
-    return '风险：$label';
-  }
-
-  @override
-  String get dashboardRiskHealth => '风险：计划健康度偏低，需要重新校准';
-
-  @override
-  String dashboardGoalChipSelectGoal(String label) {
-    return '选择目标: $label';
   }
 
   @override
@@ -34855,9 +34063,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get goalDetailNoTargetDate => '未设置日期';
-
-  @override
-  String get goalDetailDue => '截止日期';
 
   @override
   String goalDetailPartners(int count) {

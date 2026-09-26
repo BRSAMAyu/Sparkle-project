@@ -78,7 +78,6 @@
   "searchNodes": "搜索知识节点",
   "sparkNode": "点燃星火",
   "masteryScore": "掌握度",
-  "reviewSuggestion": "复习建议",
   "aiTutor": "AI 导师",
   "send": "发送",
   "typeMessage": "输入消息...",
@@ -280,7 +279,6 @@
   "chatWelcomeSubtitle": "你的学习伙伴。我会看着你的进展，有把握时提醒你，拿不准时先问你。",
   "achievementTitle": "成就",
   "achievementUnlocked": "成就解锁！",
-  "achievementLocked": "未解锁",
   "achievementProgress": "进度",
   "achievementRarityCommon": "普通",
   "achievementRarityRare": "稀有",
@@ -288,21 +286,9 @@
   "achievementRarityLegendary": "传说",
   "achievementTypeStreak": "连续",
   "achievementTypeMilestone": "里程碑",
-  "achievementTypeChallenge": "挑战",
   "achievementTypeHidden": "隐藏",
-  "achievementTypeSpecial": "特殊",
-  "achievementPoints": "{points} 积分",
-  "achievementEarned": "获得于 {date}",
-  "achievementClose": "关闭",
   "achievementShare": "分享",
   "achievementViewAll": "查看全部",
-  "achievementNoUnlocked": "还没有解锁成就",
-  "achievementKeepGoing": "继续努力解锁更多成就！",
-  "achievementStatsTotal": "总数",
-  "achievementStatsUnlocked": "已解锁",
-  "achievementStatsPoints": "积分",
-  "achievementStatsStreak": "连续天数",
-  "achievementNew": "新！",
   "achievementSearch": "搜索成就",
   "achievementFilter": "筛选",
   "achievementFilterActive": "筛选中",
@@ -2306,67 +2292,6 @@
       }
     }
   },
-  "reviewModeToday": "今日复习",
-  "reviewModeTodayDesc": "完成今天到期的所有错题",
-  "reviewModeBySubject": "按科目",
-  "reviewModeBySubjectDesc": "选择一个科目进行专项复习",
-  "reviewModeWeakest": "薄弱专攻",
-  "reviewModeWeakestDesc": "优先复习掌握度最低的错题",
-  "reviewModeRandom": "随机抽查",
-  "reviewModeRandomDesc": "随机抽取错题进行复习",
-  "reviewProgress": "进度: {current}/{total}",
-  "@reviewProgress": {
-    "placeholders": {
-      "current": {
-        "type": "Object"
-      },
-      "total": {
-        "type": "Object"
-      }
-    }
-  },
-  "reviewQuestion": "题目",
-  "reviewYourAnswer": "你的答案",
-  "reviewCorrectAnswer": "正确答案",
-  "reviewAIAnalysis": "AI 分析",
-  "reviewHideAnalysis": "隐藏",
-  "reviewViewAnalysis": "查看 AI 分析",
-  "reviewViewAnswer": "查看答案",
-  "reviewViewAnswerHint": "先思考答案，再点击查看",
-  "reviewSubmitFailed": "提交失败: {error}",
-  "@reviewSubmitFailed": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "reviewNoErrorsToday": "暂无需要复习的错题",
-  "reviewKeepGoing": "做得很好！继续保持",
-  "reviewComplete": "复习完成！",
-  "reviewTotalReviewed": "本次共复习 {count} 道题",
-  "@reviewTotalReviewed": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "reviewResults": "复习成果",
-  "reviewRemembered": "记住了",
-  "reviewFuzzy": "模糊",
-  "reviewForgotten": "忘记了",
-  "reviewEncourageExcellent": "太棒了！掌握得非常扎实 🎉",
-  "reviewEncourageGood": "很好！继续保持这个势头 💪",
-  "reviewEncourageFair": "不错！再多复习几次会更好 📚",
-  "reviewEncourageNeedsWork": "加油！多复习几次就能记住了 🌟",
-  "reviewBackToList": "返回列表",
-  "reviewAnotherRound": "再来一轮",
-  "reviewConfirmExitTitle": "确认退出",
-  "reviewConfirmExitMessage": "复习还未完成，确定要退出吗？",
-  "reviewContinue": "继续复习",
-  "reviewExit": "退出",
-  "reviewNoMatchingErrors": "没有符合条件的错题",
   "communityTitle": "星火社群",
   "communityDiscoverFriends": "去发现好友",
   "communityCreateGroup": "创建社群",
@@ -4899,7 +4824,6 @@
   "dashboardSetFirstGoal": "先定下你的第一个目标",
   "dashboardSetFirstGoalSummary": "告诉我你最近最想推进的一件事，我会立刻帮你拆成可执行的计划。",
   "dashboardStartWithAI": "和 AI 定目标",
-  "dashboardOpenTaskList": "查看任务列表",
   "dashboardDueToday": "今天截止",
   "dashboardOverdueDays": "已逾期 {days} 天",
   "@dashboardOverdueDays": {
@@ -5005,7 +4929,6 @@
       }
     }
   },
-  "dashboardWhatToPush": "你现在最想推进什么？",
   "dashboardGoalExamSprint": "考试冲刺",
   "dashboardGoalLongTerm": "长期学习",
   "dashboardGoalProject": "项目交付",
@@ -5657,94 +5580,10 @@
   "predictedIntentSummary": "基于画像、最近 24 小时行为与任务节奏",
   "predictedIntentSuggestedCont": "建议接续",
   "predictedIntentWaiting": "预测结果已生成，等待可继续指令",
-  "predictedIntentConfidence": "可信度 {percent}%",
-  "@predictedIntentConfidence": {
-    "placeholders": {
-      "percent": {
-        "type": "Object"
-      }
-    }
-  },
   "predictedIntentWhy": "为什么这样预测",
   "predictedIntentContinuing": "正在衔接…",
   "predictedIntentContinue": "按这个继续",
   "predictedIntentError": "继续对话时出现问题，请稍后重试",
-  "predictedActionResumePriority": "继续重点任务",
-  "predictedActionStudyPlan": "生成学习计划",
-  "predictedActionDiagnose": "问题诊断",
-  "predictedActionCreateTask": "落成任务",
-  "predictedActionInstantResult": "即时结果",
-  "predictedActionReviewProgress": "复盘进展",
-  "predictedActionPlanNext": "规划下一步",
-  "predictedActionReflection": "快速反思",
-  "predictedActionDefault": "预测意图",
-  "predictedWindowNow": "就是现在",
-  "predictedWindow30m": "未来 30 分钟",
-  "predictedWindow1h": "未来 1 小时",
-  "predictedWindow2h": "未来 2 小时",
-  "predictedWindow6h": "未来 6 小时",
-  "predictedWindowToday": "今天内",
-  "predictedSourceLongRange": "长期预测",
-  "predictedSourceRules": "规则兜底",
-  "predictedFreshnessJustNow": "刚刚更新",
-  "predictedFreshnessMinutes": "{count} 分钟前",
-  "@predictedFreshnessMinutes": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "predictedFreshnessHours": "{count} 小时前",
-  "@predictedFreshnessHours": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "predictedFreshnessDays": "{count} 天前",
-  "@predictedFreshnessDays": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "predictedCategoryPrefTitle": "同类请求里的近期偏好",
-  "predictedCategoryPrefHint": "在{category}里，近期结果更常把「{tool}」推到前面。",
-  "@predictedCategoryPrefHint": {
-    "placeholders": {
-      "category": {
-        "type": "Object"
-      },
-      "tool": {
-        "type": "Object"
-      }
-    }
-  },
-  "predictedCategoryPrefCaveat": "仅基于同类请求里的近期结果，不代表 Sparkle 理解了你的完整工作流。",
-  "predictedCategoryPlan": "规划类请求",
-  "predictedCategoryTask": "任务类请求",
-  "predictedCategoryFocus": "专注支持类请求",
-  "predictedCategoryGrowth": "成长推进类请求",
-  "predictedCategoryQuery": "查询类请求",
-  "predictedCategoryKnowledge": "知识类请求",
-  "predictedCategoryReview": "复盘类请求",
-  "predictedCategoryResearch": "研究类请求",
-  "predictedCategoryMemory": "记忆整理类请求",
-  "predictedCategoryCognitive": "认知整理类请求",
-  "predictedCategoryDefault": "同类请求",
-  "predictedToolCreatePlan": "生成计划",
-  "predictedToolGenerateTasks": "展开计划步骤",
-  "predictedToolCreateTask": "落成任务",
-  "predictedToolListTasks": "查看任务列表",
-  "predictedToolUpdateTask": "更新任务",
-  "predictedToolQueryKnowledge": "查询知识",
-  "predictedToolExplainConcept": "解释概念",
-  "predictedToolReviewProgress": "复盘进度",
-  "predictedToolGenerateSummary": "生成总结",
-  "predictedToolSuggestSchedule": "建议排期",
   "insightHubTitle": "学习洞察",
   "insightHubFallbackSummary": "把报告和洞察收进一条更轻量的学习动线。",
   "insightHubReport": "学习报告",
@@ -8062,7 +7901,6 @@
   "simulationBubbleStance": "立场 {stance}",
   "simulationBubbleReply": "回应 {speaker}",
   "simulationBubbleRound": "第 {round} 轮",
-  "achievementPrestigeLane": "声望进阶线",
   "weatherTitleSunny": "晴空万里",
   "weatherTitleCloudy": "薄雾弥漫",
   "weatherTitleRainy": "风雨欲来",
@@ -8123,7 +7961,6 @@
   "intentPredictionContinuePriority": "继续重点任务",
   "intentPrediction25Min": "先做 25 分钟",
   "flashCapsuleTitle": "闪念胶囊",
-  "flashCapsuleSubtitle": "把一闪而过的疑点及时落地成错题线索，减少【知道有问题但没记住】的损耗。",
   "flashCapsuleHistory": "历史胶囊",
   "flashCapsuleHistoryEmpty": "还没有保存过闪念胶囊。",
   "flashCapsuleHistoryDesc": "这里会显示你之前保存过的闪念与思考胶囊。",
@@ -8132,81 +7969,10 @@
   "flashCapsuleUnnamed": "未命名胶囊",
   "flashCapsuleNoDesc": "暂无补充描述",
   "flashCapsuleSyncPending": "待同步",
-  "flashCapsuleContent": "记录内容",
-  "flashCapsuleContentSubtitle": "选择科目、错误类型，再补充知识点和描述。",
-  "flashCapsuleSubject": "科目",
-  "flashCapsuleSelectSubject": "选择科目",
-  "flashCapsuleKnowledgePoint": "知识点",
-  "flashCapsuleKnowledgeHint": "例如：三角函数求导、牛顿第二定律...",
-  "flashCapsuleErrorDesc": "错误描述",
-  "flashCapsuleErrorHint": "记录你是怎么错的、卡在什么地方、下次要如何避免。",
-  "flashCapsuleKpLength": "知识点长度",
-  "flashCapsuleDescLength": "描述长度",
-  "flashCapsuleCognitiveDim": "认知维度",
-  "flashCapsuleHistoryView": "查看历史",
-  "flashCapsuleSaving": "记录中...",
-  "flashCapsuleSave": "保存胶囊",
-  "flashCapsuleSubjectCount": "{count} 个科目",
-  "flashCapsuleHistoryCount": "{count} 条历史胶囊",
-  "flashCapsuleSaved": "已保存胶囊，并同步到错题本",
-  "flashCapsuleSavedNoSync": "胶囊已保存，错题本同步稍后重试",
-  "flashCapsuleSaveFailed": "记录失败: {error}",
-  "flashCapsuleSyncFailed": "请补全知识点和错误描述",
-  "flashCapsuleSaveError": "胶囊保存失败，请稍后重试",
-  "flashCapsuleLoadError": "加载历史胶囊失败: {error}",
-  "flashCapsuleErrorConcept": "概念混淆",
-  "flashCapsuleErrorCalc": "计算错误",
-  "flashCapsuleErrorReading": "审题不清",
-  "flashCapsuleErrorMemory": "知识遗忘",
-  "flashCapsuleErrorMethod": "方法不当",
-  "flashCapsuleErrorOther": "其他",
-  "flashCapsuleSubjectMath": "数学",
-  "flashCapsuleSubjectPhysics": "物理",
-  "flashCapsuleSubjectChemistry": "化学",
-  "flashCapsuleSubjectBiology": "生物",
-  "flashCapsuleSubjectEnglish": "英语",
-  "flashCapsuleSubjectChinese": "语文",
-  "flashCapsuleSubjectComputer": "计算机",
-  "flashCapsuleSubjectOther": "其他",
   "flashCapsuleTagFlash": "闪念",
   "flashCapsuleTagThink": "思考",
   "vocabularyLookupTitle": "查词",
-  "vocabularyLookupSubtitle": "用来做快速词义确认、例句生成和关联词扩展，查询结果可以直接收进本地生词本。",
-  "vocabularyLookupInput": "查询输入",
-  "vocabularyLookupInputSubtitle": "输入英文单词后回车或点击查询。Oxford 词典优先，本地离线包会先于网络命中。",
-  "vocabularyLookupSearch": "查询",
-  "vocabularyLookupInputHint": "输入英文单词...",
-  "vocabularyLookupResults": "查询结果",
-  "vocabularyLookupResultsSubtitle": "词义、例句、关联词和模型生成句都在这里。",
-  "vocabularyLookupStartTyping": "输入单词开始查询",
-  "vocabularyLookupTemporarilyFailed": "查询暂时失败",
-  "vocabularyLookupErrorDesc": "查询完成后可以直接收藏到生词本，并继续生成例句。",
-  "vocabularyLookupDefinitions": "释义",
-  "vocabularyLookupDictExamples": "词典例句",
-  "vocabularyLookupGeneratedExample": "模型生成例句",
-  "vocabularyLookupRelatedWords": "关联词汇",
-  "vocabularyLookupInWordbook": "已在生词本中",
-  "vocabularyLookupCanAdd": "可加入生词本",
-  "vocabularyLookupWaitingAssoc": "等待关联词",
-  "vocabularyLookupAssocCount": "{count} 个关联词",
-  "vocabularyLookupOfflineCount": "{count} 个离线词典包",
-  "vocabularyLookupNoOffline": "未下载离线词典",
-  "vocabularyLookupManageOffline": "管理离线词典",
-  "vocabularyLookupDownloadOffline": "下载离线词典",
-  "vocabularyLookupOfflinePackages": "离线词典包",
   "vocabularyLookupOfflineDesc": "优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。",
-  "vocabularyLookupInstalled": "已安装",
-  "vocabularyLookupPackageDesc": "Oxford 优先离线词典包",
-  "vocabularyLookupEntryCount": "{count} 词条",
-  "vocabularyLookupSizeBytes": "{size}",
-  "vocabularyLookupInstalledAt": "安装于 {date}",
-  "vocabularyLookupReDownload": "重新下载",
-  "vocabularyLookupDownloadLocal": "下载到本地",
-  "vocabularyLookupRemove": "移除",
-  "vocabularyLookupGenerateSentence": "生成例句",
-  "vocabularyLookupRemoveFromWordbook": "移出生词本",
-  "vocabularyLookupAddToWordbook": "加入生词本",
-  "vocabularyLookupPos": "词性 · {pos}",
   "vocabularyLookupAddedToWordbook": "已添加「{word}」到生词本",
   "vocabularyLookupRemovedFromWordbook": "已从生词本移除「{word}」",
   "vocabularyLookupEnterWord": "请输入要查询的单词",
@@ -8215,9 +7981,6 @@
   "vocabularyLookupOfflineRemoved": "已移除离线词典包",
   "vocabularyLookupOfflineRemoveFailed": "移除离线词典包失败: {error}",
   "vocabularyLookupNoPackage": "暂无可下载的离线词典包",
-  "vocabularyLookupDownloading": "下载中...",
-  "vocabularyLookupPackageScope": "{scope}",
-  "vocabularyLookupPackageInstallDate": "安装于 {date}",
   "entityCardActionLabel": "执行",
   "entityCardTitleFallback": "未命名卡片",
   "entityCardEntityFallback": "未命名实体",
@@ -10961,7 +10724,6 @@
   "settingsMonthlyLimit": "每月上限",
   "settingsPreferencesSaved": "执行偏好已保存",
   "settingsSavePreferences": "保存执行偏好",
-  "settingsSynced": "当前已同步",
   "taskMinutesUnit": "{minutes} 分钟",
   "taskCompletedToday": "今天完成了！",
   "taskDone": "✓ 做到了！",
@@ -12000,27 +11762,6 @@
   "userAdminAvgDuration": "平均耗时",
   "userAdminTrendDays": "7/14/30 天趋势",
   "userAdminEventTypeDrilldown": "事件类型 drill-down",
-  "@flashCapsuleSubjectCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "@vocabularyLookupSizeBytes": {
-    "placeholders": {
-      "size": {
-        "type": "Object"
-      }
-    }
-  },
-  "@vocabularyLookupOfflineCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "@vocabularyLookupAddedToWordbook": {
     "placeholders": {
       "word": {
@@ -12041,13 +11782,6 @@
   "@entityCardTaskListFallback": {
     "placeholders": {
       "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "@flashCapsuleSaveFailed": {
-    "placeholders": {
-      "error": {
         "type": "Object"
       }
     }
@@ -12139,13 +11873,6 @@
   "@visualElementViewCollection": {
     "description": "Button text to view the visual element collection"
   },
-  "@vocabularyLookupEntryCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "@simulationBubbleReply": {
     "placeholders": {
       "speaker": {
@@ -12156,13 +11883,6 @@
   "@simulationBubbleRound": {
     "placeholders": {
       "round": {
-        "type": "Object"
-      }
-    }
-  },
-  "@flashCapsuleLoadError": {
-    "placeholders": {
-      "error": {
         "type": "Object"
       }
     }
@@ -12183,34 +11903,6 @@
   },
   "@visualElementUnlockTitle": {
     "description": "Title displayed when a visual element is unlocked"
-  },
-  "@vocabularyLookupAssocCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "@vocabularyLookupInstalledAt": {
-    "placeholders": {
-      "date": {
-        "type": "Object"
-      }
-    }
-  },
-  "@vocabularyLookupPos": {
-    "placeholders": {
-      "pos": {
-        "type": "Object"
-      }
-    }
-  },
-  "@flashCapsuleHistoryCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
   },
   "planViewCurrentPlan": "当前计划",
   "planViewNoPlanTasks": "暂无方案任务",
@@ -14481,48 +14173,22 @@
   "homeNoUrgentAction": "今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。",
   "goalIntentTitle": "告诉我你想达成什么",
   "goalIntentHint": "一句话就好，比如「7天后计网考试基本没学想先别挂」",
-  "goalIntentTypeHere": "在这里输入",
   "goalIntentUnderstanding": "正在理解…",
-  "goalIntentReadSituation": "让我先看看你的情况",
-  "goalIntentSuggestedAction": "我建议先这样做",
-  "goalIntentOrWrong": "或者我猜错了——",
-  "goalIntentDaysLeft": "剩 {days} 天",
-  "goalIntentConfidence": "置信度 {percent}%",
-  "goalIntentExamRescue": "考试抢救",
-  "goalIntentExamPrep": "考试备战",
-  "goalIntentJobSprint": "求职冲刺",
-  "goalIntentProject": "项目交付",
-  "goalIntentHabit": "习惯养成",
-  "goalIntentKeepGoing": "继续了解",
-  "goalWizardType": "类型",
-  "goalWizardMotivation": "动机",
-  "goalWizardTimeline": "时间",
-  "goalWizardMilestones": "拆解",
-  "goalWizardConfirm": "确认",
   "goalWizardTitle": "创建目标",
-  "goalWizardStepProgress": "创建目标，第 {current} 步，共 {total} 步：{label}",
   "goalWizardBack": "返回",
   "goalWizardCreate": "创建",
   "goalWizardContinue": "继续",
   "goalWizardDecomposeFailed": "目标拆解失败，请稍后再试",
-  "goalWizardCreated": "目标已创建",
   "goalWizardCreateFailed": "创建失败，请检查目标内容",
-  "goalWizardProgressSemantics": "进度：第 {current} 步，共 {total} 步",
   "goalWizardTypeAcademic": "学术",
   "goalWizardTypeSkill": "技能",
   "goalWizardTypeHabit": "习惯",
   "goalWizardTypeProject": "项目",
   "goalWizardTypeOther": "其他",
-  "goalWizardGoalTitle": "目标标题",
-  "goalWizardWhyMatters": "为什么重要",
-  "goalWizardDescription": "补充描述",
   "goalWizardShortTerm": "短期 7-30 天",
   "goalWizardMediumTerm": "中期 1-3 月",
   "goalWizardLongTerm": "长期 3 月+",
   "goalWizardRegenerate": "重新生成",
-  "goalWizardMilestoneN": "里程碑 {n}",
-  "goalWizardOutcome": "产出描述",
-  "goalWizardConfirmMilestones": "里程碑",
   "chatFailureOffline": "离线了",
   "chatFailureAuth": "需要重新登录",
   "chatFailureServer": "服务暂时不稳",
@@ -14919,7 +14585,6 @@
   "dashboardLeanView": "回到精简",
   "slotEditorExpand": "展开",
   "slotEditorCollapse": "收起",
-  "dashboardAllSectionsVisible": "所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。",
   "slotDailyBriefingTitle": "今日简报",
   "slotDailyBriefingSubtitle": "当天的状态、节奏与重点",
   "slotMetricsRowTitle": "关键指标",
@@ -14968,13 +14633,6 @@
   "notificationAchievementContent": "恭喜您获得「连续学习7天」成就",
   "dashboardTopicReliableTransport": "传输层可靠传输",
   "dashboardTopicTcpCongestion": "TCP 拥塞控制",
-  "dashboardSignalManyRecentTasks": "近期任务较多",
-  "dashboardSignalSomeIncomplete": "存在少量未完成任务",
-  "dashboardSignalEveningInterrupted": "晚间学习容易被打断",
-  "dashboardSignalRecent24hActive": "最近24小时持续活跃",
-  "dashboardSignalPriorityPending": "当前仍有重点待办",
-  "dashboardLabelContinuePriority": "继续重点任务",
-  "dashboardLabelStart25Min": "先做 25 分钟",
   "multiAgentSwitchMode": "切换到{mode}模式",
   "@multiAgentSwitchMode": {
     "placeholders": {
@@ -15074,26 +14732,6 @@
   "communityHidden": "已隐藏",
   "communityAllowObservationDesc": "关闭后，对方不再收到任何关于你的信号或观察提醒",
   "communitySeeEmotionState": "看到我的情绪/能量状态",
-  "dashboardSprintTask1": "闭卷默写 TCP 三次握手与四次挥手",
-  "dashboardSprintTask2": "订正 3 道可靠传输错题",
-  "dashboardSprintTask3": "复习拥塞控制算法",
-  "dashboardSprintTask4": "练习第三章习题",
-  "dashboardSprintTask5": "复习错题纠正技巧",
-  "dashboardGrowthSignalMorning": "今早能量高，适合攻克难点",
-  "dashboardGrowthSignalAfternoon": "下午专注力稳定，适合复习",
-  "dashboardGrowthSignalEvening": "晚上适合轻松复习和规划",
-  "dashboardGrowthSignalWeekend": "周末动能略低于工作日",
-  "dashboardDropoutRiskSummary": "当前没有明显流失风险，但如果连续两天没有专注记录，风险会抬升。",
-  "dashboardOptimalTimeSummary": "下午 3 点到 5 点是你最稳定的学习窗口，晚上适合做收尾与复盘。",
-  "dashboardPredictionTitle": "系统预测你接下来会继续推进最关键任务",
-  "dashboardPredictionSummary": "根据最近 24 小时的节奏，先推进当前重点任务最合适。",
-  "dashboardSuggestedPrompt": "帮我继续推进今天最关键的任务",
-  "dashboardRecent24hActive": "最近24小时持续活跃",
-  "dashboardRecent7dStable": "过去7天保持稳定推进",
-  "dashboardProfileTendency": "你更容易承接已有重点任务",
-  "dashboardFocusNatural25": "先推进一个25分钟小段更自然",
-  "dashboardContinuePriority": "继续重点任务",
-  "dashboardStart25Min": "先做 25 分钟",
   "@communitySimilarGoalPursuersCount": {
     "placeholders": {
       "count": {
@@ -15615,15 +15253,6 @@
   "dashboardErrorActionSignIn": "去登录",
   "dashboardErrorActionRetryOnline": "连网后重试",
   "dashboardCommandCenterNow": "现在的指挥台",
-  "dashboardCommandCenterNoTasks": "今天未排任务",
-  "dashboardCommandCenterHealth": "健康度 {percent}%",
-  "@dashboardCommandCenterHealth": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
   "todayCockpitEyebrowFresh": "今天最值得做",
   "todayCockpitEyebrowActive": "继续推进",
   "todayCockpitEyebrowStalled": "先解决卡点",
@@ -15683,37 +15312,6 @@
   "@todayCockpitRunOngoingDetailed": {
     "placeholders": {
       "detail": {
-        "type": "String"
-      }
-    }
-  },
-  "dashboardCcAllMapped": "今天的任务已经清楚了",
-  "dashboardCcCheckPlan": "先检查今天的计划节奏",
-  "dashboardCcSetGoal": "先定一个今天能开始的目标",
-  "dashboardCcHighPriority": "高优先级",
-  "dashboardCcPlanProgress": "完成后会更新计划进度",
-  "dashboardCcWillBreakDown": "Sparkle 会把目标拆成下一步、进度和风险提醒。",
-  "dashboardRiskBottleneck": "风险：{topic} 正在卡住进度",
-  "@dashboardRiskBottleneck": {
-    "placeholders": {
-      "topic": {
-        "type": "String"
-      }
-    }
-  },
-  "dashboardRiskDeadline": "风险：{label}",
-  "@dashboardRiskDeadline": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      }
-    }
-  },
-  "dashboardRiskHealth": "风险：计划健康度偏低，需要重新校准",
-  "dashboardGoalChipSelectGoal": "选择目标: {label}",
-  "@dashboardGoalChipSelectGoal": {
-    "placeholders": {
-      "label": {
         "type": "String"
       }
     }
@@ -16562,8 +16160,6 @@
   },
   "goalDetailNoTargetDate": "未设置日期",
   "@goalDetailNoTargetDate": {},
-  "goalDetailDue": "截止日期",
-  "@goalDetailDue": {},
   "@goalDetailEstimated": {},
   "goalDetailPartners": "{count} 位伙伴",
   "@goalDetailPartners": {
