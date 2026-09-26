@@ -317,6 +317,25 @@ class AppFailureMapper {
             originalError: error,
           );
         }
+        // V3-FIX-17：未知异常不再一揽子伪装成网络错误。web 注册「静默假失败」
+        // 机制根因：dio 成功管线内非 Dio 异常（解码/cast/拦截器错误）被
+        // assureDioException 包装为 unknown → NetworkFailure → 200 成功却
+        // 播报「网络连接不稳定」。解码/校验类异常与「服务器已有应答」的
+        // 异常保留原始类别：失败真实可见，成功不被谎报。
+        final rawError = error.error;
+        final isClientParseFailure = rawError is TypeError ||
+            rawError is FormatException ||
+            rawError is ArgumentError;
+        if (isClientParseFailure || statusCode != null) {
+          // 文案走 fallback：不向用户倾倒响应体 dump/技术细节（message 此时
+          // 可能是整个 200 响应的 toString），真实异常留在 originalError。
+          return UnknownFailure(
+            message: fallbackMessage,
+            code: isClientParseFailure ? 'PARSE_ERROR' : 'PIPELINE_ERROR',
+            statusCode: statusCode,
+            originalError: error,
+          );
+        }
         return NetworkFailure(
           message: message,
           code: 'NETWORK_ERROR',

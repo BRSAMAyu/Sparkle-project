@@ -57,11 +57,27 @@ class AuthRepository {
           'agreed_locale': agreedLocale,
         },
       );
-      // Assuming registration returns the user and tokens directly
+      // V3-FIX-17：注册成功判定 = HTTP 2xx + user 体可解析；2xx 却无 user
+      // 体属于真正异常（防御分支），以真实失败反馈而非网络错误兜底。
       final data = response.data;
-      final tokenData = data!['token'] as Map<String, dynamic>? ?? data;
-      final tokenResponse = TokenResponse.fromJson(tokenData);
-      await saveTokens(tokenResponse);
+      if (data == null || data['user'] is! Map<String, dynamic>) {
+        throw ServerFailure(
+          message: I18nService.instance.l10n.authErrorRegistrationFailed,
+          code: 'REGISTRATION_EMPTY_RESPONSE',
+          statusCode: response.statusCode,
+        );
+      }
+      // V3-FIX-17 UX 语义修正：token 解析/持久化失败（web localStorage 配额/
+      // 隐私模式、响应缺 token 块等）只降级为「注册成功但本地会话未建立」，
+      // 绝不把已建号回滚成注册失败 —— 否则用户重试必撞「用户名已存在」
+      // （B-03 REPORT §4.1）。失败可凭真实账号走登录/恢复，成功可验。
+      try {
+        final tokenData = data['token'] as Map<String, dynamic>? ?? data;
+        await saveTokens(TokenResponse.fromJson(tokenData));
+      } catch (e) {
+        debugPrint('[V3-FIX-17] token persistence degraded after successful '
+            'registration: $e');
+      }
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw AppFailureMapper.fromDio(e, fallbackMessage: I18nService.instance.l10n.authErrorRegistrationFailed);
