@@ -173,9 +173,10 @@ class SyncEngine {
     try {
       final sendTime = DateTime.now();
       await _localDb.isar.writeTxn(() async {
-        item.status = SyncStatus.waitingAck;
-        item.lastSentAt = sendTime;
-        item.nextAttemptAt = sendTime.add(_waitingAckTtl);
+        item
+          ..status = SyncStatus.waitingAck
+          ..lastSentAt = sendTime
+          ..nextAttemptAt = sendTime.add(_waitingAckTtl);
         await _localDb.isar.outboxItems.put(item);
       });
 

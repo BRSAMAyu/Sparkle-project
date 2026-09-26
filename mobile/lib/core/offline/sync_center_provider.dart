@@ -192,11 +192,12 @@ class SyncCenterService {
     await _localDb.isar.writeTxn(() async {
       final item = await _localDb.isar.outboxItems.get(outboxId);
       if (item == null) return;
-      item.status = SyncStatus.pending;
-      item.nextAttemptAt = null;
-      item.lastSentAt = null;
-      item.error = null;
-      item.lastErrorCode = null;
+      item
+        ..status = SyncStatus.pending
+        ..nextAttemptAt = null
+        ..lastSentAt = null
+        ..error = null
+        ..lastErrorCode = null;
       await _localDb.isar.outboxItems.put(item);
     });
 
@@ -213,11 +214,12 @@ class SyncCenterService {
 
     await _localDb.isar.writeTxn(() async {
       for (final item in failed) {
-        item.status = SyncStatus.pending;
-        item.nextAttemptAt = null;
-        item.lastSentAt = null;
-        item.error = null;
-        item.lastErrorCode = null;
+        item
+          ..status = SyncStatus.pending
+          ..nextAttemptAt = null
+          ..lastSentAt = null
+          ..error = null
+          ..lastErrorCode = null;
         await _localDb.isar.outboxItems.put(item);
       }
     });

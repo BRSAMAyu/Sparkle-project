@@ -92,8 +92,9 @@ class FirebaseMessagingService {
       _isInitialized = true;
       _logger.i('FirebaseMessagingService initialized successfully');
     } catch (e, stack) {
-      _logger.e('Failed to initialize FirebaseMessagingService: $e');
-      _logger.d(stack.toString());
+      _logger
+        ..e('Failed to initialize FirebaseMessagingService: $e')
+        ..d(stack.toString());
     }
   }
 
@@ -131,8 +132,9 @@ class FirebaseMessagingService {
 
   /// Handle message opened (from background or terminated)
   void _handleMessageOpened(RemoteMessage message) {
-    _logger.i('📱 Message opened: ${message.messageId}');
-    _logger.d('Data: ${message.data}');
+    _logger
+      ..i('📱 Message opened: ${message.messageId}')
+      ..d('Data: ${message.data}');
 
     final payload = Map<String, dynamic>.from(message.data);
     unawaited(

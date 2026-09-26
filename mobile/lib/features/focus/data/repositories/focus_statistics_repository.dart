@@ -353,10 +353,11 @@ class FocusStatisticsRepository {
     await _isar.writeTxn(() async {
       final session = await _collection.get(localId);
       if (session != null) {
-        session.serverId = serverId;
-        session.isSynced = true;
-        session.lastSyncAttempt = DateTime.now();
-        session.syncError = null;
+        session
+          ..serverId = serverId
+          ..isSynced = true
+          ..lastSyncAttempt = DateTime.now()
+          ..syncError = null;
         await _collection.put(session);
       }
     });
@@ -367,9 +368,10 @@ class FocusStatisticsRepository {
     await _isar.writeTxn(() async {
       final session = await _collection.get(localId);
       if (session != null) {
-        session.isSynced = false;
-        session.lastSyncAttempt = DateTime.now();
-        session.syncError = error;
+        session
+          ..isSynced = false
+          ..lastSyncAttempt = DateTime.now()
+          ..syncError = error;
         await _collection.put(session);
       }
     });

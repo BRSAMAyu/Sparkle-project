@@ -1215,11 +1215,12 @@ class AiReasoningModeNotifier extends StateNotifier<String> {
           'ai_reasoning_mode': normalized,
         });
       }
-      _ref.invalidate(aiUsageSummaryProvider);
-      _ref.invalidate(aiOpsDashboardProvider);
-      _ref.invalidate(aiOpsExportProvider);
-      _ref.invalidate(predictionAnalyticsDashboardProvider);
-      _ref.invalidate(predictionAnalyticsByDaysProvider);
+      _ref
+        ..invalidate(aiUsageSummaryProvider)
+        ..invalidate(aiOpsDashboardProvider)
+        ..invalidate(aiOpsExportProvider)
+        ..invalidate(predictionAnalyticsDashboardProvider)
+        ..invalidate(predictionAnalyticsByDaysProvider);
     } catch (_) {
       state = previous;
     }
@@ -1239,11 +1240,12 @@ class AiReasoningModeNotifier extends StateNotifier<String> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(kAiReasoningModeKey, normalized);
       }
-      _ref.invalidate(aiUsageSummaryProvider);
-      _ref.invalidate(aiOpsDashboardProvider);
-      _ref.invalidate(aiOpsExportProvider);
-      _ref.invalidate(predictionAnalyticsDashboardProvider);
-      _ref.invalidate(predictionAnalyticsByDaysProvider);
+      _ref
+        ..invalidate(aiUsageSummaryProvider)
+        ..invalidate(aiOpsDashboardProvider)
+        ..invalidate(aiOpsExportProvider)
+        ..invalidate(predictionAnalyticsDashboardProvider)
+        ..invalidate(predictionAnalyticsByDaysProvider);
     } catch (_) {
       // Silent fail
     }

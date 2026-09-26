@@ -1079,27 +1079,24 @@ class _WaveHeaderPainter extends CustomPainter {
         colors: [startColor, middleColor, endColor],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    final path = Path();
-    path.lineTo(0, size.height - 60);
-
-    // First curve
-    path.quadraticBezierTo(
-      size.width * 0.25,
-      size.height,
-      size.width * 0.5,
-      size.height - 40,
-    );
-
-    // Second curve
-    path.quadraticBezierTo(
-      size.width * 0.75,
-      size.height - 80,
-      size.width,
-      size.height - 20,
-    );
-
-    path.lineTo(size.width, 0);
-    path.close();
+    final path = Path()
+      ..lineTo(0, size.height - 60)
+      // First curve
+      ..quadraticBezierTo(
+        size.width * 0.25,
+        size.height,
+        size.width * 0.5,
+        size.height - 40,
+      )
+      // Second curve
+      ..quadraticBezierTo(
+        size.width * 0.75,
+        size.height - 80,
+        size.width,
+        size.height - 20,
+      )
+      ..lineTo(size.width, 0)
+      ..close();
 
     canvas.drawPath(path, paint);
   }

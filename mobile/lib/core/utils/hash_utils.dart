@@ -12,14 +12,14 @@ class HashUtils {
     String? contextAfter,
     int? pageNo,
   }) {
-    final buffer = StringBuffer();
-    buffer.write(text.trim());
-    buffer.write('_');
-    buffer.write((contextBefore ?? '').trim());
-    buffer.write('_');
-    buffer.write((contextAfter ?? '').trim());
-    buffer.write('_');
-    buffer.write(pageNo?.toString() ?? '');
+    final buffer = StringBuffer()
+      ..write(text.trim())
+      ..write('_')
+      ..write((contextBefore ?? '').trim())
+      ..write('_')
+      ..write((contextAfter ?? '').trim())
+      ..write('_')
+      ..write(pageNo?.toString() ?? '');
     
     final bytes = utf8.encode(buffer.toString());
     return sha256.convert(bytes).toString();

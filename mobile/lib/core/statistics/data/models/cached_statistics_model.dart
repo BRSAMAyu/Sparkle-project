@@ -158,10 +158,10 @@ class CachedStatisticsModel {
     DateTime? customEnd,
     String? suffix,
   }) {
-    final buffer = StringBuffer();
-    buffer.write(type.name);
-    buffer.write('_');
-    buffer.write(period.name);
+    final buffer = StringBuffer()
+      ..write(type.name)
+      ..write('_')
+      ..write(period.name);
 
     if (customStart != null) {
       buffer.write('_${customStart.millisecondsSinceEpoch}');
@@ -203,9 +203,8 @@ class CachedStatisticsModel {
       ..ttlSeconds = ttlSeconds ?? this.ttlSeconds
       ..priority = priority ?? this.priority
       ..isFullySynced = isFullySynced ?? this.isFullySynced
-      ..metadata = metadata ?? this.metadata;
-
-    model.id = id;
+      ..metadata = metadata ?? this.metadata
+      ..id = id;
     return model;
   }
 }

@@ -394,19 +394,24 @@ class _WeatherPainter extends CustomPainter {
 
       // 绘制云朵（多个圆形组成）
       final cloudCenter = Offset(x * size.width, y * size.height);
-      canvas.drawCircle(cloudCenter, cloud.size, cloudPaint);
-      canvas.drawCircle(
-        Offset(cloudCenter.dx - cloud.size * 0.6,
-            cloudCenter.dy + cloud.size * 0.2,),
-        cloud.size * 0.7,
-        cloudPaint,
-      );
-      canvas.drawCircle(
-        Offset(cloudCenter.dx + cloud.size * 0.5,
-            cloudCenter.dy + cloud.size * 0.15,),
-        cloud.size * 0.6,
-        cloudPaint,
-      );
+      canvas
+        ..drawCircle(cloudCenter, cloud.size, cloudPaint)
+        ..drawCircle(
+          Offset(
+            cloudCenter.dx - cloud.size * 0.6,
+            cloudCenter.dy + cloud.size * 0.2,
+          ),
+          cloud.size * 0.7,
+          cloudPaint,
+        )
+        ..drawCircle(
+          Offset(
+            cloudCenter.dx + cloud.size * 0.5,
+            cloudCenter.dy + cloud.size * 0.15,
+          ),
+          cloud.size * 0.6,
+          cloudPaint,
+        );
     }
 
     final mistPaint = Paint()
@@ -525,11 +530,11 @@ class _WeatherPainter extends CustomPainter {
           ),
         );
 
-      final path = Path();
-      path.moveTo(x, y);
-      path.lineTo(x + meteor.size, y - meteor.size * 0.3);
-      path.lineTo(x + meteor.size * 1.2, y - meteor.size * 0.15);
-      path.close();
+      final path = Path()
+        ..moveTo(x, y)
+        ..lineTo(x + meteor.size, y - meteor.size * 0.3)
+        ..lineTo(x + meteor.size * 1.2, y - meteor.size * 0.15)
+        ..close();
 
       canvas.drawPath(path, trailPaint);
 

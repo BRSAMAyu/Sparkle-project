@@ -629,8 +629,9 @@ class GroupDirectoryNotifier
 
   Future<void> join(String groupId) async {
     await _repository.joinGroup(groupId);
-    _ref.invalidate(myGroupsProvider);
-    _ref.invalidate(groupRecommendationsProvider);
+    _ref
+      ..invalidate(myGroupsProvider)
+      ..invalidate(groupRecommendationsProvider);
     await loadDirectory();
   }
 }
@@ -710,10 +711,11 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
   Future<void> joinGroup() async {
     try {
       await _repository.joinGroup(_groupId);
-      _ref.invalidate(myGroupsProvider);
-      _ref.invalidate(groupDiscoverProvider);
-      _ref.invalidate(groupRecommendationsProvider);
-      _ref.invalidate(groupMembersProvider(_groupId));
+      _ref
+        ..invalidate(myGroupsProvider)
+        ..invalidate(groupDiscoverProvider)
+        ..invalidate(groupRecommendationsProvider)
+        ..invalidate(groupMembersProvider(_groupId));
       await loadDetail();
     } catch (e) {
       rethrow;
@@ -723,10 +725,11 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
   Future<void> leaveGroup() async {
     try {
       await _repository.leaveGroup(_groupId);
-      _ref.invalidate(myGroupsProvider);
-      _ref.invalidate(groupDiscoverProvider);
-      _ref.invalidate(groupRecommendationsProvider);
-      _ref.invalidate(groupMembersProvider(_groupId));
+      _ref
+        ..invalidate(myGroupsProvider)
+        ..invalidate(groupDiscoverProvider)
+        ..invalidate(groupRecommendationsProvider)
+        ..invalidate(groupMembersProvider(_groupId));
       await loadDetail();
     } catch (e) {
       rethrow;
@@ -793,8 +796,9 @@ class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
   Future<GroupInfo> createGroup(GroupCreate data) async {
     try {
       final group = await _repository.createGroup(data);
-      _ref.invalidate(groupDiscoverProvider);
-      _ref.invalidate(groupRecommendationsProvider);
+      _ref
+        ..invalidate(groupDiscoverProvider)
+        ..invalidate(groupRecommendationsProvider);
       await loadGroups();
       return group;
     } catch (e) {

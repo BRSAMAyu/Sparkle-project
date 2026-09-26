@@ -81,11 +81,12 @@ class SectorBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Save canvas state
-    canvas.save();
-    // Translate canvas to simulate drawing on the full surface
-    // If we are tile (x,y), we shift back by (x,y) so that (0,0) of this canvas
-    // corresponds to (x,y) of the virtual full canvas.
-    canvas.translate(-offset.dx, -offset.dy);
+    canvas
+      ..save()
+      // Translate canvas to simulate drawing on the full surface
+      // If we are tile (x,y), we shift back by (x,y) so that (0,0) of this canvas
+      // corresponds to (x,y) of the virtual full canvas.
+      ..translate(-offset.dx, -offset.dy);
 
     final center =
         Offset(actualTotalSize.width / 2, actualTotalSize.height / 2);
@@ -127,33 +128,32 @@ class SectorBackgroundPainter extends CustomPainter {
       center.dx + innerRadius * cos(startAngleRad),
       center.dy + innerRadius * sin(startAngleRad),
     );
-    path.moveTo(innerStart.dx, innerStart.dy);
-
-    // Arc to inner end
-    path.arcTo(
-      Rect.fromCircle(center: center, radius: innerRadius),
-      startAngleRad,
-      sweepAngleRad,
-      false,
-    );
+    path
+      ..moveTo(innerStart.dx, innerStart.dy)
+      // Arc to inner end
+      ..arcTo(
+        Rect.fromCircle(center: center, radius: innerRadius),
+        startAngleRad,
+        sweepAngleRad,
+        false,
+      );
 
     // Line to outer arc
     final outerEnd = Offset(
       center.dx + outerRadius * cos(startAngleRad + sweepAngleRad),
       center.dy + outerRadius * sin(startAngleRad + sweepAngleRad),
     );
-    path.lineTo(outerEnd.dx, outerEnd.dy);
-
-    // Arc back on outer edge (reversed)
-    path.arcTo(
-      Rect.fromCircle(center: center, radius: outerRadius),
-      startAngleRad + sweepAngleRad,
-      -sweepAngleRad,
-      false,
-    );
-
-    // Close the path
-    path.close();
+    path
+      ..lineTo(outerEnd.dx, outerEnd.dy)
+      // Arc back on outer edge (reversed)
+      ..arcTo(
+        Rect.fromCircle(center: center, radius: outerRadius),
+        startAngleRad + sweepAngleRad,
+        -sweepAngleRad,
+        false,
+      )
+      // Close the path
+      ..close();
 
     // Create gradient for the sector
     final centerAngle = startAngleRad + sweepAngleRad / 2;

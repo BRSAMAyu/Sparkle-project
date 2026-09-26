@@ -353,10 +353,11 @@ class _PersonaOnboardingScreenState
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     // 用户显式放弃 persona 逐页引导 → 清除草稿（建模访谈完成即整体完成）。
     unawaited(_clearDraft());
-    ref.invalidate(transparentProfileProvider);
-    ref.invalidate(profileContextProvider);
-    ref.invalidate(inferredPreferencesProvider);
-    ref.invalidate(activePoliciesProvider);
+    ref
+      ..invalidate(transparentProfileProvider)
+      ..invalidate(profileContextProvider)
+      ..invalidate(inferredPreferencesProvider)
+      ..invalidate(activePoliciesProvider);
     if (mounted) {
       context.go(UserRoutes.modelingChat);
     }
@@ -500,10 +501,11 @@ class _PersonaOnboardingScreenState
         'response_depth': _depthPreference,
         'curiosity_preference': _curiosityPreference,
       });
-      ref.invalidate(transparentProfileProvider);
-      ref.invalidate(profileContextProvider);
-      ref.invalidate(inferredPreferencesProvider);
-      ref.invalidate(activePoliciesProvider);
+      ref
+        ..invalidate(transparentProfileProvider)
+        ..invalidate(profileContextProvider)
+        ..invalidate(inferredPreferencesProvider)
+        ..invalidate(activePoliciesProvider);
       // 提交成功 → 引导闭环，草稿使命结束。
       unawaited(_clearDraft());
       if (mounted) {

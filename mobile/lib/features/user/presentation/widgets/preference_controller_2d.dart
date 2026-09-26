@@ -332,16 +332,17 @@ class _GridAxisPainter extends CustomPainter {
       ..strokeWidth = 1;
 
     // Center Cross
-    canvas.drawLine(
-      Offset(0, size.height / 2),
-      Offset(size.width, size.height / 2),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width / 2, 0),
-      Offset(size.width / 2, size.height),
-      paint,
-    );
+    canvas
+      ..drawLine(
+        Offset(0, size.height / 2),
+        Offset(size.width, size.height / 2),
+        paint,
+      )
+      ..drawLine(
+        Offset(size.width / 2, 0),
+        Offset(size.width / 2, size.height),
+        paint,
+      );
 
     // Axis Arrows
     _drawArrow(
@@ -371,14 +372,16 @@ class _GridAxisPainter extends CustomPainter {
     final path = Path();
     if (isVertical) {
       // Up arrow at Top
-      path.moveTo(tip.dx, tip.dy);
-      path.lineTo(tip.dx - arrowSize, tip.dy + arrowSize);
-      path.lineTo(tip.dx + arrowSize, tip.dy + arrowSize);
+      path
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(tip.dx - arrowSize, tip.dy + arrowSize)
+        ..lineTo(tip.dx + arrowSize, tip.dy + arrowSize);
     } else {
       // Right arrow
-      path.moveTo(tip.dx, tip.dy);
-      path.lineTo(tip.dx - arrowSize, tip.dy - arrowSize);
-      path.lineTo(tip.dx - arrowSize, tip.dy + arrowSize);
+      path
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(tip.dx - arrowSize, tip.dy - arrowSize)
+        ..lineTo(tip.dx - arrowSize, tip.dy + arrowSize);
     }
     path.close();
     canvas.drawPath(path, paint..style = PaintingStyle.fill);

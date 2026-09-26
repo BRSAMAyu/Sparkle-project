@@ -623,21 +623,23 @@ class _ConfettiPainter extends CustomPainter {
         ..color = p.color.withValues(alpha: opacity)
         ..style = PaintingStyle.fill;
 
-      canvas.save();
-      canvas.translate(dx, dy);
-      canvas.rotate(p.rotationSpeed * progress * math.pi);
-
-      // Draw small rectangles for confetti effect
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(
-              center: Offset.zero, width: p.size, height: p.size * 0.6,),
-          Radius.circular(p.size * 0.15),
-        ),
-        paint,
-      );
-
-      canvas.restore();
+      canvas
+        ..save()
+        ..translate(dx, dy)
+        ..rotate(p.rotationSpeed * progress * math.pi)
+        // Draw small rectangles for confetti effect
+        ..drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: Offset.zero,
+              width: p.size,
+              height: p.size * 0.6,
+            ),
+            Radius.circular(p.size * 0.15),
+          ),
+          paint,
+        )
+        ..restore();
     }
   }
 
@@ -680,8 +682,9 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
     if (widget.progress >= 1.0 && !_glowController.isAnimating) {
       unawaited(_glowController.repeat(reverse: true));
     } else if (widget.progress < 1.0 && _glowController.isAnimating) {
-      _glowController.stop();
-      _glowController.value = 0;
+      _glowController
+        ..stop()
+        ..value = 0;
     }
   }
 
@@ -995,8 +998,9 @@ class _FocusHighlightFieldState extends State<_FocusHighlightField>
 
   @override
   void dispose() {
-    _focusNode.removeListener(_onFocusChanged);
-    _focusNode.dispose();
+    _focusNode
+      ..removeListener(_onFocusChanged)
+      ..dispose();
     _borderController.dispose();
     super.dispose();
   }

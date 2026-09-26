@@ -23,11 +23,12 @@ class ChatCacheService {
   /// Initialize and register adapters
   /// This should be called in main.dart
   static void registerAdapters() {
-    Hive.registerAdapter(UserStatusAdapter());
-    Hive.registerAdapter(MessageTypeAdapter());
-    Hive.registerAdapter(UserBriefAdapter());
-    Hive.registerAdapter(MessageInfoAdapter());
-    Hive.registerAdapter(PrivateMessageInfoAdapter());
+    Hive
+      ..registerAdapter(UserStatusAdapter())
+      ..registerAdapter(MessageTypeAdapter())
+      ..registerAdapter(UserBriefAdapter())
+      ..registerAdapter(MessageInfoAdapter())
+      ..registerAdapter(PrivateMessageInfoAdapter());
   }
 
   Future<void> saveGroupMessages(
