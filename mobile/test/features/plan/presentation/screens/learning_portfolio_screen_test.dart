@@ -58,7 +58,7 @@ void main() {
     await tester.tap(find.text('计算机网络'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Galaxy 掌握度摘要'), findsOneWidget);
+    expect(find.text('星图掌握度摘要'), findsOneWidget);
     expect(find.text('最薄弱的点'), findsOneWidget);
     expect(find.text('值得引以为豪的节点'), findsOneWidget);
     expect(find.text('TCP 拥塞控制'), findsWidgets);

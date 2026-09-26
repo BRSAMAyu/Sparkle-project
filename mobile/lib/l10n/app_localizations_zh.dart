@@ -1155,7 +1155,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get achievementRewardTitle => '称号';
 
   @override
-  String get achievementRewardSkin => '星系皮肤';
+  String get achievementRewardSkin => '星图皮肤';
 
   @override
   String achievementRewardXp(Object count) {
@@ -4823,7 +4823,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingGalaxyDescription => '将你的知识可视化为一张星图';
 
   @override
-  String get onboardingGalaxyFeature1 => '6大知识星域：理性、造物、灵感、文明、生活、精神';
+  String get onboardingGalaxyFeature1 => '6 大学习领域：理性、造物、灵感、文明、生活、精神';
 
   @override
   String get onboardingGalaxyFeature2 => '实时衰减预测：了解知识遗忘曲线';
@@ -4988,7 +4988,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get patternProcrastination => '拖延倾向';
 
   @override
-  String get cognitiveSelectGalaxyNodes => '请先在 Galaxy 中选择要复习的节点';
+  String get cognitiveSelectGalaxyNodes => '请先在星图中选择要复习的节点';
 
   @override
   String get cognitiveTimeMachine => '知识时光机';
@@ -10945,7 +10945,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationSpacedRepetition => '复习';
 
   @override
-  String get notificationSpacedRepetitionSubtitle => '控制 Galaxy 间隔复习节点提醒';
+  String get notificationSpacedRepetitionSubtitle => '控制星图间隔复习节点提醒';
 
   @override
   String get notificationWeeklyReport => '周报';
@@ -13228,7 +13228,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '这个自由节点已经找到星图参考，加入时会走统一创建链路，并补齐标准节点信息。';
 
   @override
-  String get theaterNodeBannerFreeform => '这个自由节点还未正式入图，加入后会自动补齐星域、位置、关系和解锁状态。';
+  String get theaterNodeBannerFreeform => '这个自由节点还未正式入图，加入后会自动补齐领域、位置、关系和解锁状态。';
 
   @override
   String get theaterRouteRecommended => '推荐';
@@ -17147,7 +17147,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportAiAnalysisTitle => 'AI 分析报告';
 
   @override
-  String get reportBackToGalaxy => '回到 Galaxy';
+  String get reportBackToGalaxy => '回到星图';
 
   @override
   String get reportViewSprintHistory => '查看 Sprint 历史';
@@ -17772,7 +17772,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyUploadTargetGalaxyCore => '银河核心';
 
   @override
-  String get galaxyUploadTargetSelectedConstellation => '这片星域';
+  String get galaxyUploadTargetSelectedConstellation => '所选领域';
 
   @override
   String get galaxyUploadAlreadyInProgress => '已经有一份学习资料正在飞向你的星图。';
@@ -20754,10 +20754,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get achievementDemoCategoryHidden => '隐藏';
 
   @override
-  String get achievementDemoSkinDefaultName => '经典星系';
+  String get achievementDemoSkinDefaultName => '经典星图';
 
   @override
-  String get achievementDemoSkinDefaultDesc => '默认的星系主题';
+  String get achievementDemoSkinDefaultDesc => '默认的星图主题';
 
   @override
   String get achievementDemoSkinNebulaName => '紫色星云';
@@ -27113,7 +27113,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get planPortfolioGalaxySummary => 'Galaxy 掌握度摘要';
+  String get planPortfolioGalaxySummary => '星图掌握度摘要';
 
   @override
   String planPortfolioResultRating(int rating) {

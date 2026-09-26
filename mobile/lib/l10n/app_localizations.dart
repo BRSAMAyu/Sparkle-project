@@ -2345,7 +2345,7 @@ abstract class AppLocalizations {
   /// No description provided for @achievementRewardSkin.
   ///
   /// In zh, this message translates to:
-  /// **'星系皮肤'**
+  /// **'星图皮肤'**
   String get achievementRewardSkin;
 
   /// No description provided for @achievementRewardXp.
@@ -8987,7 +8987,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingGalaxyFeature1.
   ///
   /// In zh, this message translates to:
-  /// **'6大知识星域：理性、造物、灵感、文明、生活、精神'**
+  /// **'6 大学习领域：理性、造物、灵感、文明、生活、精神'**
   String get onboardingGalaxyFeature1;
 
   /// No description provided for @onboardingGalaxyFeature2.
@@ -9305,7 +9305,7 @@ abstract class AppLocalizations {
   /// No description provided for @cognitiveSelectGalaxyNodes.
   ///
   /// In zh, this message translates to:
-  /// **'请先在 Galaxy 中选择要复习的节点'**
+  /// **'请先在星图中选择要复习的节点'**
   String get cognitiveSelectGalaxyNodes;
 
   /// No description provided for @cognitiveTimeMachine.
@@ -20166,7 +20166,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationSpacedRepetitionSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'控制 Galaxy 间隔复习节点提醒'**
+  /// **'控制星图间隔复习节点提醒'**
   String get notificationSpacedRepetitionSubtitle;
 
   /// No description provided for @notificationWeeklyReport.
@@ -24231,7 +24231,7 @@ abstract class AppLocalizations {
   /// No description provided for @theaterNodeBannerFreeform.
   ///
   /// In zh, this message translates to:
-  /// **'这个自由节点还未正式入图，加入后会自动补齐星域、位置、关系和解锁状态。'**
+  /// **'这个自由节点还未正式入图，加入后会自动补齐领域、位置、关系和解锁状态。'**
   String get theaterNodeBannerFreeform;
 
   /// No description provided for @theaterRouteRecommended.
@@ -31180,7 +31180,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportBackToGalaxy.
   ///
   /// In zh, this message translates to:
-  /// **'回到 Galaxy'**
+  /// **'回到星图'**
   String get reportBackToGalaxy;
 
   /// No description provided for @reportViewSprintHistory.
@@ -32272,7 +32272,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyUploadTargetSelectedConstellation.
   ///
   /// In zh, this message translates to:
-  /// **'这片星域'**
+  /// **'所选领域'**
   String get galaxyUploadTargetSelectedConstellation;
 
   /// No description provided for @galaxyUploadAlreadyInProgress.
@@ -37822,13 +37822,13 @@ abstract class AppLocalizations {
   /// No description provided for @achievementDemoSkinDefaultName.
   ///
   /// In zh, this message translates to:
-  /// **'经典星系'**
+  /// **'经典星图'**
   String get achievementDemoSkinDefaultName;
 
   /// No description provided for @achievementDemoSkinDefaultDesc.
   ///
   /// In zh, this message translates to:
-  /// **'默认的星系主题'**
+  /// **'默认的星图主题'**
   String get achievementDemoSkinDefaultDesc;
 
   /// No description provided for @achievementDemoSkinNebulaName.
@@ -49494,7 +49494,7 @@ abstract class AppLocalizations {
   /// No description provided for @planPortfolioGalaxySummary.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy 掌握度摘要'**
+  /// **'星图掌握度摘要'**
   String get planPortfolioGalaxySummary;
 
   /// No description provided for @planPortfolioResultRating.
