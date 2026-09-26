@@ -1,0 +1,89 @@
+{
+ "budget_s3b": [
+  {
+   "point": "25",
+   "ok": 2,
+   "err": 0,
+   "total_min": 127.428,
+   "total_max": 127.705,
+   "ttft_max": 82.468,
+   "upstream": 13
+  },
+  {
+   "point": "45",
+   "ok": 2,
+   "err": 0,
+   "total_min": 127.329,
+   "total_max": 127.876,
+   "ttft_max": 82.71,
+   "upstream": 13
+  },
+  {
+   "point": "65",
+   "ok": 0,
+   "err": 2,
+   "total_min": 180.001,
+   "total_max": 180.01,
+   "ttft_max": 145.863,
+   "upstream": 12
+  }
+ ],
+ "cap_s5_n30": [
+  {
+   "point": "5",
+   "ok": 30,
+   "err": 0,
+   "total_min": 13.345,
+   "total_max": 19.165,
+   "ttft_max": 18.962,
+   "upstream": 31
+  },
+  {
+   "point": "10",
+   "ok": 30,
+   "err": 0,
+   "total_min": 13.758,
+   "total_max": 18.744,
+   "ttft_max": 18.546,
+   "upstream": 33
+  },
+  {
+   "point": "20",
+   "ok": 30,
+   "err": 0,
+   "total_min": 9.792,
+   "total_max": 15.065,
+   "ttft_max": 14.861,
+   "upstream": 34
+  },
+  {
+   "point": "30",
+   "ok": 30,
+   "err": 0,
+   "total_min": 4.155,
+   "total_max": 13.752,
+   "ttft_max": 13.54,
+   "upstream": 32
+  }
+ ],
+ "cap_s5_n60": [
+  {
+   "point": "20@n60",
+   "ok": 60,
+   "err": 0,
+   "total_min": 102.489,
+   "total_max": 127.992,
+   "ttft_max": 127.786,
+   "upstream": 63
+  },
+  {
+   "point": "2@n60",
+   "ok": 60,
+   "err": 0,
+   "total_min": 101.962,
+   "total_max": 116.253,
+   "ttft_max": 116.044,
+   "upstream": 63
+  }
+ ]
+}

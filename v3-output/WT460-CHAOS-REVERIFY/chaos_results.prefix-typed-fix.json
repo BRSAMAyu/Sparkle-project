@@ -1,0 +1,1994 @@
+[
+ {
+  "scenario": "S4b",
+  "label": "断流（all）",
+  "mode": "broken_all",
+  "n": 8,
+  "wall_s": 12.7,
+  "probes": [
+   {
+    "request_id": "wt406-chaos-S4b-0-b3eb8b",
+    "t_first_event_s": 0.337,
+    "ttft_first_delta_s": 4.522,
+    "total_s": 4.695,
+    "chars": 43,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 15,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型qwen3.7-flash在模式broken_all下的第二句。"
+   },
+   {
+    "request_id": "wt406-chaos-S4b-1-e36242",
+    "t_first_event_s": 0.021,
+    "ttft_first_delta_s": 0.232,
+    "total_s": 0.386,
+    "chars": 43,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 15,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型qwen3.7-flash在模式broken_all下的第二句。"
+   },
+   {
+    "request_id": "wt406-chaos-S4b-2-ddd9b8",
+    "t_first_event_s": 0.02,
+    "ttft_first_delta_s": 0.229,
+    "total_s": 0.375,
+    "chars": 43,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 15,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型qwen3.7-flash在模式broken_all下的第二句。"
+   },
+   {
+    "request_id": "wt406-chaos-S4b-3-40487f",
+    "t_first_event_s": 0.014,
+    "ttft_first_delta_s": 0.226,
+    "total_s": 0.376,
+    "chars": 43,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 15,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型qwen3.7-flash在模式broken_all下的第二句。"
+   },
+   {
+    "request_id": "wt406-chaos-S4b-4-3db55f",
+    "t_first_event_s": 0.037,
+    "ttft_first_delta_s": 0.309,
+    "total_s": 0.457,
+    "chars": 43,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 15,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型qwen3.7-flash在模式broken_all下的第二句。"
+   },
+   {
+    "request_id": "wt406-chaos-S4b-5-db5c09",
+    "t_first_event_s": 0.027,
+    "ttft_first_delta_s": null,
+    "total_s": 0.681,
+    "chars": 165,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 6,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "full_text"
+    ],
+    "head": "我想先把目标收紧到足够可执行，再开始做计划：  - 你提到的目标还比较宽泛。能具体到哪门课、哪个项目，或者你想完成到什么程度吗？ - 这个目标完成后，你希望看到"
+   },
+   {
+    "request_id": "wt406-chaos-S4b-6-93c8c3",
+    "t_first_event_s": 0.018,
+    "ttft_first_delta_s": 0.271,
+    "total_s": 0.431,
+    "chars": 43,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 15,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型qwen3.7-flash在模式broken_all下的第二句。"
+   },
+   {
+    "request_id": "wt406-chaos-S4b-7-dd6619",
+    "t_first_event_s": 0.035,
+    "ttft_first_delta_s": 0.277,
+    "total_s": 0.435,
+    "chars": 43,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型qwen3.7-flash在模式broken_all下的第二句。"
+   }
+  ],
+  "upstream_requests": 12,
+  "upstream_sample": [
+   {
+    "ts": "2026-09-26T02:15:12.888+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:15:13.038+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:15:13.074+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:15:13.586+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:15:13.828+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:15:13.907+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:15:14.050+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:15:14.900+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:15:15.875+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:15:16.945+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:15:19.250+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:15:20.297+00:00",
+    "mode": "broken_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   }
+  ],
+  "engine_log_hits": [],
+  "summary": {
+   "ok": 8,
+   "err": 0,
+   "truncated": 0,
+   "ttft_max": 4.522,
+   "total_max": 4.695,
+   "total_min": 0.375,
+   "err_codes": []
+  }
+ },
+ {
+  "scenario": "S5",
+  "label": "队列压力（all ok×5s 上游延迟，30 并发）",
+  "mode": "slow_ok",
+  "n": 30,
+  "wall_s": 20.3,
+  "probes": [
+   {
+    "request_id": "wt406-chaos-S5-0-c66bfc",
+    "t_first_event_s": 0.644,
+    "ttft_first_delta_s": 15.677,
+    "total_s": 15.896,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-1-7158fc",
+    "t_first_event_s": 0.636,
+    "ttft_first_delta_s": 18.871,
+    "total_s": 19.081,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-2-de0771",
+    "t_first_event_s": 0.655,
+    "ttft_first_delta_s": 15.479,
+    "total_s": 15.71,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-3-dd6562",
+    "t_first_event_s": 0.654,
+    "ttft_first_delta_s": 17.398,
+    "total_s": 17.602,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-4-387825",
+    "t_first_event_s": 0.654,
+    "ttft_first_delta_s": 17.886,
+    "total_s": 18.084,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-5-bd9605",
+    "t_first_event_s": 0.638,
+    "ttft_first_delta_s": null,
+    "total_s": 14.133,
+    "chars": 165,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 6,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "full_text"
+    ],
+    "head": "我想先把目标收紧到足够可执行，再开始做计划：  - 你提到的目标还比较宽泛。能具体到哪门课、哪个项目，或者你想完成到什么程度吗？ - 这个目标完成后，你希望看到"
+   },
+   {
+    "request_id": "wt406-chaos-S5-6-976e95",
+    "t_first_event_s": 0.653,
+    "ttft_first_delta_s": 18.382,
+    "total_s": 18.584,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-7-fe44ec",
+    "t_first_event_s": 0.656,
+    "ttft_first_delta_s": 17.724,
+    "total_s": 17.924,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 17,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-8-44d0f4",
+    "t_first_event_s": 0.634,
+    "ttft_first_delta_s": 17.039,
+    "total_s": 17.26,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-9-cd78f3",
+    "t_first_event_s": 0.65,
+    "ttft_first_delta_s": 16.646,
+    "total_s": 16.887,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 17,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "tool_result",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-10-0f3136",
+    "t_first_event_s": 0.639,
+    "ttft_first_delta_s": 19.864,
+    "total_s": 20.06,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-11-c44a23",
+    "t_first_event_s": 0.634,
+    "ttft_first_delta_s": 18.219,
+    "total_s": 18.431,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-12-fea471",
+    "t_first_event_s": 0.652,
+    "ttft_first_delta_s": 16.86,
+    "total_s": 17.072,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 18,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "tool_result",
+     "tool_result",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-13-845e63",
+    "t_first_event_s": 0.635,
+    "ttft_first_delta_s": 18.545,
+    "total_s": 18.744,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-14-c54556",
+    "t_first_event_s": 0.65,
+    "ttft_first_delta_s": 16.039,
+    "total_s": 16.259,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-15-f8a127",
+    "t_first_event_s": 0.646,
+    "ttft_first_delta_s": 19.55,
+    "total_s": 19.747,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-16-8267a8",
+    "t_first_event_s": 0.63,
+    "ttft_first_delta_s": 16.225,
+    "total_s": 16.464,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-17-022088",
+    "t_first_event_s": 0.636,
+    "ttft_first_delta_s": null,
+    "total_s": 14.154,
+    "chars": 165,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 6,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "full_text"
+    ],
+    "head": "我想先把目标收紧到足够可执行，再开始做计划：  - 你提到的目标还比较宽泛。能具体到哪门课、哪个项目，或者你想完成到什么程度吗？ - 这个目标完成后，你希望看到"
+   },
+   {
+    "request_id": "wt406-chaos-S5-18-8b0af6",
+    "t_first_event_s": 0.649,
+    "ttft_first_delta_s": 15.861,
+    "total_s": 16.07,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-19-96aa74",
+    "t_first_event_s": 0.653,
+    "ttft_first_delta_s": 17.225,
+    "total_s": 17.429,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 17,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-20-51da3a",
+    "t_first_event_s": 0.646,
+    "ttft_first_delta_s": 19.7,
+    "total_s": 19.894,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-21-683806",
+    "t_first_event_s": 0.648,
+    "ttft_first_delta_s": 16.432,
+    "total_s": 16.663,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-22-1a56e5",
+    "t_first_event_s": 0.628,
+    "ttft_first_delta_s": 19.206,
+    "total_s": 19.41,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-23-3e287a",
+    "t_first_event_s": 0.627,
+    "ttft_first_delta_s": 18.034,
+    "total_s": 18.247,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-24-6384a9",
+    "t_first_event_s": 0.633,
+    "ttft_first_delta_s": 19.378,
+    "total_s": 19.573,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-25-1a0f5d",
+    "t_first_event_s": 0.629,
+    "ttft_first_delta_s": 20.028,
+    "total_s": 20.223,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-26-a4d066",
+    "t_first_event_s": 0.647,
+    "ttft_first_delta_s": 17.565,
+    "total_s": 17.762,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-27-497adc",
+    "t_first_event_s": 0.631,
+    "ttft_first_delta_s": 18.706,
+    "total_s": 18.904,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-28-acc419",
+    "t_first_event_s": 0.645,
+    "ttft_first_delta_s": 19.043,
+    "total_s": 19.249,
+    "chars": 47,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 16,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "delta",
+     "delta",
+     "usage",
+     "full_text"
+    ],
+    "head": "这是mock回复。模型deepseek-flash在模式slow_ok下的第二句。第三句收尾。"
+   },
+   {
+    "request_id": "wt406-chaos-S5-29-a978cf",
+    "t_first_event_s": 0.65,
+    "ttft_first_delta_s": null,
+    "total_s": 14.872,
+    "chars": 165,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 6,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "full_text"
+    ],
+    "head": "我想先把目标收紧到足够可执行，再开始做计划：  - 你提到的目标还比较宽泛。能具体到哪门课、哪个项目，或者你想完成到什么程度吗？ - 这个目标完成后，你希望看到"
+   }
+  ],
+  "upstream_requests": 33,
+  "upstream_sample": [
+   {
+    "ts": "2026-09-26T02:19:43.328+00:00",
+    "mode": "slow_ok",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:19:43.375+00:00",
+    "mode": "slow_ok",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:19:43.918+00:00",
+    "mode": "slow_ok",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:19:43.952+00:00",
+    "mode": "slow_ok",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:19:44.001+00:00",
+    "mode": "slow_ok",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:19:44.034+00:00",
+    "mode": "slow_ok",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:19:45.484+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:45.685+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:45.876+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:46.053+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:46.239+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:46.448+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:46.658+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:46.871+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:47.050+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:47.240+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:47.406+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:47.584+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:47.737+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:47.897+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:48.052+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:48.233+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:48.394+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:48.557+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:48.720+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:48.880+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:49.063+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:49.224+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:49.396+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:49.565+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:49.717+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:49.878+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:19:50.047+00:00",
+    "mode": "slow_ok",
+    "model": "deepseek-flash",
+    "stream": true
+   }
+  ],
+  "engine_log_hits": [],
+  "summary": {
+   "ok": 30,
+   "err": 0,
+   "truncated": 0,
+   "ttft_max": 20.028,
+   "total_max": 20.223,
+   "total_min": 14.133,
+   "err_codes": []
+  }
+ },
+ {
+  "scenario": "S2",
+  "label": "total outage（all 429×12 连发，熔断开路；最后跑）",
+  "mode": "429_all",
+  "n": 12,
+  "wall_s": 39.0,
+  "probes": [
+   {
+    "request_id": "wt406-chaos-S2-0-f522c4",
+    "t_first_event_s": 0.234,
+    "ttft_first_delta_s": null,
+    "total_s": 13.55,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 15,
+    "frame_kinds": [
+     "status_update",
+     "tool_result",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   },
+   {
+    "request_id": "wt406-chaos-S2-1-c109fc",
+    "t_first_event_s": 0.023,
+    "ttft_first_delta_s": null,
+    "total_s": 1.459,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 13,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   },
+   {
+    "request_id": "wt406-chaos-S2-2-36dfe2",
+    "t_first_event_s": 0.052,
+    "ttft_first_delta_s": null,
+    "total_s": 10.576,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 14,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   },
+   {
+    "request_id": "wt406-chaos-S2-3-a6d58d",
+    "t_first_event_s": 0.035,
+    "ttft_first_delta_s": null,
+    "total_s": 1.381,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 13,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   },
+   {
+    "request_id": "wt406-chaos-S2-4-7fb376",
+    "t_first_event_s": 0.044,
+    "ttft_first_delta_s": null,
+    "total_s": 0.708,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 13,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   },
+   {
+    "request_id": "wt406-chaos-S2-5-92144d",
+    "t_first_event_s": 0.021,
+    "ttft_first_delta_s": null,
+    "total_s": 0.745,
+    "chars": 165,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 6,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "full_text"
+    ],
+    "head": "我想先把目标收紧到足够可执行，再开始做计划：  - 你提到的目标还比较宽泛。能具体到哪门课、哪个项目，或者你想完成到什么程度吗？ - 这个目标完成后，你希望看到"
+   },
+   {
+    "request_id": "wt406-chaos-S2-6-bde4c7",
+    "t_first_event_s": 0.02,
+    "ttft_first_delta_s": null,
+    "total_s": 0.608,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 13,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   },
+   {
+    "request_id": "wt406-chaos-S2-7-2cc845",
+    "t_first_event_s": 0.037,
+    "ttft_first_delta_s": null,
+    "total_s": 0.651,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 14,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   },
+   {
+    "request_id": "wt406-chaos-S2-8-9e4c46",
+    "t_first_event_s": 0.031,
+    "ttft_first_delta_s": null,
+    "total_s": 0.503,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 13,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   },
+   {
+    "request_id": "wt406-chaos-S2-9-6e12d0",
+    "t_first_event_s": 0.019,
+    "ttft_first_delta_s": null,
+    "total_s": 0.489,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 13,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   },
+   {
+    "request_id": "wt406-chaos-S2-10-bd9012",
+    "t_first_event_s": 0.027,
+    "ttft_first_delta_s": null,
+    "total_s": 0.496,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 13,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   },
+   {
+    "request_id": "wt406-chaos-S2-11-ef2912",
+    "t_first_event_s": 0.03,
+    "ttft_first_delta_s": null,
+    "total_s": 0.563,
+    "chars": 61,
+    "truncated_marker": false,
+    "error": {
+     "error_code": "10",
+     "message": "系统暂时不可用，请稍后重试。",
+     "retryable": true
+    },
+    "frame_count": 13,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "error",
+     "full_text"
+    ],
+    "head": "(System) No valid response generated. Please try again later."
+   }
+  ],
+  "upstream_requests": 78,
+  "upstream_sample": [
+   {
+    "ts": "2026-09-26T02:10:38.707+00:00",
+    "mode": "429_all",
+    "model": "MiniMax-M3",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:10:38.818+00:00",
+    "mode": "429_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:10:39.028+00:00",
+    "mode": "429_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:10:39.763+00:00",
+    "mode": "429_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:10:39.872+00:00",
+    "mode": "429_all",
+    "model": "deepseek-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:10:40.083+00:00",
+    "mode": "429_all",
+    "model": "mimo-v2.6-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:10:40.639+00:00",
+    "mode": "429_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:40.645+00:00",
+    "mode": "429_all",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:40.650+00:00",
+    "mode": "429_all",
+    "model": "mimo-v2.6-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:40.656+00:00",
+    "mode": "429_all",
+    "model": "glm-5.3-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:40.661+00:00",
+    "mode": "429_all",
+    "model": "glm-ocr",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:50.675+00:00",
+    "mode": "429_all",
+    "model": "tencent/Hunyuan-MT-7B",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:50.681+00:00",
+    "mode": "429_all",
+    "model": "tencent/Hunyuan-MT-7B",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:50.687+00:00",
+    "mode": "429_all",
+    "model": "MiniMax-M3",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:50.693+00:00",
+    "mode": "429_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:50.699+00:00",
+    "mode": "429_all",
+    "model": "Qwen/Qwen3.5-4B",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:50.707+00:00",
+    "mode": "429_all",
+    "model": "glm-5.3-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:50.712+00:00",
+    "mode": "429_all",
+    "model": "glm-5.3-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:50.718+00:00",
+    "mode": "429_all",
+    "model": "glm-5.3-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:50.724+00:00",
+    "mode": "429_all",
+    "model": "glm-5.3-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:50.730+00:00",
+    "mode": "429_all",
+    "model": "Qwen/Qwen3.5-4B",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:51.967+00:00",
+    "mode": "429_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:10:52.084+00:00",
+    "mode": "429_all",
+    "model": "deepseek-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:10:52.301+00:00",
+    "mode": "429_all",
+    "model": "mimo-v2.6-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:10:52.840+00:00",
+    "mode": "429_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.847+00:00",
+    "mode": "429_all",
+    "model": "deepseek-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.853+00:00",
+    "mode": "429_all",
+    "model": "mimo-v2.6-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.859+00:00",
+    "mode": "429_all",
+    "model": "glm-5.3-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.864+00:00",
+    "mode": "429_all",
+    "model": "glm-ocr",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.870+00:00",
+    "mode": "429_all",
+    "model": "deepseek-ai/DeepSeek-OCR",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.875+00:00",
+    "mode": "429_all",
+    "model": "tencent/Hunyuan-MT-7B",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.881+00:00",
+    "mode": "429_all",
+    "model": "tencent/Hunyuan-MT-7B",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.886+00:00",
+    "mode": "429_all",
+    "model": "MiniMax-M3",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.893+00:00",
+    "mode": "429_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.898+00:00",
+    "mode": "429_all",
+    "model": "Qwen/Qwen3.5-4B",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.903+00:00",
+    "mode": "429_all",
+    "model": "glm-5.3-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.908+00:00",
+    "mode": "429_all",
+    "model": "glm-5.3-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.913+00:00",
+    "mode": "429_all",
+    "model": "glm-5.3-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.918+00:00",
+    "mode": "429_all",
+    "model": "glm-5.3-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:10:52.925+00:00",
+    "mode": "429_all",
+    "model": "Qwen/Qwen3.5-4B",
+    "stream": true
+   }
+  ],
+  "engine_log_hits": [],
+  "summary": {
+   "ok": 1,
+   "err": 11,
+   "truncated": 0,
+   "ttft_max": 0,
+   "total_max": 13.55,
+   "total_min": 0.489,
+   "err_codes": [
+    "10"
+   ]
+  }
+ }
+]

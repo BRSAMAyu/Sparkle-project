@@ -1,0 +1,189 @@
+[
+ {
+  "scenario": "S3b",
+  "label": "slow TTFT 65s（all，>60s read timeout）",
+  "mode": "slow_ttft_65_all",
+  "n": 2,
+  "wall_s": 361.2,
+  "probes": [
+   {
+    "request_id": "wt406-chaos-S3b-0-617cd8",
+    "t_first_event_s": 0.343,
+    "ttft_first_delta_s": 142.994,
+    "total_s": 180.01,
+    "chars": 83,
+    "truncated_marker": false,
+    "error": {
+     "code": "_MultiThreadedRendezvous",
+     "message": "<_MultiThreadedRendezvous of RPC that terminated with:\n\tstatus = StatusCode.DEADLINE_EXCEEDED\n\tdetails = \"Deadline Exceeded\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_status:4, grpc_message:\"Deadline Exceeded\"}\"\n>"
+    },
+    "frame_count": 29,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "delta",
+     "status_update",
+     "status_update",
+     "status_update"
+    ],
+    "head": "我先根据已检索到的知识结果直接回答你： [Knowledge Results] [1] 备考节奏规划 \"复习周期与时间分配策略，让努力不内耗。\" [2] 典型题"
+   },
+   {
+    "request_id": "wt406-chaos-S3b-1-b0b9c4",
+    "t_first_event_s": 0.051,
+    "ttft_first_delta_s": 145.863,
+    "total_s": 180.001,
+    "chars": 81,
+    "truncated_marker": false,
+    "error": {
+     "code": "_MultiThreadedRendezvous",
+     "message": "<_MultiThreadedRendezvous of RPC that terminated with:\n\tstatus = StatusCode.DEADLINE_EXCEEDED\n\tdetails = \"Deadline Exceeded\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_message:\"Deadline Exceeded\", grpc_status:4}\"\n>"
+    },
+    "frame_count": 30,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "delta",
+     "status_update",
+     "status_update",
+     "status_update"
+    ],
+    "head": "我先根据已检索到的知识结果直接回答你： [Knowledge Results] [1] 典型题型训练 \"高频考题结构与解题方法，建立答题的肌肉记忆。\" [2] "
+   }
+  ],
+  "upstream_requests": 12,
+  "upstream_sample": [
+   {
+    "ts": "2026-09-26T02:40:53.212+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "MiniMax-M3",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:40:53.930+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:40:56.625+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:41:14.646+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:41:53.338+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:42:14.779+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "deepseek-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:43:15.031+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "deepseek-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:43:54.145+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:44:00.113+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:44:18.134+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:45:18.246+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "deepseek-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:46:18.529+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "deepseek-flash",
+    "stream": false
+   }
+  ],
+  "engine_log_hits": [],
+  "summary": {
+   "ok": 0,
+   "err": 2,
+   "truncated": 0,
+   "ttft_max": 145.863,
+   "total_max": 180.01,
+   "total_min": 180.001,
+   "err_codes": [
+    ""
+   ]
+  }
+ }
+]

@@ -13,6 +13,7 @@ from typing import Any
 from loguru import logger
 
 from app.config import settings
+from app.core.exceptions import LLMOverloadedError, LLMProvidersExhaustedError
 from app.core.metrics import FSM_CONTEXT_EVICTION_TOTAL, FSM_CONTEXT_SIZE_BYTES
 
 _CHECKPOINT_VOLATILE_CONTEXT_KEYS = {
@@ -253,6 +254,10 @@ class StateGraph:
 
         steps = 0
         node_exception_occurred = False
+        # V3-FIX-78/79 集成补全（wt460）：记录首个节点异常实例——typed fast-fail
+        # 异常需要原样穿透 statechart 边界（见 invoke 尾部的 raise 面与
+        # tests/unit/test_q06_resilience_fastfail.py 的 statechart 三测）。
+        first_node_exception: Exception | None = None
 
         logger.info(f"🚀 [{self.name}] Starting execution from '{current_node_name}'")
         await self._emit_event(GraphEventType.GRAPH_START, self.name, state)
@@ -301,6 +306,8 @@ class StateGraph:
                 logger.exception("❌ Error in node '{}' : {}", current_node_name, e)
                 state.errors.append(f"[{self.name}] Node {current_node_name} failed: {str(e)}")
                 await self._emit_event(GraphEventType.ERROR, current_node_name, state, str(e))
+                if first_node_exception is None:
+                    first_node_exception = e
                 node_exception_occurred = True
                 break  # Or handle error transition
 
@@ -346,6 +353,15 @@ class StateGraph:
                 await mark_completed(session_id, request_id or None)
 
         if node_exception_occurred:
+            # V3-FIX-78/79 集成补全（wt460）：引擎侧快速诚实失败的 typed error
+            # 原样上抛——此前一律包装成 RuntimeError，orchestrator 的
+            # build_safe_chat_error 只能落泛化 ERROR_CODE_INTERNAL 分支，wt448
+            # 声明的 ERROR_CODE_UNAVAILABLE / ERROR_CODE_RATE_LIMITED 专属文案
+            # 在真实栈上不出现（wt460 真栈 chaos S2 实锤：全部错误帧为
+            # code=10 泛化文案）。仅这两个封闭类型绕过包装，其余节点错误维持
+            # 既有 RuntimeError 包装语义不变。
+            if isinstance(first_node_exception, (LLMProvidersExhaustedError, LLMOverloadedError)):
+                raise first_node_exception
             raise RuntimeError(
                 f"Graph '{self.name}' aborted due to node error(s): "
                 + "; ".join(str(e) for e in state.errors[-3:])

@@ -1,0 +1,181 @@
+[
+ {
+  "scenario": "S3b",
+  "label": "slow TTFT 65s（all，>60s read timeout）",
+  "mode": "slow_ttft_65_all",
+  "n": 2,
+  "wall_s": 256.4,
+  "probes": [
+   {
+    "request_id": "wt406-chaos-S3b-0-daa8ed",
+    "t_first_event_s": 0.406,
+    "ttft_first_delta_s": 82.71,
+    "total_s": 127.876,
+    "chars": 83,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 25,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "delta",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "full_text"
+    ],
+    "head": "我先根据已检索到的知识结果直接回答你： [Knowledge Results] [1] 备考节奏规划 \"复习周期与时间分配策略，让努力不内耗。\" [2] 典型题"
+   },
+   {
+    "request_id": "wt406-chaos-S3b-1-40d0ac",
+    "t_first_event_s": 0.044,
+    "ttft_first_delta_s": 82.178,
+    "total_s": 127.329,
+    "chars": 86,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 28,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "delta",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "tool_result",
+     "tool_result",
+     "tool_result",
+     "full_text"
+    ],
+    "head": "我先根据已检索到的知识结果直接回答你： [Knowledge Results] [1] 典型题型训练 \"高频考题结构与解题方法，建立答题的肌肉记忆。\" [2] "
+   }
+  ],
+  "upstream_requests": 13,
+  "upstream_sample": [
+   {
+    "ts": "2026-09-26T02:36:09.246+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:36:11.812+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:36:29.837+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:37:30.024+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "deepseek-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:38:15.152+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:38:15.170+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:38:17.117+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:38:19.784+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:38:27.675+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:38:37.804+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:39:37.978+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "deepseek-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:40:23.093+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:40:23.115+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   }
+  ],
+  "engine_log_hits": [],
+  "summary": {
+   "ok": 2,
+   "err": 0,
+   "truncated": 0,
+   "ttft_max": 82.71,
+   "total_max": 127.876,
+   "total_min": 127.329,
+   "err_codes": []
+  }
+ }
+]

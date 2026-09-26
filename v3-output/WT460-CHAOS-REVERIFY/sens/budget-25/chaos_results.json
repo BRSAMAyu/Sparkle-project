@@ -1,0 +1,178 @@
+[
+ {
+  "scenario": "S3b",
+  "label": "slow TTFT 65s（all，>60s read timeout）",
+  "mode": "slow_ttft_65_all",
+  "n": 2,
+  "wall_s": 256.4,
+  "probes": [
+   {
+    "request_id": "wt406-chaos-S3b-0-a9e953",
+    "t_first_event_s": 0.333,
+    "ttft_first_delta_s": 82.468,
+    "total_s": 127.705,
+    "chars": 83,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 25,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "delta",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "full_text"
+    ],
+    "head": "我先根据已检索到的知识结果直接回答你： [Knowledge Results] [1] 备考节奏规划 \"复习周期与时间分配策略，让努力不内耗。\" [2] 典型题"
+   },
+   {
+    "request_id": "wt406-chaos-S3b-1-248c08",
+    "t_first_event_s": 0.044,
+    "ttft_first_delta_s": 82.269,
+    "total_s": 127.428,
+    "chars": 81,
+    "truncated_marker": false,
+    "error": null,
+    "frame_count": 25,
+    "frame_kinds": [
+     "status_update",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "meta_only",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "meta_only",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "delta",
+     "status_update",
+     "status_update",
+     "status_update",
+     "status_update",
+     "full_text"
+    ],
+    "head": "我先根据已检索到的知识结果直接回答你： [Knowledge Results] [1] 典型题型训练 \"高频考题结构与解题方法，建立答题的肌肉记忆。\" [2] "
+   }
+  ],
+  "upstream_requests": 13,
+  "upstream_sample": [
+   {
+    "ts": "2026-09-26T02:29:53.473+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:29:56.060+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:30:14.083+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:31:14.274+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "deepseek-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:31:59.467+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:31:59.498+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:32:01.562+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:32:04.206+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": true
+   },
+   {
+    "ts": "2026-09-26T02:32:11.998+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:32:22.226+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.7-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:33:22.404+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "deepseek-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:34:07.521+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   },
+   {
+    "ts": "2026-09-26T02:34:07.539+00:00",
+    "mode": "slow_ttft_65_all",
+    "model": "qwen3.8-flash",
+    "stream": false
+   }
+  ],
+  "engine_log_hits": [],
+  "summary": {
+   "ok": 2,
+   "err": 0,
+   "truncated": 0,
+   "ttft_max": 82.468,
+   "total_max": 127.705,
+   "total_min": 127.428,
+   "err_codes": []
+  }
+ }
+]

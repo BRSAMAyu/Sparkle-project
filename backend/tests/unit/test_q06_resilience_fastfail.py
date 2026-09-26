@@ -416,3 +416,64 @@ def test_no_healthy_candidates_message_is_typed():
     err = LLMProvidersExhaustedError("No healthy fallback models available after 2 attempts")
     assert "No healthy fallback models" in str(err)
     assert err.status_code == 503
+
+
+# ---------------------------------------------------------------------------
+# V3-FIX-78/79 集成验证补丁（wt460）：statechart 节点错误包装不得吞掉 typed error
+#
+# 真栈 chaos 复跑实锤（wt460，engine :50062 + mock :9099）：S2 全断供下
+# generation_node 快速放行的 LLMProvidersExhaustedError 在 statechart_engine.invoke
+# 的节点错误包装处被替换为 RuntimeError("Graph ... aborted due to node error(s)...")
+# —— orchestrator 的 build_safe_chat_error 收到的是 RuntimeError，落入泛化
+# ERROR_CODE_INTERNAL「系统暂时不可用」分支，wt448 声明的 ERROR_CODE_UNAVAILABLE
+# 「AI 服务暂时全部不可用」专属文案在真实栈上不出现（单测直测 build_safe_chat_error
+# 测不到该包装面）。LLMOverloadedError 同型。修后判据：两个 typed fast-fail 异常
+# 原样穿透 statechart 边界；其余节点错误维持既有 RuntimeError 包装语义不变。
+# ---------------------------------------------------------------------------
+
+
+def _graph_whose_node_raises(exc: Exception):
+    from app.orchestration.statechart_engine import StateGraph
+
+    async def _boom(_state):  # noqa: ANN202
+        raise exc
+
+    graph = StateGraph("WT460TypedErrorProbe")
+    graph.add_node("generation", _boom)
+    graph.set_entry_point("generation")
+    graph.add_edge("generation", "__end__")
+    return graph
+
+
+def _fresh_workflow_state():
+    from app.orchestration.statechart_engine import WorkflowState
+
+    return WorkflowState()
+
+
+@pytest.mark.asyncio
+async def test_statechart_preserves_providers_exhausted_typed_error():
+    """FIX-78：LLMProvidersExhaustedError 原样穿透 statechart（不得包装成 RuntimeError）。"""
+    from app.core.exceptions import LLMProvidersExhaustedError  # noqa: PLC0415
+
+    graph = _graph_whose_node_raises(LLMProvidersExhaustedError("all candidates unhealthy; failing fast"))
+    with pytest.raises(LLMProvidersExhaustedError):
+        await graph.invoke(_fresh_workflow_state())
+
+
+@pytest.mark.asyncio
+async def test_statechart_preserves_overloaded_typed_error():
+    """FIX-79：LLMOverloadedError 原样穿透 statechart（不得包装成 RuntimeError）。"""
+    from app.core.exceptions import LLMOverloadedError  # noqa: PLC0415
+
+    graph = _graph_whose_node_raises(LLMOverloadedError("queue depth 21 exceeds admission cap 20"))
+    with pytest.raises(LLMOverloadedError):
+        await graph.invoke(_fresh_workflow_state())
+
+
+@pytest.mark.asyncio
+async def test_statechart_still_wraps_generic_node_errors():
+    """回归锁：其余节点错误维持既有 RuntimeError 包装语义（修复不扩面）。"""
+    graph = _graph_whose_node_raises(ValueError("boom"))
+    with pytest.raises(RuntimeError):
+        await graph.invoke(_fresh_workflow_state())

@@ -282,6 +282,8 @@ def grep_engine_log(log_path: Path, since_iso: str, until_iso: str) -> list[str]
     return hits[-80:]
 
 
+S5_CONCURRENCY = [30]  # wt460：S5 并发度（--s5-concurrency 覆盖；[0] 可变槽避免改签名）
+
 SCENARIOS: dict[str, dict] = {
     "S1": {"mode": "429_dashscope", "n": 8, "label": "primary-429（qwen* 429，fallback 候选 ok）"},
     "S3a": {"mode": "slow_ttft_35_qwen", "n": 5, "label": "slow TTFT 35s（qwen*，<60s read timeout）"},
@@ -328,7 +330,7 @@ async def run_scenarios(out_dir: Path, only: list[str]) -> None:
                     finally:
                         local_channel.close()
 
-                with concurrent.futures.ThreadPoolExecutor(max_workers=30) as pool:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=S5_CONCURRENCY[0]) as pool:
                     probes = list(pool.map(_one, range(sc["n"])))
             else:
                 for i in range(sc["n"]):
@@ -386,11 +388,31 @@ def main() -> None:
     ap_run = sub.add_parser("run", help="跑场景（需 chaos 引擎 :50062 与 mock 在位）")
     ap_run.add_argument("--scenarios", default="S1,S3a,S3b,S4a,S4b,S5,S2")
     ap_run.add_argument("--out-dir", default=str(DEFAULT_OUT))
+    # wt460 敏感性扫描参数化：--n-override "S3b=2,S5=30" 覆盖场景探针数
+    # （只影响本轮 run，不改 SCENARIOS 权威定义；落盘元数据带 n_override）。
+    ap_run.add_argument("--n-override", default="", help="按场景覆盖探针数，如 S3b=2,S5=30")
+    # wt460：S5 并发度参数化（默认 30=wt406 口径）。n=60 用于在当前主线上
+    # 重建深排队面（ intervening llm_service 变更后 n=30 已不再堆积等待），
+    # 以真栈断言 FIX-79 的「cap 外毫秒级 429」。
+    ap_run.add_argument("--s5-concurrency", type=int, default=30)
     args = ap.parse_args()
+    S5_CONCURRENCY[0] = max(1, args.s5_concurrency)
     if args.cmd == "serve":
         serve()
     else:
         only = [s.strip() for s in args.scenarios.split(",") if s.strip()]
+        overrides: dict[str, int] = {}
+        for pair in args.n_override.split(","):
+            pair = pair.strip()
+            if pair and "=" in pair:
+                sid, _, raw = pair.partition("=")
+                try:
+                    overrides[sid.strip()] = max(1, int(raw))
+                except ValueError:
+                    continue
+        for sid, n in overrides.items():
+            if sid in SCENARIOS:
+                SCENARIOS[sid]["n"] = n
         asyncio.run(run_scenarios(Path(args.out_dir), only))
 
 
