@@ -301,10 +301,13 @@ class FeedbackLearningService:
         adjustments = []
 
         # 按指标分组分析
-        metric_data = defaultdict(list)
+        metric_data: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
         for review in reviews:
             for metric in review.metrics:
                 metric_name = metric.get("metric")
+                if metric_name is None:
+                    # 无名指标无法参与阈值学习，跳过（ThresholdAdjustment.metric_name 要求 str）
+                    continue
                 metric_score = metric.get("score", 0.0)
                 metric_passed = metric.get("passed", True)
                 metric_data[metric_name].append({
@@ -361,15 +364,19 @@ class FeedbackLearningService:
         # 简化实现：统计未通过且用户不满意的指标
 
         feedback_by_review = {f.review_id: f for f in feedbacks}
-        metric_failures: dict[str, Any] = defaultdict(int)
+        metric_failures: dict[str, int] = defaultdict(int)
 
         for review in reviews:
             feedback = feedback_by_review.get(review.review_id)
             if feedback and feedback.feedback_type == ContentReviewFeedbackType.UNSATISFIED:
                 # 用户不满意，统计哪些指标未通过
                 for metric in review.metrics:
+                    metric_name = metric.get("metric")
+                    if metric_name is None:
+                        # 无名指标无法参与权重学习（WeightAdjustment.metric_name 要求 str）
+                        continue
                     if not metric.get("passed", True):
-                        metric_failures[metric.get("metric")] += 1
+                        metric_failures[metric_name] += 1
 
         # 对失败次数多的指标，建议增加权重
         total_unsatisfied = sum(metric_failures.values()) or 1
@@ -471,10 +478,12 @@ class FeedbackLearningService:
                 applied_count += 1
                 logger.info(f"[FeedbackLearning] Applied threshold adjustment: {adj.metric_name} -> {adj.suggested_threshold}")
 
-        for adj in report.weight_adjustments:
-            self._current_weights[adj.metric_name] = adj.suggested_weight
+        for w_adj in report.weight_adjustments:
+            self._current_weights[w_adj.metric_name] = w_adj.suggested_weight
             applied_count += 1
-            logger.info(f"[FeedbackLearning] Applied weight adjustment: {adj.metric_name} -> {adj.suggested_weight}")
+            logger.info(
+                f"[FeedbackLearning] Applied weight adjustment: {w_adj.metric_name} -> {w_adj.suggested_weight}"
+            )
 
         if applied_count > 0:
             logger.info(f"[FeedbackLearning] Applied {applied_count} adjustments")
@@ -527,7 +536,7 @@ class FeedbackLearningService:
         """查找假阳性模式"""
         feedback_by_review = {f.review_id: f for f in feedbacks}
 
-        false_positives = []
+        false_positives: list[dict[str, Any]] = []
         for review in reviews:
             feedback = feedback_by_review.get(review.review_id)
             if feedback and review.decision == "passed" and feedback.feedback_type == ContentReviewFeedbackType.UNSATISFIED:
@@ -559,7 +568,7 @@ class FeedbackLearningService:
         """查找假阴性模式"""
         feedback_by_review = {f.review_id: f for f in feedbacks}
 
-        false_negatives = []
+        false_negatives: list[dict[str, Any]] = []
         for review in reviews:
             feedback = feedback_by_review.get(review.review_id)
             if feedback and review.decision != "passed" and feedback.feedback_type == ContentReviewFeedbackType.SATISFIED:
@@ -611,13 +620,17 @@ class FeedbackLearningService:
 
         return None
 
-    def _find_common_metrics(self, metrics_list: list[list[dict]]) -> list[str]:
+    def _find_common_metrics(self, metrics_list: list[list[dict[str, Any]]]) -> list[str]:
         """找出共同的未通过指标"""
-        metric_failures: dict[str, Any] = defaultdict(int)
+        metric_failures: dict[str, int] = defaultdict(int)
         for metrics in metrics_list:
             for metric in metrics:
+                metric_name = metric.get("metric")
+                if metric_name is None:
+                    # 无名指标不参与共同失败统计（键类型要求 str）
+                    continue
                 if not metric.get("passed", True):
-                    metric_failures[metric.get("metric")] += 1
+                    metric_failures[metric_name] += 1
 
         threshold = len(metrics_list) * 0.5
         return [m for m, count in metric_failures.items() if count >= threshold]
@@ -815,7 +828,7 @@ class FeedbackLearningService:
 # 全局实例管理
 # ============================================
 
-_learning_services: dict[str, FeedbackLearningService] = {}
+_learning_services: dict[int, FeedbackLearningService] = {}
 
 
 def get_feedback_learning_service(

@@ -9,20 +9,26 @@ Stage: Signal-to-Action Spine — Decision Realization Score
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypedDict
 
 from loguru import logger
 
 try:
     from prometheus_client import Counter as _Counter
-    _PROM_SIGNALS = _Counter("sparkle_spine_signals_generated_total", "Spine signals generated")
-    _PROM_POLICIES = _Counter("sparkle_spine_policies_evaluated_total", "Spine policies evaluated")
-    _PROM_DIRECTIVES = _Counter("sparkle_spine_directives_generated_total", "Spine directives generated")
-    _PROM_DIRECTIVES_APPLIED = _Counter("sparkle_spine_directives_applied_total", "Spine directives applied")
-    _PROM_OUTCOMES = _Counter("sparkle_spine_outcomes_recorded_total", "Spine outcomes recorded")
-    _PROM_EFFECTIVE = _Counter("sparkle_spine_effective_attributions_total", "Spine effective attributions")
-    _PROM_RECEIPTS = _Counter("sparkle_spine_receipts_shown_total", "Spine receipts shown")
-    _PROM_RETRACTIONS = _Counter("sparkle_spine_retractions_total", "Spine retractions")
+    _PROM_SIGNALS: _Counter | None = _Counter("sparkle_spine_signals_generated_total", "Spine signals generated")
+    _PROM_POLICIES: _Counter | None = _Counter("sparkle_spine_policies_evaluated_total", "Spine policies evaluated")
+    _PROM_DIRECTIVES: _Counter | None = _Counter(
+        "sparkle_spine_directives_generated_total", "Spine directives generated"
+    )
+    _PROM_DIRECTIVES_APPLIED: _Counter | None = _Counter(
+        "sparkle_spine_directives_applied_total", "Spine directives applied"
+    )
+    _PROM_OUTCOMES: _Counter | None = _Counter("sparkle_spine_outcomes_recorded_total", "Spine outcomes recorded")
+    _PROM_EFFECTIVE: _Counter | None = _Counter(
+        "sparkle_spine_effective_attributions_total", "Spine effective attributions"
+    )
+    _PROM_RECEIPTS: _Counter | None = _Counter("sparkle_spine_receipts_shown_total", "Spine receipts shown")
+    _PROM_RETRACTIONS: _Counter | None = _Counter("sparkle_spine_retractions_total", "Spine retractions")
 except Exception:
     _PROM_SIGNALS = _PROM_POLICIES = _PROM_DIRECTIVES = None
     _PROM_DIRECTIVES_APPLIED = _PROM_OUTCOMES = _PROM_EFFECTIVE = None
@@ -47,7 +53,14 @@ except Exception:
 # ── 指标定义 ─────────────────────────────────────────────────────────
 # 每个指标有 name, description, numerator_key, denominator_key。
 
-METRIC_DEFINITIONS = {
+
+class _MetricDefinition(TypedDict):
+    description: str
+    numerator: str
+    denominator: str | None
+
+
+METRIC_DEFINITIONS: dict[str, _MetricDefinition] = {
     "signal_to_state_rate": {
         "description": "高价值信号有多少进入状态",
         "numerator": "signals_entered_state",

@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import inspect
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Callable, Coroutine, Sequence
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
@@ -73,7 +73,9 @@ STREAK_QUALITY_STATUS_PERSIST_FAILURES = get_or_create_metric(
 
 @event.listens_for(AsyncSession.sync_session_class, "after_commit")
 def _run_achievement_after_commit_tasks(session) -> None:
-    callbacks: list[Callable[[], Awaitable[None]]] = session.info.pop(_AFTER_COMMIT_TASKS_KEY, [])
+    # 队列里实际入队的都是 async 方法调用产生的 coroutine
+    # （spawn_tracked 也要求 Coroutine 而非任意 Awaitable），契约按实收收紧。
+    callbacks: list[Callable[[], Coroutine[Any, Any, Any]]] = session.info.pop(_AFTER_COMMIT_TASKS_KEY, [])
     if not callbacks:
         return
 
@@ -163,7 +165,8 @@ class AchievementEngine:
         "HIDDEN_TRIGGER",
     }
     SUPPORTED_REWARD_TYPES = {"freeze_charge", "galaxy_skin", "photon", "title", "visual_element"}
-    PRESTIGE_LANES = {
+    # 内层 dict 值异构（str/int），显式 Any 内层避免被推断成 dict[str, object]
+    PRESTIGE_LANES: dict[str, dict[str, Any]] = {
         "streak": {"id": "streak_lane", "label": "连胜王者线", "color": "#FF8A3D", "x": 120},
         "sprint": {"id": "sprint_lane", "label": "冲刺战绩线", "color": "#2FB6FF", "x": 390},
         "conquest": {"id": "conquest_lane", "label": "探索征服线", "color": "#63E6BE", "x": 660},
@@ -182,7 +185,7 @@ class AchievementEngine:
 
     # 成就定义缓存（内存缓存）
     _achievement_cache: dict[str, Achievement] = {}
-    _cache_last_update: datetime = None
+    _cache_last_update: datetime | None = None
     _cache_ttl = timedelta(minutes=5)
     _cache_lock = asyncio.Lock()
 
@@ -215,7 +218,7 @@ class AchievementEngine:
         except Exception:
             logger.opt(exception=True).debug("Failed to cache recent achievement event for user={}", user_id)
 
-    def _enqueue_after_commit(self, callback: Callable[[], Awaitable[None]]) -> None:
+    def _enqueue_after_commit(self, callback: Callable[[], Coroutine[Any, Any, Any]]) -> None:
         callbacks = self.db.sync_session.info.setdefault(_AFTER_COMMIT_TASKS_KEY, [])
         callbacks.append(callback)
 
@@ -296,12 +299,12 @@ class AchievementEngine:
             return bool(cast("CursorResult[Any]", (result)).rowcount)
 
         if dialect_name == "sqlite":
-            stmt = (
+            stmt_sqlite = (
                 sqlite_insert(SessionCompletion)
                 .values(**values)
                 .on_conflict_do_nothing(index_elements=[SessionCompletion.session_id])
             )
-            result = await self.db.execute(stmt)
+            result = await self.db.execute(stmt_sqlite)
             return bool(cast("CursorResult[Any]", (result)).rowcount)
 
         try:
@@ -628,7 +631,11 @@ class AchievementEngine:
 
     @classmethod
     def _calculate_weekend_streak(cls, timestamps: list[datetime]) -> int:
-        buckets = sorted({cls._weekend_bucket_for(ts) for ts in timestamps if cls._weekend_bucket_for(ts)})
+        # 海象守卫先过滤 None 桶再收集，mypy 可收窄元素类型为 date（原写法
+        # 调用两次取值/判真，此处单次取值，结果集合完全一致）。
+        buckets = sorted(
+            {bucket for ts in timestamps if (bucket := cls._weekend_bucket_for(ts)) is not None}
+        )
         if not buckets:
             return 0
 
@@ -1724,7 +1731,14 @@ class AchievementEngine:
                 error_message=str(exc),
             )
 
-        await self._retry_photon_reward_locally(**payload)
+        # 显式关键字传参替代 **payload 展开：payload 键与形参一一对应，
+        # mypy 无法从 dict[str, object] 展开校验关键字签名。
+        await self._retry_photon_reward_locally(
+            user_id=user_id,
+            achievement_id=achievement_id,
+            achievement_name=achievement_name,
+            quantity=quantity,
+        )
 
     async def _retry_photon_reward_locally(
         self,
@@ -3213,7 +3227,9 @@ class ContractService:
             from app.services.photon_service import PhotonService, PhotonTransactionType
 
             photon_service = PhotonService(self.db)
-            reward_amount = contract.photon_stake * contract.reward_multiplier
+            # stake(int) × multiplier(float) 的乘积按积分语义取整入库
+            # （PhotonTransactionHistory.amount 为 Integer 列，grant_photons 契约即 int）。
+            reward_amount = int(contract.photon_stake * contract.reward_multiplier)
 
             await photon_service.grant_photons(
                 user_id=contract.user_id,

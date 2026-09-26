@@ -23,6 +23,7 @@ from app.schemas.community import (
     RecommendationFeedbackStageEnum,
     RecommendationItemTypeEnum,
     UserBrief,
+    UserStatusEnum,
 )
 from app.services.personalization.preference_service import PreferenceService
 
@@ -497,19 +498,21 @@ class RecommendationFeedbackService:
         if item_type == RecommendationItemTypeEnum.FRIEND and isinstance(
             payload, FriendRecommendationFeedbackRequest
         ):
-            if getattr(payload, "relevance_score", None) and payload.relevance_score <= 2:
+            # payload 已由 isinstance 收窄为 Friend 变体，直接以属性真值守卫
+            # 让 mypy 收窄 Optional 评分字段（与 getattr 写法运行时等价）。
+            if payload.relevance_score and payload.relevance_score <= 2:
                 bump_feature("subject_overlap", "preference_alignment", delta=0.08)
-            if getattr(payload, "similarity_score", None) and payload.similarity_score <= 2:
+            if payload.similarity_score and payload.similarity_score <= 2:
                 bump_feature("subject_overlap", "preference_alignment", "cognitive_alignment", delta=0.08)
                 bump_strategy("compatibility", delta=0.06)
-            if getattr(payload, "complementary_score", None) and payload.complementary_score <= 2:
+            if payload.complementary_score and payload.complementary_score <= 2:
                 bump_feature("support_strength", "mastery_gap_help", "diversity", delta=0.08)
                 bump_strategy("complementary", delta=0.06)
-            if getattr(payload, "comfort_score", None) and payload.comfort_score <= 2:
+            if payload.comfort_score and payload.comfort_score <= 2:
                 bump_feature("relationship_readiness", "stability", delta=0.06)
-            if getattr(payload, "overall_score", None) and payload.overall_score >= 4 and payload.strategy.value == "compatibility":
+            if payload.overall_score and payload.overall_score >= 4 and payload.strategy.value == "compatibility":
                 bump_strategy("compatibility", delta=0.03)
-            if getattr(payload, "overall_score", None) and payload.overall_score >= 4 and payload.strategy.value == "complementary":
+            if payload.overall_score and payload.overall_score >= 4 and payload.strategy.value == "complementary":
                 bump_strategy("complementary", delta=0.03)
 
             for signal in parsed_signals:
@@ -532,13 +535,19 @@ class RecommendationFeedbackService:
                 elif signal == "trustworthy":
                     bump_feature("relationship_readiness", "stability", delta=0.04)
         else:
-            if getattr(payload, "interest_match_score", None) and payload.interest_match_score <= 2:
+            # payload 可能是 Friend/Group 任一变体，经 getattr 取可选评分字段
+            # 并绑定局部变量（真值守卫与比较用同一取值，行为不变）。
+            interest_match = getattr(payload, "interest_match_score", None)
+            if interest_match and interest_match <= 2:
                 bump_feature("tag_score", delta=0.10)
-            if getattr(payload, "activity_score", None) and payload.activity_score <= 2:
+            activity = getattr(payload, "activity_score", None)
+            if activity and activity <= 2:
                 bump_feature("activity", delta=0.05)
-            if getattr(payload, "atmosphere_score", None) and payload.atmosphere_score <= 2:
+            atmosphere = getattr(payload, "atmosphere_score", None)
+            if atmosphere and atmosphere <= 2:
                 bump_feature("quality", delta=0.04)
-            if getattr(payload, "overall_score", None) and payload.overall_score >= 4:
+            overall = getattr(payload, "overall_score", None)
+            if overall and overall >= 4:
                 bump_feature("quality", delta=0.02)
 
             for signal in parsed_signals:
@@ -675,7 +684,9 @@ class RecommendationFeedbackService:
                 avatar_url=user.avatar_url,
                 flame_level=user.flame_level,
                 flame_brightness=user.flame_brightness,
-                status=user.status.value,
+                # models 层 UserStatus → schemas 层 UserStatusEnum 按值转换
+                # （两者同为同值 StrEnum），保持 UserBrief 字段类型精确。
+                status=UserStatusEnum(user.status),
             )
         return briefs
 
