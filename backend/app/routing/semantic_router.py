@@ -49,7 +49,7 @@ class SemanticRouter:
                 }
 
             best_capability = None
-            best_score = 0
+            best_score = 0.0
 
             for capability, scores in similarities.items():
                 if scores['combined'] > best_score and scores['combined'] > 0.3: # Threshold 0.3

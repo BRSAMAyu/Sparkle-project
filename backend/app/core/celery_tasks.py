@@ -2658,7 +2658,7 @@ def purge_deleted_account(self, user_id: str) -> dict:
             logger.info(f"✅ Purged deleted account {user_id}: {counts}")
 
             # R8-P1-04: Clean up Redis keys for Aurora, Spine, and other systems
-            redis_deleted = await _purge_redis_keys(user_id)
+            redis_deleted = await _purge_redis_keys(uid)
             counts["redis_keys"] = redis_deleted
 
             return {"status": "purged", "user_id": user_id, "counts": counts}

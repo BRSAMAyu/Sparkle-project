@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import ClassVar
+
 
 
 class SLOSeverity(StrEnum):
@@ -273,7 +273,7 @@ class BurnRateWindow:
 
 
 # Standard multi-window burn rate config
-BURN_RATE_WINDOWS: ClassVar[list[BurnRateWindow]] = [
+BURN_RATE_WINDOWS: list[BurnRateWindow] = [
     BurnRateWindow(
         name="fast_burn_1h",
         window_hours=1.0,
@@ -316,7 +316,7 @@ def burn_rate(
 
 # ── Aggregate registry ──────────────────────────────────────────────────────
 
-ALL_DOMAINS: ClassVar[list[SLODomain]] = [
+ALL_DOMAINS: list[SLODomain] = [
     PERFORMANCE_SLOS,
     INFRASTRUCTURE_SLOS,
     RELIABILITY_SLOS,
@@ -340,6 +340,6 @@ def targets_by_service(service: str) -> list[SLOTarget]:
     return [t for t in all_targets() if t.service == service]
 
 
-SLO_TABLE: ClassVar[dict[str, SLOTarget]] = {
+SLO_TABLE: dict[str, SLOTarget] = {
     t.name: t for t in all_targets()
 }
