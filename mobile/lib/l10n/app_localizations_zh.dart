@@ -8398,6 +8398,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planReviewDecisionRequiresConfirmation => '需要确认';
 
   @override
+  String get planReviewDecisionSkipped => '未经审查';
+
+  @override
   String planReviewEvidenceLabel(Object arg0) {
     return '$arg0';
   }
@@ -8454,6 +8457,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get planReviewSummaryRequiresConfirmation => '计划需要确认';
+
+  @override
+  String get planReviewSummarySkipped => '计划未经审查';
 
   @override
   String get planSectionCompletionRate => '完成率';

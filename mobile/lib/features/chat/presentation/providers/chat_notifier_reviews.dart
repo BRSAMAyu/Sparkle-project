@@ -92,6 +92,9 @@ extension ChatNotifierReviews on ChatNotifier {
         return UserReviewDecision.modify;
       case ReviewDecision.requiresConfirmation:
         return UserReviewDecision.acknowledge;
+      case ReviewDecision.skipped:
+        // 降级未审查（V3-FIX-302）：无审批动作可提交，仅确认知悉。
+        return UserReviewDecision.acknowledge;
     }
   }
 
@@ -106,6 +109,8 @@ extension ChatNotifierReviews on ChatNotifier {
         return 'review_modification_requested';
       case ReviewDecision.requiresConfirmation:
         return 'review_confirmed';
+      case ReviewDecision.skipped:
+        return 'review_skipped';
     }
   }
 

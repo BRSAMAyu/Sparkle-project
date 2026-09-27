@@ -29,6 +29,11 @@ from app.orchestration.schemas import (
     ToolCallSpec,
 )
 
+# wt600（V3-FIX-302）：synthesized fallback 计划的真实置信档位。
+# 兜底计划是无 LLM 参与的固定模板链，不继承 _convert_to_plan 面向 LLM 计划的
+# 0.8 启发式，也不得再人为抬到 0.35——信封置信带与降级审查记录按此档位如实呈现。
+FALLBACK_PLAN_CONFIDENCE = 0.05
+
 
 class LangGraphPlanner:
     """LangGraph Planner (Phase 2)
@@ -600,10 +605,14 @@ class LangGraphPlanner:
             "review_config": None,
         }
         fallback_plan = self._convert_to_plan(fallback_state, snapshot, user_id, session_id)
-        # Keep fallback plans on the same executable lane as native LangGraph plans
-        # so downstream tool execution does not silently skip them.
-        fallback_plan.source = "langgraph"
-        fallback_plan.confidence = max(fallback_plan.confidence, 0.35)
+        # wt600（V3-FIX-302）：降级产物诚实元数据。source 如实标 langgraph_fallback
+        # （不再伪装原生 langgraph——消费面 bypass 已同步认得降级来源，见
+        # grounding_validator._should_bypass_confirmation），置信度按模板兜底的
+        # 真实档位 FALLBACK_PLAN_CONFIDENCE 走（不再 max(…, 0.35) 抬升，
+        # 也不继承 _convert_to_plan 面向 LLM 计划的 0.8 启发式）。
+        # 下游工具执行按 tool_calls 泳道消费，source 变化不影响可执行性。
+        fallback_plan.source = "langgraph_fallback"
+        fallback_plan.confidence = FALLBACK_PLAN_CONFIDENCE
         fallback_plan.rationale = rationale
         fallback_plan.plan_version = plan_version
         return fallback_plan

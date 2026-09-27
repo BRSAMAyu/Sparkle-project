@@ -280,6 +280,8 @@ def _install_import_stubs() -> None:
             REJECTED = types.SimpleNamespace(value="rejected")
             REQUIRES_CONFIRMATION = types.SimpleNamespace(value="requires_confirmation")
             NEEDS_MODIFICATION = types.SimpleNamespace(value="needs_modification")
+            # wt600（V3-FIX-302）：与真实 ReviewDecision 词表保持同步（降级链未审查）。
+            SKIPPED = types.SimpleNamespace(value="skipped")
 
         class _PlanReviewServiceStub:
             def set_redis(self, redis_client) -> None:

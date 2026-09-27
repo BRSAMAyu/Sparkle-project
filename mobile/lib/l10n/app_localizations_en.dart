@@ -8735,6 +8735,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Plan Review Decision Requires Confirmation';
 
   @override
+  String get planReviewDecisionSkipped => 'Review Skipped';
+
+  @override
   String planReviewEvidenceLabel(Object arg0) {
     return '$arg0';
   }
@@ -8799,6 +8802,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get planReviewSummaryRequiresConfirmation =>
       'Plan Review Summary Requires Confirmation';
+
+  @override
+  String get planReviewSummarySkipped => 'Plan Not Reviewed';
 
   @override
   String get planSectionCompletionRate => 'Plan Section Completion Rate';

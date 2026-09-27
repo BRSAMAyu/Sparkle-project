@@ -2523,12 +2523,17 @@ class ExecutionEngineMixin:
                         "Skipping LLM plan review for synthesized fallback plan {} to keep planning degradations executable",
                         executable_plan.plan_id,
                     )
+                    # wt600（V3-FIX-302）：降级链不再伪造 APPROVED 审查记录。跳过
+                    # LLM 审查是允许的降级，但审查状态必须如实：decision=skipped、
+                    # alignment_score=None（分数只允许来自真实审查产物）、
+                    # review_skipped=True 供信封区分「未审查」与「已审查」。
                     state.context_data["plan_review"] = {
-                        "decision": ReviewDecision.APPROVED.value,
+                        "decision": ReviewDecision.SKIPPED.value,
                         "confidence": executable_plan.confidence,
-                        "alignment_score": executable_plan.confidence,
-                        "alignment_summary": "Fallback plan auto-approved to preserve end-to-end execution.",
+                        "alignment_score": None,
+                        "alignment_summary": "计划为降级生成，未经 LLM 审查。",
                         "reasoning_source": "rule_skip_synthesized_fallback",
+                        "review_skipped": True,
                         "plan_id": executable_plan.plan_id,
                     }
                 else:
@@ -2725,20 +2730,25 @@ class ExecutionEngineMixin:
                             ),
                             plan_version=1,
                         )
+                        # wt600（V3-FIX-302）：替换出的降级计划未经审查，审查状态
+                        # 如实记 skipped（不再伪造 APPROVED）；原计划的真实审查
+                        # 结论保留在 original_review_* 可追溯。
                         state.context_data["plan_review"] = {
-                            "decision": ReviewDecision.APPROVED.value,
+                            "decision": ReviewDecision.SKIPPED.value,
                             "confidence": executable_plan.confidence,
-                            "alignment_score": executable_plan.confidence,
+                            "alignment_score": None,
                             "alignment_summary": (
-                                "复杂规划已自动降级为可直接执行的最小计划链，" "以确保聊天内能稳定产出计划卡与任务卡。"
+                                "复杂规划已自动降级为可直接执行的最小计划链，"
+                                "降级计划未经 LLM 审查；原计划审查结论已保留。"
                             ),
                             "reasoning_source": "review_degraded_to_synthesized_fallback",
+                            "review_skipped": True,
                             "plan_id": executable_plan.plan_id,
                             "original_review_decision": review_result.decision,
                             "original_review_id": review_result.review_id,
                         }
 
-                    if review_requires_user_action and not should_force_minimal_execution:
+                    elif review_requires_user_action:
                         action_id = await plan_review_service.store_review_result(
                             review=review_result,
                             user_id=str(user_id),
@@ -2768,10 +2778,11 @@ class ExecutionEngineMixin:
                         )
                         return route_decision, executable_plan, snapshot, True
 
-                    state.context_data["plan_review"] = review_result.to_dict()
-                    logger.info(
-                        f"Plan {executable_plan.plan_id} auto-approved: " f"confidence={review_result.confidence}"
-                    )
+                    else:
+                        state.context_data["plan_review"] = review_result.to_dict()
+                        logger.info(
+                            f"Plan {executable_plan.plan_id} auto-approved: " f"confidence={review_result.confidence}"
+                        )
 
             state.context_data["executable_plan"] = executable_plan
             state.context_data["snapshot"] = snapshot

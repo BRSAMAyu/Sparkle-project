@@ -682,6 +682,9 @@ class UXEnvelopeBuilder:
             "approved",
             "requires_confirmation",
             "needs_modification",
+            # wt600（V3-FIX-302）：降级链未审查（skipped）的计划同样已就绪可执行，
+            # 阶段判定按「计划就绪」如实呈现。
+            "skipped",
         }:
             return "plan_ready"
 
@@ -940,9 +943,11 @@ class UXEnvelopeBuilder:
         plan_review = context_data.get("plan_review")
         if isinstance(plan_review, dict):
             decision = str(plan_review.get("decision") or "").strip().lower()
-            if decision in {"requires_confirmation", "needs_modification"}:
-                return "needs_input"
-            if decision and decision != "approved":
+            # wt600（V3-FIX-302）：只有需要用户行动的真实审查结论才算 needs_input；
+            # decision=skipped（降级链未执行审查）不是待用户输入信号——枚举
+            # 取值与 ReviewDecision 一致，不再用「非 approved 即 needs_input」
+            # 的兜底判定误伤如实记录。
+            if decision in {"requires_confirmation", "needs_modification", "rejected"}:
                 return "needs_input"
         chat_mode = str(context_data.get("chat_mode") or CHAT_MODE_STANDARD)
         latest_user_message = ""
@@ -971,13 +976,22 @@ class UXEnvelopeBuilder:
             validation_score = execution_validation.get("quality_score") or execution_validation.get("confidence")
         plan_confidence = getattr(executable_plan, "confidence", None)
         route_confidence = getattr(route_decision, "confidence", None)
-        for score in (validation_score, plan_confidence, route_confidence):
+        # wt600（V3-FIX-302）：降级合成计划的置信带按其真实低置信度档位呈现，
+        # 不被路由置信度顶高；无更高实证时落 cautious 而非默认 medium。
+        degraded_plan = getattr(executable_plan, "source", "") == "langgraph_fallback"
+        for score in (validation_score, plan_confidence) if degraded_plan else (
+            validation_score,
+            plan_confidence,
+            route_confidence,
+        ):
             if isinstance(score, (float, int)):
                 if score >= 0.8:
                     return "high"
                 if score >= 0.55:
                     return "medium"
         if self._execution_failed_count(execution_validation) > 0:
+            return "cautious"
+        if degraded_plan:
             return "cautious"
         return "medium"
 
@@ -1567,7 +1581,12 @@ class UXEnvelopeBuilder:
         if not isinstance(plan_reasoning_details, list):
             plan_reasoning_details = []
         if context_data.get("plan_review"):
-            highlights.append("已记录本轮计划审查状态")
+            # wt600（V3-FIX-302）：降级链审查记录（decision=skipped）不再冒充
+            # 「已记录本轮计划审查状态」，按未审查事实如实呈现。
+            if (plan_review or {}).get("decision") == "skipped":
+                highlights.append("计划为降级生成，未经 LLM 审查")
+            else:
+                highlights.append("已记录本轮计划审查状态")
         if context_data.get("pending_review_action_id"):
             highlights.append("已等待你的确认后再继续执行")
         if (user_context_payload or {}).get("preference_version"):
@@ -1802,6 +1821,13 @@ class UXEnvelopeBuilder:
             }
         context_data = getattr(final_state, "context_data", {}) or {}
         if context_data.get("plan_review"):
+            # wt600（V3-FIX-302）：降级链未审查的计划不再谎称「已生成计划审查结果」。
+            if (context_data.get("plan_review") or {}).get("decision") == "skipped":
+                return {
+                    "title": "继续当前节奏",
+                    "message": "上轮计划为降级生成，未经计划审查；这轮我会按你的新请求继续。",
+                    "kind": "degraded_plan",
+                }
             return {
                 "title": "等待你的选择",
                 "message": "上轮已经生成了计划审查结果，这轮会沿着你的反馈继续。",

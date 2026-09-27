@@ -58,12 +58,18 @@ def _is_liberal_arts(background: str | None) -> bool:
 
 
 class ReviewDecision(Enum):
-    """Plan review decision types"""
+    """Plan review decision types
+
+    wt600（V3-FIX-302）：SKIPPED = 降级链未执行 LLM 计划审查（如 synthesized
+    fallback 跳过审查）。与 APPROVED 严格区分——跳过不是批准。消费面词表见
+    ux_envelope（_conversation_stage/_completion_state/_memory_updates）。
+    """
 
     APPROVED = "approved"
     REJECTED = "rejected"
     NEEDS_MODIFICATION = "needs_modification"
     REQUIRES_CONFIRMATION = "requires_confirmation"
+    SKIPPED = "skipped"
 
 
 class ReviewCategory(Enum):

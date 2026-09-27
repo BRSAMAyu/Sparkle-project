@@ -16,6 +16,9 @@ enum ReviewDecision {
   rejected,
   needsModification,
   requiresConfirmation,
+
+  /// 降级链未执行 LLM 计划审查（V3-FIX-302：skipped 与 approved 严格区分——跳过不是批准）。
+  skipped,
 }
 
 /// Review comment model
@@ -112,6 +115,8 @@ class PlanReviewResult {
         return ReviewDecision.needsModification;
       case 'requires_confirmation':
         return ReviewDecision.requiresConfirmation;
+      case 'skipped':
+        return ReviewDecision.skipped;
       default:
         return ReviewDecision.requiresConfirmation;
     }
@@ -319,6 +324,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
             widget.onModify?.call();
           case ReviewDecision.requiresConfirmation:
             widget.onApprove?.call();
+          case ReviewDecision.skipped:
+            // 降级未审查计划无审批动作可提交（V3-FIX-302）。
+            break;
         }
         setState(() => _isSubmitted = true);
       }
@@ -722,6 +730,10 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         label = context.l10n.planReviewDecisionRequiresConfirmation;
         bgColor = DS.info.withValues(alpha: 0.1);
         textColor = DS.info;
+      case ReviewDecision.skipped:
+        label = context.l10n.planReviewDecisionSkipped;
+        bgColor = DS.neutral600.withValues(alpha: 0.1);
+        textColor = DS.neutral600;
     }
 
     return Container(
@@ -1074,6 +1086,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         return DS.warningGradient;
       case ReviewDecision.requiresConfirmation:
         return DS.infoGradient;
+      case ReviewDecision.skipped:
+        return DS.cardGradientNeutral;
     }
   }
 
@@ -1087,6 +1101,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         return DS.warning;
       case ReviewDecision.requiresConfirmation:
         return DS.info;
+      case ReviewDecision.skipped:
+        return DS.neutral600;
     }
   }
 
@@ -1100,6 +1116,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         return Icons.edit_note_rounded;
       case ReviewDecision.requiresConfirmation:
         return Icons.help_outline_rounded;
+      case ReviewDecision.skipped:
+        return Icons.hourglass_empty_rounded;
     }
   }
 
@@ -1113,6 +1131,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         return context.l10n.planReviewSummaryNeedsModification;
       case ReviewDecision.requiresConfirmation:
         return context.l10n.planReviewSummaryRequiresConfirmation;
+      case ReviewDecision.skipped:
+        return context.l10n.planReviewSummarySkipped;
     }
   }
 

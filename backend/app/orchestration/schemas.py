@@ -131,7 +131,10 @@ class ExecutablePlan:
     context_version: str = ""
     snapshot_id: str = ""  # Phase 2: Associated snapshot_id
 
-    source: Literal["langgraph", "fast_path", "shadow"] = "fast_path"
+    # wt600（V3-FIX-302）：langgraph_fallback = 降级合成兜底计划（未经 LLM 规划/审查），
+    # 与原生 langgraph 计划同泳道可执行，但来源如实区分（消费面见
+    # grounding_validator._should_bypass_confirmation 的受控链 bypass）。
+    source: Literal["langgraph", "langgraph_fallback", "fast_path", "shadow"] = "fast_path"
     confidence: float = 0.5
     rationale: str = ""
 

@@ -66,10 +66,14 @@ class GroundingValidator:
         the executable DAG is limited to `create_plan -> generate_tasks_for_plan`.
         For this specific `langgraph` planning path we auto-execute so the chat
         flow can produce real plan/task cards instead of stalling on HITL.
+
+        wt600（V3-FIX-302）：降级合成兜底（langgraph_fallback）是同一规划泳道的
+        降级产物——同样的用户显式请求、同样的受控 DAG 形态——bypass 语义保持，
+        避免降级链被 HITL 闸门卡死（source 如实化不得改变可执行性）。
         """
         if getattr(tool_call, "name", "") != "generate_tasks_for_plan":
             return False
-        if getattr(plan, "source", "") != "langgraph":
+        if getattr(plan, "source", "") not in {"langgraph", "langgraph_fallback"}:
             return False
         if getattr(tool_call, "point_of_no_return", False):
             return False

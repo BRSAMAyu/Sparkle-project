@@ -15494,6 +15494,12 @@ abstract class AppLocalizations {
   /// **'需要确认'**
   String get planReviewDecisionRequiresConfirmation;
 
+  /// No description provided for @planReviewDecisionSkipped.
+  ///
+  /// In zh, this message translates to:
+  /// **'未经审查'**
+  String get planReviewDecisionSkipped;
+
   /// No description provided for @planReviewEvidenceLabel.
   ///
   /// In zh, this message translates to:
@@ -15601,6 +15607,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'计划需要确认'**
   String get planReviewSummaryRequiresConfirmation;
+
+  /// No description provided for @planReviewSummarySkipped.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划未经审查'**
+  String get planReviewSummarySkipped;
 
   /// No description provided for @planSectionCompletionRate.
   ///
