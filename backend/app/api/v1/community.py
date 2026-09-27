@@ -15,7 +15,7 @@ import json
 import time
 from copy import deepcopy
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
@@ -318,13 +318,16 @@ def _cohort_visible_post_clause(current_user: User):
     )
 
 
-def _active_block_exclusion_clause(current_user: User):
+def _active_block_exclusion_clause(current_user: User, *, author_column: Any = Post.user_id):
     """双向拉黑排除谓词：与 feed 读面同一闸，读写共享（V3-FIX-419 写侧对偶）。
 
     排除与当前用户存在任一向活跃拉黑关系的作者——「我拉黑的」与「拉黑我的」
     的帖一律按不存在处理；软删行（解除拉黑）不回闸。此前该谓词只在 feed 读面
     生效，comment/like 写面按 post_id 直写绕过闸门（软删帖可写、计数在已删行
     自增、拉黑交互仍触发通知推送），现读写共享同一子句。
+
+    V3-FIX-449：评论读面按同一闸排除评论作者，传 ``author_column=PostComment.user_id``
+    复用同一子句（默认仍为帖作者列，feed/写面调用点与编译 SQL 零变化）。
     """
     blocked_uids = (
         select(UserBlock.blocked_id.label("uid"))
@@ -336,7 +339,7 @@ def _active_block_exclusion_clause(current_user: User):
         )
         .subquery()
     )
-    return ~Post.user_id.in_(select(blocked_uids.c.uid))
+    return ~author_column.in_(select(blocked_uids.c.uid))
 
 
 # route-tier: authed
@@ -582,9 +585,23 @@ async def toggle_like_post(
 @router.get("/posts/{post_id}/comments", summary="获取评论列表")
 async def list_post_comments(
     post_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get comments for a post, newest first."""
+    # V3-FIX-449（读面对偶）：帖定位与 419 写面/feed 读面同闸——软删帖按不存在
+    # 处理（404），评论列表不再读已删行（419 计数污染同族的读半边）。
+    post = (
+        await db.execute(
+            select(Post).where(
+                Post.id == post_id,
+                Post.not_deleted_filter(),
+            )
+        )
+    ).scalar_one_or_none()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
     # V3-FIX-08：评论读面排除 guest/seed cohort 评论作者（与 feed 主修同词表）。
     visible_commenters = select(User.id).where(
         User.registration_source.not_in(EXCLUDED_COHORT_REGISTRATION_SOURCES)
@@ -595,6 +612,10 @@ async def list_post_comments(
             .where(
                 PostComment.post_id == post_id,
                 PostComment.user_id.in_(visible_commenters),
+                # V3-FIX-449（读面对偶）：评论作者双向拉黑排除——与 feed 读面
+                # 同闸同词表（复用 _active_block_exclusion_clause，作者列换成
+                # 评论作者），被拉黑/拉黑我的作者的评论按不存在处理（隐藏）。
+                _active_block_exclusion_clause(current_user, author_column=PostComment.user_id),
             )
             .order_by(desc(PostComment.created_at))
         )
@@ -727,7 +748,14 @@ async def delete_post_comment(
         raise HTTPException(status_code=403, detail="Not your comment")
 
     post = (
-        await db.execute(select(Post).where(Post.id == post_id))
+        await db.execute(
+            select(Post).where(
+                Post.id == post_id,
+                # V3-FIX-449（419 计数污染删除半边）：comment_count 自减仅对活跃帖
+                # 行生效，软删行跳过自减；删除动作本身保留（wt733 裁决，不扩成 404）。
+                Post.not_deleted_filter(),
+            )
+        )
     ).scalar_one_or_none()
     if post:
         post.comment_count = max(0, (post.comment_count or 1) - 1)
