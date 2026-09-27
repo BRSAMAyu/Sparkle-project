@@ -7235,7 +7235,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get studyMaterialsHeroSubtitle =>
-      '统一管理你的笔记、课件和 PDF，查看它们落到哪些知识星点，并追踪 Aurora 实际引用了多少次。';
+      '统一管理你的笔记、课件和 PDF，查看它们关联到哪些知识点，并追踪 Aurora 实际引用了多少次。';
 
   @override
   String get studyMaterialsMetricDocs => '资料数';
@@ -15103,7 +15103,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String galaxyUploadHeadingTo(Object target) {
-    return '正飞向 $target';
+    return '正在添加到 $target';
   }
 
   @override

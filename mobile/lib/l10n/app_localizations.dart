@@ -13336,7 +13336,7 @@ abstract class AppLocalizations {
   /// No description provided for @studyMaterialsHeroSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'统一管理你的笔记、课件和 PDF，查看它们落到哪些知识星点，并追踪 Aurora 实际引用了多少次。'**
+  /// **'统一管理你的笔记、课件和 PDF，查看它们关联到哪些知识点，并追踪 Aurora 实际引用了多少次。'**
   String get studyMaterialsHeroSubtitle;
 
   /// No description provided for @studyMaterialsMetricDocs.
@@ -27333,7 +27333,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyUploadHeadingTo.
   ///
   /// In zh, this message translates to:
-  /// **'正飞向 {target}'**
+  /// **'正在添加到 {target}'**
   String galaxyUploadHeadingTo(Object target);
 
   /// No description provided for @galaxyUploadStepUpload.

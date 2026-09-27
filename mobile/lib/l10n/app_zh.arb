@@ -3049,7 +3049,7 @@
   "studyMaterialsEntrySubtitle": "查看上传资料、处理进度，并管理知识来源",
   "studyMaterialsHeroEyebrow": "个人知识资料馆",
   "studyMaterialsHeroTitle": "把每一次上传都变成可调用的学习上下文",
-  "studyMaterialsHeroSubtitle": "统一管理你的笔记、课件和 PDF，查看它们落到哪些知识星点，并追踪 Aurora 实际引用了多少次。",
+  "studyMaterialsHeroSubtitle": "统一管理你的笔记、课件和 PDF，查看它们关联到哪些知识点，并追踪 Aurora 实际引用了多少次。",
   "studyMaterialsMetricDocs": "资料数",
   "studyMaterialsMetricReady": "已就绪",
   "studyMaterialsMetricInMotion": "处理中",
@@ -7091,7 +7091,7 @@
   "galaxyUploadFailedTitle": "这颗星还没落稳",
   "galaxyUploadFailedBody": "这份资料没能进你的星图，你的数据没有丢，稍后再试一次。",
   "galaxyUploadRetry": "重新上传",
-  "galaxyUploadHeadingTo": "正飞向 {target}",
+  "galaxyUploadHeadingTo": "正在添加到 {target}",
   "@galaxyUploadHeadingTo": {
     "placeholders": {
       "target": {
