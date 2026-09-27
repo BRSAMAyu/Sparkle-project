@@ -1,6 +1,13 @@
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 错误消息映射工具类
+///
+/// V3-FIX-360（wt692 收口）：默认分支不再直出/剥前缀透传 technicalMessage——
+/// 未命中模式与错误码映射的语义未知，按 N16 单源纪律落
+/// [uiErrorMessage] 类别人话兜底（判定走全库唯一字符串判定表
+/// [categorizeUiError]），技术细节永不直达用户面。
 class ErrorMessages {
   /// 获取本地化错误消息
   static String getLocalizedMessage(
@@ -115,66 +122,29 @@ class ErrorMessages {
       // 其他错误
       case 'UNKNOWN':
       default:
-        // 如果是英文环境，且没有匹配到已知模式，则尝试剥离 "Exception: " 前缀
-        if (technicalMessage != null &&
-            technicalMessage.startsWith('Exception: ')) {
-          return technicalMessage.substring(11);
-        }
-        return technicalMessage ?? l10n.errorServerIssue;
-    }
+        // V3-FIX-360（wt692）：语义未知不透传 technicalMessage（原实现
+        // 剥「Exception: 」前缀或原样直出，后端技术细节直达用户面）——
+        // 经共享判定表尽力归类，归类不中落最笼统兜底词条（N16 口径）。
+        return uiErrorMessage(l10n, categorizeUiError(technicalMessage));
+      }
   }
 
-  /// 将技术性错误代码映射为用户友好的消息 (保留作为兜底，默认中文)
+  /// 将技术性错误代码映射为用户友好的消息 (无 BuildContext 场景的兜底入口)。
+  ///
+  /// V3-FIX-360（wt692）：l10n 缺省时改走 [I18nService]（zh 优先解析，
+  /// 见 W-7 裁决）统一进 [getLocalizedMessage] 单路径；原「Exception: /
+  /// ~/啦」剥前缀透传与英文私有映射表退役——私有「异常→文案」映射违反
+  /// N16 单源条款，且透传面同属技术信息泄漏。
   static String getUserFriendlyMessage(
     String errorCode,
     String? technicalMessage, {
     AppLocalizations? l10n,
-  }) {
-    if (l10n != null) {
-      return getLocalizedMessage(l10n, errorCode, technicalMessage);
-    }
-
-    // Fallback to English when l10n is unavailable
-    if (technicalMessage != null &&
-        (technicalMessage.contains('Exception: ') ||
-            technicalMessage.contains('~') ||
-            technicalMessage.contains('啦'))) {
-      return technicalMessage.replaceFirst('Exception: ', '');
-    }
-
-    switch (errorCode.toUpperCase()) {
-      case 'CONNECTION_ERROR':
-      case 'WEBSOCKET_ERROR':
-        return 'Connection lost. Could not receive the full response.';
-      case 'OFFLINE':
-      case 'NO_INTERNET':
-        return 'You appear to be offline. Content has been saved locally.';
-      case 'CONNECTION_TIMEOUT':
-      case 'STREAM_TIMEOUT':
-        return 'The request timed out. Only partial results were received.';
-      case 'MAX_RETRIES_EXCEEDED':
-        return 'Maximum retries exceeded. The connection did not stabilize.';
-      case 'UNAUTHORIZED':
-      case 'AUTH_REQUIRED':
-        return 'Authentication is invalid. Please sign in again.';
-      case 'TOKEN_EXPIRED':
-        return 'Session expired. Please sign in again.';
-      case 'SERVER_ERROR':
-      case 'INTERNAL_ERROR':
-        return 'The server encountered an error processing this request.';
-      case 'SERVICE_UNAVAILABLE':
-        return 'This service is temporarily unavailable.';
-      case 'RATE_LIMIT_EXCEEDED':
-        return 'Too many requests. Please try again later.';
-      case 'LLM_ERROR':
-      case 'AI_ERROR':
-        return 'The AI service did not return a stable response.';
-      case 'CONTEXT_LENGTH_EXCEEDED':
-        return 'Context is too long to process with full history.';
-      default:
-        return technicalMessage ?? 'An unexpected error occurred.';
-    }
-  }
+  }) =>
+      getLocalizedMessage(
+        l10n ?? I18nService.instance.l10n,
+        errorCode,
+        technicalMessage,
+      );
 
   /// 判断错误是否可重试
   static bool isRetryable(String errorCode) {
