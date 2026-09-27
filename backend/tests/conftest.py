@@ -217,12 +217,18 @@ def _restore_llm_global_health_state():
     from app.services import circuit_breaker as cb_module
 
     health_snapshot = dict(llm_router._model_health)
+    available_snapshot = dict(llm_router._available_models)
     stats_snapshot = dict(adaptive_routing_engine._stats)
     cb_failures_snapshot = dict(cb_module._LOCAL_FAILURES)
     cb_open_snapshot = dict(cb_module._LOCAL_OPEN)
     yield
     llm_router._model_health.clear()
     llm_router._model_health.update(health_snapshot)
+    # 2026-09-27 CI shard 复现：_available_models 同为进程级可变全局——前序测试
+    # 注册/注销模型会泄漏进后续测试（capability_selection_policy 的 tier 期望
+    # 随可用集漂移）；与 _model_health 同拍快照还原。
+    llm_router._available_models.clear()
+    llm_router._available_models.update(available_snapshot)
     adaptive_routing_engine._stats.clear()
     adaptive_routing_engine._stats.update(stats_snapshot)
     cb_module._LOCAL_FAILURES.clear()
