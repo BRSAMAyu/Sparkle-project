@@ -117,13 +117,13 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 4. **云端部署**：未部署（O-01 卡凭据）；本地栈形态是唯一已验证运行形态。
 5. **演示数据**：guest 登录播种 6 演示群+演示用户（friend 行共享）；journey 主用户 ns001 数据为真实七日驱动。
 
-## 9. 度量快照（2026-09-28 03:00）
+## 9. 度量快照（2026-09-28 03:50，wt780 全本机实测@9a4ea3d4，详 v3-output/WT780-METRICS/metrics.md）
 
-- 卡片：100/107 done（三源核验）｜FIX 台账 339 行（493 FIXED/占比 72%+）
-- mypy 91（冷缓存主干口径；CI 侧基线 380 系平台代际差待 CI 实数对齐下调）
-- 测试：backend ~12.3k/gateway 692/flutter 2636 用例
-- 磁盘/运行态：本地栈三容器 healthy、双端 200（生产部署 N/A）
-- ⏳ v0.2 补：代码规模统计、模块依赖图、测试覆盖分布
+- **代码规模**：手写生产 ~113.5 万行——backend/app 1,356 文件/533k 行；mobile/lib 手写 1,187 文件/564k 行（排除 vendored 与生成物）；gateway 105 文件/38k 行（+141 测试文件 27k 行）。测试文件：backend 1,443 + gateway 141 + mobile 518。
+- **模块依赖**：35 顶层包/192 边/34 对双向依赖；最重边 services→core 314、services→models 310；**core↔services 双向对是 V4 分层解环首批对象**。
+- **测试分布**：backend/tests 收集 **13,799 用例 0 错误**（unit 占 70.8%）；tests_e2e 36+1 收集错误（死文件 FIX-528）；gateway 746 测试函数；flutter 2,628（静态）。测量卫生：worktree 需先补 gen 否则数字失真。
+- **FIX 台账**：351 条数据行，**FIXED 276（78.6%）/OPEN 71/CLOSED 3/WONTFIX 1**；P0 5/5 全闭；P1 27/28（唯一 OPEN=FIX-53）；底重金字塔（P3 占 44%）。热点 top10：services 90、mobile 68、models/orchestration 各 45…（V4 债务治理地理图）。
+- mypy **70**（本日 922→70 十一批冷缓存主干口径；CI 侧基线 380 平台代际差待 CI 实数对齐）；卡片 101/107+J-02 PARTIAL+O-05 待审查；本地栈三容器 healthy 双端 200（生产部署 N/A）。
 
 ## 10. V4 设计建议输入（⏳ v0.2 起充实）
 
