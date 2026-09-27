@@ -64,15 +64,28 @@ async def _run(client: Any, capability_id: str) -> int:
     baseline_mode = snapshot["mode"]
     print(f"[1/3] baseline: {capability_id} mode={baseline_mode} (settings_mode={snapshot['settings_mode']})")
 
-    set_result = await ops_surface.set_capability_mode(
-        client, spec, SMOKE_TARGET_MODE, actor="rollback-smoke", reason="O-06 smoke"
-    )
-    print(f"[2/3] flipped: {baseline_mode} -> {set_result['mode']} (history_recorded={set_result['history_recorded']})")
-    if set_result["mode"] != SMOKE_TARGET_MODE:
-        print(f"FAIL: expected {SMOKE_TARGET_MODE}, got {set_result['mode']}")
-        return 1
+    # WT771-B: 翻转→回滚段任何异常都必须尝试恢复 baseline 再非零退出——
+    # 交付版在段内崩出（如 NoRollbackPointError）会把旗滞留在 shadow。
+    try:
+        set_result = await ops_surface.set_capability_mode(
+            client, spec, SMOKE_TARGET_MODE, actor="rollback-smoke", reason="O-06 smoke"
+        )
+        print(f"[2/3] flipped: {baseline_mode} -> {set_result['mode']} (history_recorded={set_result['history_recorded']})")
+        if set_result["mode"] != SMOKE_TARGET_MODE:
+            print(f"FAIL: expected {SMOKE_TARGET_MODE}, got {set_result['mode']}")
+            return 1
 
-    rollback = await ops_surface.rollback_capability(client, spec, actor="rollback-smoke")
+        rollback = await ops_surface.rollback_capability(client, spec, actor="rollback-smoke")
+    except Exception as exc:  # noqa: BLE001 —— 冒烟脚本须尽最大努力恢复后报错
+        print(f"ERROR: flip/rollback stage failed: {exc!r} —— attempting baseline restore")
+        try:
+            await ops_surface.set_capability_mode(
+                client, spec, baseline_mode, actor="rollback-smoke", reason="WT771-B crash restore"
+            )
+            print(f"RESTORED: {capability_id} -> {baseline_mode}")
+        except Exception as restore_exc:  # noqa: BLE001
+            print(f"CRITICAL: baseline restore ALSO failed: {restore_exc!r} —— capability left flipped!")
+        return 1
     print(f"[3/3] rollback: {rollback['previous_mode']} -> {rollback['mode']}")
     history = await ops_surface.capability_history(client, spec, limit=5)
 
