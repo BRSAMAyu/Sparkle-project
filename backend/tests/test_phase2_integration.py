@@ -184,8 +184,12 @@ async def test_idempotency_flow():
             responses2.append(r)
         
         # Should return cached response
-        assert len(responses2) == 1
-        assert responses2[0].full_text == "Cached response"
+        # V3-FIX-439 首帧前移（wt755）：intake ack 帧先于幂等守卫下发，
+        # 缓存命中的 STOP full_text 仍是唯一终帧。
+        assert len(responses2) == 2
+        assert responses2[0].metadata.get("early_ack") == "true"
+        assert responses2[1].full_text == "Cached response"
+        assert responses2[1].finish_reason == agent_service_pb2.STOP
         
         print("✅ Idempotency test passed")
         

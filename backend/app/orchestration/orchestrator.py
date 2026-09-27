@@ -1467,8 +1467,9 @@ class ChatOrchestrator(
     ) -> None:
         """E-03 首反馈帧（intake/handoff）。
 
-        服务可知点（校验/幂等/锁/会话态就绪）立即下发，携带 trace 关联；
-        帧构造走 stage_events 单一真源（canonical stage + 无 reasoning 面）。
+        服务可知点（V3-FIX-439 前移后=请求身份锚定：校验/幂等/锁/会话态守卫
+        链之前）立即下发，携带 trace 关联；帧构造走 stage_events 单一真源
+        （canonical stage + 无 reasoning 面）。
         """
         if not getattr(settings, "EARLY_ACK_PROGRESS_ENABLED", True):
             return
@@ -2215,6 +2216,86 @@ class ChatOrchestrator(
                 prompt_version=str(prompt_version),
             )
 
+            # V3-FIX-439 首帧前移（wt755，E08-ISS-L2-FEEDBACK/L3-ACK/L0-TTFT）：
+            # wt372 bench（0e4087ec）实测首帧 0.33-5.24s——E-03 把 ack 挂在
+            # 「校验/幂等/锁/会话态就绪」点，但该服务可知点本身晚到：守卫链
+            # 的每个 Redis/DB await（幂等 GET/锁 SET/态 HSET）+ run_started
+            # 持久化全部串行排在首帧之前。此处把服务可知点再前移到「请求身份
+            # 锚定」（request/session/response/trace id + spine 就绪）后、守卫
+            # 链之前：立即建立 stream_callback + RunLedger，登记 run_started
+            # 并下发首个 stage 帧（intake/handoff），随即 drain-yield——不等
+            # 守卫链，不等重上下文构建，更不等首个 token。纯重排零并发；
+            # ledger 写失败按 stage_events 同款哲学降级（绝不阻断主链）。
+            lock_acquired = False
+            lock_renewal_task: asyncio.Task | None = None
+            lock_renewal_stop: asyncio.Event | None = None
+            total_prompt_tokens = 0
+            total_completion_tokens = 0
+            transparency_generator: TransparencyDataGenerator | None = None
+            emit_transparency_event = None
+            queue: asyncio.Queue = asyncio.Queue(maxsize=self._STREAM_QUEUE_MAXSIZE)
+            chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
+            user_message = request.message or ""
+
+            async def stream_callback(resp: agent_service_pb2.ChatResponse):
+                if resp.WhichOneof("content") in ("delta", "full_text"):
+                    latency_probe.first_token()
+                resp.response_id = response_id
+                resp.created_at = int(datetime.now().timestamp())
+                resp.request_id = request_id
+                resp.session_id = resp.session_id or session_id
+                resp.workflow_id = resp.workflow_id or workflow_id
+                resp.prompt_version = resp.prompt_version or prompt_version
+                resp.trace_id = resp.trace_id or trace_id
+                try:
+                    await self._enqueue_stream_response(queue, resp)
+                except TimeoutError:
+                    # 注：基线的 response_dropped 布尔从未被读取（写死标志），
+                    # 前移后顺手移除——计数器与错误日志语义原样保留。
+                    STREAM_RESPONSE_DROPPED.inc()
+                    logger.error(
+                        "Timed out while enqueueing critical stream response "
+                        f"(response_id={resp.response_id}, finish_reason={resp.finish_reason}, "
+                        f"content={resp.WhichOneof('content')})"
+                    )
+
+            run_ledger = RunLedgerRecorder(
+                trace_id=trace_id,
+                session_id=session_id,
+                workflow_id=workflow_id,
+                response_id=response_id,
+                prompt_version=prompt_version,
+                request_id=request_id,
+                redis_client=self.redis,
+                stream_callback=stream_callback,
+            )
+            try:
+                _run_started_event = await run_ledger.record_event(
+                    event_type="run_started",
+                    label="运行开始",
+                    workflow_stage="orchestration",
+                    metadata={
+                        "chat_mode": chat_mode,
+                        "workflow_id": workflow_id,
+                        "prompt_version": prompt_version,
+                    },
+                    emit_snapshot=False,
+                )
+            except Exception as ledger_exc:  # noqa: BLE001 — run_started 失败不得阻断首帧
+                _run_started_event = None
+                logger.warning(
+                    "run_started ledger persist failed (non-fatal, first frame proceeds) "
+                    f"request_id={request_id}: {ledger_exc}"
+                )
+            await self._emit_early_ack_progress(
+                stream_callback=stream_callback,
+                chat_mode=chat_mode,
+                trace_id=trace_id,
+                ledger_event_id=str((_run_started_event or {}).get("event_id") or ""),
+            )
+            async for queued in self._drain_queue(queue):
+                yield self._bind_response_session_id(queued, session_id, request_id=request_id)
+
             # Step 1: Validation & idempotency (early exits)
             if validation_error := await self._validate_request(
                 request, response_id=response_id, request_id=request_id
@@ -2226,15 +2307,6 @@ class ChatOrchestrator(
             ):
                 yield self._bind_response_session_id(cached_resp, session_id, request_id=request_id)
                 return
-
-            lock_acquired = False
-            lock_renewal_task: asyncio.Task | None = None
-            lock_renewal_stop: asyncio.Event | None = None
-            total_prompt_tokens = 0
-            total_completion_tokens = 0
-            transparency_generator: TransparencyDataGenerator | None = None
-            emit_transparency_event = None
-            queue: asyncio.Queue = asyncio.Queue(maxsize=self._STREAM_QUEUE_MAXSIZE)
 
             try:
                 # Step 2: Distributed lock
@@ -2260,7 +2332,8 @@ class ChatOrchestrator(
                     session_id, request_id, interval=10.0
                 )
 
-                # Step 3: Initialize state & extract message
+                # Step 3: Initialize state（V3-FIX-439 前移后：chat_mode/user_message
+                # 提取与首帧 ack 已在守卫链之前完成，此处只推进 FSM）
                 await self._update_state(
                     session_id,
                     STATE_INIT,
@@ -2268,64 +2341,6 @@ class ChatOrchestrator(
                     request_id=request_id,
                     user_id=user_id,
                 )
-                chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
-                user_message = request.message or ""
-
-                # E-03 首反馈（<500ms 服务可知后）：校验/幂等/锁/会话态就绪即
-                # 建立 stream_callback + RunLedger，登记 run_started 并下发首个
-                # stage 帧（intake/handoff），随即 drain-yield——不等重上下文构建
-                # （_build_full_context 及其后的画像/RAG 前置段），更不等首个 token。
-                async def stream_callback(resp: agent_service_pb2.ChatResponse):
-                    if resp.WhichOneof("content") in ("delta", "full_text"):
-                        latency_probe.first_token()
-                    resp.response_id = response_id
-                    resp.created_at = int(datetime.now().timestamp())
-                    resp.request_id = request_id
-                    resp.session_id = resp.session_id or session_id
-                    resp.workflow_id = resp.workflow_id or workflow_id
-                    resp.prompt_version = resp.prompt_version or prompt_version
-                    resp.trace_id = resp.trace_id or trace_id
-                    try:
-                        await self._enqueue_stream_response(queue, resp)
-                    except TimeoutError:
-                        # 注：基线的 response_dropped 布尔从未被读取（写死标志），
-                        # 前移后顺手移除——计数器与错误日志语义原样保留。
-                        STREAM_RESPONSE_DROPPED.inc()
-                        logger.error(
-                            "Timed out while enqueueing critical stream response "
-                            f"(response_id={resp.response_id}, finish_reason={resp.finish_reason}, "
-                            f"content={resp.WhichOneof('content')})"
-                        )
-
-                run_ledger = RunLedgerRecorder(
-                    trace_id=trace_id,
-                    session_id=session_id,
-                    workflow_id=workflow_id,
-                    response_id=response_id,
-                    prompt_version=prompt_version,
-                    request_id=request_id,
-                    redis_client=self.redis,
-                    stream_callback=stream_callback,
-                )
-                _run_started_event = await run_ledger.record_event(
-                    event_type="run_started",
-                    label="运行开始",
-                    workflow_stage="orchestration",
-                    metadata={
-                        "chat_mode": chat_mode,
-                        "workflow_id": workflow_id,
-                        "prompt_version": prompt_version,
-                    },
-                    emit_snapshot=False,
-                )
-                await self._emit_early_ack_progress(
-                    stream_callback=stream_callback,
-                    chat_mode=chat_mode,
-                    trace_id=trace_id,
-                    ledger_event_id=str((_run_started_event or {}).get("event_id") or ""),
-                )
-                async for queued in self._drain_queue(queue):
-                    yield self._bind_response_session_id(queued, session_id, request_id=request_id)
 
                 # Extract locale early — needed for all execution paths
                 _request_locale = "en"

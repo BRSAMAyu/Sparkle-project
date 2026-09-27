@@ -313,6 +313,90 @@ async def test_first_stage_frame_beats_slow_context_build() -> None:
     ), f"首帧应先于上下文构建完成，事件序错误: {events}"
 
 
+@pytest.mark.asyncio
+async def test_intake_ack_beats_slow_prologue_guards() -> None:
+    """V3-FIX-439 裁决 b 移交（wt755）：intake/handoff 首帧必须先于串行守卫链
+    （校验/幂等/锁）下发——wt372 bench（0e4087ec）实测首帧 0.33-5.24s 才到达，
+    说明「服务可知点」本身晚到：守卫链的每个 Redis/DB await 都排在首帧之前。
+    服务可知点应钉在请求身份锚定（ids+trace spine 就绪）之后、守卫链之前。"""
+    events: list[str] = []
+    orchestrator = _build_orchestrator(events)
+
+    async def slow_validate(*args: Any, **kwargs: Any) -> None:
+        await asyncio.sleep(0.2)
+        events.append("validated")
+        return None
+
+    async def slow_idempotency(**kwargs: Any) -> None:
+        await asyncio.sleep(0.2)
+        events.append("idempotency_checked")
+        return None
+
+    async def slow_lock(session_id: str, request_id: str) -> bool:
+        await asyncio.sleep(0.2)
+        events.append("lock_acquired")
+        return True
+
+    async def spy_update_state(
+        session_id: str, state: str, details: str = "", *, request_id: str | None = None, user_id: str | None = None
+    ) -> None:
+        events.append(f"state_{state}")
+
+    orchestrator._validate_request = slow_validate
+    orchestrator._check_idempotency_response = slow_idempotency
+    orchestrator._acquire_session_lock = slow_lock
+    orchestrator._update_state = spy_update_state
+
+    first_frame_seen_at: list[float] = []
+
+    async def timed_drive() -> list[Any]:
+        request = agent_service_pb2.ChatRequest(
+            request_id="wt755_first_frame",
+            session_id="test_sess",
+            user_id=str(uuid.uuid4()),
+            message="帮我深度分析一下这个学期该怎么复习",
+        )
+        responses: list[Any] = []
+        started = time.perf_counter()
+        async for resp in orchestrator.process_stream(request):
+            if not first_frame_seen_at:
+                first_frame_seen_at.append(time.perf_counter() - started)
+                events.append("first_frame")
+            responses.append(resp)
+            if resp.finish_reason == agent_service_pb2.STOP:
+                break
+        for _ in range(50):
+            current = asyncio.current_task()
+            pending = [t for t in asyncio.all_tasks() if t is not current and not t.done()]
+            if not pending:
+                break
+            await asyncio.wait(pending, timeout=1.0)
+        return responses
+
+    with (
+        patch("app.services.llm_service.llm_service.chat_stream_with_tools", AsyncMock()),
+        patch("app.services.llm_service.llm_service.chat_json", AsyncMock(return_value={})),
+    ):
+        responses = await timed_drive()
+
+    assert first_frame_seen_at, "流必须有首帧"
+    # 首帧不晚于 500ms：三个守卫各 0.2s——旧序（首帧在守卫链后）必然 ≥0.6s
+    assert (
+        first_frame_seen_at[0] < 0.5
+    ), f"首帧应先于串行守卫链（3×0.2s）到达，实际 {first_frame_seen_at[0]:.3f}s"
+    first = responses[0]
+    assert first.WhichOneof("content") == "status_update", "首帧应是 intake/handoff stage 状态帧"
+    ux = json.loads(first.metadata.get("ux_progress") or "{}")
+    assert ux.get("stage") in {"intake", "handoff"}, f"首帧 stage 应为 intake/handoff，实际 {ux}"
+
+    # 事件序：首帧严格先于校验/幂等/锁守卫（确定性红绿判据，不依赖计时）
+    for guard in ("validated", "idempotency_checked", "lock_acquired"):
+        assert guard in events, f"守卫事件 {guard} 应已发生，实际 {events}"
+        assert events.index("first_frame") < events.index(guard), (
+            f"首帧应先于守卫 {guard} 下发（守卫链不得排在首帧前），事件序: {events}"
+        )
+
+
 # ---------------------------------------------------------------------------
 # 3. 深路径 stage 序列 + trace 匹配
 # ---------------------------------------------------------------------------

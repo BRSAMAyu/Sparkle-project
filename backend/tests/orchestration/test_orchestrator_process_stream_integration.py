@@ -1487,10 +1487,16 @@ async def test_process_stream_lock_conflict_returns_retryable_error(orchestrator
     responses = await _collect(orchestrator, request)
     final_state = await orchestrator.state_manager.load_state(request.session_id)
 
-    assert len(responses) == 1
-    assert responses[0].HasField("error")
-    assert responses[0].error.error_code == agent_service_pb2.ERROR_CODE_CONFLICT
-    assert responses[0].error.retryable is True
+    # V3-FIX-439 首帧前移（wt755）：intake ack 帧先于锁守卫下发（droppable
+    # status 帧），冲突错误仍是唯一终帧且可重试。
+    assert len(responses) == 2
+    first = responses[0]
+    assert first.WhichOneof("content") == "status_update"
+    ux = json.loads(first.metadata.get("ux_progress") or "{}")
+    assert ux.get("stage") in {"intake", "handoff"}
+    assert responses[1].HasField("error")
+    assert responses[1].error.error_code == agent_service_pb2.ERROR_CODE_CONFLICT
+    assert responses[1].error.retryable is True
     assert state_updates == []
     assert final_state is None
 

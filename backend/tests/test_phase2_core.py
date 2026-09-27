@@ -335,8 +335,13 @@ async def test_orchestrator_integration():
     async for response in orchestrator.process_stream(request, db_session=db_mock):
         responses.append(response)
 
-    assert len(responses) == 1
-    assert responses[0].error.error_code == agent_service_pb2.ERROR_CODE_CONFLICT
+    # V3-FIX-439 首帧前移（wt755）：intake ack 帧先于锁守卫下发，
+    # 冲突错误仍是唯一终帧（ack 是 droppable status 帧，不是终帧）。
+    assert len(responses) == 2
+    first = responses[0]
+    assert first.WhichOneof("content") == "status_update"
+    assert first.metadata.get("early_ack") == "true"
+    assert responses[1].error.error_code == agent_service_pb2.ERROR_CODE_CONFLICT
 
     print("✅ Orchestrator Integration test passed")
 
