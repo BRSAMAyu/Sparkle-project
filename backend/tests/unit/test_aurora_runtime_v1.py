@@ -449,9 +449,11 @@ async def test_plan_turn_kill_switch_off_returns_minimal_plan(monkeypatch: pytes
 
     修前该分支以不存在的 telemetry/next_action/source 字段构造 TurnPlan
     且缺 surface/surface_complete/modeling_complete 必填字段，一触发即 TypeError。
-    注：当前 AuroraStage38KillSwitchService 未注册 aurora_runtime binding，
-    get_feature_mode("aurora_runtime") 恒 ValueError → 缺省 "shadow"，故本测
-    直接桩掉 get_feature_mode 以到达分支（binding 接线属后续开关接入工作）。
+    注（V3-FIX-443/wt730 接线后原注作废）：aurora_runtime binding 已注册进
+    AuroraStage38KillSwitchService（settings AURORA_STAGE38_AURORA_RUNTIME_MODE，
+    legacy bool ENABLE_AURORA_RUNTIME_V1 缺席兜底），真链路红→绿见
+    test_wt730_ksweep_faces.py::test_runtime_plan_turn_off_gate_via_settings_no_stub；
+    本测保留服务级桩以隔离分支行为面。
     """
 
     async def _mode_off(self, feature: str) -> str:

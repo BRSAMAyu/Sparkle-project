@@ -31,6 +31,7 @@ async def test_stage38_push_scheduler_defaults_to_settings(monkeypatch) -> None:
 async def test_stage38_redis_override_both_features(monkeypatch) -> None:
     settings.AURORA_STAGE38_ERR_REPLAN_MODE = "off"
     settings.AURORA_STAGE38_PUSH_SCHEDULER_MODE = "off"
+    monkeypatch.setattr(settings, "AURORA_STAGE38_AURORA_RUNTIME_MODE", "live")
 
     fake_redis = AsyncMock()
 
@@ -38,6 +39,7 @@ async def test_stage38_redis_override_both_features(monkeypatch) -> None:
         mapping = {
             "aurora_stage38:err_replan_mode": "live",
             "aurora_stage38:push_scheduler_mode": "shadow",
+            "aurora_stage38:aurora_runtime_mode": "off",
         }
         return mapping.get(key)
 
@@ -48,17 +50,23 @@ async def test_stage38_redis_override_both_features(monkeypatch) -> None:
     assert summary == {
         "err_replan_mode": "live",
         "push_scheduler_mode": "shadow",
+        "aurora_runtime_mode": "off",
     }
 
 
 @pytest.mark.asyncio
 async def test_stage38_summary_returns_both_features(monkeypatch) -> None:
     monkeypatch.setattr(cache_service, "redis", None)
-    settings.AURORA_STAGE38_ERR_REPLAN_MODE = "shadow"
-    settings.AURORA_STAGE38_PUSH_SCHEDULER_MODE = "shadow"
+    monkeypatch.setattr(settings, "AURORA_STAGE38_ERR_REPLAN_MODE", "shadow")
+    monkeypatch.setattr(settings, "AURORA_STAGE38_PUSH_SCHEDULER_MODE", "shadow")
+    monkeypatch.setattr(settings, "AURORA_STAGE38_AURORA_RUNTIME_MODE", "shadow")
 
     summary = await AuroraStage38KillSwitchService().summary()
-    assert set(summary.keys()) == {"err_replan_mode", "push_scheduler_mode"}
+    assert set(summary.keys()) == {
+        "err_replan_mode",
+        "push_scheduler_mode",
+        "aurora_runtime_mode",
+    }
 
 
 @pytest.mark.asyncio

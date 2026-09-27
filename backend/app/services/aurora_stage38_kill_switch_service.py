@@ -25,12 +25,29 @@ _PUSH_SCHEDULER_BINDING = KillSwitchBinding(
     fallback_mode="shadow",
 )
 
+# V3-FIX-443（wt730 扫雷接线）：runtime_v1 plan_turn 的 R8-P1-03 门此前调用
+# get_feature_mode("aurora_runtime")，但本服务未注册该 feature——_resolve_binding
+# 恒抛 ValueError 被调用方宽 except 吞掉、缺省 "shadow"，off 分支不可达（假开关）。
+# 既有 test_plan_turn_kill_switch_off_returns_minimal_plan docstring 明文记载
+# 「binding 接线属后续开关接入工作」，本绑定即该接线：tri-state
+# AURORA_STAGE38_AURORA_RUNTIME_MODE 在场即唯一判据，legacy bool
+# ENABLE_AURORA_RUNTIME_V1 仅缺席兜底（False → off → runtime 最小 TurnPlan）。
+_AURORA_RUNTIME_BINDING = KillSwitchBinding(
+    stage="38",
+    feature="aurora_runtime",
+    redis_key="aurora_runtime_mode",
+    settings_attr="AURORA_STAGE38_AURORA_RUNTIME_MODE",
+    legacy_bool_attr="ENABLE_AURORA_RUNTIME_V1",
+    fallback_mode="live",
+)
+
 
 class AuroraStage38KillSwitchService:
     PREFIX = "aurora_stage38:"
     _BINDINGS = {
         "err_replan": _ERR_REPLAN_BINDING,
         "push_scheduler": _PUSH_SCHEDULER_BINDING,
+        "aurora_runtime": _AURORA_RUNTIME_BINDING,
     }
 
     async def get_feature_mode(self, feature: str) -> str:
@@ -55,6 +72,7 @@ class AuroraStage38KillSwitchService:
         return {
             "err_replan_mode": await self.get_feature_mode("err_replan"),
             "push_scheduler_mode": await self.get_feature_mode("push_scheduler"),
+            "aurora_runtime_mode": await self.get_feature_mode("aurora_runtime"),
         }
 
     @classmethod
@@ -74,4 +92,9 @@ record_mode_gauge(
     _PUSH_SCHEDULER_BINDING.stage,
     _PUSH_SCHEDULER_BINDING.feature,
     resolve_settings_mode(_PUSH_SCHEDULER_BINDING),
+)
+record_mode_gauge(
+    _AURORA_RUNTIME_BINDING.stage,
+    _AURORA_RUNTIME_BINDING.feature,
+    resolve_settings_mode(_AURORA_RUNTIME_BINDING),
 )

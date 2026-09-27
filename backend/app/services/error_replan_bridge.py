@@ -196,6 +196,13 @@ class ErrorReplanBridge:
         try:
             mode = await AuroraStage38KillSwitchService().get_feature_mode("err_replan")
             ERROR_REPLAN_BRIDGE_EVALUATED_TOTAL.labels(mode=mode).inc()
+            # V3-FIX-443（wt730 扫雷）：off=真关断早退。修前 off 落 else 分支
+            # （effective_decision=legacy_decision）继续跑全链——修复任务落库、
+            # 干预记录、通知、replan 评估、弱节点 claim 全部发生（假关断，
+            # FIX-415 幽灵信号同族）。语义对齐 social/community bridge：
+            # off=零副作用跳过、shadow=legacy 判据+影子记录、live=stage34 判据。
+            if mode == "off":
+                return self._blocked(mode=mode, gate="kill_switch_off")
             normalized_node_ids = [node_id for node_id in linked_node_ids if node_id]
             if not normalized_node_ids:
                 return self._blocked(mode=mode, gate="no_linked_nodes")

@@ -956,6 +956,9 @@ class Settings(BaseSettings):
     AURORA_DOC_CONTEXT_AMBIGUOUS_BUDGET_TOKENS: int = 500
     AURORA_STAGE38_ERR_REPLAN_MODE: str = "live"
     AURORA_STAGE38_PUSH_SCHEDULER_MODE: str = "live"
+    # V3-FIX-443：runtime_v1 aurora_runtime 门 tri-state 判据（off=最小 TurnPlan、
+    # shadow/live=全管线；legacy bool ENABLE_AURORA_RUNTIME_V1 仅缺席兜底）。
+    AURORA_STAGE38_AURORA_RUNTIME_MODE: str = "live"
     AURORA_STAGE38_PUSH_SCHEDULER_INTERVAL_MINUTES: int = 5
     CONTEXT_SEMANTIC_GATING_RULES_JSON: str = ""
     CONTEXT_RANKING_SOFT_CAP_EPISODIC: int = 6
