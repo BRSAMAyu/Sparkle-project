@@ -5,7 +5,9 @@ ROOT=Path(__file__).resolve().parents[1]
 p=argparse.ArgumentParser(); p.add_argument('--state',default='.sparkle_v3_fleet_state.json'); p.add_argument('--limit',type=int,default=6); a=p.parse_args()
 tasks=json.loads((ROOT/'07_tasks/tasks.json').read_text(encoding='utf-8'))['tasks']; sp=Path(a.state)
 state=json.loads(sp.read_text(encoding='utf-8')) if sp.exists() else {'tasks':{}}
-def st(i): return state.get('tasks',{}).get(i,{}).get('status','TODO')
+# 状态解析双源：per-task map（旧形态）+ done 列表（本仓实际形态）；默认 TODO
+_done_list=set(state.get('done',[]))
+def st(i): return 'DONE' if i in _done_list else state.get('tasks',{}).get(i,{}).get('status','TODO')
 done={t['id'] for t in tasks if st(t['id'])=='DONE'}; running=[t for t in tasks if st(t['id']) in ('CLAIMED','READY_FOR_REVIEW','CHANGES')]
 used={l for t in running for l in t['required_locks']}
 cands=[]
