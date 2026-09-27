@@ -3205,10 +3205,17 @@
             "type": "string"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "reason": {
             "anyOf": [
@@ -3451,10 +3458,17 @@
             "type": "integer"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "sender": {
             "$ref": "#/components/schemas/UserBrief",
@@ -3768,10 +3782,17 @@
             "type": "string"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "is_all_day": {
             "description": "是否全天事件",
@@ -4889,10 +4910,17 @@
             "type": "string"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "model_name": {
             "anyOf": [
@@ -10372,10 +10400,17 @@
             "title": "Expires At"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "is_active": {
             "description": "是否激活",
@@ -15763,10 +15798,17 @@
             "description": "好友信息"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "initiated_by_me": {
             "default": false,
@@ -17277,10 +17319,17 @@
             "type": "string"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "is_in_my_library": {
             "default": false,
@@ -17638,10 +17687,17 @@
             "type": "array"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "is_public": {
             "description": "是否公开",
@@ -18605,10 +18661,17 @@
             "type": "integer"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "is_claimed_by_me": {
             "default": false,
@@ -22430,10 +22493,17 @@
             "title": "Group Message Id"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "message_preview": {
             "anyOf": [
@@ -22627,10 +22697,17 @@
             "title": "Edited At"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "is_revoked": {
             "default": false,
@@ -22897,10 +22974,17 @@
             "title": "Description"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "reason": {
             "$ref": "#/components/schemas/ReportReasonEnum",
@@ -25437,10 +25521,17 @@
             "title": "Error Message"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "message_type": {
             "description": "消息类型",
@@ -27156,10 +27247,17 @@
             "title": "Health Status"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "is_active": {
             "description": "Is active",
@@ -28220,10 +28318,17 @@
             "title": "Edited At"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "is_read": {
             "description": "是否已读",
@@ -30781,6 +30886,17 @@
         "title": "RiskClass",
         "type": "string"
       },
+      "RollbackRequest": {
+        "properties": {
+          "actor": {
+            "default": "ops-api",
+            "title": "Actor",
+            "type": "string"
+          }
+        },
+        "title": "RollbackRequest",
+        "type": "object"
+      },
       "RunAgentStepCompleteRequest": {
         "description": "Agent 完成 agent-owned 步骤（POST /runs/{id}/steps/{step_id}/agent-complete）。\n\nowner 纪律的服务端面：HUMAN/HYBRID 步骤只能走用户 complete 端点——\nAgent 不得代替用户完成认知归属属于用户的步骤（HUMAN_AGENT_HYBRID §2/§3）。",
         "properties": {
@@ -31968,6 +32084,35 @@
         "title": "SeedAdoptionAction",
         "type": "object"
       },
+      "SetModeRequest": {
+        "properties": {
+          "actor": {
+            "default": "ops-api",
+            "title": "Actor",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "SetModeRequest",
+        "type": "object"
+      },
       "SetPasswordRequest": {
         "description": "Set password (no old password)",
         "properties": {
@@ -32927,10 +33072,17 @@
             "type": "integer"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "is_own": {
             "default": false,
@@ -35853,10 +36005,17 @@
             "title": "Guide Content"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "knowledge_node_id": {
             "anyOf": [
@@ -37210,10 +37369,17 @@
             "title": "Guide Json"
           },
           "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "description": "Record ID",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
           },
           "is_example": {
             "default": false,
@@ -42479,6 +42645,312 @@
         "summary": "Handle Alertmanager Webhook",
         "tags": [
           "Internal SLO"
+        ]
+      }
+    },
+    "/api/internal/ops/capabilities": {
+      "get": {
+        "description": "全量能力 flag 状态（运行时模式 + settings 判据 + 静态描述）。",
+        "operationId": "list_capabilities_api_internal_ops_capabilities_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-internal-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Capabilities Api Internal Ops Capabilities Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Capabilities",
+        "tags": [
+          "Internal Ops"
+        ]
+      }
+    },
+    "/api/internal/ops/capabilities/{capability_id}": {
+      "get": {
+        "operationId": "get_capability_api_internal_ops_capabilities__capability_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "capability_id",
+            "required": true,
+            "schema": {
+              "title": "Capability Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-internal-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Capability Api Internal Ops Capabilities  Capability Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Capability",
+        "tags": [
+          "Internal Ops"
+        ]
+      }
+    },
+    "/api/internal/ops/capabilities/{capability_id}/mode": {
+      "post": {
+        "description": "受控翻转单能力三态模式（带回滚史；不丢用户态——只写能力模式键）。",
+        "operationId": "set_capability_mode_api_internal_ops_capabilities__capability_id__mode_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "capability_id",
+            "required": true,
+            "schema": {
+              "title": "Capability Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-internal-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetModeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Set Capability Mode Api Internal Ops Capabilities  Capability Id  Mode Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Capability Mode",
+        "tags": [
+          "Internal Ops"
+        ]
+      }
+    },
+    "/api/internal/ops/capabilities/{capability_id}/rollback": {
+      "post": {
+        "description": "回滚单能力到回滚史中最近的异值先前模式。",
+        "operationId": "rollback_capability_api_internal_ops_capabilities__capability_id__rollback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "capability_id",
+            "required": true,
+            "schema": {
+              "title": "Capability Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-internal-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Rollback Capability Api Internal Ops Capabilities  Capability Id  Rollback Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rollback Capability",
+        "tags": [
+          "Internal Ops"
+        ]
+      }
+    },
+    "/api/internal/ops/release-manifest": {
+      "get": {
+        "description": "release manifest：model/config/migration 只读快照。",
+        "operationId": "get_release_manifest_api_internal_ops_release_manifest_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-internal-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Release Manifest Api Internal Ops Release Manifest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Release Manifest",
+        "tags": [
+          "Internal Ops"
         ]
       }
     },
@@ -59064,6 +59536,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取评论列表",
         "tags": [
           "community"
@@ -79853,7 +80330,7 @@
     },
     "/api/v1/predictive/difficulty/{topic_id}": {
       "get": {
-        "description": "获取主题难度预测\n\nArgs:\n    topic_id: 主题ID\n\nReturns:\n    - difficulty_score: 难度分数 (0-1)\n    - estimated_time_hours: 预估学习时长（小时）\n    - prerequisites_ready: 前置知识是否就绪\n    - missing_prerequisites: 缺失的前置知识\n\n    V3-FIX-347：原 difficulty_factors 为硬编码空列表冒充的未接线\n    承诺键，已删除（全仓零消费方）。",
+        "description": "获取主题难度预测\n\nArgs:\n    topic_id: 主题ID\n\nReturns:\n    - difficulty_score: 难度分数 (0-1)\n    - estimated_time_hours: 预估学习时长（小时）\n    - prerequisites_ready: 前置知识是否就绪\n    - missing_prerequisites: 缺失的前置知识\n\n    V3-FIX-352：原 difficulty_factors 为硬编码空列表冒充的未接线\n    承诺键，已删除（全仓零消费方）。",
         "operationId": "get_difficulty_prediction_api_v1_predictive_difficulty__topic_id__get",
         "parameters": [
           {
@@ -79925,7 +80402,7 @@
     },
     "/api/v1/predictive/engagement": {
       "get": {
-        "description": "获取用户活跃度预测\n\nReturns:\n    - next_active_time: 预测下次活跃时间\n    - confidence: 预测置信度 (0-1)\n    - dropout_risk: 流失风险 (low/medium/high)\n    - recommended_intervention: 建议干预\n\n    V3-FIX-347：原 typical_weekdays / typical_hours / prediction_factors\n    为硬编码空列表冒充的未接线承诺键，已删除（全仓零消费方）。",
+        "description": "获取用户活跃度预测\n\nReturns:\n    - next_active_time: 预测下次活跃时间\n    - confidence: 预测置信度 (0-1)\n    - dropout_risk: 流失风险 (low/medium/high)\n    - recommended_intervention: 建议干预\n\n    V3-FIX-352：原 typical_weekdays / typical_hours / prediction_factors\n    为硬编码空列表冒充的未接线承诺键，已删除（全仓零消费方）。",
         "operationId": "get_engagement_forecast_api_v1_predictive_engagement_get",
         "responses": {
           "200": {
