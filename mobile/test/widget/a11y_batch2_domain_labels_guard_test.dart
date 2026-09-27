@@ -127,7 +127,8 @@ void main() {
     'lib/features/intent',
     'lib/features/mirofish',
     'lib/features/notification_center',
-    'lib/features/onboarding',
+    // lib/features/onboarding 已随 V3-FIX-342 孤儿屏整链下线（2026-09-27），
+    // 作用域项同步移除；活引导在 lib/features/plan 的 persona 屏。
     'lib/features/openclaw',
     'lib/features/reflection',
     'lib/features/splash',
