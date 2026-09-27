@@ -1,0 +1,7 @@
+SECRET_KEY is only 1 characters. Recommended minimum: 32 characters for production.
+2026-09-27 19:41:14.154 | INFO     | app.core.llm_router:_load_model_configs:931 - XIAOMI_MIMO_API_KEY not configured: xiaomi mimo entries kept out of registry (无 key 不注册); explicit selection falls back to default lane
+2026-09-27 19:41:14.155 | INFO     | app.core.llm_router:_load_model_configs:1088 - LLMRouter initialized with 27 model configs
+deleted+blocked post visible to comment/like write path: True
+active block relationship in place: True
+same post visible to feed read face: False
+RED: write face accepts soft-deleted + block-hidden posts the read face filters

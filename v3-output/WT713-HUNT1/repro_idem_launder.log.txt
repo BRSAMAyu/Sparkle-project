@@ -1,0 +1,41 @@
+SECRET_KEY is only 1 characters. Recommended minimum: 32 characters for production.
+2026-09-27 19:38:16.659 | INFO     | app.core.llm_router:_load_model_configs:931 - XIAOMI_MIMO_API_KEY not configured: xiaomi mimo entries kept out of registry (无 key 不注册); explicit selection falls back to default lane
+2026-09-27 19:38:16.659 | INFO     | app.core.llm_router:_load_model_configs:1088 - LLMRouter initialized with 27 model configs
+2026-09-27 19:38:17.471 | ERROR    | app.core.event_bus:connect:1043 - Failed to connect to Redis: Authentication required.
+2026-09-27 19:38:17.471 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.started stream=sparkle_events attempt=1/3 delay_ms=200 error=redis_not_connected
+2026-09-27 19:38:17.671 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.started stream=sparkle_events attempt=2/3 delay_ms=400 error=redis_connect_cooldown (0.2s < 5.0s)
+2026-09-27 19:38:18.071 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.started stream=sparkle_events attempt=3/3 delay_ms=800 error=redis_connect_cooldown (0.6s < 5.0s)
+2026-09-27 19:38:18.872 | ERROR    | app.core.event_bus:publish:1113 - Failed to publish event tool.execution.started: redis_connect_cooldown (1.4s < 5.0s)
+2026-09-27 19:38:18.887 | ERROR    | app.core.event_bus:publish:1128 - Failed to persist publish failure DLQ entry for tool.execution.started: password authentication failed for user "postgres"
+2026-09-27 19:38:18.900 | ERROR    | app.services.tool_history_service:record_tool_execution:161 - Failed to record tool execution: InvalidPasswordError
+2026-09-27 19:38:18.900 | WARNING  | app.orchestration.executor:_record_tool_execution:1275 - Failed to record tool execution history: InvalidPasswordError
+2026-09-27 19:38:18.900 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.completed stream=sparkle_events attempt=1/3 delay_ms=200 error=redis_connect_cooldown (1.4s < 5.0s)
+2026-09-27 19:38:19.100 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.completed stream=sparkle_events attempt=2/3 delay_ms=400 error=redis_connect_cooldown (1.6s < 5.0s)
+2026-09-27 19:38:19.500 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.completed stream=sparkle_events attempt=3/3 delay_ms=800 error=redis_connect_cooldown (2.0s < 5.0s)
+2026-09-27 19:38:20.303 | ERROR    | app.core.event_bus:publish:1113 - Failed to publish event tool.execution.completed: redis_connect_cooldown (2.8s < 5.0s)
+2026-09-27 19:38:20.332 | ERROR    | app.core.event_bus:publish:1128 - Failed to persist publish failure DLQ entry for tool.execution.completed: password authentication failed for user "postgres"
+2026-09-27 19:38:20.336 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.failed stream=sparkle_events attempt=1/3 delay_ms=200 error=redis_connect_cooldown (2.9s < 5.0s)
+2026-09-27 19:38:20.538 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.failed stream=sparkle_events attempt=2/3 delay_ms=400 error=redis_connect_cooldown (3.1s < 5.0s)
+2026-09-27 19:38:20.940 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.failed stream=sparkle_events attempt=3/3 delay_ms=800 error=redis_connect_cooldown (3.5s < 5.0s)
+2026-09-27 19:38:21.743 | ERROR    | app.core.event_bus:publish:1113 - Failed to publish event tool.execution.failed: redis_connect_cooldown (4.3s < 5.0s)
+2026-09-27 19:38:21.768 | ERROR    | app.core.event_bus:publish:1128 - Failed to persist publish failure DLQ entry for tool.execution.failed: password authentication failed for user "postgres"
+2026-09-27 19:38:21.785 | ERROR    | app.services.tool_history_service:record_tool_execution:161 - Failed to record tool execution: InvalidPasswordError
+2026-09-27 19:38:21.785 | WARNING  | app.orchestration.executor:_record_tool_execution:1275 - Failed to record tool execution history: InvalidPasswordError
+2026-09-27 19:38:21.787 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.started stream=sparkle_events attempt=1/3 delay_ms=200 error=redis_connect_cooldown (4.3s < 5.0s)
+2026-09-27 19:38:21.989 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.started stream=sparkle_events attempt=2/3 delay_ms=400 error=redis_connect_cooldown (4.5s < 5.0s)
+2026-09-27 19:38:22.392 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.started stream=sparkle_events attempt=3/3 delay_ms=800 error=redis_connect_cooldown (4.9s < 5.0s)
+2026-09-27 19:38:23.195 | ERROR    | app.core.event_bus:connect:1043 - Failed to connect to Redis: Authentication required.
+2026-09-27 19:38:23.195 | ERROR    | app.core.event_bus:publish:1113 - Failed to publish event tool.execution.started: redis_not_connected
+2026-09-27 19:38:23.208 | ERROR    | app.core.event_bus:publish:1128 - Failed to persist publish failure DLQ entry for tool.execution.started: password authentication failed for user "postgres"
+2026-09-27 19:38:23.220 | ERROR    | app.services.tool_history_service:record_tool_execution:161 - Failed to record tool execution: InvalidPasswordError
+2026-09-27 19:38:23.220 | WARNING  | app.orchestration.executor:_record_tool_execution:1275 - Failed to record tool execution history: InvalidPasswordError
+2026-09-27 19:38:23.220 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.completed stream=sparkle_events attempt=1/3 delay_ms=200 error=redis_connect_cooldown (0.0s < 5.0s)
+2026-09-27 19:38:23.422 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.completed stream=sparkle_events attempt=2/3 delay_ms=400 error=redis_connect_cooldown (0.2s < 5.0s)
+2026-09-27 19:38:23.823 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=tool.execution.completed stream=sparkle_events attempt=3/3 delay_ms=800 error=redis_connect_cooldown (0.6s < 5.0s)
+2026-09-27 19:38:24.626 | ERROR    | app.core.event_bus:publish:1113 - Failed to publish event tool.execution.completed: redis_connect_cooldown (1.4s < 5.0s)
+2026-09-27 19:38:24.656 | ERROR    | app.core.event_bus:publish:1128 - Failed to persist publish failure DLQ entry for tool.execution.completed: password authentication failed for user "postgres"
+attempt1: True error: None count: 1
+attempt2 (same key): False error_type: IdempotencyConflict count: 1
+entered correction: True final.success: True
+tool execute_count after correction: 2
+RED: IdempotencyConflict laundered into a second real execution (count=2)
