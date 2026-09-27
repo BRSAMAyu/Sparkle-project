@@ -5,7 +5,7 @@ the full app with realistic pre-populated content.
 """
 import math
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, NotRequired, TypedDict
 
 from loguru import logger
@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
+from app.core.time_utils import DEFAULT_USER_TIMEZONE, local_date
 from app.data.populate_achievements import sync_achievement_definitions
 from app.models import (
     AchievementRarity,
@@ -1699,6 +1700,13 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
 
 async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
     now = datetime.utcnow()
+    # 本地日锚（V3-FIX-323）：种子内 Plan.target_date / Task.due_date 等
+    # 「今日+N」派生统一从同一 utcnow 换算用户本地日。修前 date.today() 取
+    # 宿主机本地日，与 created_at 的 utcnow 钟混用——UTC 宿主在上海
+    # 00:00-08:00（= 前日 16:00-24:00Z）窗口播种时，「今日」任务落本地昨日、
+    # 计划目标日整体偏移一日，且随宿主时区漂移。访客无 PushPreference，
+    # 按市场缺省 Asia/Shanghai 口径（time_utils 对缺省/非法同此回落）。
+    today_local = local_date(now, DEFAULT_USER_TIMEZONE)
 
     # Update guest profile to look like an active learner
     user.nickname = f"访客体验{user.username[-4:]}"
@@ -2002,7 +2010,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             name="数据结构期中冲刺",
             type=PlanType.SPRINT,
             description="集中攻克链表、栈、队列和二叉树，准备期中考试。",
-            target_date=date.today() + timedelta(days=7),
+            target_date=today_local + timedelta(days=7),
             daily_available_minutes=120,
             total_estimated_hours=20,
             mastery_level=0.6,
@@ -2026,7 +2034,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             name="计算机科学基础巩固",
             type=PlanType.GROWTH,
             description="系统性复习CS基础四大件，构建完整的知识体系。",
-            target_date=date.today() + timedelta(days=90),
+            target_date=today_local + timedelta(days=90),
             daily_available_minutes=60,
             total_estimated_hours=100,
             mastery_level=0.3,
@@ -2051,7 +2059,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "energy_cost": 4,
             "status": TaskStatus.IN_PROGRESS,
             "priority": 3,
-            "due_date": date.today(),
+            "due_date": today_local,
             "started_at": now - timedelta(minutes=30),
             "plan_id": sprint_plan.id,
         },
@@ -2064,7 +2072,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "energy_cost": 3,
             "status": TaskStatus.PENDING,
             "priority": 3,
-            "due_date": date.today(),
+            "due_date": today_local,
             "plan_id": sprint_plan.id,
         },
         {
@@ -2076,7 +2084,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "energy_cost": 4,
             "status": TaskStatus.PENDING,
             "priority": 3,
-            "due_date": date.today() + timedelta(days=2),
+            "due_date": today_local + timedelta(days=2),
             "plan_id": growth_plan.id,
         },
         {
@@ -2088,7 +2096,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "energy_cost": 3,
             "status": TaskStatus.PENDING,
             "priority": 2,
-            "due_date": date.today() + timedelta(days=3),
+            "due_date": today_local + timedelta(days=3),
             "plan_id": growth_plan.id,
         },
     ]:
@@ -2228,7 +2236,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "energy_cost": 3,
             "status": TaskStatus.COMPLETED,
             "priority": 2,
-            "due_date": date.today() - timedelta(days=1),
+            "due_date": today_local - timedelta(days=1),
             "completed_at": now - timedelta(days=1, hours=2),
             "actual_minutes": 55,
             "user_note": "把锁、信号量、条件变量的易混点重新过了一遍。",
@@ -2247,7 +2255,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "energy_cost": 2,
             "status": TaskStatus.COMPLETED,
             "priority": 2,
-            "due_date": date.today(),
+            "due_date": today_local,
             "completed_at": now - timedelta(hours=1, minutes=5),
             "actual_minutes": 30,
             "user_note": "把昨天群里提到的微反馈模板顺口复述了一遍。",
@@ -2675,7 +2683,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
         defaults={
             "type": PlanType.SPRINT,
             "description": "用 5 天完成树、图和堆的高频题回顾。",
-            "target_date": date.today() + timedelta(days=5),
+            "target_date": today_local + timedelta(days=5),
             "daily_available_minutes": 80,
             "total_estimated_hours": 10,
             "mastery_level": 0.55,
@@ -2690,7 +2698,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
         defaults={
             "type": PlanType.GROWTH,
             "description": "晨读、复述、微反馈三段式练口语。",
-            "target_date": date.today() + timedelta(days=21),
+            "target_date": today_local + timedelta(days=21),
             "daily_available_minutes": 45,
             "total_estimated_hours": 18,
             "mastery_level": 0.48,
@@ -2710,7 +2718,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "energy_cost": 2,
             "status": TaskStatus.COMPLETED,
             "priority": 2,
-            "due_date": date.today() - timedelta(days=1),
+            "due_date": today_local - timedelta(days=1),
             "completed_at": now - timedelta(hours=18),
         },
     )
@@ -2726,7 +2734,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "energy_cost": 2,
             "status": TaskStatus.IN_PROGRESS,
             "priority": 2,
-            "due_date": date.today(),
+            "due_date": today_local,
             "started_at": now - timedelta(minutes=40),
         },
     )

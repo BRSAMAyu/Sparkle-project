@@ -424,7 +424,9 @@ class IdiographicAssociationService:
             now=reference_time,
             days=self.WINDOW_DAYS,
         )
-        srl_phase_by_day = await self._build_srl_phase_series(user_id, start_day, today_local)
+        srl_phase_by_day = await self._build_srl_phase_series(
+            user_id, start_day, today_local, timezone_name=tz_name
+        )
 
         vectors: dict[date, dict[str, Any]] = {}
         for offset in range(self.WINDOW_DAYS):
@@ -562,6 +564,8 @@ class IdiographicAssociationService:
         user_id: UUID,
         start_day: date,
         end_day: date,
+        *,
+        timezone_name: str,
     ) -> dict[date, float]:
         row = (
             (
@@ -579,12 +583,18 @@ class IdiographicAssociationService:
             return {}
         current_score = self.PHASE_SCORES.get(str(row.current_phase or "UNKNOWN").upper(), 0.0)
         previous_score = self.PHASE_SCORES.get(str(row.previous_phase or row.current_phase or "UNKNOWN").upper(), current_score)
-        phase_started_at = row.phase_started_at.date() if row.phase_started_at else start_day
+        # V3-FIX-323：phase_started_at 是 UTC 存储列（srl_phase_tracker 服务端
+        # _utcnow 写入），修前 ``.date()`` 取 UTC 日——与本函数的用户本地日网格
+        # （V3-FIX-320 契约）错位：上海 00:00-08:00 的相位切换分界错切到 UTC
+        # 「昨日」。分界日统一 local_date 换算。
+        phase_started_day = (
+            local_date(row.phase_started_at, timezone_name) if row.phase_started_at else start_day
+        )
         series: dict[date, float] = {}
         total_days = (end_day - start_day).days + 1
         for offset in range(total_days):
             current_day = start_day + timedelta(days=offset)
-            series[current_day] = current_score if current_day >= phase_started_at else previous_score
+            series[current_day] = current_score if current_day >= phase_started_day else previous_score
         return series
 
     def _detect_recent_changepoints(

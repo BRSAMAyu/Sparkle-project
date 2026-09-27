@@ -18,11 +18,13 @@ from app.core.metrics import (
     METACOG_PROCESS_SCAFFOLD_TOTAL,
     METACOG_SAMPLE_BELOW_THRESHOLD_TOTAL,
 )
+from app.core.time_utils import local_date, valid_timezone_name
 from app.models.chat import ChatMessage, MessageRole
 from app.models.memory import MemoryCorrection
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
 from app.models.theater_prediction import TheaterPrediction
+from app.models.user import PushPreference
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.aurora_stage30_metacognition_kill_switch_service import (
     AuroraStage30MetacognitionKillSwitchService,
@@ -142,6 +144,17 @@ class MetacognitionService:
             )
         return MetacognitionProfileSummaryValue(items=tuple(items))
 
+    async def _user_timezone_name(self, user_id: UUID | str) -> str:
+        """用户时区名（V3-FIX-323）：PushPreference.timezone 标量直查，缺省 Asia/Shanghai。
+
+        沿 streak_quality V3-FIX-320 / persdyn 221 / focus._local_today 先例：
+        标量直查而非 ORM 关系，规避身份映射命中未加载关系时 async lazy-load 炸裂。
+        """
+        tz_name = await self.db.scalar(
+            select(PushPreference.timezone).where(PushPreference.user_id == user_id)
+        )
+        return valid_timezone_name(tz_name)
+
     async def build_daily_accuracy_series(
         self,
         user_id: UUID,
@@ -149,8 +162,19 @@ class MetacognitionService:
         now: datetime | None = None,
         days: int = 45,
     ) -> dict[date, float]:
+        """每日准确率序列，键控用户本地日（V3-FIX-323）。
+
+        行时间 ``recorded_at`` 来自 UTC 存储列（``TheaterPrediction.generated_at``
+        / ``Task.completed_at``），修前 ``.date()`` 是 UTC 日；唯一消费方
+        idiographic ``_build_daily_vectors`` 的日网格是用户本地日（V3-FIX-320
+        已裁决契约）——上海 00:00-08:00（= 前日 16:00-24:00Z）的记录落错桶，
+        metacognition_accuracy 维残差 ≤1 日。窗口端点与行键控统一
+        :func:`local_date`。
+        """
         reference_time = now or _utcnow()
-        earliest_day = reference_time.date() - timedelta(days=max(1, int(days or 45)) - 1)
+        tz_name = await self._user_timezone_name(user_id)
+        today_local = local_date(reference_time, tz_name)
+        earliest_day = today_local - timedelta(days=max(1, int(days or 45)) - 1)
         rows = (
             await self._collect_completion_bias_rows(user_id)
             + await self._collect_mastery_bias_rows(user_id)
@@ -159,8 +183,8 @@ class MetacognitionService:
         grouped: dict[datetime.date, list[float]] = {}
         for row in rows:
             recorded_at = row.get("recorded_at") or reference_time
-            recorded_day = recorded_at.date()
-            if recorded_day < earliest_day or recorded_day > reference_time.date():
+            recorded_day = local_date(recorded_at, tz_name)
+            if recorded_day < earliest_day or recorded_day > today_local:
                 continue
             accuracy = 1.0 - min(1.0, abs(float(row.get("bias") or 0.0)))
             grouped.setdefault(recorded_day, []).append(round(accuracy, 4))
