@@ -1,6 +1,6 @@
 # B-04 · 首轮视觉问题 Ledger（golden 基线批）
 
-- 基线：`v3-output/B-04/screenshots/`（9 canonical states × 3 viewport 批 = 27 张，build SHA8 `87b5f432`，wt693 重采批 2026-09-25；首轮基线 `d7a961da`（wt667）27 张已删除并由新批同位替代——26/27 逐字节相同、1 张已知时间戳噪声，见文末「重采批记录」）
+- 基线：`v3-output/B-04/screenshots/`（9 canonical states × 3 viewport 批 = 27 张，build SHA8 `b8c94477`，wt708 全量重采批 2026-09-27 单锚态；前批 `87b5f432`（wt693）26 张 + android home 单面 `e0777bd5`（wt696）已删除并由本批同位替代——25/27 逐字节相同、2 张差全归因（chat android 时间戳噪声、macos 1280x800 home=FIX-376 内容演进），见文末「重采批记录」wt708 段）
 - 审查依据：`v3/04_ux/VISUAL_REVIEW_RUBRIC.md`（12 维 0–2 分；A=阻断/误导/不可读/错误主焦点，B=明显降低体验，C=微调）
 - 审查方式：逐张真实读图（本会话直接查看 PNG）+ 布局探针（`v3-output/WT401-Q03-VISUAL/layout_probe_b04.json`，27 条：pump_exception=0、截断候选=0）
 - 声明：本批为 flutter test golden 路径真实渲染；macos 批存在**环境级字形伪影**（见 ENV-1），文字级审查以 android 批为权威，布局/层级/间距审查两批均有效。
@@ -91,3 +91,15 @@
 - manifest ×3 重建于 87b5f432（`manifests/manifest_{android__1080x2400@3.0, macos__800x600@2.0, macos__1280x800@2.0}.json`，各 9 条目）→ `verify OK` ×3 → `coverage 9/9`。
 - 布局探针 `v3-output/WT401-Q03-VISUAL/layout_probe_b04.json` 随采刷新：27 条全部锚定 87b5f432，pump_exception=0、截断候选=0（与首轮同口径）。
 - 旧 d7a961da 批 27 张 PNG 已删除（由 87b5f432 批同位替代；首轮实拍事实以本 ledger 文字记录与 REPORT.md 留痕）。
+
+## 重采批记录（wt708 · 2026-09-27 · build SHA8 `b8c94477` · 全量单锚化）
+- 背景：兑现 V3-FIX-376 行尾注「macos 批 home 面仍锚 87b5f432 待下轮全量重采」+ 消解 V3-FIX-395（verify 门以单一 B04_BUILD_SHA8 定位全部 27 张，wt696 单面重采后的 87b5f432/e0777bd5 混锚态使任一单 sha8 全套运行必现 missing-file 挂）。零产品代码改动，FIX 号不新占（395 闭账不新占 407/408）。
+- 采集：`B04_VISUAL_CAPTURE=true flutter test --update-goldens test/goldens/b04_visual_baseline/ --dart-define=B04_BUILD_SHA8=b8c94477` → 27/27 采集绿；复验（无 `--update-goldens`）→ **33/33 全绿单锚**（含 6 例比较器带界单测）。旧 27 张（26×87b5f432 + android home×e0777bd5）git rm 同位替代，混锚残留为零。
+- 新旧对比（87b5f432/e0777bd5 → b8c94477，逐对 sha256）：**25/27 逐字节相同**；2 张差全归因：
+  - `chat__history_citations` android 批：消息时间标签 17:35 → 18:55（亲验读图确认，已知噪声类，wt667 首轮登记）。
+  - `home__main` macos 1280x800 批：**V3-FIX-376 home 重做内容演进**——亲验读图对照：旧图主叙事句下「ⓘ 加载失败 轻触重试」（CompactErrorCard）消失，同位 UnderstandingSnapshotCard 空态承载（兜底叙事+「纠正我的理解」+置信 pill），与 wt696 android 批同状；wt702 实测对旧基线 15.24%/624,197px 真差确系内容演进而非渲染管线问题，新基线下归零（verify 单锚直过）。
+  - `home__main` macos 800x600 批与 android 批重采输出均逐字节复现旧批（800x600 视口回执卡在折叠线下，可见面零变化）——同一渲染管线 25/27 逐字节复现旧输出，为「非管线问题」的反证。
+- manifest ×3 重建于 b8c94477（各 9 条目）→ `verify OK` ×3 → `coverage 9/9` ×3。
+- 布局探针 `v3-output/WT401-Q03-VISUAL/layout_probe_b04.json` 随采刷新：27 条全锚 b8c94477、恢复测试执行自然序（android 9 → macos800 9 → macos1280 9；wt696 尾并暂态消除），pump_exception=0、截断候选=0；chat/galaxy/profile/home 面 text_widget_count −5 与窗口内 main 合入的 V3-FIX-384/385/360 同期，对应 PNG 逐字节相同（屏外/语义层 widget 增减，像素面零回归）。
+- 全量回归：`flutter test test/goldens/` 84 过 15 skip 0 红；`flutter analyze` No issues found。逐张新旧锚对照表与读图记录见 `v3-output/WT708-REBASE/notes.md`。
+- 评分摘要与 L/ENV 各条目判定不受本批影响：本批无新产品缺陷发现；L-01 闭案结论在 macos 1280x800 批同状复核成立（错误行消失）。
