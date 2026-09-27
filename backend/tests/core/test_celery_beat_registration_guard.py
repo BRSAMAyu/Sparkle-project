@@ -78,3 +78,37 @@ def test_community_checkin_reminders_task_is_registered() -> None:
     registered = _registered_task_names()
 
     assert "tasks.community.send_checkin_reminders" in registered
+
+
+def test_login_attempt_cleanup_module_included_and_beat_entry_resolvable() -> None:
+    """V3-FIX-338 回归锚点：GDPR 登录尝试清理的 include 面与 beat 引用一致性。
+
+    双断言：
+    1. 定义模块 ``app.tasks.login_attempt_cleanup`` 必须在
+       ``celery_app.conf.include`` 里——include 是 worker 唯一权威加载面。
+       此前缺失只被 ``setup_periodic_tasks`` 内的 import 副作用
+       （shared_task 代理绑定即注册）遮蔽成假绿，注册面依赖信号触发顺序，
+       正是 EI-02 学说禁止的形态（90 天 GDPR 删除宣称随之无结构保证）。
+    2. celery_schedule 的 beat 条目（cleanup-old-login-attempts-daily）引用的
+       任务名必须等于该模块注册的真实 ``name=``，且最终可解析进任务注册表。
+    """
+    # 1) 权威 worker 加载面：模块必须在 include 里（结构性断言，不依赖
+    #    进程内注册表状态，任何测试顺序下都有效）。
+    assert "app.tasks.login_attempt_cleanup" in celery_app.conf.include, (
+        "GDPR 登录尝试清理模块必须随 worker 显式加载（EI-02）："
+        "否则 beat 投递的消息按 unregistered task 被静默丢弃"
+    )
+
+    # 2) beat 条目引用可解析：celery_schedule 声明的名字 == 模块注册的 name=。
+    from app.tasks.login_attempt_cleanup import cleanup_old_login_attempts
+
+    task_name = cleanup_old_login_attempts.name
+    assert task_name == "tasks.cleanup_old_login_attempts"
+
+    setup_periodic_tasks(celery_app)  # 幂等：镜像 on_after_configure 信号行为
+    scheduled_names = {str(entry["task"]) for entry in celery_app.conf.beat_schedule.values()}
+    assert task_name in scheduled_names, (
+        "celery_schedule 必须保留 cleanup-old-login-attempts-daily beat 条目"
+        "（90 天 GDPR 保留期的执行宣称面）"
+    )
+    assert task_name in set(celery_app.tasks)

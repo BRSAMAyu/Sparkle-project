@@ -69,6 +69,12 @@ celery_app = Celery(
         # EI-02: beat 每天 10:00/20:00 调度 tasks.community.send_checkin_reminders，
         # 该模块必须随 worker 加载，否则消息按 unregistered task 被静默丢弃。
         "app.tasks.community_checkin_reminder",
+        # V3-FIX-338: celery_schedule 注册的 GDPR 每日 04:00 清理
+        # （cleanup-old-login-attempts-daily → tasks.cleanup_old_login_attempts，
+        # 90 天保留期）所在模块必须随 worker 显式加载。此前 include 缺失仅被
+        # setup_periodic_tasks 内的 import 副作用（shared_task 代理绑定即注册）
+        # 遮蔽——注册面依赖信号触发顺序，正是 EI-02 学说禁止的形态。
+        "app.tasks.login_attempt_cleanup",
         "app.tasks.policy_tasks",
         # SESSION-GC: user_sessions 过期行清理（AUTH-DEEP A-2 末行 P2）。
         # beat 静态条目引用其任务名，模块必须随 worker 加载（EI-02 守卫）。
