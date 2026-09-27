@@ -47,6 +47,9 @@ from tests.golden.north_star_wvpl_fixture import (
     file_evidence as _file_evidence,
 )
 from tests.golden.north_star_wvpl_fixture import (
+    focus as _focus,
+)
+from tests.golden.north_star_wvpl_fixture import (
     make_goal_plan as _make_goal_plan,
 )
 from tests.golden.north_star_wvpl_fixture import (
@@ -422,6 +425,53 @@ async def test_proactive_and_mode_faces(db_session):
     assert fact["proactive"]["lifecycle_events_by_type"] == {"started": 3, "exposed": 1}
     assert fact["proactive"]["started_by_execution_mode"] == {"human": 1, "agent": 1, "hybrid": 0, "other": 1}
     assert fact["outcomes"]["behavioral_by_outcome_type"] == {"action_taken": {"total": 1, "success": 1}}
+
+
+# ---------------------------------------------------------------------------
+# V3-FIX-319：_focus_pred 跨钟（墙上钟 end_time 混 UTC 窗，±8h 错桶）
+# ---------------------------------------------------------------------------
+
+#: 上海本地 2026-09-21 01:00（缺陷窗 00:00-08:00 内）；窗口 = [09-13 17:00, 09-20 17:00) naive-UTC
+AS_OF_SHANGHAI_MORNING = datetime(2026, 9, 20, 17, 0)
+
+
+async def _fact_with_single_focus(db_session, *, end: datetime, fid: int | None) -> dict:
+    """仅一条 focus 信号的用户（分母成员资格完全经 _focus_pred 判定）。"""
+    user = await _make_user(db_session)
+    db_session.add(_focus(user.id, end=end, fid=fid))
+    await db_session.commit()
+    return await NorthStarWvplService(db_session).build_fact(
+        as_of=AS_OF_SHANGHAI_MORNING, generated_at=AS_OF_SHANGHAI_MORNING
+    )
+
+
+async def test_focus_wall_event_before_window_not_counted(db_session):
+    """高估方向：上海墙上钟 09-14 00:30（绝对 09-13T16:30Z）在窗起点（09-13T17:00Z）之前。
+
+    修前 coalesce(end_time, created_at) 的 naive 00:30 ≥ 17:00 直比 → 误计入
+    （墙上钟值显得「新」8h）。
+    """
+    fact = await _fact_with_single_focus(db_session, end=datetime(2026, 9, 14, 0, 30), fid=603)
+    assert fact["north_star"]["active_users"] == 0, (
+        f"绝对时刻在窗前的 focus 会话不得计入分母；修前 naive 直比误计入：{fact['north_star']}"
+    )
+
+
+async def test_focus_wall_event_inside_window_counted(db_session):
+    """低估方向：上海墙上钟 09-20 22:00（绝对 09-20T14:00Z）在窗（终点 09-20T17:00Z）内。
+
+    修前 naive 22:00 ≥ 终点 17:00 直比 → 误排除（墙上钟值显得「旧」8h）。
+    """
+    fact = await _fact_with_single_focus(db_session, end=datetime(2026, 9, 20, 22, 0), fid=604)
+    assert fact["north_star"]["active_users"] == 1, (
+        f"绝对时刻在窗内的 focus 会话必须计入分母；修前 naive 直比误排除：{fact['north_star']}"
+    )
+
+
+async def test_focus_mid_window_utc_control_unchanged(db_session):
+    """UTC 控制组：窗中部（距两端 ≥8h）事件在任何钟表口径下都应计入（钉住非平移回归面）。"""
+    fact = await _fact_with_single_focus(db_session, end=datetime(2026, 9, 17, 12, 0), fid=605)
+    assert fact["north_star"]["active_users"] == 1
 
 
 # ---------------------------------------------------------------------------

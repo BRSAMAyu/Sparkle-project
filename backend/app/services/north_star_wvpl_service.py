@@ -54,6 +54,7 @@ from app.core.outcome_ledger import (
     TruthClass,
     derive_outcome_id,
 )
+from app.core.time_utils import DEFAULT_USER_TIMEZONE, utc_naive_to_wall_clock
 from app.models.chat import ChatMessage, MessageRole
 from app.models.context_pack import ContextPackRun
 from app.models.focus import FocusSession, FocusStatus
@@ -324,6 +325,17 @@ class NorthStarWvplService:
         production = lambda col: col.not_in(seed_ids_subq)  # noqa: E731
         in_seed = lambda col: col.in_(seed_ids_subq)  # noqa: E731
 
+        # V3-FIX-319：FocusSession.end_time 存客户端本地墙上时间 naive（V3-FIX-37
+        # 定界），修前与 created_at（UTC 列）coalesce 后直比 UTC 窗——墙上钟值
+        # 显得「新」8h，±8h 错桶（窗前事件误计入、窗内事件误排除）。端点经
+        # utc_naive_to_wall_clock 换成用户墙上钟入 SQL 同钟比（V3-FIX-300 同款
+        # 逆向换算，双射等价「列值先 wall_clock_to_utc_naive 再比 UTC 端点」）。
+        # fleet 级 distinct 发现无法逐行取 per-user 时区，按主市场缺省
+        # Asia/Shanghai 口径（time_utils.DEFAULT_USER_TIMEZONE，与 _user_timezone
+        # 缺省回落一致）。
+        focus_start_wall = utc_naive_to_wall_clock(start, DEFAULT_USER_TIMEZONE)
+        focus_end_wall = utc_naive_to_wall_clock(end, DEFAULT_USER_TIMEZONE)
+
         def _task_pred(cohort: Any) -> Any:
             occurred = func.coalesce(Task.completed_at, Task.created_at)
             return [
@@ -347,12 +359,13 @@ class NorthStarWvplService:
             ]
 
         def _focus_pred(cohort: Any) -> Any:
-            occurred = func.coalesce(FocusSession.end_time, FocusSession.created_at)
+            # end_time 列 nullable=False（models/focus.py），旧 coalesce 的
+            # created_at（UTC 列）回退分支不可达且混钟——同钟修复直接比墙上钟列。
             return [
                 FocusSession.status == FocusStatus.COMPLETED,
                 FocusSession.not_deleted_filter(),
-                occurred >= start,
-                occurred < end,
+                FocusSession.end_time >= focus_start_wall,
+                FocusSession.end_time < focus_end_wall,
                 cohort(FocusSession.user_id),
             ]
 
