@@ -6,7 +6,9 @@ from typing import Any
 from uuid import UUID
 
 from app.config import settings
+from app.core.kill_switch import is_enabled_mode, resolve_settings_mode
 from app.core.llm_secure_io import sanitize_text_for_llm
+from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
 from app.services.evidence.unified_evidence import (
     EvidenceDirection,
     EvidenceSourceType,
@@ -42,8 +44,16 @@ class ConversationalEvidenceExtractor:
         timeout_seconds: float | None = None,
         retry_count: int | None = None,
     ) -> None:
+        # V3-FIX-189：llm_enabled 判据走 V3-FIX-21 统一入口 resolve_settings_mode——
+        # tri-state 设置 AURORA_STAGE19_LLM_EXTRACTOR_MODE 在场即唯一判据（off/shadow/live），
+        # legacy bool SPARKLE_LLM_EXTRACTOR_ENABLED 只在设置缺席时兜底；直读 legacy bool
+        # 会让 stage19 kill-switch off 仍走 extractor LLM 车道（治理面与行为面分叉，
+        # 同 V3-FIX-186 先例）。__init__ 为同步面，读 settings 层三态（Redis 覆盖由
+        # 治理面 read_mode 承接），与 AuroraStage19KillSwitchService 共用同一 binding；
+        # DRY_RUN bool 合取语义保留：true 压倒任何 mode，回规则车道。
+        extractor_mode = resolve_settings_mode(AuroraStage19KillSwitchService.BINDINGS["llm_extractor_enabled"])
         self.llm_enabled = (
-            bool(settings.SPARKLE_LLM_EXTRACTOR_ENABLED) and not bool(settings.SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED)
+            is_enabled_mode(extractor_mode) and not bool(settings.SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED)
             if llm_enabled is None
             else bool(llm_enabled)
         )

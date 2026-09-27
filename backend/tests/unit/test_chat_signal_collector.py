@@ -5,6 +5,7 @@ import pytest
 
 import app.services.evidence.conversational_extractor as conversational_extractor_module
 from app.api.v1.cognitive import BeliefCorrectionRequest, _belief_correction_evidence
+from app.config import settings
 from app.services.chat_signal_collector import ChatSignalCollector
 from app.services.evidence import ConversationalEvidenceExtractor, EvidenceDirection, EvidenceSourceType, EvidenceTarget
 from app.services.evidence.unified_evidence import UnifiedEvidence
@@ -246,6 +247,93 @@ async def test_conversational_extractor_retries_llm_once(monkeypatch) -> None:
     assert captured["retry_count"] == 1
     assert captured["timeout"] == 12.0
     assert evidence[0].source_type == EvidenceSourceType.CONVERSATIONAL_IMPLICIT
+
+
+# --- V3-FIX-189：conversational_extractor llm_enabled 判据与 stage19 三态门对齐 ---
+# 修法同 V3-FIX-186 先例：判据走 kill_switch.resolve_settings_mode 统一入口，
+# tri-state AURORA_STAGE19_LLM_EXTRACTOR_MODE 在场即唯一判据，legacy bool
+# SPARKLE_LLM_EXTRACTOR_ENABLED 只在缺席时兜底；DRY_RUN 合取语义保留。
+
+
+def test_conversational_extractor_stage19_off_cuts_llm_lane(monkeypatch) -> None:
+    """stage19 kill-switch 显式 off 必须断 extractor LLM 车道，即使 legacy bool 为 true（修前红：off 被劫持）。"""
+    monkeypatch.setattr(settings, "AURORA_STAGE19_LLM_EXTRACTOR_MODE", "off", raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_ENABLED", True, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED", False, raising=False)
+
+    extractor = ConversationalEvidenceExtractor()
+
+    assert extractor.llm_enabled is False
+
+
+def test_conversational_extractor_stage19_live_overrides_legacy_false(monkeypatch) -> None:
+    """tri-state 显式 live 时不被 legacy bool=false 劫持回关（修前红：legacy 单权威）。"""
+    monkeypatch.setattr(settings, "AURORA_STAGE19_LLM_EXTRACTOR_MODE", "live", raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_ENABLED", False, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED", False, raising=False)
+
+    extractor = ConversationalEvidenceExtractor()
+
+    assert extractor.llm_enabled is True
+
+
+def test_conversational_extractor_shadow_mode_keeps_llm_lane(monkeypatch) -> None:
+    """tri-state shadow 属于 is_enabled（shadow/live 均放行），车道保持开。"""
+    monkeypatch.setattr(settings, "AURORA_STAGE19_LLM_EXTRACTOR_MODE", "shadow", raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_ENABLED", False, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED", False, raising=False)
+
+    extractor = ConversationalEvidenceExtractor()
+
+    assert extractor.llm_enabled is True
+
+
+def test_conversational_extractor_legacy_bool_fallback_when_tri_state_absent(monkeypatch) -> None:
+    """tri-state 设置缺席（未配置）时 legacy bool 兜底：false→关，true→开。"""
+    monkeypatch.delattr(settings, "AURORA_STAGE19_LLM_EXTRACTOR_MODE", raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED", False, raising=False)
+
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_ENABLED", False, raising=False)
+    assert ConversationalEvidenceExtractor().llm_enabled is False
+
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_ENABLED", True, raising=False)
+    assert ConversationalEvidenceExtractor().llm_enabled is True
+
+
+def test_conversational_extractor_dry_run_overrides_mode(monkeypatch) -> None:
+    """DRY_RUN bool 合取语义保留：即便 tri-state live，DRY_RUN=true 仍压回规则回退。"""
+    monkeypatch.setattr(settings, "AURORA_STAGE19_LLM_EXTRACTOR_MODE", "live", raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_ENABLED", True, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED", True, raising=False)
+
+    extractor = ConversationalEvidenceExtractor()
+
+    assert extractor.llm_enabled is False
+
+
+@pytest.mark.asyncio
+async def test_conversational_extractor_stage19_off_returns_rule_fallback_without_llm_call(monkeypatch) -> None:
+    """行为面：stage19 off 时 extract() 只回规则回退，不发起 LLM 调用。"""
+    monkeypatch.setattr(settings, "AURORA_STAGE19_LLM_EXTRACTOR_MODE", "off", raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_ENABLED", True, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED", False, raising=False)
+
+    async def _forbidden(*args, **kwargs):
+        raise AssertionError("stage19 off must not call the LLM lane")
+
+    monkeypatch.setattr(conversational_extractor_module, "safe_llm_json_call", _forbidden)
+    extractor = ConversationalEvidenceExtractor()
+
+    evidence = await extractor.extract(
+        user_id=uuid4(),
+        user_message="这个任务看着就烦，不想开始。",
+        ai_response="",
+        conversation_id="c-off",
+        turn_index=1,
+    )
+
+    assert evidence
+    assert all(item.metadata["extractor"] == "rule_fallback" for item in evidence)
 
 
 @pytest.mark.asyncio
