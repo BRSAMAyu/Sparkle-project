@@ -98,10 +98,9 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 ## 6. 测试与 CI 态势
 
 - **测试规模**：backend ~12300+ 用例（首次完整裁决 139F/12340P 后大量修复）、gateway 13 包（692 用例）、flutter 2636 用例、integration/e2e 面多层
-- **CI**：21 次追绿（本日），洋葱 19 层全剥——基础设施层（shard 污染/AT 守卫/隐藏文件/coverage 配置/goimports/PEL 测试赛跑）与真测试层（首完整裁决暴露的真实缺陷）都已收口；第 21 次在航（层 19 修复后）
-- **mypy 棘轮**：922→132→113→94→**91**（十批烧减，零 cast/零 ignore/真 bug 停手登记纪律——顺带挖出 491/492 等真 bug）
+- **CI：第 23 次 push-run 首次全绿（2026-09-28 04:15，run 36343384107）**——22 次失败后洋葱 21 层剥尽（proto 双布局→goimports→PEL 竞态→OpenAPI 重冻结→BA-ROUTES→backend 三分片→flutter→coverage merge→build artifacts→journey smoke）；12 个执行 job 全 ✓（Simulation Benchmark 系 PR 事件专属设计跳过）。**V4 教训固化：从未全量跑过的管线自带腐烂——21 层缺陷没有一层能在部分运行中暴露，V4 初期就应建立全绿基线**
+- **mypy 棘轮**：922→132→113→94→91→76→70→**55**（十一批+wt777 探针，零 cast/零 ignore/真 bug 停手登记纪律——顺带挖出 491/492/529 等真 bug；CI 侧口径差异待第 24 次实测对齐）
 - **ruff/l10n**：evidence 目录全净；en/zh 10061 键双向零缺失；EN 占位符清零
-- ⏳ CI 首绿后的三后置 job（Build Artifacts/Simulation Benchmark/Journey Smoke）首跑结果待补
 
 ## 7. 已知债务与未决清单
 
