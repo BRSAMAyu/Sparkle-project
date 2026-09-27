@@ -30,7 +30,9 @@ class CapabilitySelectionPolicy:
     """Select runtime organs from the Phase D body map and requirements."""
 
     _BLOCKED_AVAILABILITY = {"disabled", "unavailable", "blocked", "not_configured"}
-    _HEALTHY_AVAILABILITY = {"available", "healthy", "configured", "active"}
+    # V3-FIX-333：verified（真实调用证据）入健康词表；unverified（键在但从未
+    # 被真实流量触达）刻意不进健康集——可选（available）但不冒充健康。
+    _HEALTHY_AVAILABILITY = {"available", "healthy", "configured", "active", "verified"}
     _DEFAULT_SPECIALIST_ORDER = [
         "agent:error_analyst",
         "agent:deep_analyst",

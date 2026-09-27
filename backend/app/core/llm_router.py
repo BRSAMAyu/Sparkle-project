@@ -269,6 +269,12 @@ class ModelHealthState:
     is_healthy: bool = True
     phase: str = "healthy"  # "healthy" | "probation" | "unhealthy"
     cooldown_seconds: float | None = None  # None = 取 settings 默认
+    # V3-FIX-333：是否发生过真实流量成败回调（宣称面证据位）。只被
+    # record_success/record_failure 置位，reset_to_healthy 不清除（被真实
+    # 流量触达过的历史仍在）。路由语义不读它——is_healthy/phase 才是路由
+    # 判据；宣称面（capability_registry）用它区分「从未触达=unverified」与
+    # 「真实流量健康=verified」，键非空不再冒充健康。
+    ever_observed: bool = False
 
     FAILURE_THRESHOLD: int = field(default=5)
     RECOVERY_SECONDS: float = field(default=300.0)
@@ -308,6 +314,7 @@ class ModelHealthState:
         self.consecutive_failures += 1
         self.consecutive_successes = 0
         self.last_failure_at = time.monotonic()
+        self.ever_observed = True  # V3-FIX-333：真实流量失败证据
         if self.phase == "probation":
             # 恢复观察期内失败：立即回 unhealthy，冷却翻倍（防风暴滞回；有界封顶）
             self.cooldown_seconds = min(
@@ -326,10 +333,13 @@ class ModelHealthState:
 
     def record_success(self) -> None:
         if self.phase == "unhealthy":
-            # 滞回：unhealthy 期间在途旧请求的成功不解除熔断，等待冷却走完
+            # 滞回：unhealthy 期间在途旧请求的成功不解除熔断，等待冷却走完。
+            # 证据位仍置真：这次真实成功是「模型曾被触达」的证据（V3-FIX-333）
+            self.ever_observed = True
             return
         if self.phase == "probation":
             self.consecutive_successes += 1
+            self.ever_observed = True  # V3-FIX-333：真实流量成功证据
             if self.consecutive_successes >= self.PROBE_SUCCESS_THRESHOLD:
                 self.consecutive_failures = 0
                 self.cooldown_seconds = self.RECOVERY_SECONDS
@@ -339,6 +349,7 @@ class ModelHealthState:
         # healthy：单次成功清零失败计数（E-02 既有行为）
         self.consecutive_failures = 0
         self.consecutive_successes = 0
+        self.ever_observed = True  # V3-FIX-333：真实流量成功证据
 
     def check_recovery(self) -> None:
         """unhealthy → probation（冷却到期、无新失败）。probation/healthy 不变。"""

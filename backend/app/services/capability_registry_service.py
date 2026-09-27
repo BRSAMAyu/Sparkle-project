@@ -6,6 +6,7 @@ from typing import Any
 from app.config import settings
 from app.core.agent_profiles import ModelTier, agent_profile_registry, get_public_agent_catalog, get_public_mode_catalog
 from app.core.llm_router import llm_router
+from app.services.capability_runtime_status import aggregate_family_state
 from app.services.constitutional_drift_firewall import ConstitutionalDriftFirewall
 from app.services.five_layer_learning_contract import DEFAULT_FIVE_LAYER_CONTRACT
 
@@ -30,6 +31,7 @@ class CapabilityRegistryService:
             "kind": "core_runtime",
             "purpose": "Diagnose, decide, act, and explain on the primary user loop.",
             "state": "active",
+            "state_evidence": "in_process_self_evident: this registry payload is served by the live engine process itself",
             "cost_hint": "medium",
             "activation_cues": ["primary conversation loop", "diagnosis", "user-facing explanation"],
             "risk_hint": "Can become theatrical if it expands scope without user benefit.",
@@ -41,6 +43,7 @@ class CapabilityRegistryService:
             "kind": "execution_pipeline",
             "purpose": "Delegate bounded execution work when the task is ready for action.",
             "state": "configured" if bool(settings.OPENCLAW_ENABLED and settings.OPENCLAW_GATEWAY_URL) else "not_configured",
+            "state_evidence": "settings: OPENCLAW_ENABLED and OPENCLAW_GATEWAY_URL (reachability is probed separately by the openclaw client)",
             "cost_hint": "variable",
             "activation_cues": ["bounded execution", "tool-backed delivery", "task-ready action"],
             "risk_hint": "Should not be implied when gateway or rights are unavailable.",
@@ -51,7 +54,8 @@ class CapabilityRegistryService:
             "label": "Prediction Systems",
             "kind": "forecasting",
             "purpose": "Forecast likely next actions, engagement windows, and risk trends.",
-            "state": "active",
+            "state": "configured",
+            "state_evidence": "in_process_assembly: module shipped in this build; no runtime probe performed (V3-FIX-333)",
             "cost_hint": "low",
             "activation_cues": ["timing optimization", "risk forecasting", "next-move selection"],
             "risk_hint": "Forecasts should inform, not silently steer against user intent.",
@@ -62,7 +66,8 @@ class CapabilityRegistryService:
             "label": "Galaxy Knowledge Systems",
             "kind": "knowledge_graph",
             "purpose": "Ground learning structure, node mastery, and prerequisite maps.",
-            "state": "active",
+            "state": "configured",
+            "state_evidence": "in_process_assembly: module shipped in this build; no runtime probe performed (V3-FIX-333)",
             "cost_hint": "medium",
             "activation_cues": ["knowledge grounding", "user materials", "mastery structure"],
             "risk_hint": "Weak or stale graph state can create false confidence if not grounded.",
@@ -73,7 +78,8 @@ class CapabilityRegistryService:
             "label": "Feedback and Intervention Binding",
             "kind": "adaptation_loop",
             "purpose": "Bind user feedback to interventions and keep adaptations reversible.",
-            "state": "active",
+            "state": "configured",
+            "state_evidence": "in_process_assembly: module shipped in this build; no runtime probe performed (V3-FIX-333)",
             "cost_hint": "low",
             "activation_cues": ["visible adaptation", "intervention feedback", "reversibility"],
             "risk_hint": "Adaptations lose trust if they are invisible or feel non-reversible.",
@@ -84,7 +90,8 @@ class CapabilityRegistryService:
             "label": "Community Systems",
             "kind": "social_surface",
             "purpose": "Support community interactions and social accountability loops.",
-            "state": "active",
+            "state": "configured",
+            "state_evidence": "in_process_assembly: module shipped in this build; no runtime probe performed (V3-FIX-333)",
             "cost_hint": "medium",
             "activation_cues": ["accountability", "shared momentum", "social support"],
             "risk_hint": "Community should not be invoked when privacy or timing makes it burdensome.",
@@ -95,7 +102,8 @@ class CapabilityRegistryService:
             "label": "Achievement Systems",
             "kind": "motivation_surface",
             "purpose": "Reflect progress and reinforce durable movement without overpowering the core loop.",
-            "state": "active",
+            "state": "configured",
+            "state_evidence": "in_process_assembly: module shipped in this build; no runtime probe performed (V3-FIX-333)",
             "cost_hint": "low",
             "activation_cues": ["progress reflection", "celebration", "motivation support"],
             "risk_hint": "Achievement surfaces can cheapen the loop if they replace true diagnosis.",
@@ -106,7 +114,8 @@ class CapabilityRegistryService:
             "label": "Visual and BGM Systems",
             "kind": "ambient_surface",
             "purpose": "Shape atmosphere and continuity across chat, focus, and home surfaces.",
-            "state": "active",
+            "state": "configured",
+            "state_evidence": "in_process_assembly: module shipped in this build; no runtime probe performed (V3-FIX-333)",
             "cost_hint": "low",
             "activation_cues": ["mood support", "continuity", "ambient adaptation"],
             "risk_hint": "Ambient changes should support the moment, not distract from it.",
@@ -257,7 +266,7 @@ class CapabilityRegistryService:
                 "reason": "Evidence threshold not met for this system-layer change.",
                 "knob_id": knob_id,
             }
-        if subsystem and subsystem["state"] not in {"active", "configured"}:
+        if subsystem and subsystem["state"] not in {"active", "configured", "verified"}:
             return {
                 "allowed": False,
                 "reason": f"{subsystem['label']} is not available.",
@@ -455,6 +464,7 @@ class CapabilityRegistryService:
         models: list[dict[str, Any]] = []
         for key, config in sorted(llm_router._available_models.items()):  # noqa: SLF001 - internal registry surfacing
             health = llm_router._model_health.get(key)  # noqa: SLF001 - internal registry surfacing
+            state = self._model_claim_state(config, health)
             models.append(
                 {
                     "key": key,
@@ -463,10 +473,41 @@ class CapabilityRegistryService:
                     "model_name": config.model_name,
                     "cost_per_1k_tokens": config.cost_per_1k_tokens,
                     "avg_latency_ms": config.avg_latency_ms,
-                    "state": "healthy" if (health is None or health.is_healthy) else "degraded",
+                    "state": state,
+                    "state_evidence": self._model_claim_evidence(health),
+                    "health_phase": getattr(health, "phase", None),
                 }
             )
         return models
+
+    @staticmethod
+    def _model_claim_state(config: Any, health: Any) -> str:
+        """V3-FIX-333 模型宣称态（封闭集，证据驱动；路由语义在 llm_router 不变）。
+
+        - 键空 -> not_configured（不可用）
+        - 键在、从未被真实流量触达 -> unverified（「已配置未验证」，绝不冒充健康）
+        - phase=healthy 且被真实流量触达过 -> verified
+        - phase=probation（曾失败、冷却后恢复观察）-> degraded
+        - phase=unhealthy -> unavailable
+        """
+        if not bool((getattr(config, "api_key", "") or "").strip()):
+            return "not_configured"
+        if health is None or not bool(getattr(health, "ever_observed", False)):
+            return "unverified"
+        phase = str(getattr(health, "phase", "") or "")
+        if phase == "healthy":
+            return "verified"
+        if phase == "probation":
+            return "degraded"
+        if phase == "unhealthy":
+            return "unavailable"
+        return "unverified"
+
+    @staticmethod
+    def _model_claim_evidence(health: Any) -> str:
+        if health is None or not bool(getattr(health, "ever_observed", False)):
+            return "none: registered from configuration only; no real traffic observed yet"
+        return "real_traffic: llm_router record_success/record_failure callbacks (E-07 hysteresis)"
 
     def _agents(self) -> list[dict[str, Any]]:
         public_catalog = {item["id"]: item for item in get_public_agent_catalog()}
@@ -525,7 +566,10 @@ class CapabilityRegistryService:
                     "label": str(item.get("model_name") or item["key"]),
                     "capability_kind": "model",
                     "purpose": f"Generation and reasoning at the {tier or 'unknown'} tier.",
-                    "availability": "healthy" if item.get("state") == "healthy" else "degraded",
+                    # V3-FIX-333：availability 透传模型宣称态（not_configured/
+                    # unverified/verified/degraded/unavailable），不再把
+                    # 「从未触达」翻成 healthy。
+                    "availability": str(item.get("state") or "unknown"),
                     "quality_hint": self._quality_hint_for_model_tier(tier),
                     "latency_hint": self._latency_hint(item.get("avg_latency_ms")),
                     "cost_hint": self._cost_hint_for_tier(tier, item.get("cost_per_1k_tokens")),
@@ -605,6 +649,7 @@ class CapabilityRegistryService:
                 }
             )
         capabilities.extend(self._canonical_runtime_paths())
+        capabilities.extend(self._media_capabilities())
         for item in self._SYSTEM_LAYER_KNOBS:
             capabilities.append(
                 {
@@ -710,12 +755,129 @@ class CapabilityRegistryService:
             },
         ]
 
+    _MEDIA_CAPABILITY_META: tuple[dict[str, Any], ...] = (
+        {
+            "family": "embedding",
+            "capability_id": "media:embedding",
+            "label": "Embedding",
+            "purpose": "Turn text into versioned vectors for semantic search and semantic cache.",
+            "when_to_use": ["semantic_search", "semantic_cache"],
+        },
+        {
+            "family": "stt",
+            "capability_id": "media:stt",
+            "label": "Speech to Text",
+            "purpose": "Transcribe user audio (file upload and realtime WebSocket stream).",
+            "when_to_use": ["voice_input", "audio_transcription"],
+        },
+        {
+            "family": "tts",
+            "capability_id": "media:tts",
+            "label": "Text to Speech",
+            "purpose": "Synthesize server-side speech for notifications and multimodal replies.",
+            "when_to_use": ["voice_output", "notification_speech"],
+        },
+        {
+            "family": "ocr",
+            "capability_id": "media:ocr",
+            "label": "OCR",
+            "purpose": "Extract structured text and layout from images and documents.",
+            "when_to_use": ["document_ingestion", "math_ocr"],
+        },
+    )
+
+    @classmethod
+    def _media_capabilities(cls) -> list[dict[str, Any]]:
+        """五族媒体能力的对外宣称条目（V3-FIX-333）。
+
+        availability 直接采用各 service 的如实运行时状态（封闭集：
+        not_configured/unverified/verified/unavailable）——键非空只配得上
+        unverified，绝不冒充 available。证据由真实调用回调写入
+        capability_runtime_status（事件驱动），本 registry 不发起探活。
+        """
+        capabilities: list[dict[str, Any]] = []
+        for meta in cls._MEDIA_CAPABILITY_META:
+            family = str(meta["family"])
+            provider_states = [str(item.get("state") or "") for item in cls._media_family_status(family).values()]
+            availability = aggregate_family_state(provider_states)
+            capabilities.append(
+                {
+                    "capability_id": meta["capability_id"],
+                    "label": meta["label"],
+                    "capability_kind": "media",
+                    "purpose": meta["purpose"],
+                    "availability": availability,
+                    "quality_hint": "evidence_driven_claim" if availability == "verified" else "unverified_until_real_call",
+                    "latency_hint": "medium",
+                    "cost_hint": "medium",
+                    "read_scope": ["user_media"],
+                    "write_scope": [],
+                    "required_preconditions": ["provider_credentials_configured", "real_call_evidence_for_verified_claim"],
+                    "when_to_use": list(meta["when_to_use"]),
+                    "when_not_to_use": ["credentials_missing", "probe_never_succeeded"],
+                    "rights_model": "media_io_only",
+                    "reversible": True,
+                    "declared_knobs": [],
+                    "providers": cls._media_family_status(family),
+                }
+            )
+        return capabilities
+
+    @staticmethod
+    def _media_family_status(family: str) -> dict[str, dict[str, Any]]:
+        """按族读取各 service 的如实 runtime_status（局部 import 防环）。"""
+        if family == "embedding":
+            from app.services.embedding_service import embedding_service
+
+            return {
+                provider: {
+                    "state": str(info.get("runtime_state") or "not_configured"),
+                    "evidence": info.get("evidence"),
+                    "observed_at": info.get("observed_at"),
+                }
+                for provider, info in embedding_service.provider_status().items()
+            }
+        if family == "stt":
+            from app.services.stt_service import stt_service
+
+            return {
+                str(info.get("provider") or role): {
+                    "state": str(info.get("state") or "not_configured"),
+                    "evidence": info.get("evidence"),
+                    "observed_at": info.get("observed_at"),
+                }
+                for role, info in stt_service.runtime_status().items()
+            }
+        if family == "tts":
+            from app.services.tts_service import tts_service
+
+            return {
+                provider: {
+                    "state": str(info.get("state") or "not_configured"),
+                    "evidence": info.get("evidence"),
+                    "observed_at": info.get("observed_at"),
+                }
+                for provider, info in tts_service.runtime_status().items()
+            }
+        if family == "ocr":
+            from app.services.ocr_service import ocr_service
+
+            return {
+                provider: {
+                    "state": str(info.get("state") or "not_configured"),
+                    "evidence": info.get("evidence"),
+                    "observed_at": info.get("observed_at"),
+                }
+                for provider, info in ocr_service.runtime_status().items()
+            }
+        return {}
+
     @staticmethod
     def _normalize_subsystem_state(value: Any) -> str:
         normalized = str(value or "").strip().lower()
-        if normalized in {"active", "configured"}:
+        if normalized in {"active", "configured", "verified"}:
             return "available"
-        if normalized in {"not_configured", "blocked"}:
+        if normalized in {"not_configured", "unavailable", "blocked"}:
             return "blocked"
         return normalized or "unknown"
 

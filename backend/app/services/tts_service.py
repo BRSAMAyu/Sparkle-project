@@ -18,6 +18,7 @@ import httpx
 from loguru import logger
 
 from app.config import settings
+from app.services.capability_runtime_status import capability_runtime_status
 
 
 class TTSProviderError(RuntimeError):
@@ -140,6 +141,8 @@ class TTSService:
 
     def __init__(self):
         self.provider: BailianTTSProvider | None = None
+        # V3-FIX-333：宣称名（runtime_status 按名读证据）
+        self.provider_name: str = ""
         self._init_provider()
 
     def _init_provider(self):
@@ -152,10 +155,37 @@ class TTSService:
             logger.error(f"Failed to initialize TTS provider {provider_name}: {e}")
             self.provider = None
 
+        self.provider_name = provider_name if self.provider is not None else ""
         if self.provider is not None:
             logger.info(f"TTS provider initialized: {provider_name}")
         else:
             logger.warning(f"TTS provider unavailable: {provider_name}")
+
+    def _provider_configured(self, provider_name: str) -> bool:
+        """与 _init_provider 同一判据的键存在性检查（V3-FIX-333 宣称面用）。"""
+        if provider_name == "bailian":
+            return bool(settings.DASHSCOPE_API_KEY and settings.DASHSCOPE_API_KEY.strip())
+        return False
+
+    def runtime_status(self) -> dict[str, dict[str, Any]]:
+        """TTS 可用性如实宣称面（V3-FIX-333）。
+
+        state 封闭集：not_configured（键空）/ unverified（键在、无真实合成
+        证据）/ verified（最近一次真实合成成功）/ unavailable（最近一次真实
+        合成失败）。证据来自 synthesize 的真实调用回调——不做定时主动 probe
+        （周期合成=持续付费买不消费的音频，成本裁决见台账 V3-FIX-333 行）。
+        """
+        name = self.provider_name or (settings.TTS_PROVIDER or "bailian").lower()
+        configured = self._provider_configured(name)
+        observation = capability_runtime_status.status("tts", name)
+        return {
+            name: {
+                "configured": configured,
+                "state": capability_runtime_status.runtime_state("tts", name, configured=configured),
+                "evidence": observation.evidence if observation else None,
+                "observed_at": observation.observed_at if observation else None,
+            }
+        }
 
     async def synthesize(
         self,
@@ -173,12 +203,22 @@ class TTSService:
 
         try:
             audio_bytes = await self.provider.synthesize(text, voice=voice, instructions=instructions)
+            # V3-FIX-333：真实合成成功 -> verified 证据（事件驱动）
+            capability_runtime_status.observe_success("tts", self.provider_name or "bailian")
             return {"audio": audio_bytes, "format": self.provider.audio_format, "error": None}
         except TTSProviderError as e:
             logger.warning(f"TTS synthesize failed: {e}")
+            # V3-FIX-333：真实合成失败 -> unavailable 证据（事件驱动）
+            capability_runtime_status.observe_failure(
+                "tts", self.provider_name or "bailian", detail=str(e)
+            )
             return {"audio": b"", "format": settings.QWEN_TTS_AUDIO_FORMAT, "error": str(e)}
         except Exception as e:
             logger.error(f"TTS synthesize unexpected error: {e}")
+            # V3-FIX-333：真实合成异常 -> unavailable 证据（事件驱动）
+            capability_runtime_status.observe_failure(
+                "tts", self.provider_name or "bailian", detail=str(e)
+            )
             return {
                 "audio": b"",
                 "format": settings.QWEN_TTS_AUDIO_FORMAT,

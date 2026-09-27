@@ -30,6 +30,7 @@ from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wai
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.services.capability_runtime_status import capability_runtime_status
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 
 try:
@@ -125,20 +126,29 @@ class EmbeddingService:
 
         E-05 D1：resolved_version 供运维直接看出"备用供应商为何不参与
         failover"（异构版本会被 batch_embeddings 的守卫跳过）。
+
+        V3-FIX-333 如实宣称：``configured`` 只说明键存在；``runtime_state``
+        才是可用性宣称——键空=not_configured、键在无真实调用证据=unverified、
+        真实调用成功=verified、真实调用失败=unavailable。绝不把「能配置」
+        当「可用」。
         """
         return {
-            "dashscope": {
-                "configured": bool(self.dashscope_api_key),
-                "model": self.dashscope_model,
-                "resolved_version": self.provider_version("dashscope"),
-                "env": "DASHSCOPE_API_KEY",
-            },
-            "siliconflow": {
-                "configured": bool(self.siliconflow_api_key),
-                "model": self.siliconflow_model,
-                "resolved_version": self.provider_version("siliconflow"),
-                "env": "SILICONFLOW_API_KEY",
-            },
+            "dashscope": self._provider_claim("dashscope", bool(self.dashscope_api_key)),
+            "siliconflow": self._provider_claim("siliconflow", bool(self.siliconflow_api_key)),
+        }
+
+    def _provider_claim(self, provider: str, configured: bool) -> dict:
+        observation = capability_runtime_status.status("embedding", provider)
+        return {
+            "configured": configured,
+            "runtime_state": capability_runtime_status.runtime_state(
+                "embedding", provider, configured=configured
+            ),
+            "evidence": observation.evidence if observation else None,
+            "observed_at": observation.observed_at if observation else None,
+            "model": self.dashscope_model if provider == "dashscope" else self.siliconflow_model,
+            "resolved_version": self.provider_version(provider),
+            "env": "DASHSCOPE_API_KEY" if provider == "dashscope" else "SILICONFLOW_API_KEY",
         }
 
     def is_configured(self) -> bool:
@@ -271,6 +281,8 @@ class EmbeddingService:
                 else:
                     continue
                 await circuit_breaker_service.record_success(f"embedding:{provider}")
+                # V3-FIX-333：真实供应商调用成功 -> verified 证据（事件驱动）
+                capability_runtime_status.observe_success("embedding", provider)
 
                 if len(result) != len(missing_texts):
                     raise RuntimeError(
@@ -305,6 +317,8 @@ class EmbeddingService:
             except Exception as e:
                 logger.warning(f"Embedding provider {provider} failed: {e}")
                 await circuit_breaker_service.record_failure(f"embedding:{provider}")
+                # V3-FIX-333：真实供应商调用失败 -> unavailable 证据（事件驱动）
+                capability_runtime_status.observe_failure("embedding", provider, detail=str(e))
                 last_error = e
                 continue
 

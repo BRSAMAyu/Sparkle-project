@@ -10,6 +10,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
 
 from app.config import settings
+from app.services.capability_runtime_status import capability_runtime_status
 from app.services.stt.providers.base import STTProvider
 
 
@@ -21,14 +22,21 @@ class STTService:
         self.provider: STTProvider | None = None
         self.backup_provider: STTProvider | None = None
         self.stream_provider: STTProvider | None = None
+        # V3-FIX-333：记录 provider 名（宣称面按名对证据登记/读取）
+        self.primary_provider_name: str = ""
+        self.backup_provider_name: str = ""
         self._init_provider()
 
     def _init_provider(self):
         """根据配置初始化STT Provider"""
         provider_name = (settings.STT_PROVIDER or "bailian").lower()
         backup_name = (settings.STT_BACKUP_PROVIDER or "").lower()
+        # V3-FIX-333：宣称名记录「配置意图」（键缺失也在 runtime_status 如实
+        # 报 not_configured，而不是让空位消失）。
+        self.primary_provider_name = provider_name
         self.provider = self._build_provider(provider_name)
         alternate_name = backup_name or ("xunfei" if provider_name == "zhipu" else "zhipu")
+        self.backup_provider_name = alternate_name
         self.backup_provider = self._build_provider(alternate_name)
 
         # 移动端的聊天、群聊、工具页都通过 WebSocket 走流式识别。
@@ -86,12 +94,57 @@ class STTService:
     def _is_configured_value(self, value: Any) -> bool:
         return isinstance(value, str) and bool(value.strip())
 
+    def _provider_key_configured(self, provider_name: str) -> bool:
+        """与 _build_provider 同一判据的键存在性检查（V3-FIX-333 宣称面用）。"""
+        if provider_name == "bailian":
+            return self._is_configured_value(settings.DASHSCOPE_API_KEY)
+        if provider_name == "zhipu":
+            return self._is_configured_value(settings.ZHIPU_API_KEY)
+        if provider_name == "xunfei":
+            return all(
+                self._is_configured_value(value)
+                for value in (settings.XUNFEI_APP_ID, settings.XUNFEI_API_KEY, settings.XUNFEI_API_SECRET)
+            )
+        return False
+
+    def runtime_status(self) -> dict[str, dict[str, Any]]:
+        """STT 可用性如实宣称面（V3-FIX-333）。
+
+        state 封闭集：not_configured（键空）/ unverified（键在、无真实转写
+        证据）/ verified（最近一次真实转写成功）/ unavailable（最近一次真实
+        转写失败）。证据来自 transcribe_file 与 WS 流的真实调用回调——
+        本服务不做定时主动 probe（probe 需真实音频资产，成本裁决见台账）。
+        """
+        payload: dict[str, dict[str, Any]] = {}
+        for role, name in (
+            ("primary", self.primary_provider_name),
+            ("backup", self.backup_provider_name),
+        ):
+            configured = self._provider_key_configured(name) if name else False
+            observation = capability_runtime_status.status("stt", name) if name else None
+            payload[role] = {
+                "provider": name or None,
+                "configured": configured,
+                "state": capability_runtime_status.runtime_state("stt", name or "", configured=configured),
+                "evidence": observation.evidence if observation else None,
+                "observed_at": observation.observed_at if observation else None,
+            }
+        return payload
+
     def _ordered_providers(self) -> list[STTProvider]:
         providers: list[STTProvider] = []
         for provider in (self.provider, self.backup_provider):
             if provider is not None and provider not in providers:
                 providers.append(provider)
         return providers
+
+    def _provider_key_for_instance(self, provider: STTProvider) -> str:
+        """反查 provider 宣称名（bailian/zhipu/xunfei），登记证据用。"""
+        if provider is self.provider and self.primary_provider_name:
+            return self.primary_provider_name
+        if provider is self.backup_provider and self.backup_provider_name:
+            return self.backup_provider_name
+        return provider.__class__.__name__.removesuffix("Provider").lower()
 
     def _should_try_backup(self, error_message: str) -> bool:
         lowered = error_message.lower()
@@ -133,6 +186,7 @@ class STTService:
         last_error: str | None = None
         for index, provider in enumerate(providers):
             provider_name = provider.__class__.__name__
+            provider_key = self._provider_key_for_instance(provider)
             try:
                 logger.info(f"Transcribing file: {file_path} using {provider_name}")
                 text = await asyncio.wait_for(
@@ -145,10 +199,14 @@ class STTService:
                 if index < len(providers) - 1 and self._should_try_backup(text):
                     raise RuntimeError(text)
 
+                # V3-FIX-333：真实转写成功 -> verified 证据（事件驱动）
+                capability_runtime_status.observe_success("stt", provider_key)
                 return {"text": text, "error": False}
             except Exception as e:
                 last_error = str(e)
                 logger.warning(f"STT provider {provider_name} failed: {e}")
+                # V3-FIX-333：真实转写失败 -> unavailable 证据（事件驱动）
+                capability_runtime_status.observe_failure("stt", provider_key, detail=last_error)
                 if index == len(providers) - 1 or not self._should_try_backup(last_error):
                     break
 
@@ -217,6 +275,8 @@ class STTService:
         try:
             # Create audio stream generator from WebSocket
             audio_stream = self._create_audio_stream_generator(websocket)
+            stream_provider_key = self._provider_key_for_instance(active_provider)
+            saw_transcription = False
 
             # Transcribe using the provider
             async for text in active_provider.transcribe_stream(audio_stream):
@@ -225,15 +285,23 @@ class STTService:
                     logger.warning(f"Provider returned error as text: {text[:80]}")
                     await websocket.send_json({"type": "error", "content": "STT provider error"})
                     break
+                saw_transcription = True
                 await websocket.send_json({"type": "transcription", "text": text, "is_final": False})
 
             # Send completion signal
             await websocket.send_json({"type": "status", "content": "completed"})
+            # V3-FIX-333：真实流式转写产出 -> verified 证据（事件驱动）
+            if saw_transcription:
+                capability_runtime_status.observe_success("stt", stream_provider_key)
 
         except WebSocketDisconnect:
             logger.info(f"WebSocket disconnected: {session_id}")
         except Exception as e:
             logger.error(f"WebSocket error: {e}")
+            # V3-FIX-333：真实流式转写异常 -> unavailable 证据（事件驱动）
+            capability_runtime_status.observe_failure(
+                "stt", self._provider_key_for_instance(active_provider), detail=str(e)
+            )
             try:
                 await websocket.send_json({"type": "error", "content": "STT stream error"})
             except Exception:

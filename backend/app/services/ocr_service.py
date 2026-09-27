@@ -14,6 +14,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from app.config import settings
 from app.core.cost_controller import is_llm_within_budget
 from app.core.llm_client import SecureLLMClient
+from app.services.capability_runtime_status import capability_runtime_status
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 
 
@@ -61,6 +62,26 @@ class OCRService:
             return bool(self.siliconflow_api_key)
         return False
 
+    def runtime_status(self) -> dict[str, dict[str, Any]]:
+        """OCR 可用性如实宣称面（V3-FIX-333）。
+
+        state 封闭集：not_configured（键空）/ unverified（键在、无真实识别
+        证据）/ verified（最近一次真实识别成功）/ unavailable（最近一次真实
+        识别失败）。证据来自 ocr_from_url / ocr_from_base64_sync 的真实调用
+        回调——不做定时主动 probe（probe 需维护真实图片资产，成本裁决见台账）。
+        """
+        payload: dict[str, dict[str, Any]] = {}
+        for provider in self._provider_order():
+            configured = self._provider_configured(provider)
+            observation = capability_runtime_status.status("ocr", provider)
+            payload[provider] = {
+                "configured": configured,
+                "state": capability_runtime_status.runtime_state("ocr", provider, configured=configured),
+                "evidence": observation.evidence if observation else None,
+                "observed_at": observation.observed_at if observation else None,
+            }
+        return payload
+
     def _circuit_key(self, provider: str) -> str:
         return f"ocr:{provider}"
 
@@ -94,6 +115,8 @@ class OCRService:
                 if not text.strip():
                     raise RuntimeError(f"{provider} returned empty OCR result")
                 await circuit_breaker_service.record_success(self._circuit_key(provider))
+                # V3-FIX-333：真实识别成功 -> verified 证据（事件驱动）
+                capability_runtime_status.observe_success("ocr", provider)
                 logger.info(f"OCR completed via {provider}, text length: {len(text)}")
                 return text
             except CircuitBreakerOpenException as exc:
@@ -102,6 +125,8 @@ class OCRService:
             except Exception as exc:
                 logger.warning(f"OCR provider {provider} failed: {exc}")
                 await circuit_breaker_service.record_failure(self._circuit_key(provider))
+                # V3-FIX-333：真实识别失败 -> unavailable 证据（事件驱动）
+                capability_runtime_status.observe_failure("ocr", provider, detail=str(exc))
                 last_error = exc
 
         if last_error:
@@ -145,10 +170,14 @@ class OCRService:
                     text = self._siliconflow_ocr_from_base64_sync(image_b64, prompt=prompt)
                 if text.strip():
                     logger.info(f"OCR sync completed via {provider}, text length: {len(text)}")
+                    # V3-FIX-333：真实识别成功 -> verified 证据（事件驱动）
+                    capability_runtime_status.observe_success("ocr", provider)
                     return text
                 raise RuntimeError(f"{provider} returned empty OCR result")
             except Exception as exc:
                 logger.warning(f"OCR sync provider {provider} failed: {exc}")
+                # V3-FIX-333：真实识别失败 -> unavailable 证据（事件驱动）
+                capability_runtime_status.observe_failure("ocr", provider, detail=str(exc))
                 last_error = exc
 
         if last_error:
