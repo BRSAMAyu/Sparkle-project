@@ -118,10 +118,12 @@ class AgentStatsService:
         # 无 GROUP BY 的聚合查询恒返回一行；.one() 类型为 Row（非 Optional）
         overall = result.one()
 
-        # 按Agent类型统计
+        # 按Agent类型统计（label 同名异型改名：Row 是 tuple 子类，row.count 命中
+        # tuple.count 方法遮蔽列值；改名 execution_count 后属性访问不再撞方法名，
+        # 行值/排序语义不变）
         agent_query = select(
             AgentExecutionStats.agent_type,
-            func.count(AgentExecutionStats.id).label('count'),
+            func.count(AgentExecutionStats.id).label('execution_count'),
             func.avg(AgentExecutionStats.duration_ms).label('avg_duration'),
             func.max(AgentExecutionStats.duration_ms).label('max_duration'),
             func.count(
@@ -138,17 +140,17 @@ class AgentStatsService:
         ).group_by(
             AgentExecutionStats.agent_type
         ).order_by(
-            desc('count')
+            desc('execution_count')
         )
 
         result = await self.db.execute(agent_query)
         agent_stats = [
             {
                 'agent_type': row.agent_type,
-                'count': row.count,
+                'count': row.execution_count,
                 'avg_duration_ms': int(row.avg_duration) if row.avg_duration else 0,
                 'max_duration_ms': row.max_duration or 0,
-                'success_rate': (row.success_count / row.count * 100) if row.count > 0 else 0
+                'success_rate': (row.success_count / row.execution_count * 100) if row.execution_count > 0 else 0
             }
             for row in result.fetchall()
         ]

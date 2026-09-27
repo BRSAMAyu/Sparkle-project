@@ -583,10 +583,13 @@ class AuroraControlSurfaceService:
             }
 
         days_left = exam.get("days_left")
-        try:
-            days_left_int = int(days_left)
-        except (TypeError, ValueError):
-            days_left_int = None
+        days_left_int: int | None = None
+        if days_left is not None:
+            # 键缺失时原 int(None) 抛 TypeError 落 except → None；显式跳过逐值等价
+            try:
+                days_left_int = int(days_left)
+            except (TypeError, ValueError):
+                days_left_int = None
         if days_left_int is not None and days_left_int <= 14:
             title = _strip(exam.get("title")) or "考试"
             label = "今天考试" if days_left_int == 0 else f"距考试还有 {days_left_int} 天"
@@ -750,7 +753,11 @@ class AuroraControlSurfaceService:
         priority = {"scene_model": 0, "self_model": 1, "goal_model": 2, "user_model": 3}
         ordered_facets = sorted(facets, key=lambda item: priority.get(str(item.get("key")), 9))
         for facet in ordered_facets:
-            items.append(facet.get("summary"))
+            facet_summary = facet.get("summary")
+            if facet_summary is not None:
+                # summary 缺失时原 append(None) 会被 _clean_evidence_chain 的 _strip 落空过滤；
+                # 显式不追加，过滤结果逐值等价
+                items.append(facet_summary)
         for facet in ordered_facets:
             meta = _as_dict(facet.get("meta"))
             evidence_chain = _as_list(meta.get("evidence_chain"))

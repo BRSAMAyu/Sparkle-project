@@ -241,7 +241,9 @@ class GroupFileService:
         user_id: UUID,
         requested_file_ids: list[UUID] | None = None,
         include_group_documents: bool = False,
-        group_ids: list[UUID | str] | None = None,
+        # Sequence 只读协变承接 list[UUID]/list[str] 调用点；值仅透传
+        # list_accessible_group_ids(requested_group_ids: Sequence[...])，不做原地变更
+        group_ids: Sequence[UUID | str] | None = None,
         limit: int | None = None,
     ) -> list[StoredFile]:
         stmt = select(StoredFile).where(

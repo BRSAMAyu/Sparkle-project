@@ -216,8 +216,12 @@ class OPEGatekeeper:
         signal_type = str(reward.get("signal_type") or "unknown")
         if signal_type in EXCLUDED_SIGNAL_TYPES or bool(reward.get("is_censored")):
             return None
+        raw_total_reward = reward.get("total_reward")
+        if raw_total_reward is None:
+            # 键缺失时原 float(None) 抛 TypeError 落 except → None；显式返回逐值等价
+            return None
         try:
-            total_reward = float(reward.get("total_reward"))
+            total_reward = float(raw_total_reward)
         except (TypeError, ValueError):
             return None
         if signal_type in POSITIVE_SIGNAL_TYPES or total_reward > 0:

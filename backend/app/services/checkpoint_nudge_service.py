@@ -1207,6 +1207,9 @@ def extract_strategy_checkpoints(plan: Plan) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         day = item.get("day")
+        if day is None:
+            # 键缺失时原 int(None) 抛 TypeError 落 except → continue；显式跳过逐值等价
+            continue
         try:
             day_int = int(day)
         except (TypeError, ValueError):

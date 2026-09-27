@@ -188,7 +188,7 @@ class SummarizationWorker:
 
         return False
 
-    async def _generate_summary(self, history: list[dict], user_id: str) -> str:
+    async def _generate_summary(self, history: list[dict], user_id: str | None) -> str:
         """
         使用 LLM 生成历史对话摘要
 

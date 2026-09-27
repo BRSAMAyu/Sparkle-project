@@ -1664,7 +1664,9 @@ class ToolExecutor:
                 base_delay_seconds=DEFAULT_RETRY_BASE_DELAY_SECONDS,
                 max_delay_seconds=DEFAULT_RETRY_MAX_DELAY_SECONDS,
             )
-            if not should_retry:
+            # retry_decision 契约：True 必伴非 None delay（见 failure_semantics.retry_decision），
+            # delay is None 分支按契约不可达；守卫与 not should_retry 同走死信终态
+            if not should_retry or delay is None:
                 if classification.retryable:
                     logger.warning(
                         "step {} (tool {}) dead-lettered after {} attempt(s): {}",

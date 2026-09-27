@@ -26,6 +26,7 @@ from app.schemas.community import (
     FriendRecommendationTargetEnum,
     RecommendationItemTypeEnum,
     UserBrief,
+    UserStatusEnum,
 )
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
@@ -294,7 +295,10 @@ class FriendMatchService:
                         avatar_url=user.avatar_url,
                         flame_level=user.flame_level,
                         flame_brightness=user.flame_brightness,
-                        status=user.status.value,
+                        # ORM UserStatus 与 schema UserStatusEnum 为同值 StrEnum
+                        # （online/offline/invisible 逐值对齐）；直接传 schema 侧枚举，
+                        # pydantic 终存值与原 str 校验后等值
+                        status=UserStatusEnum(user.status.value),
                     ),
                     match_score=min(max(total_score, 0.0), 1.0),
                     match_reasons=reasons,

@@ -390,9 +390,15 @@ class GalaxyOutcomeAbsorber:
                             exc,
                         )
 
-        # dedupe, preserve order
+        # dedupe, preserve order（与 `nid in seen or seen.add(nid)` 推导式逐值等价：
+        # 首见加入并保留、重复跳过，set.add 语句化以静态表达其无返回值）
         seen: set[UUID] = set()
-        unique = [nid for nid in resolved if not (nid in seen or seen.add(nid))]
+        unique: list[UUID] = []
+        for nid in resolved:
+            if nid in seen:
+                continue
+            seen.add(nid)
+            unique.append(nid)
         # only keep nodes that actually exist (protects against stale refs)
         existing: list[UUID] = []
         for node_id in unique:

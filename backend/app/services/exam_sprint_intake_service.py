@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import cache_service
 from app.models.goal import Goal
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
-from app.models.task import Task
+from app.models.task import Task, TaskType
 from app.orchestration.bottleneck_analyzer import bottleneck_analyzer
 from app.orchestration.planning_workflow import (
     PLANNING_PROFILE_KEYS,
@@ -525,7 +525,10 @@ class ExamSprintIntakeService:
                             f"Day {day_spec['day']} · {self._strip(phase.get('label'))}"
                             f" - {self.planning_manager._task_title_focus(day_spec)}"
                         ),
-                        type=coerce_task_type(_task_type_for_day_spec(day_spec)),
+                        # _task_type_for_day_spec 只产 learning/training/error_fix 三个词，
+                        # 经 ALIAS_MAP 全部命中合法 TaskType，default 分支不可达；
+                        # 显式 default 选中单参重载（返回 TaskType 非 TaskType | None）
+                        type=coerce_task_type(_task_type_for_day_spec(day_spec), default=TaskType.LEARNING),
                         plan_id=plan.id,
                         estimated_minutes=max(
                             self._safe_int(day_spec.get("estimated_minutes"))

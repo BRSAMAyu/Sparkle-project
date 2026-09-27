@@ -317,6 +317,9 @@ def execution_mode_slice(execution_mode: str | None) -> str:
 
 def clamp_observation_window_hours(hours: int | float | None) -> int:
     """观察窗钳制到 [MIN, MAX]；缺失/非法 → DEFAULT（72h，与既有 tracker 对齐）。"""
+    if hours is None:
+        # 与原 int(None) 抛 TypeError 被 except 捕获后返 DEFAULT 逐值等价（显式提前）
+        return DEFAULT_OBSERVATION_WINDOW_HOURS
     try:
         value = int(hours)
     except (TypeError, ValueError):

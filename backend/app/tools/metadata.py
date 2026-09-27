@@ -149,13 +149,14 @@ def validate_tool_metadata(tool: Any) -> list[str]:
     name = getattr(tool, "name", None) or type(tool).__name__
     issues: list[str] = []
 
-    effect = getattr(tool, "effect", None)
+    # 缺省用 ""：枚举按值查找对 None 与 "" 同样抛 ValueError（fail-closed 产 issue 不变）
+    effect = getattr(tool, "effect", "")
     try:
         ToolEffect(effect)
     except ValueError:
         issues.append(f"{name}: missing or invalid 'effect' (must be one of {sorted(e.value for e in ToolEffect)})")
 
-    risk = getattr(tool, "risk", None)
+    risk = getattr(tool, "risk", "")
     try:
         ToolRiskLevel(risk)
     except ValueError:

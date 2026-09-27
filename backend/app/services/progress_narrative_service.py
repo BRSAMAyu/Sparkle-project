@@ -1234,10 +1234,13 @@ class ProgressNarrativeService:
         if recent_narratives:
             latest_points = recent_narratives[0].get("data_points")
             if isinstance(latest_points, dict):
-                try:
-                    latest_variant = int(latest_points.get("style_variant"))
-                except (TypeError, ValueError):
-                    latest_variant = None
+                raw_variant = latest_points.get("style_variant")
+                if raw_variant is not None:
+                    # 键缺失时原 int(None) 抛 TypeError 落 except → None；显式跳过逐值等价
+                    try:
+                        latest_variant = int(raw_variant)
+                    except (TypeError, ValueError):
+                        latest_variant = None
         if latest_variant is not None and latest_variant == variant:
             variant = (variant + 1) % 3
         return variant
