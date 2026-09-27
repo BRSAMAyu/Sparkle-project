@@ -167,8 +167,9 @@ void main() {
         priority: anyNamed('priority'),
         traceId: anyNamed('traceId'),
       ),).captured.single as Map<String, dynamic>;
-      expect(captured['completion']['actual_minutes'], 42);
-      expect(captured['completion']['user_note'], 'done');
+      final completion = captured['completion'] as Map<String, dynamic>;
+      expect(completion['actual_minutes'], 42);
+      expect(completion['user_note'], 'done');
     });
 
     test('abandonTask 离线 → 入队 abandon（原死代码接线）', () async {

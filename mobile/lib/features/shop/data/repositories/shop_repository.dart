@@ -12,8 +12,9 @@ class ShopRepository {
 
   /// Handle Dio exceptions
   T _handleDioError<T>(DioException e, String functionName) {
-    final errorMessage = e.response?.data?['detail'] ??
-        'An unknown error occurred in $functionName';
+    final errorMessage =
+        (e.response?.data as Map<String, dynamic>?)?['detail'] ??
+            'An unknown error occurred in $functionName';
     throw Exception(errorMessage);
   }
 

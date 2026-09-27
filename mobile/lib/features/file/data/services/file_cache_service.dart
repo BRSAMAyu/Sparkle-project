@@ -45,7 +45,7 @@ class FileCacheService {
     final entry = _cache.get(key);
     if (entry == null) return null;
     final file = File(entry.path);
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       _removeEntry(key, entry);
       return null;
     }
@@ -98,7 +98,7 @@ class FileCacheService {
   Future<Directory> _ensureCacheDir() async {
     final baseDir = await getApplicationDocumentsDirectory();
     final dir = Directory(p.join(baseDir.path, 'file_cache'));
-    if (!await dir.exists()) {
+    if (!dir.existsSync()) {
       await dir.create(recursive: true);
     }
     return dir;

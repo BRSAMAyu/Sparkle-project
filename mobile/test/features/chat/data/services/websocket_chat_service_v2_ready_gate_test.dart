@@ -22,6 +22,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -326,11 +327,11 @@ void main() {
     // MAX_RETRIES_EXCEEDED) target an empty controller map by design — the
     // pending message learns its fate via the offline queue instead.
     expect(
-      events.map((e) => e.code as String),
+      events.map((e) => (e as ErrorEvent).code),
       contains('CONNECTION_CLOSED'),
       reason:
           'The request stream must be terminated with a broadcast; got: '
-          '${events.map((e) => e.code as String).toList()}',
+          '${events.map((e) => (e as ErrorEvent).code).toList()}',
     );
 
     // Every reconnect log line must match its own schedule step window

@@ -347,7 +347,7 @@ class FocusStatsRepository extends HybridStatisticsRepository<FocusStatisticsDat
         averageSessionDuration: (json['averageSessionDuration'] as num?)?.toDouble(),
         longestSession: json['longestSession'] as int?,
         currentStreak: json['currentStreak'] as int?,
-        dailyData: (json['dailyData'] as List?)
+        dailyData: (json['dailyData'] as List<Map<String, dynamic>>?)
                 ?.map((e) => DailyFocusData(
                       date: DateTime.parse(e['date'] as String),
                       minutes: e['minutes'] as int,

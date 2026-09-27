@@ -168,6 +168,7 @@ class AccountabilityActions {
   ) async {
     final repo = ref.read(accountabilityRepositoryProvider);
     final result = await repo.encourageCheckin(checkinId, message);
+    final encouragement = result['encouragement'] as Map<String, dynamic>;
 
     // Update the interaction state
     final currentState = ref.read(checkinInteractionProvider(checkinId));
@@ -176,11 +177,11 @@ class AccountabilityActions {
       encouragements: [
         ...currentState.encouragements,
         EncouragementMessage(
-          id: result['encouragement']['id'] as String,
-          userId: result['encouragement']['user_id'] as String,
-          message: result['encouragement']['message'] as String,
+          id: encouragement['id'] as String,
+          userId: encouragement['user_id'] as String,
+          message: encouragement['message'] as String,
           createdAt: DateTime.parse(
-            result['encouragement']['created_at'] as String,
+            encouragement['created_at'] as String,
           ),
         ),
       ],

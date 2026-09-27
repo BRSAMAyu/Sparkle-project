@@ -794,7 +794,7 @@ void main() {
       ),).captured.single as Map<String, dynamic>;
 
       expect(
-        captured['items'].first['schema_version'],
+        (captured['items'] as List<Map<String, dynamic>>).first['schema_version'],
         equals('v1.0'),
       );
     });
@@ -896,7 +896,10 @@ void main() {
       final item = EvidenceResolveItem.fromJson(json);
 
       expect(item.type, equals('practice_outcome'));
-      expect(item.payload?['practice_outcome']?['error_id'], equals('err-2'));
+      expect(
+        (item.payload?['practice_outcome'] as Map<String, dynamic>?)?['error_id'],
+        equals('err-2'),
+      );
     });
 
     test('should handle null payload', () {

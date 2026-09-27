@@ -1054,7 +1054,7 @@ class BgmService {
         continue;
       }
       final sourceFile = File(sourcePath);
-      if (!await sourceFile.exists()) {
+      if (!sourceFile.existsSync()) {
         continue;
       }
       final targetBaseName =
@@ -1091,7 +1091,7 @@ class BgmService {
     final target = importedTracks.removeAt(targetIndex);
     try {
       final file = File(target.filePath);
-      if (await file.exists()) {
+      if (file.existsSync()) {
         await file.delete();
       }
     } catch (_) {}
@@ -2290,7 +2290,7 @@ class BgmService {
     final fileName = localPlaylist[
         _queueCursorForLength(track, localPlaylist.length, tuning.variety)];
     final file = File('$_localOverrideRoot/$fileName');
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       return null;
     }
     return _ResolvedBgmSelection(
@@ -2872,7 +2872,7 @@ class BgmService {
     final available = <String>[];
     for (final name in names) {
       final file = File('$_localOverrideRoot/$name');
-      if (await file.exists()) {
+      if (file.existsSync()) {
         available.add(name);
       }
     }
@@ -3097,7 +3097,7 @@ class BgmService {
     var count = 0;
     for (final fileName in _adaptiveLocalOverrideFiles.values.toSet()) {
       final file = File('$_localOverrideRoot/$fileName');
-      if (await file.exists()) {
+      if (file.existsSync()) {
         count++;
       }
     }
@@ -3180,13 +3180,13 @@ class BgmService {
         Directory(p.join(bgmRoot.path, _libraryImportDirectoryName));
     final downloadDirectory =
         Directory(p.join(bgmRoot.path, _libraryDownloadDirectoryName));
-    if (!await bgmRoot.exists()) {
+    if (!bgmRoot.existsSync()) {
       await bgmRoot.create(recursive: true);
     }
-    if (!await importDirectory.exists()) {
+    if (!importDirectory.existsSync()) {
       await importDirectory.create(recursive: true);
     }
-    if (!await downloadDirectory.exists()) {
+    if (!downloadDirectory.existsSync()) {
       await downloadDirectory.create(recursive: true);
     }
     return _BgmLibraryDirectories(

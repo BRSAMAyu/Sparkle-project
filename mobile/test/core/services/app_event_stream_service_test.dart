@@ -122,7 +122,7 @@ void main() {
     );
     expect(apiClient.postCalled, isTrue);
     final data = apiClient.lastData as Map<String, dynamic>;
-    final events = data['events'] as List;
+    final events = data['events'] as List<Map<String, dynamic>>;
     expect(events.length, 1);
     expect(events.first['event_type'], 'prediction_accepted');
   });
@@ -136,8 +136,11 @@ void main() {
     );
     expect(apiClient.postCalled, isTrue);
     final data = apiClient.lastData as Map<String, dynamic>;
-    final events = data['events'] as List;
-    expect(events.first['payload']['task_count'], 2);
+    final events = data['events'] as List<Map<String, dynamic>>;
+    expect(
+      (events.first['payload'] as Map<String, dynamic>)['task_count'],
+      2,
+    );
   });
 
   test('recordEntityExecution posts entity_execution event', () async {
@@ -150,7 +153,7 @@ void main() {
     );
     expect(apiClient.postCalled, isTrue);
     final data = apiClient.lastData as Map<String, dynamic>;
-    final events = data['events'] as List;
+    final events = data['events'] as List<Map<String, dynamic>>;
     expect(events.first['event_type'], 'entity_execution');
   });
 }

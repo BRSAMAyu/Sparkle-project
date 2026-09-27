@@ -319,7 +319,10 @@ void main() {
       result.userProgress?.unlockedAt,
       DateTime.parse('2026-03-10T10:00:00Z'),
     );
-    expect(result.userProgress?.contextSnapshot?['task']['title'], '导数专项练习');
+    expect(
+      (result.userProgress?.contextSnapshot?['task'] as Map<String, dynamic>)['title'],
+      '导数专项练习',
+    );
     expect(result.userProgress?.contextStory, contains('考前冲刺'));
   });
 }
