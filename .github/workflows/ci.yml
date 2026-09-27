@@ -333,6 +333,10 @@ jobs:
         with:
           name: backend-cov-shard-${{ matrix.shard }}
           path: /tmp/cov/.coverage.${{ matrix.shard }}
+          # .coverage.N 是点开头隐藏文件——upload-artifact v4 默认排除 hidden
+          # files，run 36319588673 实证 ls 在位（487KB）而上传报 No files，
+          # 必须显式 include-hidden-files: true。
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 1
 
