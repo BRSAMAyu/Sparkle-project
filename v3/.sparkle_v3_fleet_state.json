@@ -4,11 +4,11 @@
   "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
   "slots": 6,
   "active": {
-    "wt748": "合并态审查卡（streak 表三入口收敛+proxy 族残余猎缺）补位在航",
     "wt752": "FIX-481 processedIDs 无界增长修复在航",
     "wt753": "mobile 侧猎缺波（GOV-015 余波/l10n 健康/路由完整/死资源）在航",
     "wt754": "mypy 批九（113 基线）在航",
-    "wt755": "E-08 SLO 首帧前移（热路径，返航后门后再集成）在航"
+    "wt755": "E-08 SLO 首帧前移（热路径，返航后门后再集成）在航",
+    "wt756": "FIX-480 链判据互斥修复（XFH 死路+fail-open）在航"
   },
   "done": [
     "A-01",
@@ -813,6 +813,7 @@
     "[2026-09-28 00:1x 主会话轮#238 例行轮] 六查全绿（docker 3 healthy/双端 200/引擎 UP；磁盘 2.2→3.5Gi 回升；load 1.80）。worktree 巡检清障：孤儿残留 8 项全删（wt709-scratch 177M/wt569/570/571/salvage-wt719-archived/wt660 日志/salvage/v3-output staging——逐一核主仓有正本后删）；注册 worktree 仅剩在航 wt745/wt749。第十七次在航 18m43s（五 job 绿+shards 在跑）。满编 6/6（wt745/748/749/750/751+主会话）。三问：①满编在航②无空位③下张最高价值=第十七次 coverage merge 裁决。",
     "[2026-09-28 00:2x 主会话轮#239] wt749 集成（52383b48+台账：FIX-469 幂等闸去格式假设——normalizeEventKey：UUID 形照旧规范化兼容旧行、非空 ≤100 键 verbatim 透传（stream ID 通）、空/超宽快速失败；红→绿双测 invalid UUID length→PASS+UUID 兼容钉；合并态 cqrs 两包 ok；诚实残差=真库往返 SKIP 无库+旧行命中为审读级论证）。新登 481（processedIDs 无界 P3）。本单踩一次链路雷：断言失败的脚本没拦住 cherry-pick --continue，带标记提交落地被 verify 抓住→修复 amend——再次确认 verify 必须在 continue 后独立跑。补位 wt752=FIX-481（预占 487/488）。三问：①满编 6/6（wt745/748/750/751/752+主会话）②无空位③下张最高价值=第十七次 coverage merge 裁决。",
     "[2026-09-28 00:4x 主会话轮#240] wt751 集成（verdicts 入库：runday7 手册七项全 PASS 裁定 GO，0 BLOCKER——kill 面恰 3 PID 定靶/STATE 仅只读/gate_day7.py 3542 字节分毫不差/alembic AST 定谳单头）。晨门执行缓解采纳：①kill 命令加 -sTCP:LISTEN（WARN①：防 ESTABLISHED 连带杀）②单步逼近超时上限视为黄灯先 tail 日志再判（WARN②）。卡池清点：余 5 张全 HEAVY 或依赖未满足（J-01 触 journey 锁晨门前危险/A-06、M-10、E-03 依赖 TODO 卡/G-04 tasks.json=done 与 next_tasks 矛盾待双证）——按活源 c 改派 wt753=mobile 猎缺波（GOV-015 删除余波/l10n 双向键健康/路由对账/死资源/analyze 定级，预占 489/490）。三问：①满编 6/6（wt745/748/750/752/753+主会话）②无空位③下张最高价值=第十七次 coverage merge 裁决（在航 1h+，若下轮仍无裁决查 job 明细）。",
-    "[2026-09-28 01:0x 主会话轮#241] 双收口：wt745（fbe37f37→main：mypy 批八 133→113 净 20 零新增——声明面注解 12+同名异型改名 8，真 bug/cast/ignore/bare-Any 全 0；合并态 mypy 113 冷缓存亲证+批面 45 绿。基线文件 380 系 CI 侧口径含平台代际差——不动，待下轮 CI 打印 improvement 实数再降）+ wt750（联跑回归报告入库：三段全绿 3662 用例零失败——backend 311 四族/gateway 692 定点含 469/flutter 2636+analyze 0 告警，55 skip 全门控）。补位双卡：wt754=mypy 批九（零语义可晨前集成）+wt755=E-08 SLO 首帧前移（439 裁决 b 移交 L2/L3/L0-TTFT——热路径，明令返航后门后再集成，低侵入优先：intake 帧前移子集优先于并行化）。三问：①满编 6/6（wt748/752/753/754/755+主会话）②无空位③下张最高价值=第十七次 coverage merge 裁决（shard 2/3 收尾中）。"
+    "[2026-09-28 01:0x 主会话轮#241] 双收口：wt745（fbe37f37→main：mypy 批八 133→113 净 20 零新增——声明面注解 12+同名异型改名 8，真 bug/cast/ignore/bare-Any 全 0；合并态 mypy 113 冷缓存亲证+批面 45 绿。基线文件 380 系 CI 侧口径含平台代际差——不动，待下轮 CI 打印 improvement 实数再降）+ wt750（联跑回归报告入库：三段全绿 3662 用例零失败——backend 311 四族/gateway 692 定点含 469/flutter 2636+analyze 0 告警，55 skip 全门控）。补位双卡：wt754=mypy 批九（零语义可晨前集成）+wt755=E-08 SLO 首帧前移（439 裁决 b 移交 L2/L3/L0-TTFT——热路径，明令返航后门后再集成，低侵入优先：intake 帧前移子集优先于并行化）。三问：①满编 6/6（wt748/752/753/754/755+主会话）②无空位③下张最高价值=第十七次 coverage merge 裁决（shard 2/3 收尾中）。",
+    "[2026-09-28 01:3x 主会话轮#242] wt748 集成（108c398a：合并态审查双焦点——streak 三入口三查全 PASS（uuid5 逐字符同源/方言同构/FOR UPDATE 同型）+proxy 族猎缺 5 项 CONFIRMED：480 P3 链判据与网关追加契约结构互斥（XFH 可信分支死路+伪造链 fail-open）/479 friend 演示用户种子每 /guest 重播跨访客竞态/482 community WS 代理 XFF 透传不追加/483 gin dev trust-all ClientIP 可伪造/484 X-Real-IP 残留分支+无 IP 形态校验。本单修一处 verify FAIL：483 行 Go 代码片段裸 || 造成幻影列，改人话「或」——amend 收口，330 行零 FAIL）。补位 wt756=FIX-480（最高价值 P3，双端测试不回退门）。三问：①满编 6/6（wt752/753/754/755/756+主会话）②无空位③下张最高价值=第十七次裁决（shards 已超 1h，接近 120min 上限——若取消看 job 时间戳判真测超时 vs infra）。"
   ]
 }
