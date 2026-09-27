@@ -963,29 +963,36 @@ func setupProxy(cfg *config.Config, logger *zap.Logger) (*proxyBundle, error) {
 		zap.String("target_host", targetURL.Host),
 		zap.String("target_scheme", targetURL.Scheme))
 
-	proxy := httputil.NewSingleHostReverseProxy(targetURL)
-	proxy.Director = func(req *http.Request) {
-		req.URL.Scheme = targetURL.Scheme
-		req.URL.Host = targetURL.Host
-		req.Host = targetURL.Host
+	// Rewrite 与 Director 互斥：NewSingleHostReverseProxy 会预置 Director，
+	// 这里改用裸 ReverseProxy 只挂 Rewrite（见下注释）。
+	proxy := &httputil.ReverseProxy{}
+	// V3-FIX-426 / V3-FIX-428：X-Forwarded-* 收拢到 Rewrite 单一出口。
+	//
+	// 历史 Director 的两个缺陷：
+	//  1. 手工追加 XFF 与 stdlib 对 Director 模式的默认追加叠加，真实 client
+	//     IP 出现两次（伪造段仍居首段——右起第 N 段解析不失真，但 N≥2 扩信任
+	//     层时双追加段干扰段序语义）；
+	//  2. `req.Host = targetURL.Host` 先覆写，XFH 兜底读到的已是内网 target
+	//     host，客户端原始 Host 完全丢失（XFH 恒 sparkle_api:8000），且客户端
+	//     自带 XFH 原样透传可伪造。
+	//
+	// Rewrite 模式下 stdlib 会先剥掉入站 Forwarded/X-Forwarded-*。随后：
+	//  - XFF：先把入站链复制回 Out，SetXForwarded 在其后**恰好追加一次**本跳
+	//    client IP（其从 Out 读既有链，stdlib 文档明示该复制处方）——右起第 N
+	//    段解析既定语义不变（EI-09）；
+	//  - XFH：SetXForwarded 无条件取 In.Host 即客户端原始 Host，伪造 XFH 不再
+	//    透传；engine 侧消费方仍须自行做可信判断（app/api/v1/vocabulary.py）；
+	//  - XFP：保留入站值（上游 TLS 终止方写入的 https 不得被内网明文段覆盖），
+	//    缺省回 http——与原 Director 行为一致。
+	proxy.Rewrite = func(pr *httputil.ProxyRequest) {
+		pr.SetURL(targetURL)
+		pr.Out.Header["X-Forwarded-For"] = pr.In.Header["X-Forwarded-For"]
+		pr.SetXForwarded()
+		if proto := pr.In.Header.Get("X-Forwarded-Proto"); proto != "" {
+			pr.Out.Header.Set("X-Forwarded-Proto", proto)
+		}
 
-		// Forward standard proxy headers so Python backend sees real client info
-		if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
-			prior := req.Header.Get("X-Forwarded-For")
-			if prior != "" {
-				req.Header.Set("X-Forwarded-For", prior+", "+clientIP)
-			} else {
-				req.Header.Set("X-Forwarded-For", clientIP)
-			}
-		}
-		if req.Header.Get("X-Forwarded-Proto") == "" {
-			req.Header.Set("X-Forwarded-Proto", "http")
-		}
-		if req.Header.Get("X-Forwarded-Host") == "" {
-			req.Header.Set("X-Forwarded-Host", req.Host)
-		}
-
-		otel.GetTextMapPropagator().Inject(req.Context(), propagation.HeaderCarrier(req.Header))
+		otel.GetTextMapPropagator().Inject(pr.Out.Context(), propagation.HeaderCarrier(pr.Out.Header))
 	}
 
 	transport := &http.Transport{
