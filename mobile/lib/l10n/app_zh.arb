@@ -88,6 +88,8 @@
   "errorNotFound": "没有找到相关内容，试试其他关键词？",
   "retry": "重试",
   "back": "返回",
+  "startupFailedTitle": "应用启动遇到问题",
+  "startupCopyDiagnostics": "复制诊断信息",
   "welcomeSubtitle": "期末备考提分，AI 陪你把该拿的分拿回来",
   "pleaseEnterUsername": "请输入用户名或邮箱",
   "pleaseEnterPassword": "请输入密码",

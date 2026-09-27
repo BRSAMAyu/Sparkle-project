@@ -291,6 +291,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get back => 'Back';
 
   @override
+  String get startupFailedTitle => 'Trouble starting the app';
+
+  @override
+  String get startupCopyDiagnostics => 'Copy diagnostics';
+
+  @override
   String get welcomeSubtitle =>
       'Prep for finals and raise your grade with AI at your side';
 

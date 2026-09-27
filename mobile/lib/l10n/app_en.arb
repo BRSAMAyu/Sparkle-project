@@ -88,6 +88,8 @@
   "errorNotFound": "Couldn't find what you're looking for, maybe try another keyword?",
   "retry": "Retry",
   "back": "Back",
+  "startupFailedTitle": "Trouble starting the app",
+  "startupCopyDiagnostics": "Copy diagnostics",
   "welcomeSubtitle": "Prep for finals and raise your grade with AI at your side",
   "pleaseEnterUsername": "Please enter your username or email",
   "pleaseEnterPassword": "Please enter your password",

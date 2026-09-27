@@ -273,6 +273,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get back => '返回';
 
   @override
+  String get startupFailedTitle => '应用启动遇到问题';
+
+  @override
+  String get startupCopyDiagnostics => '复制诊断信息';
+
+  @override
   String get welcomeSubtitle => '期末备考提分，AI 陪你把该拿的分拿回来';
 
   @override

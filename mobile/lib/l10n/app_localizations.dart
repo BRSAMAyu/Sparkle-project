@@ -626,6 +626,18 @@ abstract class AppLocalizations {
   /// **'返回'**
   String get back;
 
+  /// No description provided for @startupFailedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用启动遇到问题'**
+  String get startupFailedTitle;
+
+  /// No description provided for @startupCopyDiagnostics.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制诊断信息'**
+  String get startupCopyDiagnostics;
+
   /// No description provided for @welcomeSubtitle.
   ///
   /// In zh, this message translates to:
