@@ -3124,14 +3124,14 @@
   },
   "studyMaterialsVisibilityGroup": "群组可见",
   "studyMaterialsVisibilityPrivate": "仅自己可见",
-  "studyMaterialsAttachedNodesTitle": "挂载的知识星点",
+  "studyMaterialsAttachedNodesTitle": "关联的知识点",
   "studyMaterialsNodesPending": "这份资料还在映射到你的知识星图节点中。",
   "studyMaterialsNodesEmpty": "暂时还没有挂载到任何知识节点。",
   "studyMaterialsTopChunksTitle": "高频引用片段",
   "studyMaterialsTopChunksEmpty": "Aurora 还没有引用过这份资料。",
   "studyMaterialsConversationCountLabel": "对话数",
   "studyMaterialsReferenceCountLabel": "引用次数",
-  "studyMaterialsKnowledgeStarsLabel": "知识星点",
+  "studyMaterialsKnowledgeStarsLabel": "知识点",
   "studyMaterialsShareAction": "分享",
   "studyMaterialsDeleteAction": "删除",
   "studyMaterialsRefreshAction": "重新处理",
@@ -6939,8 +6939,8 @@
   "bgmLibrarySourceCurated": "精选曲库",
   "bgmLibrarySourceImported": "本地导入",
   "bgmLibrarySourceBundled": "系统兜底",
-  "galaxyDraftReviewScreenTitle": "审核知识星",
-  "galaxyDraftReviewPromptTitle": "我们从 {documentName} 里找到了 {count} 颗知识星，要现在看看吗？",
+  "galaxyDraftReviewScreenTitle": "审核知识点",
+  "galaxyDraftReviewPromptTitle": "我们在《{documentName}》里找到了 {count} 个知识点，要现在看看吗？",
   "@galaxyDraftReviewPromptTitle": {
     "placeholders": {
       "count": {
@@ -6951,7 +6951,7 @@
       }
     }
   },
-  "galaxyDraftReviewPromptBody": "你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。",
+  "galaxyDraftReviewPromptBody": "你的星图由你确认：逐个通过、跳过、合并，或先改名再收下。",
   "galaxyDraftReviewNow": "现在审核",
   "galaxyDraftReviewLater": "稍后再看",
   "galaxyDraftPendingIndicator": "{batchCount} 份待审核 · {draftCount} 颗星",
@@ -6976,7 +6976,7 @@
       }
     }
   },
-  "galaxyDraftCompletionReady": "准备把它们送进你的星图",
+  "galaxyDraftCompletionReady": "准备加入你的星图",
   "galaxyDraftLongPressHint": "右滑通过，左滑跳过，长按还能先改一下名字或描述。",
   "galaxyDraftLongPressShort": "长按可编辑",
   "galaxyDraftApprove": "通过",
@@ -6994,14 +6994,14 @@
       }
     }
   },
-  "galaxyDraftEditTitle": "调整这颗知识星",
+  "galaxyDraftEditTitle": "编辑这个知识点",
   "galaxyDraftNameLabel": "节点名称",
   "galaxyDraftDescriptionLabel": "节点描述",
   "galaxyDraftEditSave": "保存修改",
-  "galaxyDraftReviewEmptyTitle": "现在没有待确认的知识星",
-  "galaxyDraftReviewEmptyBody": "等文档处理完成后，新的知识草稿会先落到这里，等你点头再进入星图。",
+  "galaxyDraftReviewEmptyTitle": "现在没有待确认的知识点",
+  "galaxyDraftReviewEmptyBody": "文档处理完成后，新的知识草稿会先到这里，你确认后才会进入星图。",
   "galaxyDraftBackToGalaxy": "回到星图",
-  "galaxyDraftCompletionTitle": "已确认 {accepted} / {total} 颗知识星",
+  "galaxyDraftCompletionTitle": "已确认 {accepted} / {total} 个知识点",
   "@galaxyDraftCompletionTitle": {
     "placeholders": {
       "accepted": {
@@ -7012,7 +7012,7 @@
       }
     }
   },
-  "galaxyDraftCompletionBody": "{documentName} 里的这些知识星，已经准备好飞进你的星图。",
+  "galaxyDraftCompletionBody": "《{documentName}》里的这些知识点已整理好，确认后就会进入你的星图。",
   "@galaxyDraftCompletionBody": {
     "placeholders": {
       "documentName": {
@@ -7021,7 +7021,7 @@
     }
   },
   "galaxyDraftCompletionNothingAdded": "这批草稿先放一放也没关系，之后随时还能回来继续看。",
-  "galaxyDraftCompletionSummary": "{accepted} / {total} 颗知识星已加入你的星图！",
+  "galaxyDraftCompletionSummary": "已把 {accepted} / {total} 个知识点加入你的星图",
   "@galaxyDraftCompletionSummary": {
     "placeholders": {
       "accepted": {
@@ -7063,11 +7063,11 @@
   "galaxyNodeSourcePage": "第 {number} 页",
   "galaxyNodeSourcePages": "第 {pages} 页",
   "galaxyNodeSourceExcerpt": "片段 {index}",
-  "galaxyUploadTargetGalaxyCore": "银河核心",
+  "galaxyUploadTargetGalaxyCore": "整个星图",
   "galaxyUploadTargetSelectedConstellation": "所选领域",
-  "galaxyUploadAlreadyInProgress": "已经有一份学习资料正在飞向你的星图。",
+  "galaxyUploadAlreadyInProgress": "已经有一份资料在处理中，完成后会进入你的星图。",
   "galaxyUploadStatusUploading": "上传中...",
-  "galaxyUploadStatusQueued": "上传完成，正在进入轨道...",
+  "galaxyUploadStatusQueued": "上传完成，正在整理...",
   "galaxyUploadStatusExtracting": "提取内容中...",
   "galaxyUploadStatusFindingKnowledge": "寻找知识中...",
   "galaxyUploadStatusBuildingNodes": "编织新星中...",
@@ -7089,7 +7089,7 @@
     }
   },
   "galaxyUploadFailedTitle": "这颗星还没落稳",
-  "galaxyUploadFailedBody": "文档在落入星图前滑了出去，准备好时再试一次就好。",
+  "galaxyUploadFailedBody": "这份资料没能进你的星图，你的数据没有丢，稍后再试一次。",
   "galaxyUploadRetry": "重新上传",
   "galaxyUploadHeadingTo": "正飞向 {target}",
   "@galaxyUploadHeadingTo": {
@@ -10312,13 +10312,13 @@
   "galaxyNodeAddNotesLabel": "添加关于",
   "galaxyNodeUploadDateLabel": "上传于",
   "galaxySimSettings": "星图视图设置",
-  "galaxySimSettingsDesc": "调节显示密度、力场参数与回放节奏，让星图浏览更顺手、更直观。",
+  "galaxySimSettingsDesc": "调节显示密度、节点间距和回放速度，让星图浏览更顺手。",
   "galaxySimResetDefault": "恢复默认",
   "galaxySimCommonAdjust": "常用调整",
   "galaxySimCommonDesc": "第一眼只保留最常用、最直接影响整体体验的四项。",
-  "galaxySimCenterGravity": "中心吸引力",
+  "galaxySimCenterGravity": "节点聚拢力度",
   "galaxySimNodeRepulsion": "节点排斥力",
-  "galaxySimLinkTension": "连线牵引力",
+  "galaxySimLinkTension": "连线松紧",
   "galaxySimReplaySpeed": "回放速度",
   "galaxySimAdvanced": "高级调整",
   "galaxySimAdvancedDesc": "需要微调视觉密度时再展开，默认不用第一眼看到。",

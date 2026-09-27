@@ -3145,14 +3145,14 @@
   },
   "studyMaterialsVisibilityGroup": "Group visible",
   "studyMaterialsVisibilityPrivate": "Private",
-  "studyMaterialsAttachedNodesTitle": "Attached knowledge stars",
+  "studyMaterialsAttachedNodesTitle": "Linked knowledge points",
   "studyMaterialsNodesPending": "We're still mapping this material to your star map nodes.",
   "studyMaterialsNodesEmpty": "No star map nodes attached yet.",
   "studyMaterialsTopChunksTitle": "Most used excerpts",
   "studyMaterialsTopChunksEmpty": "Aurora hasn't cited this material yet.",
   "studyMaterialsConversationCountLabel": "Conversations",
   "studyMaterialsReferenceCountLabel": "References",
-  "studyMaterialsKnowledgeStarsLabel": "Knowledge stars",
+  "studyMaterialsKnowledgeStarsLabel": "Knowledge points",
   "studyMaterialsShareAction": "Share",
   "studyMaterialsDeleteAction": "Delete",
   "studyMaterialsRefreshAction": "Reprocess",
@@ -6950,8 +6950,8 @@
   "bgmLibrarySourceCurated": "Curated",
   "bgmLibrarySourceImported": "Local Import",
   "bgmLibrarySourceBundled": "System Fallback",
-  "galaxyDraftReviewScreenTitle": "Review knowledge stars",
-  "galaxyDraftReviewPromptTitle": "We found {count} knowledge stars in your {documentName}! Review them?",
+  "galaxyDraftReviewScreenTitle": "Review knowledge points",
+  "galaxyDraftReviewPromptTitle": "We found {count} knowledge points in {documentName}. Review them now?",
   "@galaxyDraftReviewPromptTitle": {
     "placeholders": {
       "count": {
@@ -6987,7 +6987,7 @@
       }
     }
   },
-  "galaxyDraftCompletionReady": "Ready to send them into your map",
+  "galaxyDraftCompletionReady": "Ready to add to your map",
   "galaxyDraftLongPressHint": "Swipe right to approve, swipe left to skip, or long-press to rename the draft before you keep it.",
   "galaxyDraftLongPressShort": "Long-press to edit",
   "galaxyDraftApprove": "Approve",
@@ -7005,14 +7005,14 @@
       }
     }
   },
-  "galaxyDraftEditTitle": "Tune this knowledge star",
+  "galaxyDraftEditTitle": "Edit this knowledge point",
   "galaxyDraftNameLabel": "Node name",
   "galaxyDraftDescriptionLabel": "Description",
   "galaxyDraftEditSave": "Save changes",
-  "galaxyDraftReviewEmptyTitle": "No pending stars right now",
-  "galaxyDraftReviewEmptyBody": "When document processing finishes, draft knowledge stars will land here for your approval.",
+  "galaxyDraftReviewEmptyTitle": "Nothing waiting for review",
+  "galaxyDraftReviewEmptyBody": "When document processing finishes, drafts land here for your approval before joining your map.",
   "galaxyDraftBackToGalaxy": "Back to your star map",
-  "galaxyDraftCompletionTitle": "{accepted} of {total} knowledge stars added",
+  "galaxyDraftCompletionTitle": "Added {accepted} of {total} knowledge points",
   "@galaxyDraftCompletionTitle": {
     "placeholders": {
       "accepted": {
@@ -7023,7 +7023,7 @@
       }
     }
   },
-  "galaxyDraftCompletionBody": "The stars you kept from {documentName} are ready to fly into your map.",
+  "galaxyDraftCompletionBody": "These knowledge points from {documentName} are ready — confirm to add them to your map.",
   "@galaxyDraftCompletionBody": {
     "placeholders": {
       "documentName": {
@@ -7032,7 +7032,7 @@
     }
   },
   "galaxyDraftCompletionNothingAdded": "You skipped these drafts for now. They can always come back later.",
-  "galaxyDraftCompletionSummary": "{accepted} of {total} knowledge stars added to your map!",
+  "galaxyDraftCompletionSummary": "Added {accepted} of {total} knowledge points to your map",
   "@galaxyDraftCompletionSummary": {
     "placeholders": {
       "accepted": {
@@ -7078,7 +7078,7 @@
   "galaxyUploadTargetSelectedConstellation": "Selected domain",
   "galaxyUploadAlreadyInProgress": "A study material is already joining your map.",
   "galaxyUploadStatusUploading": "Uploading...",
-  "galaxyUploadStatusQueued": "Upload complete. Holding orbit...",
+  "galaxyUploadStatusQueued": "Upload complete. Organizing...",
   "galaxyUploadStatusExtracting": "Extracting content...",
   "galaxyUploadStatusFindingKnowledge": "Finding knowledge...",
   "galaxyUploadStatusBuildingNodes": "Weaving new stars...",
@@ -7100,7 +7100,7 @@
     }
   },
   "galaxyUploadFailedTitle": "That star didn't quite land",
-  "galaxyUploadFailedBody": "The document slipped out of the star map before it could settle. Try again when you're ready.",
+  "galaxyUploadFailedBody": "This document didn't make it to your map. Your data is safe — try again in a moment.",
   "galaxyUploadRetry": "Retry upload",
   "galaxyUploadHeadingTo": "Heading toward {target}",
   "@galaxyUploadHeadingTo": {
@@ -9185,13 +9185,13 @@
   "galaxyNodeAddNotesLabel": "Add notes about",
   "galaxyNodeUploadDateLabel": "Uploaded on",
   "galaxySimSettings": "Star Map View Settings",
-  "galaxySimSettingsDesc": "Adjust display density, force field parameters, and replay speed for a smoother star map browsing experience.",
+  "galaxySimSettingsDesc": "Adjust display density, node spacing, and replay speed for a smoother star map browsing experience.",
   "galaxySimResetDefault": "Reset to Default",
   "galaxySimCommonAdjust": "Common Adjustments",
   "galaxySimCommonDesc": "Keep only the four most impactful settings visible at first glance.",
-  "galaxySimCenterGravity": "Center Gravity",
+  "galaxySimCenterGravity": "Node pull",
   "galaxySimNodeRepulsion": "Node Repulsion",
-  "galaxySimLinkTension": "Link Tension",
+  "galaxySimLinkTension": "Line tension",
   "galaxySimReplaySpeed": "Replay Speed",
   "galaxySimAdvanced": "Advanced",
   "galaxySimAdvancedDesc": "Expand when you need to fine-tune visual density; hidden by default.",

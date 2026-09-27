@@ -10,7 +10,7 @@ import 'package:sparkle/features/galaxy/presentation/screens/galaxy_draft_review
 
 import '../../../shared/i18n_test_helper.dart';
 
-/// V25 回归：「审核知识星」页（误触「现在审核」进入的真实路径）。
+/// V25 回归：「审核知识点」页（误触「现在审核」进入的真实路径）。
 ///
 /// 缺陷现场（B-04 第三棒，leg3_galaxy_step3.png）：
 /// 1. 进入即崩 `Unsupported operation: Cannot remove from a fixed-length list`
@@ -56,7 +56,7 @@ void main() {
         tester.takeException(),
         isNull,
         reason:
-            '进入「审核知识星」页不得抛 '
+            '进入「审核知识点」页不得抛 '
             '`Cannot remove from a fixed-length list`（V25：'
             '_ReviewActionBar 对固定长 list 调 removeLast）',
       );
@@ -142,7 +142,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 320));
 
       expect(tester.takeException(), isNull);
-      expect(find.text('准备把它们送进你的星图'), findsOneWidget);
+      expect(find.text('准备加入你的星图'), findsOneWidget);
     },
   );
 }

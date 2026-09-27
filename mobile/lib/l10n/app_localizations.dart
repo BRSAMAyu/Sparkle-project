@@ -13534,7 +13534,7 @@ abstract class AppLocalizations {
   /// No description provided for @studyMaterialsAttachedNodesTitle.
   ///
   /// In zh, this message translates to:
-  /// **'挂载的知识星点'**
+  /// **'关联的知识点'**
   String get studyMaterialsAttachedNodesTitle;
 
   /// No description provided for @studyMaterialsNodesPending.
@@ -13576,7 +13576,7 @@ abstract class AppLocalizations {
   /// No description provided for @studyMaterialsKnowledgeStarsLabel.
   ///
   /// In zh, this message translates to:
-  /// **'知识星点'**
+  /// **'知识点'**
   String get studyMaterialsKnowledgeStarsLabel;
 
   /// No description provided for @studyMaterialsShareAction.
@@ -26967,19 +26967,19 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyDraftReviewScreenTitle.
   ///
   /// In zh, this message translates to:
-  /// **'审核知识星'**
+  /// **'审核知识点'**
   String get galaxyDraftReviewScreenTitle;
 
   /// No description provided for @galaxyDraftReviewPromptTitle.
   ///
   /// In zh, this message translates to:
-  /// **'我们从 {documentName} 里找到了 {count} 颗知识星，要现在看看吗？'**
+  /// **'我们在《{documentName}》里找到了 {count} 个知识点，要现在看看吗？'**
   String galaxyDraftReviewPromptTitle(Object count, Object documentName);
 
   /// No description provided for @galaxyDraftReviewPromptBody.
   ///
   /// In zh, this message translates to:
-  /// **'你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。'**
+  /// **'你的星图由你确认：逐个通过、跳过、合并，或先改名再收下。'**
   String get galaxyDraftReviewPromptBody;
 
   /// No description provided for @galaxyDraftReviewNow.
@@ -27009,7 +27009,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyDraftCompletionReady.
   ///
   /// In zh, this message translates to:
-  /// **'准备把它们送进你的星图'**
+  /// **'准备加入你的星图'**
   String get galaxyDraftCompletionReady;
 
   /// No description provided for @galaxyDraftLongPressHint.
@@ -27057,7 +27057,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyDraftEditTitle.
   ///
   /// In zh, this message translates to:
-  /// **'调整这颗知识星'**
+  /// **'编辑这个知识点'**
   String get galaxyDraftEditTitle;
 
   /// No description provided for @galaxyDraftNameLabel.
@@ -27081,13 +27081,13 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyDraftReviewEmptyTitle.
   ///
   /// In zh, this message translates to:
-  /// **'现在没有待确认的知识星'**
+  /// **'现在没有待确认的知识点'**
   String get galaxyDraftReviewEmptyTitle;
 
   /// No description provided for @galaxyDraftReviewEmptyBody.
   ///
   /// In zh, this message translates to:
-  /// **'等文档处理完成后，新的知识草稿会先落到这里，等你点头再进入星图。'**
+  /// **'文档处理完成后，新的知识草稿会先到这里，你确认后才会进入星图。'**
   String get galaxyDraftReviewEmptyBody;
 
   /// No description provided for @galaxyDraftBackToGalaxy.
@@ -27099,13 +27099,13 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyDraftCompletionTitle.
   ///
   /// In zh, this message translates to:
-  /// **'已确认 {accepted} / {total} 颗知识星'**
+  /// **'已确认 {accepted} / {total} 个知识点'**
   String galaxyDraftCompletionTitle(Object accepted, Object total);
 
   /// No description provided for @galaxyDraftCompletionBody.
   ///
   /// In zh, this message translates to:
-  /// **'{documentName} 里的这些知识星，已经准备好飞进你的星图。'**
+  /// **'《{documentName}》里的这些知识点已整理好，确认后就会进入你的星图。'**
   String galaxyDraftCompletionBody(Object documentName);
 
   /// No description provided for @galaxyDraftCompletionNothingAdded.
@@ -27117,7 +27117,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyDraftCompletionSummary.
   ///
   /// In zh, this message translates to:
-  /// **'{accepted} / {total} 颗知识星已加入你的星图！'**
+  /// **'已把 {accepted} / {total} 个知识点加入你的星图'**
   String galaxyDraftCompletionSummary(Object accepted, Object total);
 
   /// No description provided for @galaxyUploadFabLabel.
@@ -27249,7 +27249,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyUploadTargetGalaxyCore.
   ///
   /// In zh, this message translates to:
-  /// **'银河核心'**
+  /// **'整个星图'**
   String get galaxyUploadTargetGalaxyCore;
 
   /// No description provided for @galaxyUploadTargetSelectedConstellation.
@@ -27261,7 +27261,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyUploadAlreadyInProgress.
   ///
   /// In zh, this message translates to:
-  /// **'已经有一份学习资料正在飞向你的星图。'**
+  /// **'已经有一份资料在处理中，完成后会进入你的星图。'**
   String get galaxyUploadAlreadyInProgress;
 
   /// No description provided for @galaxyUploadStatusUploading.
@@ -27273,7 +27273,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyUploadStatusQueued.
   ///
   /// In zh, this message translates to:
-  /// **'上传完成，正在进入轨道...'**
+  /// **'上传完成，正在整理...'**
   String get galaxyUploadStatusQueued;
 
   /// No description provided for @galaxyUploadStatusExtracting.
@@ -27321,7 +27321,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyUploadFailedBody.
   ///
   /// In zh, this message translates to:
-  /// **'文档在落入星图前滑了出去，准备好时再试一次就好。'**
+  /// **'这份资料没能进你的星图，你的数据没有丢，稍后再试一次。'**
   String get galaxyUploadFailedBody;
 
   /// No description provided for @galaxyUploadRetry.
@@ -42212,7 +42212,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxySimSettingsDesc.
   ///
   /// In zh, this message translates to:
-  /// **'调节显示密度、力场参数与回放节奏，让星图浏览更顺手、更直观。'**
+  /// **'调节显示密度、节点间距和回放速度，让星图浏览更顺手。'**
   String get galaxySimSettingsDesc;
 
   /// No description provided for @galaxySimResetDefault.
@@ -42236,7 +42236,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxySimCenterGravity.
   ///
   /// In zh, this message translates to:
-  /// **'中心吸引力'**
+  /// **'节点聚拢力度'**
   String get galaxySimCenterGravity;
 
   /// No description provided for @galaxySimNodeRepulsion.
@@ -42248,7 +42248,7 @@ abstract class AppLocalizations {
   /// No description provided for @galaxySimLinkTension.
   ///
   /// In zh, this message translates to:
-  /// **'连线牵引力'**
+  /// **'连线松紧'**
   String get galaxySimLinkTension;
 
   /// No description provided for @galaxySimReplaySpeed.

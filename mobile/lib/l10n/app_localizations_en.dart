@@ -7620,7 +7620,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studyMaterialsVisibilityPrivate => 'Private';
 
   @override
-  String get studyMaterialsAttachedNodesTitle => 'Attached knowledge stars';
+  String get studyMaterialsAttachedNodesTitle => 'Linked knowledge points';
 
   @override
   String get studyMaterialsNodesPending =>
@@ -7643,7 +7643,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studyMaterialsReferenceCountLabel => 'References';
 
   @override
-  String get studyMaterialsKnowledgeStarsLabel => 'Knowledge stars';
+  String get studyMaterialsKnowledgeStarsLabel => 'Knowledge points';
 
   @override
   String get studyMaterialsShareAction => 'Share';
@@ -15540,11 +15540,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bgmLibrarySourceBundled => 'System Fallback';
 
   @override
-  String get galaxyDraftReviewScreenTitle => 'Review knowledge stars';
+  String get galaxyDraftReviewScreenTitle => 'Review knowledge points';
 
   @override
   String galaxyDraftReviewPromptTitle(Object count, Object documentName) {
-    return 'We found $count knowledge stars in your $documentName! Review them?';
+    return 'We found $count knowledge points in $documentName. Review them now?';
   }
 
   @override
@@ -15568,7 +15568,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyDraftCompletionReady => 'Ready to send them into your map';
+  String get galaxyDraftCompletionReady => 'Ready to add to your map';
 
   @override
   String get galaxyDraftLongPressHint =>
@@ -15595,7 +15595,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyDraftEditTitle => 'Tune this knowledge star';
+  String get galaxyDraftEditTitle => 'Edit this knowledge point';
 
   @override
   String get galaxyDraftNameLabel => 'Node name';
@@ -15607,23 +15607,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyDraftEditSave => 'Save changes';
 
   @override
-  String get galaxyDraftReviewEmptyTitle => 'No pending stars right now';
+  String get galaxyDraftReviewEmptyTitle => 'Nothing waiting for review';
 
   @override
   String get galaxyDraftReviewEmptyBody =>
-      'When document processing finishes, draft knowledge stars will land here for your approval.';
+      'When document processing finishes, drafts land here for your approval before joining your map.';
 
   @override
   String get galaxyDraftBackToGalaxy => 'Back to your star map';
 
   @override
   String galaxyDraftCompletionTitle(Object accepted, Object total) {
-    return '$accepted of $total knowledge stars added';
+    return 'Added $accepted of $total knowledge points';
   }
 
   @override
   String galaxyDraftCompletionBody(Object documentName) {
-    return 'The stars you kept from $documentName are ready to fly into your map.';
+    return 'These knowledge points from $documentName are ready — confirm to add them to your map.';
   }
 
   @override
@@ -15632,7 +15632,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String galaxyDraftCompletionSummary(Object accepted, Object total) {
-    return '$accepted of $total knowledge stars added to your map!';
+    return 'Added $accepted of $total knowledge points to your map';
   }
 
   @override
@@ -15734,7 +15734,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyUploadStatusUploading => 'Uploading...';
 
   @override
-  String get galaxyUploadStatusQueued => 'Upload complete. Holding orbit...';
+  String get galaxyUploadStatusQueued => 'Upload complete. Organizing...';
 
   @override
   String get galaxyUploadStatusExtracting => 'Extracting content...';
@@ -15763,7 +15763,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyUploadFailedBody =>
-      'The document slipped out of the star map before it could settle. Try again when you\'re ready.';
+      'This document didn\'t make it to your map. Your data is safe — try again in a moment.';
 
   @override
   String get galaxyUploadRetry => 'Retry upload';
@@ -24111,7 +24111,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxySimSettingsDesc =>
-      'Adjust display density, force field parameters, and replay speed for a smoother star map browsing experience.';
+      'Adjust display density, node spacing, and replay speed for a smoother star map browsing experience.';
 
   @override
   String get galaxySimResetDefault => 'Reset to Default';
@@ -24124,13 +24124,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep only the four most impactful settings visible at first glance.';
 
   @override
-  String get galaxySimCenterGravity => 'Center Gravity';
+  String get galaxySimCenterGravity => 'Node pull';
 
   @override
   String get galaxySimNodeRepulsion => 'Node Repulsion';
 
   @override
-  String get galaxySimLinkTension => 'Link Tension';
+  String get galaxySimLinkTension => 'Line tension';
 
   @override
   String get galaxySimReplaySpeed => 'Replay Speed';

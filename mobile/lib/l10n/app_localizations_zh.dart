@@ -7346,7 +7346,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get studyMaterialsVisibilityPrivate => '仅自己可见';
 
   @override
-  String get studyMaterialsAttachedNodesTitle => '挂载的知识星点';
+  String get studyMaterialsAttachedNodesTitle => '关联的知识点';
 
   @override
   String get studyMaterialsNodesPending => '这份资料还在映射到你的知识星图节点中。';
@@ -7367,7 +7367,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get studyMaterialsReferenceCountLabel => '引用次数';
 
   @override
-  String get studyMaterialsKnowledgeStarsLabel => '知识星点';
+  String get studyMaterialsKnowledgeStarsLabel => '知识点';
 
   @override
   String get studyMaterialsShareAction => '分享';
@@ -14882,16 +14882,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bgmLibrarySourceBundled => '系统兜底';
 
   @override
-  String get galaxyDraftReviewScreenTitle => '审核知识星';
+  String get galaxyDraftReviewScreenTitle => '审核知识点';
 
   @override
   String galaxyDraftReviewPromptTitle(Object count, Object documentName) {
-    return '我们从 $documentName 里找到了 $count 颗知识星，要现在看看吗？';
+    return '我们在《$documentName》里找到了 $count 个知识点，要现在看看吗？';
   }
 
   @override
   String get galaxyDraftReviewPromptBody =>
-      '你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。';
+      '你的星图由你确认：逐个通过、跳过、合并，或先改名再收下。';
 
   @override
   String get galaxyDraftReviewNow => '现在审核';
@@ -14910,7 +14910,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyDraftCompletionReady => '准备把它们送进你的星图';
+  String get galaxyDraftCompletionReady => '准备加入你的星图';
 
   @override
   String get galaxyDraftLongPressHint => '右滑通过，左滑跳过，长按还能先改一下名字或描述。';
@@ -14936,7 +14936,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyDraftEditTitle => '调整这颗知识星';
+  String get galaxyDraftEditTitle => '编辑这个知识点';
 
   @override
   String get galaxyDraftNameLabel => '节点名称';
@@ -14948,22 +14948,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyDraftEditSave => '保存修改';
 
   @override
-  String get galaxyDraftReviewEmptyTitle => '现在没有待确认的知识星';
+  String get galaxyDraftReviewEmptyTitle => '现在没有待确认的知识点';
 
   @override
-  String get galaxyDraftReviewEmptyBody => '等文档处理完成后，新的知识草稿会先落到这里，等你点头再进入星图。';
+  String get galaxyDraftReviewEmptyBody => '文档处理完成后，新的知识草稿会先到这里，你确认后才会进入星图。';
 
   @override
   String get galaxyDraftBackToGalaxy => '回到星图';
 
   @override
   String galaxyDraftCompletionTitle(Object accepted, Object total) {
-    return '已确认 $accepted / $total 颗知识星';
+    return '已确认 $accepted / $total 个知识点';
   }
 
   @override
   String galaxyDraftCompletionBody(Object documentName) {
-    return '$documentName 里的这些知识星，已经准备好飞进你的星图。';
+    return '《$documentName》里的这些知识点已整理好，确认后就会进入你的星图。';
   }
 
   @override
@@ -14971,7 +14971,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String galaxyDraftCompletionSummary(Object accepted, Object total) {
-    return '$accepted / $total 颗知识星已加入你的星图！';
+    return '已把 $accepted / $total 个知识点加入你的星图';
   }
 
   @override
@@ -15056,19 +15056,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyUploadTargetGalaxyCore => '银河核心';
+  String get galaxyUploadTargetGalaxyCore => '整个星图';
 
   @override
   String get galaxyUploadTargetSelectedConstellation => '所选领域';
 
   @override
-  String get galaxyUploadAlreadyInProgress => '已经有一份学习资料正在飞向你的星图。';
+  String get galaxyUploadAlreadyInProgress => '已经有一份资料在处理中，完成后会进入你的星图。';
 
   @override
   String get galaxyUploadStatusUploading => '上传中...';
 
   @override
-  String get galaxyUploadStatusQueued => '上传完成，正在进入轨道...';
+  String get galaxyUploadStatusQueued => '上传完成，正在整理...';
 
   @override
   String get galaxyUploadStatusExtracting => '提取内容中...';
@@ -15096,7 +15096,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyUploadFailedTitle => '这颗星还没落稳';
 
   @override
-  String get galaxyUploadFailedBody => '文档在落入星图前滑了出去，准备好时再试一次就好。';
+  String get galaxyUploadFailedBody => '这份资料没能进你的星图，你的数据没有丢，稍后再试一次。';
 
   @override
   String get galaxyUploadRetry => '重新上传';
@@ -23133,7 +23133,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxySimSettings => '星图视图设置';
 
   @override
-  String get galaxySimSettingsDesc => '调节显示密度、力场参数与回放节奏，让星图浏览更顺手、更直观。';
+  String get galaxySimSettingsDesc => '调节显示密度、节点间距和回放速度，让星图浏览更顺手。';
 
   @override
   String get galaxySimResetDefault => '恢复默认';
@@ -23145,13 +23145,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxySimCommonDesc => '第一眼只保留最常用、最直接影响整体体验的四项。';
 
   @override
-  String get galaxySimCenterGravity => '中心吸引力';
+  String get galaxySimCenterGravity => '节点聚拢力度';
 
   @override
   String get galaxySimNodeRepulsion => '节点排斥力';
 
   @override
-  String get galaxySimLinkTension => '连线牵引力';
+  String get galaxySimLinkTension => '连线松紧';
 
   @override
   String get galaxySimReplaySpeed => '回放速度';
