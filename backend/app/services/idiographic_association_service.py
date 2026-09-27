@@ -6,7 +6,7 @@ import json
 import math
 import os
 from collections import defaultdict
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -17,6 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import cache_service
 from app.core.event_bus import EventBus
 from app.core.event_types import ATTRACTOR_UPDATED
+from app.core.time_utils import (
+    local_date,
+    local_midnight_as_utc_naive,
+    local_midnight_wall,
+    valid_timezone_name,
+)
 from app.db.session import AsyncSessionLocal
 from app.learning.changepoint_pelt import detect_change_points
 from app.learning.rolling_correlator import CorrelationResult, correlate_dimensions
@@ -31,6 +37,7 @@ from app.models.galaxy import StudyRecord
 from app.models.memory import MemoryCorrection
 from app.models.srl_phase_state import SRLPhaseStateRecord
 from app.models.task import Task, TaskStatus
+from app.models.user import PushPreference
 from app.services.aurora_stage31_idiographic_kill_switch_service import (
     AuroraStage31IdiographicKillSwitchService,
 )
@@ -47,8 +54,14 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def _day_start(day: date) -> datetime:
-    return datetime.combine(day, time.min)
+async def _resolve_user_timezone_name(db: AsyncSession, user_id: UUID) -> str:
+    """用户时区名（V3-FIX-320）：PushPreference.timezone 标量直查，缺省 Asia/Shanghai。
+
+    沿 persdyn V3-FIX-221/focus_service._local_today 先例：标量直查而非 ORM
+    关系，规避身份映射命中未加载关系时 async lazy-load 炸裂。
+    """
+    tz_name = await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+    return valid_timezone_name(tz_name)
 
 
 class IdiographicAssociationService:
@@ -266,6 +279,8 @@ class IdiographicAssociationService:
             return cached
 
         async with self._session_scope() as (db, _):
+            # V3-FIX-320：change_date 键控已统一用户本地日，回看窗锚点同切本地日。
+            summary_tz_name = await _resolve_user_timezone_name(db, user_id)
             association_rows = (
                 (
                     await db.execute(
@@ -288,7 +303,8 @@ class IdiographicAssociationService:
                         .where(
                             IdiographicChangepoint.user_id == user_id,
                             IdiographicChangepoint.deleted_at.is_(None),
-                            IdiographicChangepoint.change_date >= reference_time.date() - timedelta(days=self.CHANGEPOINT_LOOKBACK_DAYS),
+                            IdiographicChangepoint.change_date
+                            >= local_date(reference_time, summary_tz_name) - timedelta(days=self.CHANGEPOINT_LOOKBACK_DAYS),
                         )
                         .order_by(desc(IdiographicChangepoint.change_date))
                         .limit(6)
@@ -386,7 +402,12 @@ class IdiographicAssociationService:
         user_id: UUID,
         reference_time: datetime,
     ) -> dict[date, dict[str, Any]]:
-        start_day = reference_time.date() - timedelta(days=self.WINDOW_DAYS - 1)
+        # V3-FIX-320：日网格锚定用户本地日（293 已裁决契约）——修前
+        # ``reference_time.date()`` 是 UTC 日，与 persdyn（221 已修本地日）、
+        # 墙钟 focus 键互相错位。
+        tz_name = await _resolve_user_timezone_name(self._require_db(), user_id)
+        today_local = local_date(reference_time, tz_name)
+        start_day = today_local - timedelta(days=self.WINDOW_DAYS - 1)
         observations = await PersDynAttractorService(self._require_db()).build_daily_observations(
             user_id=user_id,
             now=reference_time,
@@ -395,14 +416,15 @@ class IdiographicAssociationService:
         focus_by_day, task_accuracy_by_day, task_count_by_day, study_by_day = await self._load_behavior_daily_aggregates(
             user_id,
             start_day,
-            reference_time.date(),
+            today_local,
+            timezone_name=tz_name,
         )
         metacognition_by_day = await MetacognitionService(self._require_db()).build_daily_accuracy_series(
             user_id,
             now=reference_time,
             days=self.WINDOW_DAYS,
         )
-        srl_phase_by_day = await self._build_srl_phase_series(user_id, start_day, reference_time.date())
+        srl_phase_by_day = await self._build_srl_phase_series(user_id, start_day, today_local)
 
         vectors: dict[date, dict[str, Any]] = {}
         for offset in range(self.WINDOW_DAYS):
@@ -443,10 +465,24 @@ class IdiographicAssociationService:
         user_id: UUID,
         start_day: date,
         end_day: date,
+        *,
+        timezone_name: str,
     ) -> tuple[dict[date, float], dict[date, float], dict[date, int], dict[date, int]]:
+        """行为日聚合：键控统一用户本地日（V3-FIX-320）。
+
+        列级钟源（逐列核实）：``FocusSession.end_time`` 为客户端墙上钟 naive
+        直存（V3-FIX-37 定界）——窗口走 ``local_midnight_wall`` 同钟零点、键取
+        ``end_time.date()``（墙日=用户本地日）；``Task.completed_at`` /
+        ``StudyRecord.created_at`` 为 naive 列 + 服务端 ``_utcnow`` 写入（UTC
+        存储）——窗口换算 ``local_midnight_as_utc_naive``、键取
+        ``local_date(value, timezone_name)``。修前窗口端点统一取 UTC 日零点、
+        task/study 按 UTC 日键控，上海 00:00-08:00 事件与 focus 键跨日错桶。
+        """
         db = self._require_db()
-        start_at = _day_start(start_day)
-        end_at = _day_start(end_day + timedelta(days=1))
+        wall_start = local_midnight_wall(start_day)
+        wall_end = local_midnight_wall(end_day + timedelta(days=1))
+        utc_start = local_midnight_as_utc_naive(start_day, timezone_name)
+        utc_end = local_midnight_as_utc_naive(end_day + timedelta(days=1), timezone_name)
 
         focus_rows = (
             (
@@ -455,8 +491,8 @@ class IdiographicAssociationService:
                         FocusSession.user_id == user_id,
                         FocusSession.deleted_at.is_(None),
                         FocusSession.status == FocusStatus.COMPLETED,
-                        FocusSession.end_time >= start_at,
-                        FocusSession.end_time < end_at,
+                        FocusSession.end_time >= wall_start,
+                        FocusSession.end_time < wall_end,
                     )
                 )
             )
@@ -476,8 +512,8 @@ class IdiographicAssociationService:
                         Task.deleted_at.is_(None),
                         Task.status == TaskStatus.COMPLETED,
                         Task.completed_at.is_not(None),
-                        Task.completed_at >= start_at,
-                        Task.completed_at < end_at,
+                        Task.completed_at >= utc_start,
+                        Task.completed_at < utc_end,
                     )
                 )
             )
@@ -488,7 +524,7 @@ class IdiographicAssociationService:
         for completed_at, estimated_minutes, actual_minutes in task_rows:
             if completed_at is None:
                 continue
-            day = completed_at.date()
+            day = local_date(completed_at, timezone_name)
             task_count_by_day[day] += 1
             estimated = float(estimated_minutes or 0.0)
             actual = float(actual_minutes or 0.0)
@@ -507,8 +543,8 @@ class IdiographicAssociationService:
                     select(StudyRecord.created_at).where(
                         StudyRecord.user_id == user_id,
                         StudyRecord.deleted_at.is_(None),
-                        StudyRecord.created_at >= start_at,
-                        StudyRecord.created_at < end_at,
+                        StudyRecord.created_at >= utc_start,
+                        StudyRecord.created_at < utc_end,
                     )
                 )
             )
@@ -517,7 +553,7 @@ class IdiographicAssociationService:
         study_by_day: dict[date, int] = defaultdict(int)
         for (created_at,) in study_rows:
             if created_at is not None:
-                study_by_day[created_at.date()] += 1
+                study_by_day[local_date(created_at, timezone_name)] += 1
 
         return dict(focus_by_day), task_accuracy_by_day, dict(task_count_by_day), dict(study_by_day)
 

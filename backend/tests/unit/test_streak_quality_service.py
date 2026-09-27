@@ -7,6 +7,7 @@ import pytest
 from app.models.achievement import StreakDayStatus, UserStreakDay, UserStreakStats
 from app.models.galaxy import KnowledgeNode, StudyRecord
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.user import PushPreference
 from app.services.streak_quality import StreakQualityService
 
 
@@ -79,8 +80,14 @@ async def test_compute_quality_counts_real_learning_signals(db_session, test_use
 
 
 @pytest.mark.asyncio
-async def test_build_payload_includes_quality_trend_and_evidence(db_session, test_user):
-    today = datetime.utcnow().date()
+async def test_build_payload_includes_quality_trend_and_evidence(db_session, test_user, monkeypatch):
+    # V3-FIX-320 激活本地日窗后，build_payload「今日」依赖用户时区——冻结钟
+    # +钉 Asia/Shanghai（wt590 族C 判例），修前裸 datetime.utcnow() 播种是
+    # 宿主钟/UTC 日 16:00-24:00Z 窗的潜在 flaky。断言零删改，仅播种改按
+    # 冻结常数推导。
+    frozen_now = datetime(2026, 5, 2, 10, 0)  # naive UTC；上海本地 = 05-02 18:00
+    monkeypatch.setattr("app.services.streak_quality._utcnow", lambda: frozen_now)
+    db_session.add(PushPreference(user_id=test_user.id, timezone="Asia/Shanghai"))
     node = KnowledgeNode(name="Vectors")
     db_session.add(node)
     await db_session.flush()
@@ -92,9 +99,9 @@ async def test_build_payload_includes_quality_trend_and_evidence(db_session, tes
                 node_id=node.id,
                 study_minutes=95,
                 mastery_delta=0.2,
-                created_at=datetime.combine(today, datetime.min.time()),
+                created_at=datetime(2026, 5, 2, 2, 0),  # 上海 05-02 10:00 = 本地今日上午
             ),
-            UserStreakDay(user_id=test_user.id, day=today, status=StreakDayStatus.ACTIVE),
+            UserStreakDay(user_id=test_user.id, day=date(2026, 5, 2), status=StreakDayStatus.ACTIVE),
         ]
     )
     await db_session.commit()

@@ -5,16 +5,18 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import asdict, dataclass
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time_utils import local_date, local_midnight_as_utc_naive, valid_timezone_name
 from app.models.achievement import StreakDayStatus, UserStreakDay, UserStreakStats
 from app.models.galaxy import StudyRecord
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.user import PushPreference
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +25,20 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def _day_bounds(day: date) -> tuple[datetime, datetime]:
-    return datetime.combine(day, time.min), datetime.combine(day + timedelta(days=1), time.min)
+def _day_bounds(day: date, timezone_name: str) -> tuple[datetime, datetime]:
+    """用户本地日 → [零点, 次日零点) 的 naive-UTC 瞬间窗（V3-FIX-320）。
+
+    消费列 ``StudyRecord.created_at`` / ``Task.completed_at`` 为 UTC 存储
+    （naive 列 + 服务端 ``_utcnow`` 写入）——窗口端点须把用户本地日界换算
+    成 UTC 瞬间（:func:`local_midnight_as_utc_naive`）两侧同钟。修前是
+    UTC 日零点，上海 00:00-08:00 事件落错「今日」桶。``Task.due_date`` /
+    ``UserStreakDay.day`` 为 Date 列（墙上钟日界语义），与本地日直比、
+    不经本函数。
+    """
+    return (
+        local_midnight_as_utc_naive(day, timezone_name),
+        local_midnight_as_utc_naive(day + timedelta(days=1), timezone_name),
+    )
 
 
 def _ratio(numerator: int | float, denominator: int | float) -> float:
@@ -59,8 +73,27 @@ class StreakQualityService:
         self._fatigue_cache: dict[str, dict[str, Any]] = {}
         self._crisis_cache: dict[str, bool] = {}
 
+    async def _user_timezone_name(self, user_id: UUID | str) -> str:
+        """用户时区名（V3-FIX-320）：PushPreference.timezone 标量直查，缺省 Asia/Shanghai。
+
+        沿 achievement_engine V3-FIX-293（``_resolve_streak_activity_date``）
+        同款口径：标量直查而非 ORM 关系，规避身份映射命中未加载关系时
+        async lazy-load 炸裂。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        return valid_timezone_name(tz_name)
+
+    async def _local_today(self, user_id: UUID | str) -> date:
+        """用户本地「今日」（V3-FIX-320）：对齐 293 连胜日界契约。
+
+        修前「今日」= ``_utcnow().date()``（UTC 日），与 achievement_engine
+        已裁决的「连胜今日=用户本地日」分裂——上海 00:00-08:00 两面各说各话。
+        """
+        return local_date(_utcnow(), await self._user_timezone_name(user_id))
+
     async def compute_quality(self, user_id: UUID | str, target_date: date | None = None) -> StreakQuality:
-        day = target_date or _utcnow().date()
+        tz_name = await self._user_timezone_name(user_id)
+        day = target_date or local_date(_utcnow(), tz_name)
 
         # ── Cache check (TTL 86400s / 24h) ──
         cache_key = f"streak_quality:{user_id}:{day.isoformat()}"
@@ -73,7 +106,7 @@ class StreakQualityService:
         except Exception:
             logger.warning("Streak quality cache read failed for %s", cache_key, exc_info=True)
 
-        start, end = _day_bounds(day)
+        start, end = _day_bounds(day, tz_name)
 
         effective_minutes = await self._effective_minutes(user_id, start, end)
         core_tasks_completed = await self._core_tasks_completed(user_id, start, end)
@@ -145,7 +178,7 @@ class StreakQualityService:
         return int(stats.current_streak or 0) if stats else 0
 
     async def quality_streak(self, user_id: UUID | str, target_date: date | None = None) -> int:
-        day = target_date or _utcnow().date()
+        day = target_date or await self._local_today(user_id)
         count = 0
         for offset in range(0, 90):
             quality = await self.compute_quality(user_id, day - timedelta(days=offset))
@@ -159,7 +192,7 @@ class StreakQualityService:
         user_id: UUID | str,
         target_date: date | None = None,
     ) -> list[dict[str, Any]]:
-        today = target_date or _utcnow().date()
+        today = target_date or await self._local_today(user_id)
         trend: list[dict[str, Any]] = []
         for offset in range(6, -1, -1):
             day = today - timedelta(days=offset)

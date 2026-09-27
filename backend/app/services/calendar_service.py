@@ -9,9 +9,11 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time_utils import local_date, utcnow, valid_timezone_name
 from app.models.calendar_event import CalendarEvent
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
+from app.models.user import PushPreference
 from app.services.personalization.preference_service import PreferenceService
 
 
@@ -61,6 +63,15 @@ class CalendarService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
+    async def _resolve_user_timezone_name(self, user_id: UUID) -> str:
+        """用户时区名（V3-FIX-320）：PushPreference.timezone 标量直查，缺省 Asia/Shanghai。
+
+        沿 focus_service._local_today/persdyn V3-FIX-221 先例：标量直查而非
+        ORM 关系，规避身份映射命中未加载关系时 async lazy-load 炸裂。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        return valid_timezone_name(tz_name)
+
     async def get_busy_free_context(
         self,
         user_id: UUID,
@@ -70,7 +81,12 @@ class CalendarService:
         include_conflicts: bool = True,
     ) -> dict[str, Any]:
         """Return the next ``days`` of busy events, free blocks, and pressure hints."""
-        anchor = start_date or datetime.utcnow().date()
+        # V3-FIX-320：anchor 缺省切用户本地日（293 已裁决契约）——修前
+        # ``datetime.utcnow().date()`` 是 UTC 日，上海 00:00-08:00（= 前日
+        # 16:00-24:00Z）时规划窗起点落在本地昨日、第 7 天整日漏窗。窗口端点
+        # 保持 naive 零点与墙钟列同钟（CalendarEvent.start_time/end_time 为
+        # 客户端本地 ISO 直存，V3-FIX-37 定界）。
+        anchor = start_date or local_date(utcnow(), await self._resolve_user_timezone_name(user_id))
         days = max(1, min(int(days or self.PLANNING_DAYS), 14))
         window_start = datetime.combine(anchor, time.min)
         window_end = window_start + timedelta(days=days)

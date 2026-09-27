@@ -8,7 +8,9 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time_utils import local_date, utcnow, valid_timezone_name
 from app.models.calendar_event import CalendarEvent
+from app.models.user import PushPreference
 from app.schemas.smart_schedule import (
     SmartScheduleRequest,
     SmartScheduleResponse,
@@ -40,13 +42,28 @@ class SmartScheduleService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def _resolve_user_timezone_name(self, user_id: UUID) -> str:
+        """用户时区名（V3-FIX-320）：PushPreference.timezone 标量直查，缺省 Asia/Shanghai。
+
+        沿 focus_service._local_today/persdyn V3-FIX-221 先例：标量直查而非
+        ORM 关系，规避身份映射命中未加载关系时 async lazy-load 炸裂。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        return valid_timezone_name(tz_name)
+
     async def suggest_time_slots(
         self,
         user_id: UUID,
         request: SmartScheduleRequest,
     ) -> SmartScheduleResponse:
         """生成智能时间槽建议。"""
-        target_date = request.preferred_date or date.today()
+        # V3-FIX-320：缺省目标日切用户本地日（293 已裁决契约）——修前
+        # ``date.today()`` 是宿主机本地日（V3-FIX-233 族残留），UTC 宿主
+        # 上海 00:00-08:00 时排程目标日落在本地昨日、占用查窗错日。日窗
+        # 端点保持 naive 与墙钟列同钟（CalendarEvent 墙钟直存，V3-FIX-37）。
+        target_date = request.preferred_date or local_date(
+            utcnow(), await self._resolve_user_timezone_name(user_id)
+        )
         existing_events = await self._get_existing_events(user_id, target_date)
         schedule_profile = await self._build_schedule_profile(user_id, target_date, existing_events)
 
