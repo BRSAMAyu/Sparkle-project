@@ -79995,7 +79995,7 @@
     },
     "/api/v1/predictive/difficulty/{topic_id}": {
       "get": {
-        "description": "获取主题难度预测\n\nArgs:\n    topic_id: 主题ID\n\nReturns:\n    - difficulty_score: 难度分数 (0-1)\n    - estimated_time_hours: 预估学习时长（小时）\n    - prerequisites_ready: 前置知识是否就绪\n    - missing_prerequisites: 缺失的前置知识\n    - difficulty_factors: 难度因素分析",
+        "description": "获取主题难度预测\n\nArgs:\n    topic_id: 主题ID\n\nReturns:\n    - difficulty_score: 难度分数 (0-1)\n    - estimated_time_hours: 预估学习时长（小时）\n    - prerequisites_ready: 前置知识是否就绪\n    - missing_prerequisites: 缺失的前置知识\n\n    V3-FIX-347：原 difficulty_factors 为硬编码空列表冒充的未接线\n    承诺键，已删除（全仓零消费方）。",
         "operationId": "get_difficulty_prediction_api_v1_predictive_difficulty__topic_id__get",
         "parameters": [
           {
@@ -80067,7 +80067,7 @@
     },
     "/api/v1/predictive/engagement": {
       "get": {
-        "description": "获取用户活跃度预测\n\nReturns:\n    - next_active_time: 预测下次活跃时间\n    - confidence: 预测置信度 (0-1)\n    - dropout_risk: 流失风险 (low/medium/high)\n    - typical_weekdays: 典型活跃日\n    - typical_hours: 典型活跃时段",
+        "description": "获取用户活跃度预测\n\nReturns:\n    - next_active_time: 预测下次活跃时间\n    - confidence: 预测置信度 (0-1)\n    - dropout_risk: 流失风险 (low/medium/high)\n    - recommended_intervention: 建议干预\n\n    V3-FIX-347：原 typical_weekdays / typical_hours / prediction_factors\n    为硬编码空列表冒充的未接线承诺键，已删除（全仓零消费方）。",
         "operationId": "get_engagement_forecast_api_v1_predictive_engagement_get",
         "responses": {
           "200": {

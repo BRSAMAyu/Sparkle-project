@@ -149,7 +149,10 @@ async def get_stats_overview(current_user: User = Depends(get_current_user), db:
         "study_days": study_days,
         "flame_level": current_user.flame_level or 1,
         "flame_brightness": current_user.flame_brightness or 0,
-        "streak_days": current_user.flame_level or 0,  # Using flame_level as proxy
+        # V3-FIX-346：原 ``streak_days: flame_level`` 代理冒充字段已删除——
+        # 以无关字段冒充连续学习天数违反「不以 Mock 冒充统计结果」硬约束；
+        # 真实连续天数由 FocusService._calculate_current_streak（/focus/stats/*）
+        # 提供，本端点 mobile 零消费面。
     }
 
 

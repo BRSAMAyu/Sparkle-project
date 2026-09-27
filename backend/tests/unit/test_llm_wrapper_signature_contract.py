@@ -24,7 +24,8 @@ from typing import Any
 import pytest
 
 from app.core.llm_security_wrapper import LLMSecurityWrapper, SecurityConfig
-from app.services.llm_service import LLMService, llm_service as wrapper_singleton
+from app.services.llm_service import LLMService
+from app.services.llm_service import llm_service as wrapper_singleton
 
 # =============================================================================
 # bare-signature 内层服务桩（签名逐参复制自 LLMService，用于真实参数绑定）
@@ -203,8 +204,10 @@ class TestProductionCallSiteShapesBind:
         # services/translation_service.py:364 chat(messages=..., model=...)
         self.chat_sig.bind(messages=_MESSAGES, model="model-x")
 
-    def test_a9_enhanced_orchestrator_433_shape(self):
-        # agents/enhanced_orchestrator.py:433 chat(messages=..., model="qwen-plus")
+    def test_a9_enhanced_orchestrator_shape_retired(self):
+        # V3-FIX-345：agents/enhanced_orchestrator.py 已删除（休眠 mock 轨退役），
+        # 原 :433 chat(messages=..., model="qwen-plus") 绑定形态随模块消亡；
+        # 占位说明退役事实，messages=/model= 形态仍由 a10 契约保护。
         self.chat_sig.bind(messages=_MESSAGES, model="qwen-plus")
 
     def test_a10_orchestrator_agent_158_shape(self):
@@ -392,6 +395,6 @@ class TestGetattrAllowlist:
     def test_dunder_forwarding_rejected(self):
         wrapper, _ = _make_wrapper(_MetadataInner())
         with pytest.raises(AttributeError):
-            getattr(wrapper, "__deepcopy__")
+            getattr(wrapper, "__deepcopy__")  # noqa: B009 — dunder 探测必须走 getattr 动态形态
         # __class__ 是类型属性，正常解析，不受影响
         assert wrapper.__class__ is LLMSecurityWrapper

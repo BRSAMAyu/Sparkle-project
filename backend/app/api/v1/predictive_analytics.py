@@ -49,8 +49,10 @@ async def get_engagement_forecast(
         - next_active_time: 预测下次活跃时间
         - confidence: 预测置信度 (0-1)
         - dropout_risk: 流失风险 (low/medium/high)
-        - typical_weekdays: 典型活跃日
-        - typical_hours: 典型活跃时段
+        - recommended_intervention: 建议干预
+
+        V3-FIX-347：原 typical_weekdays / typical_hours / prediction_factors
+        为硬编码空列表冒充的未接线承诺键，已删除（全仓零消费方）。
     """
     try:
         service = PredictiveService(db)
@@ -62,9 +64,6 @@ async def get_engagement_forecast(
                 "next_active_time": forecast.next_active_time.isoformat() if forecast.next_active_time else None,
                 "confidence": forecast.confidence,
                 "dropout_risk": forecast.risk_level,
-                "typical_weekdays": [],
-                "typical_hours": [],
-                "prediction_factors": [],
                 "recommended_intervention": forecast.recommended_intervention,
             }
         }
@@ -91,7 +90,9 @@ async def get_difficulty_prediction(
         - estimated_time_hours: 预估学习时长（小时）
         - prerequisites_ready: 前置知识是否就绪
         - missing_prerequisites: 缺失的前置知识
-        - difficulty_factors: 难度因素分析
+
+        V3-FIX-347：原 difficulty_factors 为硬编码空列表冒充的未接线
+        承诺键，已删除（全仓零消费方）。
     """
     try:
         service = PredictiveService(db)
@@ -109,7 +110,6 @@ async def get_difficulty_prediction(
                     }
                     for prerequisite in prediction.suggested_prerequisites
                 ],
-                "difficulty_factors": [],
             }
         }
 

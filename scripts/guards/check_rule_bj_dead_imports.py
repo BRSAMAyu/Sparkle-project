@@ -27,7 +27,6 @@ import ast
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 EXEMPT_PATTERN = re.compile(
@@ -65,7 +64,6 @@ ENTRY_POINT_MODULES = {
     "app.db.session",
     "app.db.base",
     "app.agents.base_agent",
-    "app.agents.enhanced_orchestrator",
     "app.agents.search_agent",
     "app.agents.specialist_agents",
     "app.aurora.llm_bridge",

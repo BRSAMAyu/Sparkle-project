@@ -18,7 +18,6 @@ from .collaboration_workflows import (
 
 # Enhanced Agents (v2.0)
 from .enhanced_agents import EnhancedAgentContext, EnhancedAgentRole, ProblemSolverAgent, StudyPlannerAgent
-from .enhanced_orchestrator import EnhancedOrchestratorAgent, create_enhanced_orchestrator
 from .orchestrator_agent import OrchestratorAgent
 from .search_agent import SearchAgent
 from .specialist_agents import CodeAgent, MathAgent, ScienceAgent, WritingAgent
@@ -33,7 +32,9 @@ AGENT_REGISTRY: dict[str, type[BaseAgent]] = {
     "science": ScienceAgent,
     "search": SearchAgent,
     # Enhanced Agents (v2.0)
-    "enhanced_orchestrator": EnhancedOrchestratorAgent,
+    # V3-FIX-345：enhanced_orchestrator 休眠 mock 轨已退役（零生产调用方，
+    # _build_enhanced_context 硬编码假学习数据；真实路径=orchestrator_agent
+    # 工作流 + enhanced_agents 真源上下文）。
     "study_planner": StudyPlannerAgent,
     "problem_solver": ProblemSolverAgent,
 }
@@ -60,7 +61,6 @@ __all__ = [
     "ScienceAgent",
     "SearchAgent",
     # Enhanced Agents (v2.0)
-    "EnhancedOrchestratorAgent",
     "StudyPlannerAgent",
     "ProblemSolverAgent",
     "EnhancedAgentContext",
@@ -71,7 +71,6 @@ __all__ = [
     "ErrorDiagnosisWorkflow",
     "CollaborationResult",
     # Factory Functions
-    "create_enhanced_orchestrator",
     "AGENT_REGISTRY",
     "get_agent",
 ]
