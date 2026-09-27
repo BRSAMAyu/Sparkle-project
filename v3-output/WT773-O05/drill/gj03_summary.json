@@ -1,0 +1,41 @@
+{
+  "card": "Q-02",
+  "env": "local",
+  "gateway": "http://127.0.0.1:18080",
+  "engine": "http://127.0.0.1:18000",
+  "generated_at": "2026-09-27T18:56:49.184442+00:00",
+  "totals": {
+    "journeys": 1,
+    "pass": 1,
+    "fail": 0,
+    "restricted": 0
+  },
+  "core_gjs": {},
+  "journeys": [
+    {
+      "gj": "GJ03",
+      "title": "Existing user → Today → action → outcome",
+      "verdict": "PASS",
+      "steps_total": 11,
+      "steps_ok": 11,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "wall_ms": 5307.5,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "Today/dashboard 三端 viewport 已在 U-09 渲染契约覆盖",
+        "restricted": "",
+        "core": false
+      }
+    }
+  ],
+  "visual_evidence": "headless API 级 trace（raw/*.jsonl）；视频/截图经 U-09 45 行矩阵采集清单转 HUMAN_INBOX，不伪造"
+}

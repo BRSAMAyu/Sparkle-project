@@ -1,0 +1,49 @@
+{
+  "verdict": "PASS",
+  "url_database": "wt773_o05",
+  "checked_at": "2026-09-27T18:53:40.451296Z",
+  "findings": [
+    {
+      "invariant": "INV-1",
+      "ok": true,
+      "detail": "词表源=app.core.run_state_machine; 共 3 行; 非法状态 0; 终态缺归因 0; 归因越词表 0; 缺活性戳 0",
+      "violations": []
+    },
+    {
+      "invariant": "INV-2",
+      "ok": true,
+      "detail": "比对 3 个 run 的状态行与末条迁移",
+      "violations": []
+    },
+    {
+      "invariant": "INV-3",
+      "ok": true,
+      "detail": "活跃 run per-intent 冲突 0 组",
+      "violations": []
+    },
+    {
+      "invariant": "INV-4",
+      "ok": true,
+      "detail": "校验 3 个序列计数器",
+      "violations": []
+    },
+    {
+      "invariant": "INV-5",
+      "ok": true,
+      "detail": "episodic total=4 recallable=2 archived=1 retracted=1 revoked=0",
+      "violations": []
+    },
+    {
+      "invariant": "INV-6",
+      "ok": true,
+      "detail": "孤儿检查 4/4 项执行",
+      "violations": []
+    },
+    {
+      "invariant": "INV-7",
+      "ok": true,
+      "detail": "与备份点基线比对 12 项",
+      "violations": []
+    }
+  ]
+}
