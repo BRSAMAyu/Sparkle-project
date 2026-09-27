@@ -1,6 +1,6 @@
 [
   {
-    "screen": "b04/onboarding__persona_start__new_user__android__1080x2400@3.0__87b5f432.png",
+    "screen": "b04/onboarding__persona_start__new_user__android__1080x2400@3.0__<sha8>.png",
     "state": "1080x2400@3.0",
     "pump_exception": null,
     "logical_size": "360.0x800.0",
@@ -9,16 +9,25 @@
     "overflow_bounds_widgets": 1
   },
   {
-    "screen": "b04/chat__history_citations__demo_data__android__1080x2400@3.0__87b5f432.png",
+    "screen": "b04/home__main__demo_data__android__1080x2400@3.0__<sha8>.png",
     "state": "1080x2400@3.0",
     "pump_exception": null,
     "logical_size": "360.0x800.0",
-    "text_widget_count": 126,
+    "text_widget_count": 67,
     "truncation_candidates": [],
     "overflow_bounds_widgets": 7
   },
   {
-    "screen": "b04/goal__library_main__demo_data__android__1080x2400@3.0__87b5f432.png",
+    "screen": "b04/chat__history_citations__demo_data__android__1080x2400@3.0__<sha8>.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 121,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "b04/goal__library_main__demo_data__android__1080x2400@3.0__<sha8>.png",
     "state": "1080x2400@3.0",
     "pump_exception": null,
     "logical_size": "360.0x800.0",
@@ -27,7 +36,7 @@
     "overflow_bounds_widgets": 1
   },
   {
-    "screen": "b04/task__library_main__demo_data__android__1080x2400@3.0__87b5f432.png",
+    "screen": "b04/task__library_main__demo_data__android__1080x2400@3.0__<sha8>.png",
     "state": "1080x2400@3.0",
     "pump_exception": null,
     "logical_size": "360.0x800.0",
@@ -36,7 +45,7 @@
     "overflow_bounds_widgets": 1
   },
   {
-    "screen": "b04/memory__panel_main__demo_data__android__1080x2400@3.0__87b5f432.png",
+    "screen": "b04/memory__panel_main__demo_data__android__1080x2400@3.0__<sha8>.png",
     "state": "1080x2400@3.0",
     "pump_exception": null,
     "logical_size": "360.0x800.0",
@@ -45,25 +54,25 @@
     "overflow_bounds_widgets": 4
   },
   {
-    "screen": "b04/galaxy__tree_expanded__demo_data__android__1080x2400@3.0__87b5f432.png",
+    "screen": "b04/galaxy__tree_expanded__demo_data__android__1080x2400@3.0__<sha8>.png",
     "state": "1080x2400@3.0",
     "pump_exception": null,
     "logical_size": "360.0x800.0",
-    "text_widget_count": 107,
+    "text_widget_count": 102,
     "truncation_candidates": [],
     "overflow_bounds_widgets": 7
   },
   {
-    "screen": "b04/profile__main__demo_data__android__1080x2400@3.0__87b5f432.png",
+    "screen": "b04/profile__main__demo_data__android__1080x2400@3.0__<sha8>.png",
     "state": "1080x2400@3.0",
     "pump_exception": null,
     "logical_size": "360.0x800.0",
-    "text_widget_count": 190,
+    "text_widget_count": 185,
     "truncation_candidates": [],
     "overflow_bounds_widgets": 15
   },
   {
-    "screen": "b04/settings__main__demo_data__android__1080x2400@3.0__87b5f432.png",
+    "screen": "b04/settings__main__demo_data__android__1080x2400@3.0__<sha8>.png",
     "state": "1080x2400@3.0",
     "pump_exception": null,
     "logical_size": "360.0x800.0",
@@ -72,7 +81,7 @@
     "overflow_bounds_widgets": 24
   },
   {
-    "screen": "b04/onboarding__persona_start__new_user__macos__800x600@2.0__87b5f432.png",
+    "screen": "b04/onboarding__persona_start__new_user__macos__800x600@2.0__<sha8>.png",
     "state": "800x600@2.0",
     "pump_exception": null,
     "logical_size": "800.0x600.0",
@@ -81,25 +90,25 @@
     "overflow_bounds_widgets": 267
   },
   {
-    "screen": "b04/home__main__demo_data__macos__800x600@2.0__87b5f432.png",
+    "screen": "b04/home__main__demo_data__macos__800x600@2.0__<sha8>.png",
     "state": "800x600@2.0",
     "pump_exception": null,
     "logical_size": "800.0x600.0",
-    "text_widget_count": 68,
+    "text_widget_count": 63,
     "truncation_candidates": [],
-    "overflow_bounds_widgets": 393
+    "overflow_bounds_widgets": 350
   },
   {
-    "screen": "b04/chat__history_citations__demo_data__macos__800x600@2.0__87b5f432.png",
+    "screen": "b04/chat__history_citations__demo_data__macos__800x600@2.0__<sha8>.png",
     "state": "800x600@2.0",
     "pump_exception": null,
     "logical_size": "800.0x600.0",
-    "text_widget_count": 138,
+    "text_widget_count": 133,
     "truncation_candidates": [],
-    "overflow_bounds_widgets": 743
+    "overflow_bounds_widgets": 700
   },
   {
-    "screen": "b04/goal__library_main__demo_data__macos__800x600@2.0__87b5f432.png",
+    "screen": "b04/goal__library_main__demo_data__macos__800x600@2.0__<sha8>.png",
     "state": "800x600@2.0",
     "pump_exception": null,
     "logical_size": "800.0x600.0",
@@ -108,7 +117,7 @@
     "overflow_bounds_widgets": 156
   },
   {
-    "screen": "b04/task__library_main__demo_data__macos__800x600@2.0__87b5f432.png",
+    "screen": "b04/task__library_main__demo_data__macos__800x600@2.0__<sha8>.png",
     "state": "800x600@2.0",
     "pump_exception": null,
     "logical_size": "800.0x600.0",
@@ -117,7 +126,7 @@
     "overflow_bounds_widgets": 257
   },
   {
-    "screen": "b04/memory__panel_main__demo_data__macos__800x600@2.0__87b5f432.png",
+    "screen": "b04/memory__panel_main__demo_data__macos__800x600@2.0__<sha8>.png",
     "state": "800x600@2.0",
     "pump_exception": null,
     "logical_size": "800.0x600.0",
@@ -126,25 +135,25 @@
     "overflow_bounds_widgets": 137
   },
   {
-    "screen": "b04/galaxy__tree_expanded__demo_data__macos__800x600@2.0__87b5f432.png",
+    "screen": "b04/galaxy__tree_expanded__demo_data__macos__800x600@2.0__<sha8>.png",
     "state": "800x600@2.0",
     "pump_exception": null,
     "logical_size": "800.0x600.0",
-    "text_widget_count": 97,
+    "text_widget_count": 92,
     "truncation_candidates": [],
-    "overflow_bounds_widgets": 462
+    "overflow_bounds_widgets": 419
   },
   {
-    "screen": "b04/profile__main__demo_data__macos__800x600@2.0__87b5f432.png",
+    "screen": "b04/profile__main__demo_data__macos__800x600@2.0__<sha8>.png",
     "state": "800x600@2.0",
     "pump_exception": null,
     "logical_size": "800.0x600.0",
-    "text_widget_count": 186,
+    "text_widget_count": 181,
     "truncation_candidates": [],
-    "overflow_bounds_widgets": 816
+    "overflow_bounds_widgets": 773
   },
   {
-    "screen": "b04/settings__main__demo_data__macos__800x600@2.0__87b5f432.png",
+    "screen": "b04/settings__main__demo_data__macos__800x600@2.0__<sha8>.png",
     "state": "800x600@2.0",
     "pump_exception": null,
     "logical_size": "800.0x600.0",
@@ -153,7 +162,7 @@
     "overflow_bounds_widgets": 1277
   },
   {
-    "screen": "b04/onboarding__persona_start__new_user__macos__1280x800@2.0__87b5f432.png",
+    "screen": "b04/onboarding__persona_start__new_user__macos__1280x800@2.0__<sha8>.png",
     "state": "1280x800@2.0",
     "pump_exception": null,
     "logical_size": "1280.0x800.0",
@@ -162,25 +171,25 @@
     "overflow_bounds_widgets": 267
   },
   {
-    "screen": "b04/home__main__demo_data__macos__1280x800@2.0__87b5f432.png",
+    "screen": "b04/home__main__demo_data__macos__1280x800@2.0__<sha8>.png",
     "state": "1280x800@2.0",
     "pump_exception": null,
     "logical_size": "1280.0x800.0",
-    "text_widget_count": 86,
+    "text_widget_count": 81,
     "truncation_candidates": [],
-    "overflow_bounds_widgets": 502
+    "overflow_bounds_widgets": 459
   },
   {
-    "screen": "b04/chat__history_citations__demo_data__macos__1280x800@2.0__87b5f432.png",
+    "screen": "b04/chat__history_citations__demo_data__macos__1280x800@2.0__<sha8>.png",
     "state": "1280x800@2.0",
     "pump_exception": null,
     "logical_size": "1280.0x800.0",
-    "text_widget_count": 169,
+    "text_widget_count": 164,
     "truncation_candidates": [],
-    "overflow_bounds_widgets": 927
+    "overflow_bounds_widgets": 884
   },
   {
-    "screen": "b04/goal__library_main__demo_data__macos__1280x800@2.0__87b5f432.png",
+    "screen": "b04/goal__library_main__demo_data__macos__1280x800@2.0__<sha8>.png",
     "state": "1280x800@2.0",
     "pump_exception": null,
     "logical_size": "1280.0x800.0",
@@ -189,7 +198,7 @@
     "overflow_bounds_widgets": 197
   },
   {
-    "screen": "b04/task__library_main__demo_data__macos__1280x800@2.0__87b5f432.png",
+    "screen": "b04/task__library_main__demo_data__macos__1280x800@2.0__<sha8>.png",
     "state": "1280x800@2.0",
     "pump_exception": null,
     "logical_size": "1280.0x800.0",
@@ -198,7 +207,7 @@
     "overflow_bounds_widgets": 289
   },
   {
-    "screen": "b04/memory__panel_main__demo_data__macos__1280x800@2.0__87b5f432.png",
+    "screen": "b04/memory__panel_main__demo_data__macos__1280x800@2.0__<sha8>.png",
     "state": "1280x800@2.0",
     "pump_exception": null,
     "logical_size": "1280.0x800.0",
@@ -207,39 +216,30 @@
     "overflow_bounds_widgets": 137
   },
   {
-    "screen": "b04/galaxy__tree_expanded__demo_data__macos__1280x800@2.0__87b5f432.png",
+    "screen": "b04/galaxy__tree_expanded__demo_data__macos__1280x800@2.0__<sha8>.png",
     "state": "1280x800@2.0",
     "pump_exception": null,
     "logical_size": "1280.0x800.0",
-    "text_widget_count": 115,
+    "text_widget_count": 110,
     "truncation_candidates": [],
-    "overflow_bounds_widgets": 571
+    "overflow_bounds_widgets": 528
   },
   {
-    "screen": "b04/profile__main__demo_data__macos__1280x800@2.0__87b5f432.png",
+    "screen": "b04/profile__main__demo_data__macos__1280x800@2.0__<sha8>.png",
     "state": "1280x800@2.0",
     "pump_exception": null,
     "logical_size": "1280.0x800.0",
-    "text_widget_count": 204,
+    "text_widget_count": 199,
     "truncation_candidates": [],
-    "overflow_bounds_widgets": 925
+    "overflow_bounds_widgets": 882
   },
   {
-    "screen": "b04/settings__main__demo_data__macos__1280x800@2.0__87b5f432.png",
+    "screen": "b04/settings__main__demo_data__macos__1280x800@2.0__<sha8>.png",
     "state": "1280x800@2.0",
     "pump_exception": null,
     "logical_size": "1280.0x800.0",
     "text_widget_count": 399,
     "truncation_candidates": [],
     "overflow_bounds_widgets": 1277
-  },
-  {
-    "screen": "b04/home__main__demo_data__android__1080x2400@3.0__e0777bd5.png",
-    "state": "1080x2400@3.0",
-    "pump_exception": null,
-    "logical_size": "360.0x800.0",
-    "text_widget_count": 67,
-    "truncation_candidates": [],
-    "overflow_bounds_widgets": 7
   }
 ]
