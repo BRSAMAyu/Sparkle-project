@@ -49,7 +49,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 **当前：100/107 done（93.5%）**。三源核验已完成（wt759，2026-09-28）：15 张三源齐 + 84 张销账核正 + S-01（wt763 独立审查 APPROVE）。
 
-**剩余 5 张（102/107，2026-09-28 04:05）**：
+**剩余 5 张（102/107，2026-09-28 03:42）**：
 | 卡 | 状态 | 阻塞点 |
 |---|---|---|
 | J-02 Onboarding: Value Before Profile | PARTIAL（wt764 交付+wt282 增量在主干；simulator 证据卡门后执行） | FIRST_3_MINUTES 清单：fresh install+3min 脚本+截图（需设备） |
@@ -117,7 +117,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 4. **云端部署**：未部署（O-01 卡凭据）；本地栈形态是唯一已验证运行形态。
 5. **演示数据**：guest 登录播种 6 演示群+演示用户（friend 行共享）；journey 主用户 ns001 数据为真实七日驱动。
 
-## 9. 度量快照（2026-09-28 03:50，wt780 全本机实测@9a4ea3d4，详 v3-output/WT780-METRICS/metrics.md）
+## 9. 度量快照（2026-09-28 03:25，wt780 全本机实测@9a4ea3d4，详 v3-output/WT780-METRICS/metrics.md）
 
 - **代码规模**：手写生产 ~113.5 万行——backend/app 1,356 文件/533k 行；mobile/lib 手写 1,187 文件/564k 行（排除 vendored 与生成物）；gateway 105 文件/38k 行（+141 测试文件 27k 行）。测试文件：backend 1,443 + gateway 141 + mobile 518。
 - **模块依赖**：35 顶层包/192 边/34 对双向依赖；最重边 services→core 314、services→models 310；**core↔services 双向对是 V4 分层解环首批对象**。
@@ -137,7 +137,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 ## 更新日志
 
-- v0.5.1（2026-09-28 04:05）：**O-05 销账→102/107**（wt782 独立审查 APPROVE 附前置全履：FIX-531 补登被撞号顶丢行 FIXED@1680d16c、FIX-505 范围纠偏 dev compose+AOF 新残差、FIX-532 四项附带登记）；wt781（FIX-506 演示群标记）+wt778（mypy 批十一 76→61）集成收口，**合并态 mypy 55**（70−15 逐数对账）；**FIX-530 登记**（engine 03:02 被 Redis 瞬时断连杀死、30 分钟后心跳抓获复活——单进程栈可用性单点，V4 需进程守护）；合并态测试 288 过+1 环境错配归因（integration 套件 PG 预建 schema 口径，conftest:58 create_all 注释在案）。
+- v0.5.1（2026-09-28 03:42）：**O-05 销账→102/107**（wt782 独立审查 APPROVE 附前置全履：FIX-531 补登被撞号顶丢行 FIXED@1680d16c、FIX-505 范围纠偏 dev compose+AOF 新残差、FIX-532 四项附带登记）；wt781（FIX-506 演示群标记）+wt778（mypy 批十一 76→61）集成收口，**合并态 mypy 55**（70−15 逐数对账）；**FIX-530 登记**（engine 03:02 被 Redis 瞬时断连杀死、30 分钟后心跳抓获复活——单进程栈可用性单点，V4 需进程守护）；合并态测试 288 过+1 环境错配归因（integration 套件 PG 预建 schema 口径，conftest:58 create_all 注释在案）。
 - v0.1（2026-09-28 03:00）：首版。骨架+当日三源核验快照+FIX 族谱初版+诚实边界。各线深挖章节标注 ⏳ 待填充。
 - v0.2（2026-09-28 02:10）：**M/X 线深挖并入**（wt770，代码亲验级）：Memory Epoch/Provenance 真实数据流、M-09 缺陷发现器叙事、X 线真模型证据分层、V4 教材级考古三条；新登记 FIX-502（M/X 卡级 receipt 断链）/FIX-503（FIX-36 真模型复验承诺未兑现）。详章 v3-output/WT770-DOC-MX/。
 - v0.3（2026-09-28 02:40）：**B/C 线深挖并入**（wt769 五源核验）：B 线诚实性红线执行者叙事+残差六项；C 线 10 模块亲证全活+「就绪未激活」面三项；**FIX-258 行补闭**（@52fbed29，闭账曾被行重建回退——台账指针会腐烂的实证）；新登 FIX-504。
