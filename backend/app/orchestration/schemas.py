@@ -225,6 +225,107 @@ class ExecutablePlan:
             "total_steps": self.total_steps,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> ExecutablePlan:
+        """Rebuild an ExecutablePlan from :meth:`to_dict` output.
+
+        V3-FIX-335：中断恢复面要求 plan_id / spec.id 跨中断稳定（执行器幂等键
+        以 spec.id 派生，见 executor._execute_step），计划骨架必须能从
+        checkpoint 存档还原为同身份对象。契约：
+        - ``plan_id`` 与每个 spec 的 ``id``/``name`` 是身份字段，缺失即抛
+          ``ValueError``（身份不可再生——由调用方丢弃计划回退既有重规划语义，
+          而不是静默造出新键）；
+        - 未知字段忽略（schema 漂移容忍）、缺失字段取 dataclass 默认值。
+        """
+        if not isinstance(payload, dict):
+            raise ValueError("executable_plan payload must be a dict")
+        plan_id = str(payload.get("plan_id") or "").strip()
+        if not plan_id:
+            raise ValueError("executable_plan payload requires plan_id")
+
+        raw_calls = payload.get("tool_calls")
+        if raw_calls is None:
+            raw_calls = []
+        if not isinstance(raw_calls, list):
+            raise ValueError("executable_plan tool_calls must be a list")
+        tool_calls: list[ToolCallSpec] = [cls._spec_from_dict(raw) for raw in raw_calls]
+
+        source = payload.get("source")
+        collaboration_mode = payload.get("collaboration_mode")
+        fallback_strategy = payload.get("fallback_strategy")
+        execution_order = payload.get("execution_order")
+        circuit_breaker_status = payload.get("circuit_breaker_status")
+        narrative = payload.get("collaboration_narrative")
+        raw_confidence = payload.get("confidence")
+        success_criteria = payload.get("success_criteria")
+        return cls(
+            schema_version=str(payload.get("schema_version") or "5.0"),
+            plan_id=plan_id,
+            context_version=str(payload.get("context_version") or ""),
+            snapshot_id=str(payload.get("snapshot_id") or ""),
+            source=source if source in ("langgraph", "langgraph_fallback", "fast_path", "shadow") else "fast_path",
+            confidence=float(raw_confidence) if isinstance(raw_confidence, (int, float)) else 0.5,
+            rationale=str(payload.get("rationale") or ""),
+            agents_involved=[str(a) for a in (payload.get("agents_involved") or [])],
+            collaboration_mode=(
+                collaboration_mode if collaboration_mode in COLLABORATION_MODE_VALUES else "single"
+            ),
+            collaboration_order=[c for c in (payload.get("collaboration_order") or []) if isinstance(c, dict)],
+            collaboration_narrative=str(narrative) if narrative is not None else None,
+            risk_flags=[str(r) for r in (payload.get("risk_flags") or [])],
+            tool_calls=tool_calls,
+            fallback_strategy=fallback_strategy
+            if isinstance(fallback_strategy, dict)
+            else {"on_validation_fail": "abort", "on_execution_fail": "skip", "on_version_conflict": "replan"},
+            success_criteria=success_criteria if isinstance(success_criteria, dict) else {},
+            circuit_breaker_status=circuit_breaker_status if isinstance(circuit_breaker_status, dict) else None,
+            plan_version=int(payload.get("plan_version") or 1),
+            execution_order=[
+                [str(step_id) for step_id in layer if str(step_id).strip()]
+                for layer in (execution_order or [])
+                if isinstance(layer, list)
+            ],
+            total_steps=int(payload.get("total_steps") or 0),
+        )
+
+    @staticmethod
+    def _spec_from_dict(raw: Any) -> ToolCallSpec:
+        if not isinstance(raw, dict):
+            raise ValueError("executable_plan tool_calls entries must be dicts")
+        spec_id = str(raw.get("id") or "").strip()
+        name = str(raw.get("name") or "").strip()
+        if not spec_id or not name:
+            raise ValueError("executable_plan tool_calls entries require id and name")
+        params = raw.get("params")
+        criteria_raw = raw.get("success_criteria")
+        priority = raw.get("priority")
+        compensation_call = raw.get("compensation_call")
+        output_key = raw.get("output_key")
+        timeout_ms = raw.get("timeout_ms")
+        max_retries = raw.get("max_retries")
+        return ToolCallSpec(
+            id=spec_id,
+            name=name,
+            params=params if isinstance(params, dict) else {},
+            timeout_ms=int(timeout_ms) if isinstance(timeout_ms, (int, float)) else 10000,
+            priority=priority if priority in ("high", "normal", "low") else "normal",
+            allow_retry=bool(raw.get("allow_retry", True)),
+            max_retries=int(max_retries) if isinstance(max_retries, (int, float)) and max_retries is not None else 2,
+            point_of_no_return=bool(raw.get("point_of_no_return")),
+            compensation_call=compensation_call if isinstance(compensation_call, dict) else None,
+            depends_on=[str(dep) for dep in (raw.get("depends_on") or []) if str(dep).strip()],
+            success_criteria=(
+                StepCriteria(
+                    expected_output_keys=[str(k) for k in (criteria_raw.get("expected_output_keys") or [])],
+                    max_duration_ms=int(criteria_raw.get("max_duration_ms") or 30000),
+                    required=bool(criteria_raw.get("required", True)),
+                )
+                if isinstance(criteria_raw, dict)
+                else None
+            ),
+            output_key=str(output_key) if output_key else None,
+        )
+
 
 @dataclass
 class StateSnapshot:

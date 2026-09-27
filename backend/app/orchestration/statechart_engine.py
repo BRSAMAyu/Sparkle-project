@@ -26,6 +26,14 @@ _CHECKPOINT_VOLATILE_CONTEXT_KEYS = {
     "conversation_settings",
 }
 
+# V3-FIX-335：中断恢复语义 = 续跑原尝试。checkpoint 里持久化的 executable_plan
+# 是已通过校验/审查且可能部分执行的权威计划；恢复请求 fresh 侧重跑出的计划
+# （新 plan_id/新 spec.id）会让执行器幂等键（spec.id 派生）全部换新，中断前
+# 已执行的写工具在恢复后重复执行。计划键以 checkpoint 为准（None 清理位除外，
+# 不回填覆盖 fresh 侧正常推进语义）。计划对象还原由 checkpointer 的
+# _restore_executable_plan 完成；旧 checkpoint 无该字段时合并规则不变（回退重规划）。
+_CHECKPOINT_RESUME_PRIORITY_KEYS = frozenset({"executable_plan"})
+
 # RB-11: 容量驱逐白名单——开局写入且不再更新的标识键与运行时依赖键
 # 不得被 MAX_CONTEXT_DATA_KEYS 的 LRU 驱逐淘汰
 _CONTEXT_EVICTION_PROTECTED_KEYS = frozenset(
@@ -391,6 +399,11 @@ class StateGraph:
         merged = fresh_state.clone()
         for key, value in checkpoint_state.context_data.items():
             if key in _CHECKPOINT_VOLATILE_CONTEXT_KEYS:
+                continue
+            if key in _CHECKPOINT_RESUME_PRIORITY_KEYS and value is not None:
+                # V3-FIX-335：存档计划优先于 fresh 重跑计划（键稳定，阻断 duplicate
+                # side effect 通道）；None 清理位不参与优先覆盖。
+                merged.context_data[key] = value
                 continue
             if key in merged.context_data:
                 continue

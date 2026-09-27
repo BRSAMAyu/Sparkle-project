@@ -6,6 +6,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.orchestration.schemas import ExecutablePlan
 from app.orchestration.statechart_engine import WorkflowState
 
 # 已知不可序列化的 context key（PROD-LOG #7）：存档路径上有意注入的运行期依赖
@@ -18,11 +19,15 @@ from app.orchestration.statechart_engine import WorkflowState
 #   - snapshot: execution_engine 注入 StateSnapshotManager.create_snapshot 产物
 #     （StateSnapshot 对象，execution_engine.py:2598）
 #   - executable_plan: LangGraph 计划对象（execution_engine.py:2597 /
-#     standard_workflow.py；清理位写 None 可序列化，故仅计划存活期告警）
+#     standard_workflow.py；清理位写 None 可序列化）。
+#     V3-FIX-335 起该 key 走特例：ExecutablePlan 实例以 to_dict() 骨架入档、
+#     load/load_interrupted 还原为同身份对象（plan_id/spec.id 跨中断稳定），
+#     阻断「恢复后重规划换幂等键 → 写副作用重复执行」通道；非计划值
+#     （None/运行期对象）维持原跳过语义。
 #   - user_context / focused_memory: session_state_mixin.py 合并上下文 dict，
 #     内嵌运行期对象（episodic memories / context_pack 等）序列化必炸
-#   恢复面安全：全部消费点走 .get(...) or 默认值 / 真值判断（standard_workflow
-#   generation_node 等按需重建计划），checkpoint 缺失不破坏恢复路径。
+#   恢复面安全：其余全部消费点走 .get(...) or 默认值 / 真值判断
+#   （checkpoint 缺失不破坏恢复路径）。
 # 清单外的 key 序列化失败仍走 WARNING（可能是该序列化却坏掉的对象，或新增的
 # 运行期依赖——后者确认后登记到此清单）。
 KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS = frozenset(
@@ -41,6 +46,25 @@ KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS = frozenset(
         "executable_plan",
     }
 )
+
+
+def _restore_executable_plan(context_data: dict[str, Any]) -> None:
+    """V3-FIX-335：checkpoint 存档的计划骨架还原为 ExecutablePlan（原地）.
+
+    - dict 形态 → ``ExecutablePlan.from_dict`` 还原（身份字段缺失抛 ValueError）；
+    - 还原失败（损坏/历史存量）→ 丢弃该键，回退既有「缺失即重规划」语义，不崩；
+    - None（清理位）或其他形态 → 维持原值语义不动。
+    """
+    if "executable_plan" not in context_data:
+        return
+    payload = context_data.get("executable_plan")
+    if not isinstance(payload, dict):
+        return
+    try:
+        context_data["executable_plan"] = ExecutablePlan.from_dict(payload)
+    except (ValueError, TypeError) as exc:
+        logger.warning(f"Discarding corrupted executable_plan in checkpoint (falls back to re-planning): {exc}")
+        context_data.pop("executable_plan", None)
 
 
 class RedisCheckpointer:
@@ -68,6 +92,17 @@ class RedisCheckpointer:
         # Filter out non-serializable objects from context
         safe_context = {}
         for k, v in state.context_data.items():
+            if k == "executable_plan" and isinstance(v, ExecutablePlan):
+                # V3-FIX-335：计划骨架随档（to_dict 产物为纯 JSON 值），恢复后
+                # plan_id/spec.id 不变 → 执行器幂等键稳定，同键 replay 兜底。
+                try:
+                    plan_payload = v.to_dict()
+                    json.dumps(plan_payload)
+                except (TypeError, ValueError, OverflowError):
+                    logger.warning("Skipping non-serializable executable_plan params; checkpoint continues without plan")
+                    continue
+                safe_context[k] = plan_payload
+                continue
             if k in KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS:
                 logger.debug(f"Skipping non-serializable context key (known runtime dependency): {k}")
                 continue
@@ -143,6 +178,9 @@ class RedisCheckpointer:
                 is_finished=data.get("is_finished", False),
                 trace_id=data.get("trace_id", "")
             )
+            context = state.context_data
+            if isinstance(context, dict):
+                _restore_executable_plan(context)
             return state
         except Exception as e:
             logger.error(f"Failed to load checkpoint: {e}")
@@ -187,6 +225,9 @@ class RedisCheckpointer:
                 is_finished=data.get("is_finished", False),
                 trace_id=data.get("trace_id", ""),
             )
+            context = state.context_data
+            if isinstance(context, dict):
+                _restore_executable_plan(context)
             node_id = str(data.get("node_id") or "").strip()
             if not node_id:
                 return None
