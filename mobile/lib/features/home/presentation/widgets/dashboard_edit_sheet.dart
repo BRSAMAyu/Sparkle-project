@@ -535,8 +535,6 @@ class _EditableCardTile extends StatelessWidget {
         return context.l10n.dashboardCardCuriosity;
       case DashboardCardIds.longTermPlan:
         return context.l10n.dashboardCardLongTermPlan;
-      case DashboardCardIds.seedLibrary:
-        return context.l10n.dashboardCardSeedLibrary;
       default:
         return cardId;
     }
@@ -562,8 +560,6 @@ class _EditableCardTile extends StatelessWidget {
         return context.l10n.dashboardCardCuriositySubtitle;
       case DashboardCardIds.longTermPlan:
         return context.l10n.dashboardCardLongTermPlanSubtitle;
-      case DashboardCardIds.seedLibrary:
-        return context.l10n.dashboardCardSeedLibrarySubtitle;
       default:
         return '';
     }

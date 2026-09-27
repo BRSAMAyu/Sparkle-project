@@ -78,7 +78,6 @@ Future<void> initializeDashboardTestEnvironment() async {
         DashboardCardIds.tools,
         DashboardCardIds.openClaw,
         DashboardCardIds.curiosity,
-        DashboardCardIds.seedLibrary,
       ],
       layoutMode: DashboardCardLayoutMode.grid,
     ).toJson(),
@@ -321,7 +320,6 @@ class _StaticDashboardCardConfigNotifier extends DashboardCardConfigNotifier {
         DashboardCardIds.tools,
         DashboardCardIds.openClaw,
         DashboardCardIds.curiosity,
-        DashboardCardIds.seedLibrary,
       ],
       layoutMode: DashboardCardLayoutMode.grid,
     );

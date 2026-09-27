@@ -19,7 +19,6 @@ import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart
 import 'package:sparkle/features/home/presentation/widgets/long_term_plan_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/openclaw_hub_card.dart';
-import 'package:sparkle/features/home/presentation/widgets/seed_library_dashboard_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class DashboardCardSection extends ConsumerWidget {
@@ -122,8 +121,6 @@ class DashboardCardSection extends ConsumerWidget {
         );
       case DashboardCardIds.curiosity:
         return DashboardCuriosityCard(compact: true, dense: isGridMode);
-      case DashboardCardIds.seedLibrary:
-        return SeedLibraryDashboardCard(compact: true, dense: isGridMode);
       case DashboardCardIds.longTermPlan:
         return LongTermPlanCard(compact: true, dense: isGridMode);
       default:

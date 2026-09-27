@@ -3,6 +3,11 @@ import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 
 enum DashboardCardLayoutMode { swipe, grid }
 
+/// U-07 / V3-FIX-360：seed_library（LABS）仪表盘卡整体摘册——曾以
+/// `seed_library` 卡常驻 defaultVisible 并可经编辑面板加回，属 wt356
+/// U-07 手术漏网边；现从 all/默认序/默认可见全清单除名（LABS hidden by
+/// default）。旧持久化配置含该 id 时由 fromJson 的 all 过滤诚实降解；
+/// 路由与功能文件不动（LABS 走 unlisted，深链仍落真实面）。
 class DashboardCardIds {
   static const String insights = 'insights';
   static const String focus = 'focus';
@@ -13,7 +18,6 @@ class DashboardCardIds {
   static const String nextActions = 'next_actions';
   static const String curiosity = 'curiosity';
   static const String longTermPlan = 'long_term_plan';
-  static const String seedLibrary = 'seed_library';
 
   static const List<String> all = [
     insights,
@@ -25,7 +29,6 @@ class DashboardCardIds {
     nextActions,
     curiosity,
     longTermPlan,
-    seedLibrary,
   ];
 
   static const List<String> defaultOrder = [
@@ -34,13 +37,14 @@ class DashboardCardIds {
     tools,
     openClaw,
     curiosity,
-    seedLibrary,
     longTermPlan,
     nextActions,
     focus,
     streak,
   ];
 
+  /// 历史序含 seed_library 位；除名后旧配置过滤掉该 id 即与本周表匹配，
+  /// 老用户的既有排序迁移路径保持可用。
   static const List<String> legacyDefaultOrder = [
     focus,
     calendar,
@@ -49,14 +53,12 @@ class DashboardCardIds {
     nextActions,
     curiosity,
     longTermPlan,
-    seedLibrary,
   ];
 
   static const List<String> legacyDefaultVisible = [
     calendar,
     tools,
     curiosity,
-    seedLibrary,
     longTermPlan,
   ];
 
@@ -66,7 +68,6 @@ class DashboardCardIds {
     calendar,
     tools,
     curiosity,
-    seedLibrary,
     longTermPlan,
     openClaw,
   ];

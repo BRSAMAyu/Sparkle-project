@@ -91,6 +91,11 @@ void main() {
         'lib/features/user/presentation/screens/profile_screen.dart',
         'lib/features/user/presentation/screens/unified_settings_screen.dart',
         'lib/features/tools/tool_registry.dart',
+        // V3-FIX-360 补钉：home 仪表盘卡族（wt356 首轮扫描盲区——
+        // seed_library 卡曾 defaultVisible 常驻并可经编辑面板加回）。
+        'lib/features/home/presentation/widgets/dashboard_card_section.dart',
+        'lib/features/home/presentation/widgets/dashboard_edit_sheet.dart',
+        'lib/features/home/presentation/providers/dashboard_card_config_provider.dart',
       ];
       const forbiddenTokens = <String>[
         'TheaterRoutes',
@@ -100,6 +105,9 @@ void main() {
         "push('/theater')",
         "push('/simulation')",
         'context.push(\'/seed-libraries\')',
+        'SeedLibraryDashboardCard',
+        'DashboardCardIds.seedLibrary',
+        'dashboardCardSeedLibrary',
       ];
       for (final path in coreSurfaces) {
         final source = File(path).readAsStringSync();
