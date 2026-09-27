@@ -653,6 +653,29 @@ func (c *Client) GetArbitrationQueueStats(ctx context.Context, req *agentv1.GetA
 	return c.currentAPI().GetArbitrationQueueStats(c.injectMetadata(retryCtx, ""), req)
 }
 
+// GetRequestResult resolves a gateway dedup-window hit into the engine's
+// recorded outcome for the original attempt (V3-FIX-334): completed responses
+// carry the recorded body for replay, running keeps the client waiting,
+// unknown tells the gateway nothing authoritative exists.
+func (c *Client) GetRequestResult(ctx context.Context, req *agentv1.GetRequestResultRequest) (*agentv1.GetRequestResultResponse, error) {
+	start := time.Now()
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().GetRequestResult(outCtx, req)
+	if !shouldReconnect(err) {
+		grpcCallDuration.WithLabelValues("GetRequestResult", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		grpcCallDuration.WithLabelValues("GetRequestResult", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
+		return nil, err
+	}
+	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer retryCancel()
+	resp, retryErr := c.currentAPI().GetRequestResult(c.injectMetadata(retryCtx, req.UserId), req)
+	grpcCallDuration.WithLabelValues("GetRequestResult", statusCodeLabel(retryErr)).Observe(time.Since(start).Seconds())
+	return resp, retryErr
+}
+
 // statusCodeLabel returns a short string label for the grpc status code for metrics.
 func statusCodeLabel(err error) string {
 	if err == nil {

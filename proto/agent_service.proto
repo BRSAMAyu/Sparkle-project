@@ -65,6 +65,13 @@ service AgentService {
 
   // GetArbitrationQueueStats retrieves queue statistics
   rpc GetArbitrationQueueStats(GetArbitrationQueueStatsRequest) returns (GetArbitrationQueueStatsResponse);
+
+  // GetRequestResult resolves a gateway dedup-window hit into the original
+  // attempt's recorded outcome (V3-FIX-334): COMPLETED responses carry the
+  // recorded body for verbatim replay, RUNNING means the engine is still
+  // processing, UNKNOWN means no authoritative record exists and the caller
+  // must fall back to its duplicate-request error.
+  rpc GetRequestResult(GetRequestResultRequest) returns (GetRequestResultResponse);
 }
 
 // ============================================================================
@@ -781,4 +788,42 @@ message MemoryItem {
   float score = 3;
   google.protobuf.Timestamp created_at = 4;
   map<string, string> metadata = 5;
+}
+
+// ============================================================================
+// Request Result Replay (V3-FIX-334)
+// ============================================================================
+
+// RequestResultStatus is the tri-state outcome of a request-result lookup.
+enum RequestResultStatus {
+  // No authoritative record of this request (or no replayable body) — the
+  // caller must keep its duplicate-request fallback behavior.
+  REQUEST_RESULT_UNKNOWN = 0;
+  // The original attempt is still being processed by the engine.
+  REQUEST_RESULT_RUNNING = 1;
+  // The original attempt completed; the recorded response body is attached.
+  REQUEST_RESULT_COMPLETED = 2;
+}
+
+// GetRequestResultRequest identifies a prior chat request by id.
+message GetRequestResultRequest {
+  // Authenticated user id; must match the user-id gRPC metadata the gateway
+  // injects after JWT validation (same SEC-3 rule as StreamChat).
+  string user_id = 1;
+  // Session the request belongs to.
+  string session_id = 2;
+  // The request/message id whose dedup window entry was hit.
+  string request_id = 3;
+}
+
+// GetRequestResultResponse carries the tri-state plus the replayable body.
+message GetRequestResultResponse {
+  RequestResultStatus status = 1;
+  // Final response text when status is COMPLETED (empty otherwise).
+  string message = 2;
+  // Full recorded response body ({"message", "tool_results", "metadata"})
+  // when status is COMPLETED.
+  google.protobuf.Struct payload = 3;
+  // Run ledger trace id when the request is known to the ledger.
+  string trace_id = 4;
 }

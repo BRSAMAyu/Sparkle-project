@@ -352,6 +352,33 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			if !sendChatAccepted(responder, reqID) {
 				return true
 			}
+			// V3-FIX-334: a dedup hit no longer bounces unconditionally — ask
+			// the engine what happened to the original attempt. Completed →
+			// replay the recorded answer; running → the ack above stands and
+			// the client keeps waiting; unknown (or engine unreachable) →
+			// keep the legacy duplicate_request error below as the honest
+			// fallback. Bridge-only: all adjudication happens engine-side.
+			result, resultErr := h.agentClient.GetRequestResult(ctx, &agentv1.GetRequestResultRequest{
+				UserId:    userID,
+				SessionId: input.SessionID,
+				RequestId: reqID,
+			})
+			action, replayText := dedupHitDecision(result, resultErr)
+			switch action {
+			case dedupReplayResult:
+				log.Printf("Replaying recorded result for duplicate request user=%s request_id=%s", hashUserIDForLog(userID), reqID)
+				replayTraceID := ""
+				if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+					replayTraceID = span.SpanContext().TraceID().String()
+				}
+				replay := buildReplayChatResponse(reqID, input.SessionID, replayTraceID, replayText)
+				return !sendReplayChatResponse(ctx, responder, replay)
+			case dedupAckRunning:
+				log.Printf("Duplicate request still running on engine user=%s request_id=%s", hashUserIDForLog(userID), reqID)
+				return false
+			default:
+				log.Printf("No replayable result for duplicate request user=%s request_id=%s", hashUserIDForLog(userID), reqID)
+			}
 			switch r := responder.(type) {
 			case *envelopeResponder:
 				r.SendError("duplicate_request", "Request already accepted; refresh conversation if the response is missing.", false)
@@ -1142,6 +1169,99 @@ func legacyStreamErrorPayload(code, message string, retryable bool, requestID st
 		payload["request_id"] = requestID
 	}
 	return payload
+}
+
+// ── V3-FIX-334: dedup-hit tri-state (replay completed / ack running / fallback) ──
+
+// dedupHitAction is the gateway's bridge-level disposition of a dedup-window
+// hit, derived purely from the engine's GetRequestResult answer. All business
+// adjudication stays in the Python engine; the gateway only forwards.
+type dedupHitAction int
+
+const (
+	// dedupFallbackDuplicate keeps the legacy duplicate_request error: the
+	// engine has no authoritative record (or no replayable body).
+	dedupFallbackDuplicate dedupHitAction = iota
+	// dedupReplayResult replays the recorded answer verbatim under the
+	// original request_id.
+	dedupReplayResult
+	// dedupAckRunning keeps the client waiting — chat_accepted was already
+	// sent and the engine is still processing the original attempt.
+	dedupAckRunning
+)
+
+// dedupHitDecision maps the GetRequestResult outcome onto a dedup disposition.
+// Pure function: any engine error, nil response, unknown status, or a
+// completed status without a usable body degrades to the honest fallback.
+func dedupHitDecision(resp *agentv1.GetRequestResultResponse, err error) (dedupHitAction, string) {
+	if err != nil || resp == nil {
+		return dedupFallbackDuplicate, ""
+	}
+	switch resp.GetStatus() {
+	case agentv1.RequestResultStatus_REQUEST_RESULT_COMPLETED:
+		if message := strings.TrimSpace(resp.GetMessage()); message != "" {
+			return dedupReplayResult, message
+		}
+		// Completed but nothing to replay — do not send an empty answer.
+		return dedupFallbackDuplicate, ""
+	case agentv1.RequestResultStatus_REQUEST_RESULT_RUNNING:
+		return dedupAckRunning, ""
+	default:
+		return dedupFallbackDuplicate, ""
+	}
+}
+
+// buildReplayChatResponse wraps the engine-recorded answer into the same
+// full_text terminal frame shape the normal stream path emits.
+func buildReplayChatResponse(requestID, sessionID, traceID, message string) *agentv1.ChatResponse {
+	now := time.Now()
+	return &agentv1.ChatResponse{
+		ResponseId:   uuid.New().String(),
+		CreatedAt:    now.Unix(),
+		RequestId:    requestID,
+		TraceId:      traceID,
+		SessionId:    sessionID,
+		Content:      &agentv1.ChatResponse_FullText{FullText: message},
+		FinishReason: agentv1.FinishReason_STOP,
+		Metadata:     map[string]string{"is_replay": "true"},
+		EventTime:    timestamppb.New(now),
+	}
+}
+
+// sendReplayChatResponse dispatches a replay frame through whichever responder
+// variant is attached, mirroring the semantic-cache replay path (response +
+// terminal meta). Returns true when the client is still reachable.
+func sendReplayChatResponse(ctx context.Context, responder interface{}, resp *agentv1.ChatResponse) bool {
+	const metaOpFailed = "replay failed before meta"
+	meta := gin.H{"is_replay": true}
+	switch r := responder.(type) {
+	case *envelopeResponder:
+		if err := r.SendChatResponse(resp); err != nil {
+			logWebSocketWriteError(metaOpFailed, err)
+			return false
+		}
+		if err := r.SendMeta(meta); err != nil {
+			logWebSocketWriteError("replay envelope metadata", err)
+			return false
+		}
+	case *protobufResponder:
+		if err := r.SendChatResponse(resp); err != nil {
+			logWebSocketWriteError(metaOpFailed, err)
+			return false
+		}
+		if err := r.SendMeta(meta); err != nil {
+			logWebSocketWriteError("replay protobuf metadata", err)
+			return false
+		}
+	case *wsSafeWriter:
+		if !writeLegacyJSONLogged(r, "replay legacy chat response", convertResponseToJSON(ctx, resp)) {
+			return false
+		}
+		if !writeLegacyJSONLogged(r, "replay legacy metadata", gin.H{"type": "meta", "meta": meta}) {
+			return false
+		}
+	}
+	return true
 }
 
 func estimateTokensFromRunes(runes int) int64 {

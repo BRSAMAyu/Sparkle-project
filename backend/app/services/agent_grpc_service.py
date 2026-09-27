@@ -16,9 +16,10 @@ import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import aclosing
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import grpc
-from google.protobuf.json_format import MessageToDict
+from google.protobuf.json_format import MessageToDict, ParseDict
 from loguru import logger
 from redis.exceptions import RedisError
 from sqlalchemy.exc import SQLAlchemyError
@@ -69,6 +70,70 @@ def _grpc_status_for_chat_error(error_code: int) -> grpc.StatusCode:
         agent_service_pb2.ERROR_CODE_INTERNAL: grpc.StatusCode.INTERNAL,
     }
     return _MAP.get(error_code, grpc.StatusCode.INTERNAL)
+
+
+# ── V3-FIX-334: GetRequestResult 三态（去重命中改返结果/状态） ──────────────
+# 契约常量（与 proto RequestResultStatus 一一对应，纯逻辑层用 str、handler 层映射 pb 枚举）
+REQUEST_RESULT_COMPLETED = "completed"
+REQUEST_RESULT_RUNNING = "running"
+REQUEST_RESULT_UNKNOWN = "unknown"
+
+_REQUEST_RESULT_STATUS_TO_PB = {
+    REQUEST_RESULT_COMPLETED: agent_service_pb2.RequestResultStatus.REQUEST_RESULT_COMPLETED,
+    REQUEST_RESULT_RUNNING: agent_service_pb2.RequestResultStatus.REQUEST_RESULT_RUNNING,
+    REQUEST_RESULT_UNKNOWN: agent_service_pb2.RequestResultStatus.REQUEST_RESULT_UNKNOWN,
+}
+
+
+async def resolve_request_result(
+    *,
+    state_manager: Any,
+    redis_client: Any,
+    session_id: str,
+    request_id: str,
+) -> tuple[str, str, dict[str, Any] | None, str]:
+    """Resolve a previously seen (session_id, request_id) to its tri-state outcome.
+
+    权威源裁决（V3-FIX-334）：**响应缓存为权威源，run ledger 为 fallback。**
+    1. 只有响应缓存（state_manager.get_cached_response，键 (session_id, request_id)
+       等值检索）持有完整回放体 {message, tool_results, metadata}；run ledger 的
+       response_streamed 事件只记 token/cost/finish_reason 元数据（response_builder.py），
+       无最终文本——以 ledger 为回放源会造成「completed 却无内容」的不诚实回放。
+    2. 引擎自身幂等检查（session_state_mixin._check_idempotency）以同一缓存为判据，
+       网关回放内容与引擎本应重放的响应天然同源，不产生第二事实源。
+    3. ledger 会话索引（run_ledger:session:{sid} → trace_id → summary）每 session
+       只保留最新 trace（persist 覆写），仅作 running/归属 fallback：
+       summary["request_id"] 与 summary["session_id"] 双等值命中且 status 未完成
+       → RUNNING；status=completed 但回放体缺失（缓存写失败/已过期）→ UNKNOWN，
+       由网关落回 duplicate_request 兜底（诚实：查不到/不可回放就说查不到）。
+    """
+    # 权威源：响应缓存（completed + 回放体）
+    if state_manager is not None:
+        try:
+            cached = await state_manager.get_cached_response(session_id, request_id)
+        except Exception as exc:  # 缓存读故障不阻断 fallback 判定
+            logger.warning(f"GetRequestResult cache read failed for session {session_id}: {exc}")
+            cached = None
+        if isinstance(cached, dict):
+            message = str(cached.get("message") or "")
+            return REQUEST_RESULT_COMPLETED, message, cached, ""
+
+    # fallback：run ledger 会话索引（running / 归属校验）
+    if redis_client is not None:
+        try:
+            raw_trace = await redis_client.get(RunLedgerStore.session_key(session_id))
+            trace_id = raw_trace.decode() if isinstance(raw_trace, bytes) else str(raw_trace or "")
+            summary = await RunLedgerStore.load_summary(redis_client, trace_id)
+            if summary and str(summary.get("session_id") or "") == session_id:
+                if str(summary.get("request_id") or "") == request_id:
+                    if str(summary.get("status") or "") == "completed":
+                        # 已完成但回放体缺失：无法诚实回放 → 交还网关兜底
+                        return REQUEST_RESULT_UNKNOWN, "", None, trace_id
+                    return REQUEST_RESULT_RUNNING, "", None, trace_id
+        except Exception as exc:  # ledger 读故障按 unknown 处理（诚实）
+            logger.warning(f"GetRequestResult ledger fallback failed for session {session_id}: {exc}")
+
+    return REQUEST_RESULT_UNKNOWN, "", None, ""
 
 
 class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
@@ -535,6 +600,68 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 logger.debug("StreamChat: could not send error response, context already cancelled")
         finally:
             reset_request_user_tier(_request_tier_token)
+
+    async def GetRequestResult(
+        self,
+        request: agent_service_pb2.GetRequestResultRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.GetRequestResultResponse:
+        """V3-FIX-334: 三态解析去重命中的历史请求（completed 回放 / running ack / unknown）。
+
+        业务裁决全部留在 Python 引擎：网关只桥接本 RPC 的结果。
+        """
+        try:
+            raw_metadata = context.invocation_metadata()
+            metadata = dict(raw_metadata) if raw_metadata else {}
+            user_id = self._resolve_authenticated_user_id(metadata, request.user_id)
+
+            if not user_id:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+                context.set_details("user_id metadata is required")
+                return agent_service_pb2.GetRequestResultResponse()
+
+            session_id = (request.session_id or "").strip()
+            request_id = (request.request_id or "").strip()
+            if not session_id or not request_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("session_id and request_id are required")
+                return agent_service_pb2.GetRequestResultResponse()
+
+            status, message, payload, trace_id = await resolve_request_result(
+                state_manager=getattr(self.orchestrator, "state_manager", None),
+                redis_client=getattr(self.orchestrator, "redis", None),
+                session_id=session_id,
+                request_id=request_id,
+            )
+            logger.info(f"GetRequestResult - user={user_id} session={session_id} request={request_id} status={status}")
+
+            response = agent_service_pb2.GetRequestResultResponse(
+                status=_REQUEST_RESULT_STATUS_TO_PB[status],
+                message=message,
+                trace_id=trace_id,
+            )
+            if payload is not None:
+                try:
+                    ParseDict(payload, response.payload)
+                except (TypeError, ValueError, AttributeError) as exc:
+                    # 回放体无法映射为 Struct：降级为 message-only completed（正文已随 message 携带）
+                    logger.warning(f"GetRequestResult payload parse failed for request {request_id}: {exc}")
+            return response
+        except ValueError as e:
+            # R5-P0-2: 显式拒绝两种违规——请求体带 user_id 但缺认证元数据（UNAUTHENTICATED）、
+            # 请求体 user_id 与网关认证身份不符（PERMISSION_DENIED，伪造）。
+            logger.opt(exception=True).warning(f"GetRequestResult auth rejected: {e}")
+            if "spoofing" in str(e):
+                context.set_code(grpc.StatusCode.PERMISSION_DENIED)
+            else:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+            context.set_details(str(e))
+            return agent_service_pb2.GetRequestResultResponse()
+        except Exception as e:
+            logger.opt(exception=True).error(f"GetRequestResult error: {e}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details("Internal error")
+            return agent_service_pb2.GetRequestResultResponse()
 
     async def SubmitResponseFeedback(
         self,

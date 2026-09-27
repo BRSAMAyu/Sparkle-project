@@ -47,6 +47,13 @@ STATE_FAILED = "FAILED"
 _FSM_ALL_STATES = {STATE_INIT, STATE_THINKING, STATE_GENERATING, STATE_TOOL_CALLING, STATE_DONE, STATE_FAILED}
 _FSM_ACTIVE_STATES = _FSM_ALL_STATES - {STATE_DONE, STATE_FAILED}
 
+# V3-FIX-334: 响应缓存 TTL 必须覆盖网关去重窗（1h）——此前默认 300s 短于去重窗，
+# 同 request_id 在引擎侧完成 5 分钟后重发时既被网关去重弹回、又无可回放缓存，
+# GetRequestResult 三态查询只能诚实返回 unknown。统一常量来源：全部写侧调用
+# （session_state_mixin._cache_response、execution_engine、orchestrator 共 7 处）
+# 均走 cache_response 默认值，无一处覆写。
+RESPONSE_CACHE_TTL_SECONDS = 3600
+
 _VALID_TRANSITIONS: dict[str, set[str]] = {
     STATE_INIT: set(_FSM_ALL_STATES),
     STATE_THINKING: _FSM_ACTIVE_STATES | {STATE_DONE, STATE_FAILED},
@@ -513,7 +520,9 @@ class SessionStateManager:
             pass
         logger.debug("Stopped lock renewal task")
 
-    async def cache_response(self, session_id: str, request_id: str, response: dict[str, Any], ttl: int = 300) -> bool:
+    async def cache_response(
+        self, session_id: str, request_id: str, response: dict[str, Any], ttl: int = RESPONSE_CACHE_TTL_SECONDS
+    ) -> bool:
         """
         缓存完整响应（用于幂等性和断点续传）
 
@@ -521,7 +530,8 @@ class SessionStateManager:
             session_id: 会话 ID
             request_id: 请求 ID
             response: 响应数据
-            ttl: 缓存过期时间（秒），默认 5 分钟
+            ttl: 缓存过期时间（秒），默认 RESPONSE_CACHE_TTL_SECONDS（3600，
+                对齐网关去重窗 1h，见 V3-FIX-334）
 
         Returns:
             bool: 是否成功
