@@ -2,8 +2,8 @@
 
 > **文档契约**：V4 设计者只看这一份文档做判断。因此本文档承载：V3 真实意图、全部实施细节、完成度证据、已知问题与诚实边界。持续更新（协调会话每轮维护），版本号+日期在文首。**本文档只写有三源证据（git 主干 SHA / 独立审查 receipt / 运行级实测）支撑的事实；推测与待验证项显式标注。**
 >
-> **当前版本**：v0.5（2026-09-28 03:05——A/J/U/P/S/G 六线并入（11/13 线完成）；A-08 终态数字修正为 V4 关键输入；O/Q 收官批在航）
-> **维护者**：Sparkle v3 舰队协调会话（主会话）｜**权威数据源**：v3/.sparkle_v3_fleet_state.json notes 流、v3/07_tasks/tasks.json（99→100/107 已核正）、v3/06_agent_fleet/DYNAMIC_ISSUES.md（FIX 台账 339 行）
+> **当前版本**：v0.7（2026-09-28 04:20——P0 勘正轮：文首元数据/§3 头条/线数 13→14/§5§9 台账口径统一/A-08 臂名补全；v0.6 已达 14 线全深挖）
+> **维护者**：Sparkle v3 舰队协调会话（主会话）｜**权威数据源**：v3/.sparkle_v3_fleet_state.json notes 流、v3/07_tasks/tasks.json（102/107 已核正）、v3/06_agent_fleet/DYNAMIC_ISSUES.md（FIX 台账 364 行，口径=状态格行首枚举）
 
 ---
 
@@ -18,7 +18,7 @@
 
 **一句话**：三层架构 AI 学习成长系统（Flutter Mobile → Go Gateway :8080 → Python AI Engine gRPC :50051 + FastAPI :8000；PG16+AGE+pgvector/Redis/MinIO/Celery）的参赛冲刺版本——把「AI 陪伴学习成长」从可用推向可交付的产品完整度。
 
-**V3 的核心主张（来自 MASTER_DESIGN 与卡面体系，107 卡 13 条产品线）**：
+**V3 的核心主张（来自 MASTER_DESIGN 与卡面体系，107 卡 14 条产品线（tasks.json stream 权威口径；文档早期误记 13，v0.7 勘正））**：
 1. **主链**：任务卡住 → 澄清/用户纠正 → 实际任务改变 → 重开后可见 → 完成反馈（学习成长的真实闭环，不是聊天玩具）
 2. **Human/Agent/Hybrid 执行模型**：AI 降摩擦但不偷走目标（J-06 旗舰旅程；X 线 ActionPlan 契约族）
 3. **Aurora 受限自适应**：有边界的个性化（A 线 8 卡：决策契约/干预目录/摩擦诊断/有界策略补丁）
@@ -47,7 +47,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 ## 3. 107 卡全景与完成度
 
-**当前：100/107 done（93.5%）**。三源核验已完成（wt759，2026-09-28）：15 张三源齐 + 84 张销账核正 + S-01（wt763 独立审查 APPROVE）。
+**当前：102/107 done**。三源核验（wt759，2026-09-28）：15 张三源齐 + 84 张销账核正；此后 S-01（wt763 APPROVE）→100、O-05（wt782 APPROVE+销账前置全履）→102。余 5 张见下表。
 
 **剩余 5 张（102/107，2026-09-28 03:42）**：
 | 卡 | 状态 | 阻塞点 |
@@ -60,7 +60,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 已销账补记：O-06（wt765 交付+wt771 审查 APPROVE，ops 面 OPS_SURFACE.md）｜O-05（wt773 交付 1680d16c+wt782 独立审查 APPROVE：14/14+变异 M1/M1b/M2/M4 红、CLI e2e rc=1；销账前置全履——被撞号顶丢的 FIX-504 行补登为 FIX-531、FIX-505 范围纠偏（prod compose 已 `--dir /data`，真错位面=dev compose；AOF yes+RDB-only backup 新残差转 ops）、FIX-532 审查附带四项登记）。
 
-**各线完成度**（13 线全量表见 wt759 报告）：A 线 8/8｜B 线 6/6｜C 线 8/8｜D 线 6/8（D-07/D-08 已销账✓ 实为 8/8——待复核）｜E 线 7/8｜G 线 5/5｜J 线 7/8｜M 线 10/10｜O 线 6/7（O-05/O-06 已销账；余 O-01 卡 TCC）｜P 线 6/6｜Q 线 6/8（Q-04 诚实 FAIL 形态计 done，修而不复跑见 §4 Q 线）｜S 线 5/5｜U 线 10/10｜X 线 10/10
+**各线完成度**（14 线全量表见 wt759 报告）：A 线 8/8｜B 线 6/6｜C 线 8/8｜D 线 6/8（D-07/D-08 已销账✓ 实为 8/8——待复核）｜E 线 7/8｜G 线 5/5｜J 线 7/8｜M 线 10/10｜O 线 6/7（O-05/O-06 已销账；余 O-01 卡 TCC）｜P 线 6/6｜Q 线 6/8（Q-04 诚实 FAIL 形态计 done，修而不复跑见 §4 Q 线）｜S 线 5/5｜U 线 10/10｜X 线 10/10
 （⏳ 此表 v0.2 将逐线复核修正——D 线两卡的销账依据需重列）
 
 ## 4. 各线深度状态（⏳ v0.1 仅骨架，随轮次逐线深挖填充）
@@ -69,22 +69,22 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 - **B 线 Baseline（6/6，已深挖，详章 v3-output/WT769-DOC-BC/B-line.md）**：V3 诚实性红线第一执行者——4 张零产品码审计卡+2 张 harness 卡；B-02 直接/间接催生 FIX-01/256/257/258/329-331，B-06 催生 FIX-259/260/275/276/289/291/356。B-01 重开为 759 模块四态审计（690 ALIVE/55 PARTIAL/12 DEAD/2 ORPHAN）。**残差**：B-02 红测未入库（reviewer 已抓）；FIX-256/290/291/385 OPEN；community_context_boundary 528 行零生产 import（orphan-by-design 豁免——**V4 群 AI 面必须接线**）；B-05 成本表/能力矩阵为旧时点。
 - **C 线 Context（8/8，已深挖，详章 v3-output/WT769-DOC-BC/C-line.md）**：10 个模块主干生产消费方逐一亲证**全活**，有跨卡复用网（J-06 复用 citation_markers 做 503 诚实失败）；13 测试文件 235 测试函数。**「就绪未激活」面（交付时如实留白，非缺陷）**：C-05 冲突定向澄清参数在但 validation_engine.py:361 未传（开文件亲证）；C-08 消融为 mock hermetic（56 场景×4 臂）真模型效用未做；C-01 proto 零触碰→跨语言 parity 未发生。
-- **A 线 Aurora（8/8，已深挖，详章 v3-output/WT774-DOC-AJ/A-line.md）**：逐卡 SHA 全链主干亲证。**A-05 边界机制五层硬约束面开文件亲证**（六面白名单 sha256 双钉——「改 prompt/代码/模型参数」无合法 surface 名走不到任何写路径、payload 键值双封闭、patch 仅作确定性决策输入、生命周期状态机封闭、证据门只认真源；策略版本进缓存键）。**A-08 四臂终态（V4 最重要发现之一）**：方法论可信（真实服务面+确定性判据+judge 0 次+--verify-repro），但**修后终值=0.45/0.55/0.45/0.30 且 no_memory 臂（accuracy 0.55、效用 0.0）双指标反超 full（0.45/−9.2）——模拟人口上记忆面净贡献为负**（早前流传的 0.65 vs 0.30 是修前值）。A-06 Why-this 数据流真实（真实检索 receipt 驱动，零新写路径）。残差：shadow/live 对比机制在库但零次真实运行记录。
+- **A 线 Aurora（8/8，已深挖，详章 v3-output/WT774-DOC-AJ/A-line.md）**：逐卡 SHA 全链主干亲证。**A-05 边界机制五层硬约束面开文件亲证**（六面白名单 sha256 双钉——「改 prompt/代码/模型参数」无合法 surface 名走不到任何写路径、payload 键值双封闭、patch 仅作确定性决策输入、生命周期状态机封闭、证据门只认真源；策略版本进缓存键）。**A-08 四臂终态（V4 最重要发现之一）**：方法论可信（真实服务面+确定性判据+judge 0 次+--verify-repro），但**修后终值=accuracy 0.45/0.55/0.45/0.30（臂序 full/no_memory/no_experience/fixed_policy；效用 full −9.2/fixed −24.8）且 no_memory 臂（0.55、效用 0.0）双指标反超 full（0.45/−9.2）——模拟人口上记忆面净贡献为负**（早前流传的 0.65 vs 0.30 是修前值）。A-06 Why-this 数据流真实（真实检索 receipt 驱动，零新写路径）。残差：shadow/live 对比机制在库但零次真实运行记录。
 - **J 线 Journey（7/8 交付+J-02 PARTIAL，已深挖，详章 v3-output/WT774-DOC-AJ/J-line.md）**：**七段验证深度分层**——真驱动=J-01（macOS 真后端 5 persona+101 截图）/J-03/J-05（真模拟器 32 截图）/JOURNEY 日循环；J-04/J-06 的「真实」在工具链层（真实 ToolExecutor+真实检索零 mock），独立真模型运行记录未定位；三端实机全线转 HUMAN_INBOX。**JOURNEY 门循环（M1-M4）验证的是 J-03 面+任务生命周期日界闭环，不含 J-04~J-08 旗舰旅程——V4 引用时不得扩展口径**。J-01 机会图：5/11 项已修、6 项（O2/O4/O6-O9）如实留白零台账跟踪（O6 备考文案仍在主干）。J-02=PARTIAL（工程面合格，唯一缺口卡面明列 simulator 实测，补证卡排门后）。
 - **M 线 Memory（10/10，已深挖，详章 v3-output/WT770-DOC-MX/M-line.md）**：Memory Epoch/Provenance 是**真实数据流**（代码亲验）——M-01 契约模块派生五型/七态/scope（唯一新列 epistemic_class/superseded_by_id/epoch）；M-07 统一失效管线四动作（状态+审计+epoch bump+memory.invalidated 事件）**同事务原子**，读侧 epoch 门 fail-closed，「删偏好永久复活」主通道关闭（红→绿实证）；M-08 `/memory/provenance/*` 七路由+why-this 按 receipt 查；M-10 chat 回执深链+五面客户端级联失效。**M-09 是缺陷发现器**：真模型探针（qwen3.8-flash 真实 API 25 次硬预算）4/5 稳定通过、P01-D1 0/5 实锤 FIX-36（渲染器不渲染偏好值）；82-case 门禁曾 RED 20 失败实锤 FIX-35——双 P1 均修，门禁现 82/82。关键取舍：语义层（存储门/自检）默认关，生产决策面=规则层；生产降档率 66.67% 由 M-05 主导。M 线核心 273 用例实跑绿。
 - **X 线 Action（10/10，已深挖，详章 v3-output/WT770-DOC-MX/X-line.md）**：X-01 契约（43942d23）→X-10 E2E（3b5a99bc，含 X-05B/P2 增量）。**Human/Agent/Hybrid 真模型证据面分层**：85 场景盲评与 X-10 77 场景（77/77、allocation 100%、high-risk auto=0、false success=0）均为规则层+服务层（`real_llm_calls=0` 显式断言）；**真模型证据**在 E-04 五面探针（收敛轮 15/15 含注入对抗）、J-04（LLM 建议 agent 被分配策略拦回=学习守卫生效）、J-06（真实 ToolExecutor 检索零 mock）、JOURNEY day1-6 真驱动；三端实机转 HUMAN_INBOX。**V4 教材级考古**：X-06 合入当日 chat 管道 100% 断（models `__init__` 漏注册，热修 f2e9f22e）——大改后冒烟必须当日；幂等洗白三轮修复链（FIX-40→417→447）；FIX-330 裁定 AgentRun/AgentToolCall/outcome_ledger 为生产三账本。X 线核心 403 用例实跑绿。
 - **D 线 Data（8/8，已深挖，详章 v3-output/WT776-DOC-DE/D-line.md）**：契约先行、读模型优先。D-01 词表 40 名 sha256 本档独立复算吻合（29 live/10 reserved/1 observed_unregistered 诚实设计）；D-03 五维真实表聚合+celery beat 在册；D-07 三类洞察卡 **goal-progress 有真数据、friction/helped 结构就绪生产零数据**（供给断链=FIX-507）；PredictiveInsightsCard 假精确面整体删除；D-08 双臂配对闭环 10/10+`--verify-repro` 可复算。
 - **E 线 AI（7/8+E-08，已深挖，详章 v3-output/WT776-DOC-DE/E-line.md）**：**证据必须按真模型/规则层/结构就绪三层分开看**——E-04 是真模型证据最厚卡（收敛 15/15+注入三修）；E-03 三段收口（部分达成→FIX-439 裁决 b 字面收窄→残差移交 E-08）。**E-08 完整性能图景**：修前=wt372 104 条 bench（L3 TTFT p95 113s、tier 塌缩 85/85、SLO 2/6）；已修=tier 塌缩+计量盲区+L3-ACK（400 样本 0.06s）；未修=L0 直答缺位/L2 total ~48s；复测路径=Q-06 同构 bench+wt755 集成后重采。
 - **U 线 UI（10/10，已深挖，详章 v3-output/WT775-DOC-UPSG/U-line.md）**：L2 双审查 APPROVE 达成；L4 闸门面达成但**注册表仅 8 seam**（chat/galaxy 主屏未接闸）；L5=headless 契约层（11 用例+允许差异表），**45 张真机截图矩阵是就绪清单非已采集证据**。DS.* 约束力=守卫冻结型（22,129 处引用+双 ratchet）；chat 余 80 处 fontSize 字面量存量未迁移。GOV-015/WS6 删除（~3,958 行）全是未接线孤儿面，UI 健康度无损。
-- **P 线 Proactive（6/6，已深挖）**：**双通道并存**——nudge 家族（真投递）vs P-01 事件管线（已接线但 shadow 默认无环境翻面）。P-01/P-02 数据流全链亲证（7 触发器×10 事件→fail-closed 抑制→四问相关性封闭词表→Prometheus 审计）；零 LLM 是 import 面级红线。P-05 效应量级=seeded persona 模型不可外推真人。
-- **S 线 Community（5/5，已深挖）**：S-01 五面真相（M-3 消解、实时走引擎内 ConnectionManager——**多实例是 V4 第一个重设计点**、CQRS community 投影零生产者=FIX-495 三路裁量素材）；S-02 红线守卫在库，orphan-by-design 豁免移除条件=群 AI 面接入（V4 义务）。
-- **G 线 Galaxy（5/5，已深挖）**：星图三路写入亲证——**主流量（任务完成 spark）仍走 legacy 时间公式封顶 40**；outcome 走 Kalman（TASK_OUTCOME 0.6/SELF_REPORT 隔离/TIME_ON_TASK 0）；「证据地图」主张真实但打折——**把 X-01 completion evidence 分型接进完成链是 V4 最低成本杠杆**。AGE 真实使用=GraphRAG 读侧活+graph_sync 消费者活，但写侧镜像零生产流量；outcome 撤销→已吸收效果回滚未闭环。
+- **P 线 Proactive（6/6，已深挖，详章 v3-output/WT775-DOC-UPSG/P-line.md）**：**双通道并存**——nudge 家族（真投递）vs P-01 事件管线（已接线但 shadow 默认无环境翻面）。P-01/P-02 数据流全链亲证（7 触发器×10 事件→fail-closed 抑制→四问相关性封闭词表→Prometheus 审计）；零 LLM 是 import 面级红线。P-05 效应量级=seeded persona 模型不可外推真人。
+- **S 线 Community（5/5，已深挖，详章 v3-output/WT775-DOC-UPSG/S-line.md）**：S-01 五面真相（M-3 消解、实时走引擎内 ConnectionManager——**多实例是 V4 第一个重设计点**、CQRS community 投影零生产者=FIX-495 三路裁量素材）；S-02 红线守卫在库，orphan-by-design 豁免移除条件=群 AI 面接入（V4 义务）。
+- **G 线 Galaxy（5/5，已深挖，详章 v3-output/WT775-DOC-UPSG/G-line.md）**：星图三路写入亲证——**主流量（任务完成 spark）仍走 legacy 时间公式封顶 40**；outcome 走 Kalman（TASK_OUTCOME 0.6/SELF_REPORT 隔离/TIME_ON_TASK 0）；「证据地图」主张真实但打折——**把 X-01 completion evidence 分型接进完成链是 V4 最低成本杠杆**。AGE 真实使用=GraphRAG 读侧活+graph_sync 消费者活，但写侧镜像零生产流量；outcome 撤销→已吸收效果回滚未闭环。
 - **O 线 Ops（6/7 done，已深挖，详章 v3-output/WT779-DOC-OQ/O-line.md）**：**就绪度必须三层分开看，混读会高估**——机制层（O-02/03/04/07 四卡 09-21 R2 PASS+O-06 双审查链，O+Q 线 445 用例本次实跑绿）＞演练层（O-06 真栈 shadow 回滚、O-05 一次性容器栈——全 localhost 形态，staging 级演练从未发生）＞生产部署层（O-01 零交付，卡用户 TCC 凭据 H-002；/tmp 弹药易失，工程面准备度其实很高：compose.prod+deploy 六脚本在库）。**O 线是全舰队供血最多的被依赖线**：O-04 entitlement 判官被 O-07 budget_matrix 消费、O-07 背压/安全错误面是 Q-06 修复落点基底、O-06 release manifest 是 Q-08 RC 前身、O-05 INV-1..7 是 Q-07 现成判据——V4 裁撤任何面前先查依赖网。O-02 trace 脊柱 9 阶段+finish-in-finally 亲证在位，但运行级 GJ 重建证据全库缺一口；O-04 双侧单一判官且 D-REDEEM 扩展存活；O-06 是唯一走完「审查抓真运行级缺陷→补丁→APPROVE」全链的卡；**O-05 重大发现=备份链此前静默失效**（MinIO 容器无 tar→cron 夜备份从未产出完整包；restore 曾吞 2156 SQL 错=假成功），已修+INV 校验器+GJ03 11/11 演练（详见 FIX-531/505/532 行）。
 - **Q 线 Quality（6/8 done，已深挖，详章 v3-output/WT779-DOC-OQ/Q-line.md）**：终验执行器三特点——①**「诚实 FAIL」是合法交付形态且已行使两次**（Q-04 总判定 FAIL：precision 0.0/invalid 硬门×10/overpersonalization 41.67%/uplift 0.0pp 原样交付；Q-02 首轮 13 PASS/6 FAIL/1 RESTRICTED、0 waive 全转动态卡）——全库诚实性教义最重的两个样本；②**「修而不复跑」是 Q 线最大结构残差**：Q-02/Q-04 全部修复已闭账但两卡均无修复后全量重跑，终态=首轮诚实判定+逐缺陷修复+局部复验/锁级证据——Q-08 终门必须显式三选一裁决（补全量重跑/按锁级证据判/如实判 NOT_REMEASURED，驱动都在库可复跑）；③证据形态好于 D/E 线（四产物目录在库、台账零死链）。Q-01 260 场景亲数（integration 54/model 122/simulator 84，V3-001..260 无缺无重）且 **verdict_semantics=contract-simulation 钉死——「260 全绿」≠「产品全绿」**，model 型走 mock-provider、simulator 型是 stub，证据强度按路由分层；Q-06 L3-ACK 400 样本 7.03s FAIL→0.06s 转、SLO 4/6（L0/L2 FAIL=E-08 族未修）。**Q-04 uplift 0.0pp+A-08 no_memory 双指标反超=两个独立 eval 同向：记忆/个性化面净贡献未证明为正——V4 最重负面输入，任何「越用越懂我」叙事必须先回答这两个数字**。Q-07/Q-08 执行计划已草案（DoD V3-0..V3-10 逐 gate 证据图+四个预裁决项+release-manifest 缺 git SHA 缺口；FIX-530 系 Q-07 直接前置缺陷建议先修）。
 
 ## 5. 质量与可靠性态势（FIX 台账模式学）
 
-**台账规模**：V3-FIX-001→532（362 行，FIXED 273——详 §9）。**零假账纪律**贯穿：每个 FIXED@ 指针经「集成即纠指」指向主干可达 SHA。
+**台账规模**：V3-FIX-001→534（364 行，FIXED 273/OPEN 60/CLOSED 3/WONTFIX 1+27 行旧格式自由态——口径=状态格行首枚举机器可复算，与 §9 同口径）。**零假账纪律**贯穿：每个 FIXED@ 指针经「集成即纠指」指向主干可达 SHA。
 
 **修复族谱（暴露的系统性弱点与已收口状态）**——这是 V4 最应读的一节：
 1. **竞态/并发族**（全收口）：UserStreakStats 三入口（451/457/467+479，uuid5 同源三件套+PG 实证）；aurora 融合跨进程锁（418）；状态估计 claim（193）
@@ -108,7 +108,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 **待产品/用户裁量**：FIX-495（community post CQRS 闲置接线：零生产者零消费者，S-01 证实现状实时走引擎内进程——裁决建议：留档 post-RC 接线或拆除）；EXACT 带 8 草稿键（chatConfidence×3/chatCompletion×5）；FIX-465 已裁决派修中。
 **等用户解锁**：H-001~009（HUMAN_INBOX：FIX-293 生产回填、云端 TCC、Dependabot #111-113、T36 B/D、49 冻结键、FIX-97/290、FIX-189 env 审计；**H-009=真机段汇总行**——U-09 45 张矩阵/G-05 FPS 批/U-08 a11y/B-04 走查/U-06 simulator 段/WT394 波次箱等 10 子项，wt783 回填、20 锚点零死指针，详 v3-output/WT783-HUMANINBOX/notes.md）。
 **技术债登记**：KNOWN_CODE_DEBT_LEDGER（动统计/排行榜/card_protocol 前先读）；FIX-443③ stage34 死绑定（稳定性优先缓修）；FIX-375/379②③（post-10/4 结构性）。
-**挂起待集成**：wt755 分支 938e845c（E-08 SLO L0，热路径门后集成；其新登记撞号项改 498）。
+**挂起待集成**：wt755 分支 938e845c（E-08 SLO L0，热路径门后集成；其新登记撞号项改 498——**预编号**，集成时才建行，当前无台账行非断链；wt785 预审 APPROVE 含重编号三处同步点）。
 
 ## 8. 诚实边界（V4 设计者必读）
 
@@ -123,7 +123,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 - **代码规模**：手写生产 ~113.5 万行——backend/app 1,356 文件/533k 行；mobile/lib 手写 1,187 文件/564k 行（排除 vendored 与生成物）；gateway 105 文件/38k 行（+141 测试文件 27k 行）。测试文件：backend 1,443 + gateway 141 + mobile 518。
 - **模块依赖**：35 顶层包/192 边/34 对双向依赖；最重边 services→core 314、services→models 310；**core↔services 双向对是 V4 分层解环首批对象**。
 - **测试分布**：backend/tests 收集 **13,799 用例 0 错误**（unit 占 70.8%）；tests_e2e 36+1 收集错误（死文件 FIX-528）；gateway 746 测试函数；flutter 2,628（静态）。测量卫生：worktree 需先补 gen 否则数字失真。
-- **FIX 台账**：360 条数据行，**FIXED 270（75%）/OPEN 58/CLOSED 3/WONTFIX 1**+27 行旧格式自由态备忘；P0 5/5 全闭；P1 OPEN 仅 **FIX-530**（engine FastAPI 进程被 Redis 瞬时断连杀死——billing 消费循环异常上抛整进程退出，2026-09-28 03:02 实录死亡 30 分钟，心跳探活抓获，已复活+门后派修；「唯一 OPEN P1=FIX-53」系 FIX-53 行混合状态格机器误报，FIX-512 已当场纠指收口）；底重金字塔（P3 占 44%）。热点 top10：services 90、mobile 68、models/orchestration 各 45…（V4 债务治理地理图）。
+- **FIX 台账**：364 条数据行，**FIXED 273（75%）/OPEN 60/CLOSED 3/WONTFIX 1**+27 行旧格式自由态（计数口径=状态格行首枚举，机器可复算：awk -F'|' 取 NF-1 首词）；P0 5/5 全闭；P1 OPEN 仅 **FIX-530**（engine FastAPI 进程被 Redis 瞬时断连杀死——billing 消费循环异常上抛整进程退出，2026-09-28 03:02 实录死亡 30 分钟，心跳探活抓获，已复活+门后派修；「唯一 OPEN P1=FIX-53」系 FIX-53 行混合状态格机器误报，FIX-512 已当场纠指收口）；底重金字塔（P3 占 44%）。热点 top10：services 90、mobile 68、models/orchestration 各 45…（V4 债务治理地理图）。
 - mypy **55**（本日 922→70→55：wt777 集成 −6 + wt778 批十一 −15，合并态冷缓存实测与台账逐数对账；CI 侧基线 380 平台代际差待 CI 实数对齐）；卡片 **102/107**（O-05 已销账：wt782 独立审查 APPROVE+前置全履）；本地栈三容器 healthy、gateway 200+engine /health 200（engine 03:02 曾死 30 分钟已复活，见 FIX-530；生产部署 N/A）。
 
 ## 10. V4 设计建议输入（⏳ v0.2 起充实）
@@ -138,6 +138,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 ## 更新日志
 
+- v0.7（2026-09-28 04:20）：**P0 勘正轮**（wt787 冷读审计 34 条中 P0=5 全修）：①文首元数据 v0.5→v0.7 与全文对齐（102/107、364 行）；②§3 头条 100/107→102/107（wt759 时点数未标时点的病）；③**线数 13→14**（tasks.json stream 权威=14，「13 条产品线」系计数错误，历史更新日志原文保留不回改）；④§5/§9 台账数字统一为同口径 364 行 FIXED 273/OPEN 60（并写明机器可复算口径）；⑤A-08 四臂终值补臂名与指标口径（照抄 A-line.md:146 原始锚）。附修：FIX-498 标注预编号非断链、P/S/G 详章补链接。P1=14/P2=15 清单见 v3-output/WT787-DOCAUDIT/report.md（门后打磨轮执行）。
 - v0.6（2026-09-28 03:54）：**13/13 线深挖全部完成**——O/Q 收官章并入（wt779 五源逐卡核验：主干 SHA 祖先亲证+代码开文件+O/Q 线 445 用例实跑绿+产物抽读+台账逐行复核）。§3 修正 Q 线实为 6/8（Q-01~Q-06 全有交付；「Q 线 1/8」系陈旧口径）。**FIX-512 当场收口**：FIX-53 行「OPEN 补记FIXED@」混合状态格系机器误报源，「唯一 OPEN P1=FIX-53」不成立——收口后 **P1 OPEN 仅剩 FIX-530**。FIX-511 闭账（wt783：H-009+10 子项入中央箱，20 锚点零死指针，补漏 5 组含 WT394 波次箱全量）。新登 FIX-513（42 feature portfolio 双真源词表分裂——DoD 五态 vs MODULE_PORTFOLIO 扩展词表，V3-0「唯一状态」文档层不可直接满足，Q-08 前须裁决）/FIX-514（O-05 交付 commit 幻影号勘误：号 504/520 均无效，检索锚=commit 1680d16c 本体）。台账终态 362 行 FIXED 273。
 - v0.5.1（2026-09-28 03:42）：**O-05 销账→102/107**（wt782 独立审查 APPROVE 附前置全履：FIX-531 补登被撞号顶丢行 FIXED@1680d16c、FIX-505 范围纠偏 dev compose+AOF 新残差、FIX-532 四项附带登记）；wt781（FIX-506 演示群标记）+wt778（mypy 批十一 76→61）集成收口，**合并态 mypy 55**（70−15 逐数对账）；**FIX-530 登记**（engine 03:02 被 Redis 瞬时断连杀死、30 分钟后心跳抓获复活——单进程栈可用性单点，V4 需进程守护）；合并态测试 288 过+1 环境错配归因（integration 套件 PG 预建 schema 口径，conftest:58 create_all 注释在案）。
 - v0.1（2026-09-28 03:00）：首版。骨架+当日三源核验快照+FIX 族谱初版+诚实边界。各线深挖章节标注 ⏳ 待填充。
