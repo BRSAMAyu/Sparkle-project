@@ -3,6 +3,7 @@
 - 会话：wt758（v3 航道实现 Agent）
 - 日期：2026-09-28
 - 分支：`agent/node-b/wt758/proxy`（worktree `/Users/brsama/code/GitHub/Sparkle-sysrev/wt758-proxy`，base main@878019fb，含 wt756 的 480 修后判据）
+- 修复 commit：`457f2f56`（代码+测试+本 notes）；台账 FIXED 登记 457f2f56 随后一 commit
 - 证据输入：v3-output/WT748-REVIEW/verdicts.md §焦点2 (b)(c)(d) + probe_proxy.py/log、台账 `v3/06_agent_fleet/DYNAMIC_ISSUES.md` 482/483/484 行
 - 纪律：主线仓只读；不碰 docker/运行栈/.env；不 push；gen/ 以 `cp -RL` 自主线仓补齐（构建产物不入库）
 
@@ -75,4 +76,4 @@
 - 代码：`backend/gateway/internal/handler/websocket_proxy.go`、`backend/gateway/cmd/server/setup.go`
 - 测试：`backend/gateway/internal/handler/websocket_proxy_forwarded_test.go`（新）、`websocket_proxy_test.go`（重钉 2）、`backend/gateway/cmd/server/setup_trusted_proxies_test.go`（新）、`backend/tests/core/test_forwarded_segment_validation.py`（新）、`backend/tests/core/test_rate_limit_real_ip.py`（重钉 1）
 - 文档：`backend/app/core/rate_limiting.py` docstring 契约声明（482 修后 websocket_proxy 声明为真；X-Real-IP 残留声明删除）
-- 台账：`v3/06_agent_fleet/DYNAMIC_ISSUES.md` 482/483/484 行 OPEN → FIXED@<worker commit>（随台账 commit 登记）
+- 台账：`v3/06_agent_fleet/DYNAMIC_ISSUES.md` 482/483/484 行 OPEN → FIXED@457f2f56（随台账 commit 登记）
