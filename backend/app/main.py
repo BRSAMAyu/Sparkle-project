@@ -1003,6 +1003,11 @@ app.include_router(api_router, prefix="/api/v1")
 from app.api.internal.auto_degrade import router as auto_degrade_router
 
 app.include_router(auto_degrade_router, prefix="/api/internal", tags=["Internal SLO"])
+
+# O-06: Internal API for unified kill switch / release / rollback ops surface
+from app.api.internal.ops_release import router as ops_release_router
+
+app.include_router(ops_release_router, prefix="/api/internal", tags=["Internal Ops"])
 if settings.ENABLE_AGENT_GRAPH_V2:
     try:
         from importlib import import_module

@@ -412,6 +412,10 @@ class Settings(BaseSettings):
     AURORA_METACOG_DASHBOARD_MODE: str = "live"  # off | shadow | live
     AURORA_METACOG_PROCESS_SCAFFOLDING_MODE: str = "live"  # off | shadow | live
     AURORA_METACOG_FSM_COMBINE_MODE: str = "live"  # off | shadow | live
+    # O-06：routing_parameter_registry.META_LEARNING_BINDING 声明的 settings_attr 此前
+    # 在权威字段缺席（getattr 默认 None → 恒 fallback "off"，env 通道死路）——此处按
+    # 声明补注册，默认 "off" 与缺席等价（零行为变化），env 覆盖通道自此可用。
+    AURORA_META_LEARNING_ROUTING_PARAMS_MODE: str = "off"  # off | shadow | live
     AURORA_METACOG_CACHE_TTL_SECONDS: int = 60
     AURORA_METACOG_MIN_SAMPLE_SIZE: int = 20
     AURORA_METACOG_PROCESS_TRIGGER_ABS_BIAS: float = 0.30
