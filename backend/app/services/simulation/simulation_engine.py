@@ -850,8 +850,18 @@ class SimulationEngine:
             planned_round_count=planned_round_count,
             facilitation_style=facilitation_style,
         )
-        await cache_service.delete(f"{self.SESSION_KEY_PREFIX}{session_id}")
-        if user_id is not None:
+        try:
+            await cache_service.delete(f"{self.SESSION_KEY_PREFIX}{session_id}")
+        except Exception:
+            # 完成路径 cache 清理与 _load_checkpoint/_persist_checkpoint 内
+            # get/set 同为 best-effort：Redis 抖动不得让整条流在 complete
+            # 事件前崩掉（V3-FIX-415 C3）。
+            logger.warning("Simulation checkpoint cache cleanup failed for session {}", session_id)
+        if user_id is not None and self.db is not None:
+            # db=None（纯内存模拟）时运行不可持久化（_persist_checkpoint_to_db
+            # 同口径拒绝持久化），不得发出以「已沉淀」为前提的持久性下游信号
+            # （盲区事件/系统更新），否则重启后会话 404、信号成为幽灵引用
+            # （V3-FIX-415 C2）。
             await self._persist_simulation_insights(session=session, user_id=str(user_id))
             await self._persist_session_update(user_id=user_id, session=session)
         yield (
