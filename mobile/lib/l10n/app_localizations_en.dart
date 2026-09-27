@@ -28631,109 +28631,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get sprintHistoryStartSprint => 'Start a sprint';
 
-  @override
-  String get dataUsagePrivacyTitle => 'Your Data & Privacy';
 
-  @override
-  String get dataUsageKnowsTitle => 'What Sparkle Knows About You';
 
-  @override
-  String get dataUsageProfileCardTitle => 'Profile & Goals';
 
-  @override
-  String get dataUsageProfileCardDesc =>
-      'Your name, goals, plans, and task history are used to personalize learning paths.';
 
-  @override
-  String get dataUsageAiCardTitle => 'AI Understanding';
 
-  @override
-  String get dataUsageAiCardDesc =>
-      'Cognitive patterns, learning style, and mastery estimates help Sparkle adapt to you.';
 
-  @override
-  String get dataUsageMemoryCardTitle => 'Memory & History';
 
-  @override
-  String get dataUsageMemoryCardDesc =>
-      'Chat history and growth chronicle entries are stored to maintain conversation continuity.';
-
-  @override
-  String get dataUsageSharedTitle => 'What Is Shared';
-
-  @override
-  String get dataUsageCommunityCardTitle => 'Community';
-
-  @override
-  String get dataUsageCommunityCardDesc =>
-      'Anonymous error patterns and resource quality ratings are shared to help peers learn.';
-
-  @override
-  String get dataUsageControlsTitle => 'Your Controls';
-
-  @override
-  String get dataUsageHideChronicle => 'Hide chronicle entries';
-
-  @override
-  String get dataUsageHideChronicleDesc =>
-      'Hidden entries are invisible to AI but never deleted';
-
-  @override
-  String get dataUsageDeleteData => 'Request data deletion';
-
-  @override
-  String get dataUsageDeleteDataDesc =>
-      'All your data can be permanently removed on request';
-
-  @override
-  String get dataUsageExportData => 'Export your data';
-
-  @override
-  String get dataUsageExportDataDesc =>
-      'Download a complete copy of everything Sparkle stores';
-
-  @override
-  String get dataUsageFooter =>
-      'Sparkle never sells your data. All personalization is for your benefit only.';
-
-  @override
-  String get dataUsageTagGoals => 'Goals';
-
-  @override
-  String get dataUsageTagPlans => 'Plans';
-
-  @override
-  String get dataUsageTagTasks => 'Tasks';
-
-  @override
-  String get dataUsageTagAchievements => 'Achievements';
-
-  @override
-  String get dataUsageTagCognitivePatterns => 'Cognitive patterns';
-
-  @override
-  String get dataUsageTagMasteryEstimates => 'Mastery estimates';
-
-  @override
-  String get dataUsageTagLearningStyle => 'Learning style';
-
-  @override
-  String get dataUsageTagErrorPatterns => 'Error patterns';
-
-  @override
-  String get dataUsageTagChatMessages => 'Chat messages';
-
-  @override
-  String get dataUsageTagGrowthChronicle => 'Growth chronicle';
-
-  @override
-  String get dataUsageTagSpineTraces => 'Spine traces';
-
-  @override
-  String get dataUsageTagAnonErrors => 'Anonymous error patterns';
-
-  @override
-  String get dataUsageTagResourceRatings => 'Resource ratings';
 
   @override
   String get growthPlansTitle => 'Growth Plans';
