@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -670,6 +671,17 @@ func (p *WebSocketProxy) toWebSocketURL(rawURL string) (string, error) {
 	return parsed.String(), nil
 }
 
+// buildBackendWebSocketHeaders 构造拨向后端的 WS 握手头。
+//
+// V3-FIX-482：X-Forwarded-* 语义与 HTTP 代理 Rewrite 契约对齐
+// （cmd/server/setup.go / setup_proxy_forwarded_test.go / stdlib
+// ProxyRequest.SetXForwarded 同型）——
+//   - XFF：入站链保留 + 恰好追加一次本跳 client IP（SplitHostPort(RemoteAddr)
+//     host）；RemoteAddr 无端口形（SplitHostPort 失败）时整头不转发（stdlib
+//     同款 fail-closed，宁缺勿假）。引擎侧 rate_limiting.py 右起第 N 段解析
+//     对 WS 握手请求由此同样成立，客户端注入段居左天然弃用；
+//   - X-Real-IP：不透传——引擎 IP 归因单一出口 get_client_ip 不读该头（426
+//     既定口径），透传只会制造第二归因信道。
 func buildBackendWebSocketHeaders(r *http.Request, authToken string) http.Header {
 	headers := http.Header{}
 	if authToken != "" {
@@ -678,11 +690,13 @@ func buildBackendWebSocketHeaders(r *http.Request, authToken string) http.Header
 	if origin := r.Header.Get("Origin"); origin != "" {
 		headers.Set("Origin", origin)
 	}
-	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
-		headers.Set("X-Forwarded-For", forwardedFor)
-	}
-	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
-		headers.Set("X-Real-IP", realIP)
+	if clientIP, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		prior := r.Header.Values("X-Forwarded-For")
+		chain := clientIP
+		if len(prior) > 0 {
+			chain = strings.Join(prior, ", ") + ", " + clientIP
+		}
+		headers.Set("X-Forwarded-For", chain)
 	}
 	for _, key := range []string{"X-Request-ID", "X-Trace-ID", "Accept-Language", "X-Device-ID", "X-Device-Platform"} {
 		if val := r.Header.Get(key); val != "" {

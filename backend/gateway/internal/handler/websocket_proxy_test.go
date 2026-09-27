@@ -15,7 +15,10 @@ import (
 	"github.com/sparkle/gateway/internal/config"
 )
 
-func TestBuildBackendWebSocketHeaders_ForwardsAuthAndProxyHeaders(t *testing.T) {
+// V3-FIX-482 修后契约：Authorization/Origin 照旧透传；XFF = 入站链 + 追加一次
+// 本跳 client IP（httptest.NewRequest 缺省 RemoteAddr=192.0.2.1:1234）；
+// X-Real-IP 不透传。契约级钉测见 websocket_proxy_forwarded_test.go。
+func TestBuildBackendWebSocketHeaders_AuthOriginPreservedXFFAppend(t *testing.T) {
 	req := httptest.NewRequest("GET", "http://gateway.local/api/v1/community/ws/connect", nil)
 	req.Header.Set("Origin", "https://app.sparkle.local")
 	req.Header.Set("X-Forwarded-For", "10.0.0.8")
@@ -25,18 +28,17 @@ func TestBuildBackendWebSocketHeaders_ForwardsAuthAndProxyHeaders(t *testing.T) 
 
 	require.Equal(t, "Bearer token-123", headers.Get("Authorization"))
 	require.Equal(t, "https://app.sparkle.local", headers.Get("Origin"))
-	require.Equal(t, "10.0.0.8", headers.Get("X-Forwarded-For"))
-	require.Equal(t, "10.0.0.8", headers.Get("X-Real-IP"))
+	require.Equal(t, "10.0.0.8, 192.0.2.1", headers.Get("X-Forwarded-For"))
+	require.Empty(t, headers.Get("X-Real-IP"))
 }
 
-func TestBuildBackendWebSocketHeaders_SkipsEmptyValues(t *testing.T) {
+func TestBuildBackendWebSocketHeaders_EmptyValuesStayAbsent(t *testing.T) {
 	req := httptest.NewRequest("GET", "http://gateway.local/api/v1/community/ws/connect", nil)
 
 	headers := buildBackendWebSocketHeaders(req, "")
 
 	require.Empty(t, headers.Get("Authorization"))
 	require.Empty(t, headers.Get("Origin"))
-	require.Empty(t, headers.Get("X-Forwarded-For"))
 	require.Empty(t, headers.Get("X-Real-IP"))
 }
 

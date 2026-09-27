@@ -29,9 +29,11 @@ def _trusted_proxy_count() -> int:
     """
     可信代理层数（环境变量 ``TRUSTED_PROXY_COUNT``，默认 1）。
 
-    - **1（默认）**：匹配本仓部署拓扑——Go 网关（httputil.ReverseProxy /
-      websocket_proxy）在 X-Forwarded-For 尾部追加真实 client IP，取最右 1 段。
-    - **0**：完全不信任 XFF / X-Real-IP（引擎直连暴露、前面没有可信代理时使用）。
+    - **1（默认）**：匹配本仓部署拓扑——Go 网关（httputil.ReverseProxy 与
+      websocket_proxy，V3-FIX-482 修后同契约）在 X-Forwarded-For 尾部追加
+      真实 client IP，取最右 1 段。
+    - **0**：完全不信任 XFF（引擎直连暴露、前面没有可信代理时使用；X-Real-IP
+      残留分支已删，V3-FIX-484——全仓不读该头）。
     - **N**：链路上有 N 层会追加 XFF 的可信代理，取右起第 N 段。
     """
     raw = os.getenv("TRUSTED_PROXY_COUNT", "1")
@@ -77,12 +79,70 @@ def _peer_is_trusted_proxy(peer: str | None) -> bool:
     return any(addr in network for network in _trusted_proxy_networks())
 
 
-def _forwarded_for_parts(request: Request) -> list[str] | None:
-    """X-Forwarded-For 规范化：按逗号切分、去空白、剔空段；头缺席返回 None。"""
+def _normalize_forwarded_segment(raw: str) -> str | None:
+    """
+    单段 XFF 归一为规范 IP 形态；非 IP 形态返回 ``None``（V3-FIX-484，fail-closed）。
+
+    容忍并归一真实代理会产生的三类形变：``[2001:db8::1]`` 括号形（剥离）、
+    ``203.0.113.7:8080`` / ``[2001:db8::1]:443`` 带端口形（剥端口）、
+    ``::ffff:a.b.c.d`` IPv4-mapped 形（归一为裸 IPv4，与
+    :func:`_peer_is_trusted_proxy` 同口径）。裸 IPv6（自带冒号）先整串按
+    IPv6 解析，失败再按 ``host:port`` 剥端口重试；其余无法解析的串
+    （``unknown``、截断形等）一律 ``None``——调用方不得以其归因。
+    """
+    candidate = raw.strip()
+    if candidate.startswith("["):
+        host, close, rest = candidate[1:].partition("]")
+        if not close or (rest and not rest.startswith(":")):
+            return None
+        candidate = host.strip()
+    elif ":" in candidate:
+        try:
+            ipaddress.ip_address(candidate)
+        except ValueError:
+            candidate = candidate.rpartition(":")[0].strip()
+    try:
+        addr = ipaddress.ip_address(candidate)
+    except ValueError:
+        return None
+    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+        return str(addr.ipv4_mapped)
+    return str(addr)
+
+
+def _forwarded_for_parts(request: Request) -> list[str | None] | None:
+    """
+    X-Forwarded-For 规范化：按逗号切分、去空白、剔空段，逐段 IP 形态校验
+    （V3-FIX-484）——合法段经 :func:`_normalize_forwarded_segment` 归一为规范
+    形态，非 IP 形态段置 ``None``（fail-closed，不参与归因与可信判定）；头缺席
+    返回 ``None``。
+    """
     forwarded = request.headers.get("X-Forwarded-For")
     if not forwarded:
         return None
-    return [p.strip() for p in forwarded.split(",") if p.strip()]
+    parts: list[str | None] = []
+    for segment in forwarded.split(","):
+        if not segment.strip():
+            continue
+        parts.append(_normalize_forwarded_segment(segment))
+    return parts
+
+
+def _right_nth_client(parts: list[str | None], n: int) -> str | None:
+    """
+    右起第 N 段归因（426 右起语义 + 484 形态闸）：右起 N 段窗口内存在非 IP
+    形态段（``None``）时返回 ``None``——窗口是可信代理的追加位，出现杂质说明
+    链尾不是代理按契约追加的（有代理未追加或直连注入），fail-closed 退回对端，
+    不以杂质串归因。窗口左侧杂质属客户端注入区，不影响右起解析（426 既定语义）。
+
+    归因取右起**第 N 段**（``parts[-n]``，可信代理追加位），非最右段。
+    """
+    if n <= 0 or len(parts) < n:
+        return None
+    window = parts[-n:]
+    if any(part is None for part in window):
+        return None
+    return window[0]
 
 
 def get_client_ip(request: Request) -> str | None:
@@ -93,16 +153,19 @@ def get_client_ip(request: Request) -> str | None:
     知情同意合规存证等 IP 归因面统一走本函数，禁再散抄 XFF 首段：按
     ``TRUSTED_PROXY_COUNT`` 取 XFF **右起**第 N 段——可信网关追加的段在右，
     客户端注入的伪造段居左天然弃用；链条短于 N（有代理未追加，右段可能是
-    客户端注入）或 N=0 时退回 TCP 对端地址。与 :func:`get_real_ip` 的差异：
-    不带路径后缀，且不读 ``X-Real-IP``（历史归因面未采信该头，不引入新信任面）。
+    客户端注入）、右起 N 段窗口含非 IP 形态段（V3-FIX-484 形态闸，链尾不是
+    代理按契约追加的）或 N=0 时退回 TCP 对端地址。与 :func:`get_real_ip` 的
+    差异：不带路径后缀，且不读 ``X-Real-IP``（历史归因面未采信该头，不引入
+    新信任面）。
     """
     n = _trusted_proxy_count()
     peer = request.client.host if request.client else None
     if n > 0:
         parts = _forwarded_for_parts(request)
         if parts is not None:
-            if len(parts) >= n:
-                return parts[-n]
+            attributed = _right_nth_client(parts, n)
+            if attributed is not None:
+                return attributed
             return peer
     return peer
 
@@ -145,9 +208,11 @@ def forwarded_chain_trusted(request: Request) -> bool:
     if n <= 0:
         return False
     parts = _forwarded_for_parts(request)
-    if parts is None or len(parts) < n:
+    if parts is None:
         return False
-    return True
+    # V3-FIX-484 形态闸：链长 ≥ N 之外还要求右起 N 段（代理追加位）全为合法
+    # IP 形——窗口含杂质说明链尾不是代理按契约追加的，XFH 等转发头不可信。
+    return _right_nth_client(parts, n) is not None
 
 
 def get_real_ip(request: Request) -> str:
@@ -157,8 +222,10 @@ def get_real_ip(request: Request) -> str:
     历史实现无条件信任 XFF 首段——客户端可伪造该头绕过按 IP 限流（auth 登录
     端点的爆破防护）。现按 ``TRUSTED_PROXY_COUNT`` 取 XFF **右起**第 N 段：
     可信代理追加的段在右侧，客户端注入的伪造段在左侧天然被弃用。链条短于 N
-    （说明有代理未追加，右段可能是客户端注入）或 N=0 时，退回 TCP 对端地址——
-    宁可退化为共享桶也不可被伪造。
+    （说明有代理未追加，右段可能是客户端注入）、右起 N 段窗口含非 IP 形态段
+    （V3-FIX-484 形态闸）或 N=0 时，退回 TCP 对端地址——宁可退化为共享桶也不
+    可被伪造。X-Real-IP 残留分支已删（V3-FIX-484）：与 :func:`get_client_ip`
+    单一出口口径对齐，该头直连面是客户端可选值，采信即限流键可轮转。
 
     同时追加请求路径，确保不同端点的限流配额互相隔离——
     当所有流量经过同一个内网网关时（如 Docker 环境），
@@ -171,17 +238,15 @@ def get_real_ip(request: Request) -> str:
       （login_attempt 机制）为准，不依赖本限流。
     """
     peer = get_remote_address(request)
-    real_ip = request.headers.get("X-Real-IP")
     n = _trusted_proxy_count()
 
     ip = peer
     if n > 0:
         parts = _forwarded_for_parts(request)
         if parts is not None:
-            if len(parts) >= n:
-                ip = parts[-n]
-        elif real_ip:
-            ip = real_ip
+            attributed = _right_nth_client(parts, n)
+            if attributed is not None:
+                ip = attributed
     # Include path so per-endpoint limits don't share quota
     return f"{ip}:{request.url.path}"
 

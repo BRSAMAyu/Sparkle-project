@@ -480,18 +480,48 @@ func startCQRSWorkers(ctx context.Context, cqrs *cqrsBundle, log *zap.Logger) {
 	}()
 }
 
-func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle, agentClient *agent.Client, logger *zap.Logger) *gin.Engine {
-	r := gin.Default()
-
-	// Configure trusted proxies for accurate ClientIP() behind load balancers
+// applyTrustedProxies 配置 gin ClientIP() 的信任面（V3-FIX-483 收口单一出口）。
+//
+// gin v1.9.1 缺省 trustedProxies=0.0.0.0/0,::/0（trust-all）且 RemoteIPHeaders
+// 含 X-Real-IP：trust-all 下 validateHeader 右起扫描返回 XFF **最左段**——任何
+// 直连 :8080 的对端任写 X-Forwarded-For/X-Real-IP 即任控 c.ClientIP()。消费面：
+// internal/middleware/rate_limit.go 四处 per-IP 限流键、ws_upgrade_rate_limit.go
+// 五条 WS 升级入口共享预鉴权桶、ws_auth.go 审计 client_ip、handler 侧审计/日志。
+//
+// 信任面三态：
+//   - 显式 TRUSTED_PROXIES：一律按清单（生产唯一合法形态）；
+//   - 生产缺 TRUSTED_PROXIES：Fatal 闸（不变）；
+//   - dev/test 缺省：SetTrustedProxies(nil)——gin 文档语义 = ClientIP() 恒取
+//     TCP 对端地址，转发头不参与解析，伪造轮转从根上失效（限流键宁共桶不伪造，
+//     与引擎侧 426/484 单一出口口径同型）。本地反代拓扑（nginx→gateway dev）
+//     需要按真实客户端归因时显式设 TRUSTED_PROXIES。
+func applyTrustedProxies(r *gin.Engine, cfg *config.Config, logger *zap.Logger) {
 	if len(cfg.TrustedProxies) > 0 {
 		if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
 			logger.Warn("Failed to set trusted proxies, using defaults", zap.Error(err))
 		}
-	} else if cfg.IsProduction() {
+		return
+	}
+	if cfg.IsProduction() {
 		logger.Fatal("TRUSTED_PROXIES not set in production. " +
 			"Set TRUSTED_PROXIES to your load balancer IP(s).")
+		return
 	}
+	// V3-FIX-483：dev/test 不再落入库缺省 trust-all。
+	if err := r.SetTrustedProxies(nil); err != nil {
+		logger.Warn("Failed to clear trusted proxies in dev", zap.Error(err))
+		return
+	}
+	logger.Warn("TRUSTED_PROXIES not set: ClientIP() uses the TCP peer address only " +
+		"(spoofed X-Forwarded-For/X-Real-IP are ignored); set TRUSTED_PROXIES if a local " +
+		"reverse proxy fronts the gateway in this environment")
+}
+
+func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle, agentClient *agent.Client, logger *zap.Logger) *gin.Engine {
+	r := gin.Default()
+
+	// V3-FIX-483：ClientIP() 信任面收口到 applyTrustedProxies 单一出口。
+	applyTrustedProxies(r, cfg, logger)
 	if cfg.IsDevelopment() {
 		r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	}

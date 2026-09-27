@@ -52,13 +52,16 @@ def test_shorter_chain_than_trusted_count_falls_back_to_peer(monkeypatch: pytest
     assert get_real_ip(req).startswith(f"{_PEER}:")
 
 
-def test_x_real_ip_trusted_only_behind_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_x_real_ip_not_read_single_outlet_aligned(monkeypatch: pytest.MonkeyPatch) -> None:
+    """V3-FIX-484：X-Real-IP 残留分支删除——XFF 缺席时不采信该头，一律退回 TCP
+    对端（与 get_client_ip「不读 X-Real-IP」单一出口口径对齐；修复前 N=1 时
+    返回 5.6.7.8，限流键可轮转）。"""
     monkeypatch.setenv("TRUSTED_PROXY_COUNT", "0")
     req = _request({"X-Real-IP": "5.6.7.8"})
     assert get_real_ip(req).startswith(f"{_PEER}:")
     monkeypatch.setenv("TRUSTED_PROXY_COUNT", "1")
     req2 = _request({"X-Real-IP": "5.6.7.8"})
-    assert get_real_ip(req2).startswith("5.6.7.8:")
+    assert get_real_ip(req2).startswith(f"{_PEER}:")
 
 
 def test_direct_peer_used_without_proxy_headers(monkeypatch: pytest.MonkeyPatch) -> None:
