@@ -5,7 +5,7 @@ the full app with realistic pre-populated content.
 """
 import math
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any, NotRequired, TypedDict
 
 from loguru import logger
@@ -3698,15 +3698,18 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
         select(func.count(CalendarEvent.id)).where(CalendarEvent.user_id == user.id)
     )
     if not existing_calendar_count:
-        now.date()
+        # 种子日历墙上钟（V3-FIX-327）：start/end 是用户本地墙上钟列
+        # （V3-FIX-37 定界，wt608 同钟先例），「今天/明天/昨天」锚沿用本函数
+        # today_local（V3-FIX-323）——修前 aware-UTC 构造（UTC 日 + UTC tzinfo）
+        # 比墙上钟列混钟，上海 00:00-08:00 窗播种时事件整体错位一日。
         cal_events = [
             CalendarEvent(
                 id=uuid.uuid4(),
                 user_id=user.id,
                 title="数据结构复习 — 二叉树专题",
                 description="复习二叉树遍历（前序/中序/后序），完成 3 道课后习题",
-                start_time=datetime(now.year, now.month, now.day, 9, 0, tzinfo=UTC) + timedelta(days=1),
-                end_time=datetime(now.year, now.month, now.day, 11, 0, tzinfo=UTC) + timedelta(days=1),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 9, 0) + timedelta(days=1),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 11, 0) + timedelta(days=1),
                 is_all_day=False,
                 color="#4A90D9",
                 reminder_minutes=[15, 60],
@@ -3717,8 +3720,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="算法刷题打卡",
                 description="LeetCode 每日一题 + 算法小组讨论",
-                start_time=datetime(now.year, now.month, now.day, 14, 0, tzinfo=UTC) + timedelta(days=1),
-                end_time=datetime(now.year, now.month, now.day, 16, 0, tzinfo=UTC) + timedelta(days=1),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 14, 0) + timedelta(days=1),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 16, 0) + timedelta(days=1),
                 is_all_day=False,
                 color="#7B68EE",
                 reminder_minutes=[15],
@@ -3729,8 +3732,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="英语听力训练",
                 description="精听 BBC 6-minute English 一篇 + 跟读练习",
-                start_time=datetime(now.year, now.month, now.day, 20, 0, tzinfo=UTC) + timedelta(days=2),
-                end_time=datetime(now.year, now.month, now.day, 21, 0, tzinfo=UTC) + timedelta(days=2),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 20, 0) + timedelta(days=2),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 21, 0) + timedelta(days=2),
                 is_all_day=False,
                 color="#50C878",
                 reminder_minutes=[15, 30],
@@ -3741,8 +3744,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="操作系统期中复习",
                 description="进程管理 + 内存管理章节回顾，做思维导图",
-                start_time=datetime(now.year, now.month, now.day, 10, 0, tzinfo=UTC) + timedelta(days=3),
-                end_time=datetime(now.year, now.month, now.day, 12, 30, tzinfo=UTC) + timedelta(days=3),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 10, 0) + timedelta(days=3),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 12, 30) + timedelta(days=3),
                 is_all_day=False,
                 color="#FF6B6B",
                 reminder_minutes=[15, 60, 1440],
@@ -3754,8 +3757,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="算法小组会议",
                 description="讨论本周 DP 专题，阿泽主讲",
-                start_time=datetime(now.year, now.month, now.day, 19, 30, tzinfo=UTC) + timedelta(days=4),
-                end_time=datetime(now.year, now.month, now.day, 21, 0, tzinfo=UTC) + timedelta(days=4),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 19, 30) + timedelta(days=4),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 21, 0) + timedelta(days=4),
                 is_all_day=False,
                 location="图书馆 3F 研讨室",
                 color="#FFD700",
@@ -3767,8 +3770,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="数学建模练习",
                 description="完成建模作业第一部分，线性规划建模",
-                start_time=datetime(now.year, now.month, now.day, 15, 0, tzinfo=UTC) + timedelta(days=5),
-                end_time=datetime(now.year, now.month, now.day, 17, 0, tzinfo=UTC) + timedelta(days=5),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 15, 0) + timedelta(days=5),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 17, 0) + timedelta(days=5),
                 is_all_day=False,
                 color="#4A90D9",
                 reminder_minutes=[15],
@@ -3781,8 +3784,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="数据结构实验课",
                 description="AVL 树插入与旋转操作实验",
-                start_time=datetime(now.year, now.month, now.day, 10, 0, tzinfo=UTC) - timedelta(days=1),
-                end_time=datetime(now.year, now.month, now.day, 12, 0, tzinfo=UTC) - timedelta(days=1),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 10, 0) - timedelta(days=1),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 12, 0) - timedelta(days=1),
                 is_all_day=False,
                 color="#4A90D9",
                 reminder_minutes=[15, 60],
@@ -3793,8 +3796,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="离散数学复习",
                 description="图论章节复习，重点看最短路径算法",
-                start_time=datetime(now.year, now.month, now.day, 14, 0, tzinfo=UTC) - timedelta(days=2),
-                end_time=datetime(now.year, now.month, now.day, 16, 30, tzinfo=UTC) - timedelta(days=2),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 14, 0) - timedelta(days=2),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 16, 30) - timedelta(days=2),
                 is_all_day=False,
                 color="#7B68EE",
                 reminder_minutes=[15],
@@ -3805,8 +3808,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="英语角活动",
                 description="本周话题：AI 在教育中的应用",
-                start_time=datetime(now.year, now.month, now.day, 18, 0, tzinfo=UTC) - timedelta(days=3),
-                end_time=datetime(now.year, now.month, now.day, 19, 30, tzinfo=UTC) - timedelta(days=3),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 18, 0) - timedelta(days=3),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 19, 30) - timedelta(days=3),
                 is_all_day=False,
                 location="外语学院 B201",
                 color="#50C878",
@@ -3818,8 +3821,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="期中考试倒计时 — 全天复习",
                 description="数据结构 + 操作系统综合复习日",
-                start_time=datetime(now.year, now.month, now.day, 8, 0, tzinfo=UTC) - timedelta(days=5),
-                end_time=datetime(now.year, now.month, now.day, 22, 0, tzinfo=UTC) - timedelta(days=5),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 8, 0) - timedelta(days=5),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 22, 0) - timedelta(days=5),
                 is_all_day=False,
                 color="#FF6B6B",
                 reminder_minutes=[0],
@@ -3832,8 +3835,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="每日晨读",
                 description="30 分钟英语晨读 + 单词复习",
-                start_time=datetime(now.year, now.month, now.day, 7, 30, tzinfo=UTC),
-                end_time=datetime(now.year, now.month, now.day, 8, 0, tzinfo=UTC),
+                start_time=datetime(today_local.year, today_local.month, today_local.day, 7, 30),
+                end_time=datetime(today_local.year, today_local.month, today_local.day, 8, 0),
                 is_all_day=False,
                 color="#50C878",
                 recurrence_rule="FREQ=DAILY;COUNT=14",
