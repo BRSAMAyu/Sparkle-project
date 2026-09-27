@@ -3,8 +3,8 @@
 两处定界结论（本卡完成，录台账 V3-FIX-211 行）：
 
 1. ``weekly_stats_service.get_weekly_summary``（:74 focus 窗）：窗口端点由
-   调用方传入——weekly_digest_service / weekly_synthesis_service 均为
-   ``_utcnow()`` 派生的 UTC 滚动瞬间。同一对端点直比
+   调用方传入——weekly_digest_service 以 ``_utcnow()`` 派生 UTC 滚动瞬间
+   （weekly_synthesis_service 残轨已随 V3-FIX-331 删除）。同一对端点直比
    ``StudyRecord.created_at`` / ``Task.updated_at``（UTC 存储列）无跨钟，
    而 ``FocusSession.start_time`` 是客户端本地墙上钟列——不换算时专注计数
    随市场时区漂移 ±8h。修法：focus 查询的端点换算成同一真实区间的用户本地

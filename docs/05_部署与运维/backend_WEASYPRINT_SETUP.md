@@ -7,7 +7,7 @@ WeasyPrint 用于生成学习周报的 PDF 文件。它依赖于系统的 GTK+ �
 ## 当前状态
 
 - **版本**: WeasyPrint 67.0
-- **用途**: `weekly_synthesis_service.py` - 周报 PDF 生成
+- **用途**: 通用 HTML→PDF 渲染依赖（原 `weekly_synthesis_service.py` 周报 PDF 残轨已随 V3-FIX-331 删除）
 - **容错**: ✅ 已实现，导入失败时不影响应用启动
 
 ## 依赖声明
@@ -69,18 +69,7 @@ cd backend && python grpc_server.py
 
 ## 使用方式
 
-```python
-from app.services.analytics.weekly_synthesis_service import WeeklySynthesisService
-
-# 生成周报数据
-report = await service.generate_report(user_id="user-123")
-
-# 生成 PDF（需要 WeasyPrint 和 Jinja2）
-pdf_path = await service.generate_pdf(
-    report_data=report,
-    output_path="/path/to/report.pdf"
-)
-```
+原周报 PDF 生成链路（`WeeklySynthesisService`）已随 V3-FIX-331 删除——其 AI 洞察为硬编码 mock，真实周报由 `LearningReportAgent`（`/learning-reports/generate`）与 `WeeklyLearningReportService`（celery beat）两轨覆盖。WeasyPrint/Jinja2 保留为通用可选依赖（`backend/scripts/test_weasyprint.py` 可验证安装）。
 
 ## 故障排查
 

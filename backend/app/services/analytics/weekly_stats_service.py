@@ -17,8 +17,9 @@ class WeeklyStatsService:
     Weekly Statistics Aggregation Service
     Aggregates data for the weekly learning report.
 
-    Active dependency: weekly_digest_service and weekly_synthesis_service use
-    this for user-facing weekly summaries.
+    Active dependency: weekly_digest_service uses this for user-facing
+    weekly summaries (weekly_synthesis_service mock rail removed in
+    V3-FIX-331).
     """
 
     def __init__(self, db: AsyncSession):
@@ -64,8 +65,9 @@ class WeeklyStatsService:
     async def _wall_window(self, user_id: str, start_date: datetime, end_date: datetime) -> tuple[datetime, datetime]:
         """调用方 UTC 瞬间窗口 → 用户本地墙上钟域（FocusSession.start_time 列域，V3-FIX-211）。
 
-        定界：本服务窗口端点由调用方传入（weekly_digest_service /
-        weekly_synthesis_service 均为 ``_utcnow()`` 派生的 UTC 滚动瞬间）。
+        定界：本服务窗口端点由调用方传入（weekly_digest_service 以
+        ``_utcnow()`` 派生 UTC 滚动瞬间；weekly_synthesis_service 残轨
+        已随 V3-FIX-331 删除）。
         同一端点直比 StudyRecord.created_at / Task.updated_at（UTC 存储列）
         无跨钟，而 FocusSession.start_time 存客户端本地墙上时间 naive——不
         换算时专注计数随市场时区漂移 ±8h。此处把端点换算成同一真实区间的

@@ -18679,7 +18679,8 @@
       "GroupTypeEnum": {
         "enum": [
           "squad",
-          "sprint"
+          "sprint",
+          "official"
         ],
         "title": "GroupTypeEnum",
         "type": "string"
@@ -48330,110 +48331,6 @@
           }
         ],
         "summary": "Get North Star Trends",
-        "tags": [
-          "analytics"
-        ]
-      }
-    },
-    "/api/v1/analytics/report": {
-      "get": {
-        "description": "Compatibility alias for legacy acceptance and dashboard integrations.",
-        "operationId": "get_weekly_report_alias_api_v1_analytics_report_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Weekly Report Alias Api V1 Analytics Report Get",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Weekly Report Alias",
-        "tags": [
-          "analytics"
-        ]
-      }
-    },
-    "/api/v1/analytics/reports/download/{filename}": {
-      "get": {
-        "description": "Download a generated PDF report.",
-        "operationId": "download_report_api_v1_analytics_reports_download__filename__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "filename",
-            "required": true,
-            "schema": {
-              "title": "Filename",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Download Report",
-        "tags": [
-          "analytics"
-        ]
-      }
-    },
-    "/api/v1/analytics/reports/generate": {
-      "post": {
-        "description": "Trigger on-demand generation of the weekly learning report.\nReturns the JSON data immediately and schedules PDF generation.",
-        "operationId": "generate_weekly_report_api_v1_analytics_reports_generate_post",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Generate Weekly Report Api V1 Analytics Reports Generate Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Generate Weekly Report",
         "tags": [
           "analytics"
         ]
@@ -84117,7 +84014,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/components/schemas/LibraryCategoryEnum"
                 },
                 {
                   "type": "null"
@@ -84135,7 +84032,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/components/schemas/LibraryVisibilityEnum"
                 },
                 {
                   "type": "null"
@@ -85197,7 +85094,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/components/schemas/ItemTypeEnum"
                 },
                 {
                   "type": "null"
@@ -85233,7 +85130,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/components/schemas/DifficultyLevelEnum"
                 },
                 {
                   "type": "null"

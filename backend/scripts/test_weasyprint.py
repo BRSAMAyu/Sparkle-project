@@ -3,8 +3,8 @@
 WeasyPrint 依赖测试脚本
 测试 WeasyPrint 和 Jinja2 是否正确安装和配置
 """
-import sys
 import os
+import sys
 
 # macOS: 自动设置 DYLD_LIBRARY_PATH 用于 WeasyPrint
 if sys.platform == "darwin" and os.path.exists("/opt/homebrew/lib"):
@@ -48,38 +48,6 @@ def test_jinja2_import():
         print("  请运行: pip install jinja2")
         return False
 
-def test_weekly_synthesis_service():
-    """测试周报服务导入"""
-    print("\n" + "=" * 50)
-    print("测试 WeeklySynthesisService 导入...")
-    print("=" * 50)
-
-    # 切换到 backend 目录以正确导入 app 模块
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    backend_dir = os.path.dirname(script_dir)
-
-    # 添加 backend 目录到 Python 路径
-    if backend_dir not in sys.path:
-        sys.path.insert(0, backend_dir)
-
-    try:
-        from app.services.analytics.weekly_synthesis_service import HAS_WEASYPRINT, HAS_JINJA2
-
-        if HAS_WEASYPRINT:
-            print("✓ WeasyPrint 可用")
-        else:
-            print("⚠ WeasyPrint 不可用（容错模式）")
-
-        if HAS_JINJA2:
-            print("✓ Jinja2 可用")
-        else:
-            print("⚠ Jinja2 不可用（容错模式）")
-
-        return HAS_WEASYPRINT and HAS_JINJA2
-    except ImportError as e:
-        print(f"✗ WeeklySynthesisService 导入失败: {e}")
-        return False
-
 def test_pdf_generation():
     """测试 PDF 生成功能"""
     print("\n" + "=" * 50)
@@ -88,8 +56,9 @@ def test_pdf_generation():
 
     try:
         import tempfile
-        from weasyprint import HTML
+
         from jinja2 import Template
+        from weasyprint import HTML
 
         # 创建简单的 HTML 模板
         template = Template('''
@@ -155,7 +124,6 @@ def main():
     results = {
         "WeasyPrint 导入": test_weasyprint_import(),
         "Jinja2 导入": test_jinja2_import(),
-        "WeeklySynthesisService": test_weekly_synthesis_service(),
     }
 
     # 如果所有依赖都可用，测试 PDF 生成
