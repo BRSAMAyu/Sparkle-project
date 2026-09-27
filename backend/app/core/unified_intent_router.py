@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from loguru import logger
@@ -50,8 +50,8 @@ class IntentRoutingResult:
     sub_intents: list[dict[str, Any]] = field(default_factory=list)
     confidence: float = 0.5
     routing_layer: str = "unknown"  # "explicit", "rule", "llm"
-    execution_mode: str = "direct"  # "direct", "langgraph", "hybrid"
-    risk_level: str = "low"
+    execution_mode: Literal["direct", "langgraph", "hybrid"] = "direct"
+    risk_level: Literal["low", "medium", "high"] = "low"
     context_version: str | None = None
     context_signals: dict[str, Any] = field(default_factory=dict)
 
@@ -371,7 +371,7 @@ class UnifiedIntentRouter:
         if not scores:
             # 检查是否为复杂意图
             is_complex = self._is_complex_intent(message)
-            execution_mode = "langgraph" if is_complex else "direct"
+            execution_mode: Literal["direct", "langgraph"] = "langgraph" if is_complex else "direct"
 
             return IntentRoutingResult(
                 primary_intent=UnifiedIntentType.CHAT,
@@ -395,18 +395,18 @@ class UnifiedIntentRouter:
             )
 
         # 判断执行模式
-        execution_mode = "direct"
+        rule_execution_mode: Literal["direct", "langgraph", "hybrid"] = "direct"
         if confidence >= 0.8 and best_intent in [
             UnifiedIntentType.PLAN,
             UnifiedIntentType.ERROR_DIAGNOSIS
         ]:
-            execution_mode = "langgraph"
+            rule_execution_mode = "langgraph"
 
         return IntentRoutingResult(
             primary_intent=best_intent,
             confidence=confidence,
             routing_layer="rule",
-            execution_mode=execution_mode,
+            execution_mode=rule_execution_mode,
             context_signals={"matched_keywords": list(scores.keys())}
         )
 
@@ -691,7 +691,7 @@ class UnifiedIntentRouter:
         message: str,
         intent: UnifiedIntentType,
         confidence: float,
-    ) -> str:
+    ) -> Literal["direct", "langgraph", "hybrid"]:
         risk_level = self._assess_risk_level(message=message, intent=intent)
         if risk_level == "high":
             return "direct"
@@ -718,7 +718,7 @@ class UnifiedIntentRouter:
         *,
         message: str,
         intent: UnifiedIntentType,
-    ) -> str:
+    ) -> Literal["low", "medium", "high"]:
         msg_lower = message.lower()
         if intent in {UnifiedIntentType.DELETE}:  # backward-compatible enum value
             return "high"

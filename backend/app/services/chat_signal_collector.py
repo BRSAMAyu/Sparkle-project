@@ -64,7 +64,8 @@ class ChatSignalCollector:
         ts = timestamp or _utcnow()
         tokens = self._extract_tokens(user_message)
         prev_entry = await self._get_latest_entry(user_id)
-        follow_up = self._is_follow_up(tokens, prev_entry.get("tokens") if prev_entry else [])
+        prev_tokens = prev_entry.get("tokens") if prev_entry else None
+        follow_up = self._is_follow_up(tokens, prev_tokens if isinstance(prev_tokens, list) else [])
         gratitude = self._detect_gratitude(user_message)
         dissatisfaction = self._detect_dissatisfaction(user_message)
         complexity = self._estimate_complexity(user_message)
@@ -631,6 +632,8 @@ class ChatSignalCollector:
         counts: dict[int, float] = {}
         for entry in entries:
             hour = entry.get("hour")
+            if hour is None:
+                continue
             try:
                 hour_int = int(hour)
             except (TypeError, ValueError):

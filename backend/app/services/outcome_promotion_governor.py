@@ -190,7 +190,7 @@ class OutcomePromotionGovernor:
         session_id: str | None = None,
     ) -> dict[str, Any]:
         payload = report.to_dict() if isinstance(report, OutcomeLearningReport) else _as_dict(report)
-        session_state = {
+        session_state: dict[str, Any] = {
             "validated_learnings": [
                 *[dict(item) for item in _as_list(payload.get("validated_plan_learnings")) if isinstance(item, dict)],
                 *[dict(item) for item in _as_list(payload.get("validated_insight_learnings")) if isinstance(item, dict)],

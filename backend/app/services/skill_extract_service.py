@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
 from app.config import settings
 from app.core.metrics import SPARKLE_SKILL_EXTRACT_DRAFT_ACCEPT_RATE
-from app.services.llm_service import llm_service
+from app.services.llm_service import LlmJsonFn, llm_service
 from app.services.skill_schema import (
     SkillDraft,
     normalize_activation_conditions,
@@ -26,7 +25,7 @@ class SkillExtractService:
     def __init__(
         self,
         *,
-        llm_json: Callable[[list[dict[str, str]], Any], Awaitable[Any | None]] | None = None,
+        llm_json: LlmJsonFn | None = None,
     ) -> None:
         self._llm_json = llm_json
 

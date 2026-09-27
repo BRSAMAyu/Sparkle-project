@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from typing import Literal, cast
 
 from app.core.metrics import BAYESIAN_RECOMMENDATION_TOTAL, BAYESIAN_SHADOW_DIVERGENCE_TOTAL
 from app.learning.persistent_bayesian_learner import PersistentBayesianLearner
@@ -93,7 +94,7 @@ class BayesianRoutingWireService:
         *,
         scores: tuple[dict[str, float | str | int], ...],
         fallback_target: str,
-    ) -> str | None:
+    ) -> Literal["direct", "langgraph", "hybrid"] | None:
         if not scores:
             return None
         best = scores[0]
@@ -105,7 +106,12 @@ class BayesianRoutingWireService:
             return None
         if best_probability < fallback_probability + 0.05:
             return None
-        return str(best["target"])
+        # rank_targets 只在 ROUTE_EXECUTION_TARGETS 候选内打分；成员校验后收窄为
+        # 合法路由目标（RouteDecision.execution_mode 的 Literal 契约）。
+        best_target = str(best["target"])
+        if best_target not in ROUTE_EXECUTION_TARGETS:
+            return None
+        return cast(Literal["direct", "langgraph", "hybrid"], best_target)
 
     async def current_mode(self) -> str:
         return await self.kill_switch.get_mode()

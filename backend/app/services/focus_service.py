@@ -496,6 +496,7 @@ class FocusService:
 
         return {"total_minutes": total_minutes, "pomodoro_count": pomodoro_count, "today_date": today_start.isoformat()}
 
+    @staticmethod
     async def get_methodological_guidance(
         task_context: str,
         user_input: str,

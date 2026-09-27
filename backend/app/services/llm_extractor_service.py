@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -11,7 +10,7 @@ from app.config import settings
 from app.core.cache import cache_service
 from app.core.time_utils import ensure_naive_utc
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
-from app.services.llm_service import llm_service
+from app.services.llm_service import LlmJsonFn, llm_service
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate
 from app.services.rule_y_adapter import RuleYAdapter
 
@@ -32,7 +31,7 @@ class LlmExtractorService:
     def __init__(
         self,
         *,
-        llm_json: Callable[[list[dict[str, str]], Any], Awaitable[Any | None]] | None = None,
+        llm_json: LlmJsonFn | None = None,
         now_fn=_utcnow,
     ) -> None:
         self._llm_json = llm_json

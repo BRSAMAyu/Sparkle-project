@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -67,7 +68,7 @@ class ProfileWriteService:
         user_id: UUID,
         updates: dict[str, Any],
         evidence_refs_by_key: dict[str, list[dict[str, Any]]],
-        confidence_by_key: dict[str, float | None] | None = None,
+        confidence_by_key: Mapping[str, float | None] | None = None,
         source_type: str | None = None,
         source: str | None = None,
     ) -> ProfileWriteResult:
@@ -177,7 +178,7 @@ class ProfileWriteService:
         *,
         user_id: UUID,
         updates: dict[str, Any],
-        confidence_by_key: dict[str, float | None] | None = None,
+        confidence_by_key: Mapping[str, float | None] | None = None,
         source: str = "ai_inferred",
     ) -> int:
         """写入推断偏好并发布事件。返回新版本号。"""
@@ -253,7 +254,7 @@ class ProfileWriteService:
     def _build_inference_metadata(
         updates: dict[str, Any],
         *,
-        confidence_by_key: dict[str, float | None],
+        confidence_by_key: Mapping[str, float | None],
     ) -> dict[str, Any]:
         metadata: dict[str, Any] = {}
         meta_suffixes = ("_confidence", "_status", "_last_updated", "_last_direction")

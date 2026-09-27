@@ -96,7 +96,7 @@ class ProductionSignalInventory:
         ):
             evidence_routes.extend(cls._evidence_route("outcome_adapter", name, item) for item in items)
 
-        reward_routes = [
+        reward_routes_candidates = [
             cls._reward_route("task.completed", RoutingRewardModel.from_task_outcome(completed_event, completed=True)),
             cls._reward_route("task.abandoned", RoutingRewardModel.from_task_outcome(abandoned_event, completed=False)),
             cls._reward_route("task.feedback_negative", RoutingRewardModel.from_task_feedback(feedback_negative)),
@@ -110,7 +110,7 @@ class ProductionSignalInventory:
                 RoutingRewardModel.from_chat_turn(gratitude=True, dissatisfaction=False),
             ),
         ]
-        reward_routes = [item for item in reward_routes if item is not None]
+        reward_routes: list[dict[str, Any]] = [item for item in reward_routes_candidates if item is not None]
 
         return {
             "schema_version": "production_signal_inventory.v1",

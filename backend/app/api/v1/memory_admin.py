@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
@@ -220,7 +221,7 @@ async def run_memory_health(
 @audit_admin_action(category="memory_governance", risk="high", action="run_memory_adjustments")
 async def run_adjustments(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
-    summary = {}
+    summary: dict[str, Any] = {}
 
     tuning_status = "skipped"
     if settings.ENABLE_BUDGET_TUNING:

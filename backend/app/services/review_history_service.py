@@ -1120,7 +1120,7 @@ class ReviewHistoryService:
 # 全局实例管理
 # ============================================
 
-_review_history_services: dict[str, ReviewHistoryService] = {}
+_review_history_services: dict[int, ReviewHistoryService] = {}  # 键为 id(db_session)
 
 
 def get_review_history_service(db_session: AsyncSession) -> ReviewHistoryService:

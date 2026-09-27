@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config import settings
 
 DEFAULT_BUDGETS: dict[str, dict[str, int]] = {
@@ -15,7 +17,7 @@ class ContextBudgetScheduler:
     def __init__(
         self,
         budgets: dict[str, dict[str, int]] | None = None,
-        db: object | None = None,
+        db: AsyncSession | None = None,
     ) -> None:
         self.budgets = budgets or DEFAULT_BUDGETS
         self.db = db

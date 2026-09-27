@@ -233,7 +233,7 @@ class MilestoneHandler:
 
             proposal = TaskGenerationProposal(
                 proposal_id=f"prop-{uuid.uuid4().hex[:8]}",
-                milestone_id=milestone.get("id"),
+                milestone_id=str(milestone.get("id") or ""),
                 plan_id=str(plan_id),
                 reasoning=result_data.get("reasoning", "Generated based on milestone achievement."),
                 suggested_count=len(tasks),
@@ -301,7 +301,7 @@ class MilestoneHandler:
 
         return TaskGenerationProposal(
             proposal_id=f"prop-{uuid.uuid4().hex[:8]}",
-            milestone_id=milestone.get("id"),
+            milestone_id=str(milestone.get("id") or ""),
             plan_id=str(plan_id),
             reasoning=f"基于已完成的 {completed} 个任务，为你推荐继续学习的内容",
             suggested_count=len(templates),

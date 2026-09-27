@@ -13,7 +13,7 @@ import time
 import uuid
 from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Protocol, cast
 
 from fastapi import HTTPException
 from loguru import logger
@@ -68,6 +68,24 @@ LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS = 45
 LLM_STREAM_FIRST_CHUNK_TIMEOUT_REASONING_SECONDS = 90
 LLM_STREAM_OVERALL_TIMEOUT_SECONDS = 120
 LLM_STREAM_OVERALL_TIMEOUT_REASONING_SECONDS = 300
+
+
+class LlmJsonFn(Protocol):
+    """注入式 JSON LLM 调用契约：与 ``LLMService.chat_json`` 对齐。
+
+    ``max_tokens`` 等额外参数经 chat_json 的 ``**kwargs`` 透传；此处显式声明
+    注入方必须接受的调用形态（messages + model/max_tokens/temperature kwargs），
+    供 SkillExtract/SkillShare/LlmExtractor 的可注入 ``llm_json`` 依赖做静态检查。
+    """
+
+    async def __call__(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        model: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float = 0.3,
+    ) -> Any | None: ...
 
 
 def _report_call_outcome(

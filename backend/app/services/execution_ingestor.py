@@ -395,9 +395,9 @@ class ExecutionIngestor:
             matches = []
             if isinstance(risk, dict):
                 matches = [
-                    item.get("label")
+                    label
                     for item in list(risk.get("sensitive_signals") or [])
-                    if isinstance(item, dict) and str(item.get("label") or "").strip()
+                    if isinstance(item, dict) and (label := str(item.get("label") or "")).strip()
                 ]
             label_suffix = f"（{', '.join(matches[:3])}）" if matches else ""
             quality_warnings.append(
@@ -810,7 +810,7 @@ class ExecutionIngestor:
 
         required_fields = schema.get("required", []) if isinstance(schema, dict) else []
         properties = schema.get("properties", {}) if isinstance(schema, dict) else {}
-        type_map = {
+        type_map: dict[str, type[Any] | tuple[type[Any], ...]] = {
             "string": str,
             "number": (int, float),
             "integer": int,
@@ -839,7 +839,7 @@ class ExecutionIngestor:
                         expected_labels.append(str(item))
                         expected_types.append(python_type)
             else:
-                python_type = type_map.get(schema_type)
+                python_type = type_map.get(schema_type) if isinstance(schema_type, str) else None
                 if python_type:
                     expected_labels.append(str(schema_type))
                     expected_types.append(python_type)

@@ -1108,7 +1108,6 @@ class AuroraDecisionLoop:
         if decision.harness_updates:
             try:
                 decision.harness_updates = ControlSurfaceService.validate_harness_update(
-                    ControlSurfaceService,
                     decision.harness_updates,
                     hard_bounds=hard_bounds,
                 )
@@ -1179,7 +1178,6 @@ class AuroraDecisionLoop:
         if decision.harness_updates:
             try:
                 decision.harness_updates = ControlSurfaceService.validate_harness_update(
-                    ControlSurfaceService,
                     decision.harness_updates,
                     hard_bounds=hard_bounds,
                 )

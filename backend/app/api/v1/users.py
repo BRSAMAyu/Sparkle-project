@@ -41,6 +41,12 @@ from app.schemas.user import (
     UserSessionInfo,
     UserUpdate,
 )
+from app.schemas.user import (
+    AvatarStatus as SchemaAvatarStatus,
+)
+from app.schemas.user import (
+    UserStatusEnum as SchemaUserStatusEnum,
+)
 from app.services.auth_session_service import auth_session_service
 from app.services.profile_write_service import ProfileWriteService
 from app.services.user_settings_service import UserSettingsService
@@ -116,7 +122,7 @@ async def _build_user_profile(
         password_login_enabled=user.password_login_enabled,
         nickname=user.nickname,
         avatar_url=user.avatar_url,
-        avatar_status=user.avatar_status,
+        avatar_status=SchemaAvatarStatus(user.avatar_status.value),
         pending_avatar_url=user.pending_avatar_url,
         flame_level=user.flame_level,
         flame_brightness=user.flame_brightness,
@@ -125,9 +131,9 @@ async def _build_user_profile(
         schedule_preferences=user.schedule_preferences,
         weather_preferences=user.weather_preferences,
         is_active=user.is_active,
-        status=user.status,
-        created_at=user.created_at.isoformat() if user.created_at else "",
-        updated_at=user.updated_at.isoformat() if user.updated_at else "",
+        status=SchemaUserStatusEnum(user.status.value),
+        created_at=user.created_at,
+        updated_at=user.updated_at,
         photon_balance=user.photon_balance,
         equipped_skin=user.equipped_skin,
         equipped_skin_source=user.equipped_skin_source,

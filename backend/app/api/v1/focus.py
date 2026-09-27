@@ -115,7 +115,7 @@ async def get_llm_breakdown(
     """
     subtasks = await focus_service.breakdown_task_via_llm(
         data.task_title,
-        data.task_description
+        data.task_description or "",
     )
     return {"subtasks": subtasks}
 

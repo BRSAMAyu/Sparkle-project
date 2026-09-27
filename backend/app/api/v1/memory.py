@@ -15,7 +15,7 @@ from app.models.chat import ChatSession
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
 from app.services.accountability_mvp_service import AccountabilityMvpService
-from app.services.conflict_resolver_service import ConflictResolverService
+from app.services.conflict_resolver_service import ConflictResolverService, UserSelection
 from app.services.memory_epistemic_contract import (
     EpistemicClass,
     classify_episodic_class,
@@ -658,10 +658,11 @@ async def arbitrate_unresolved_conflict(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="selection must be left/right/none"
         )
     service = ConflictResolverService(db)
+    selection_typed: UserSelection = "left" if selection == "left" else ("right" if selection == "right" else "none")
     item = await service.arbitrate_unresolved_conflict(
         user_id=current_user.id,
         conflict_id=conflict_id,
-        selection=selection,
+        selection=selection_typed,
     )
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unresolved conflict not found")
@@ -921,12 +922,13 @@ def _serialize_episodic(record: EpisodicMemory) -> dict:
     return payload
 
 
-def _serialize_corrected_memory(kind: str, record: object) -> dict:
-    if kind == "preference":
+def _serialize_corrected_memory(kind: str, record: MemoryPreference | MemoryGoal | EpisodicMemory) -> dict:
+    # apply_correction 按 kind 选模型返回 ORM 实例；isinstance 收窄与该契约一致。
+    if kind == "preference" and isinstance(record, MemoryPreference):
         return _serialize_preference(record)
-    if kind == "goal":
+    if kind == "goal" and isinstance(record, MemoryGoal):
         return _serialize_goal(record)
-    if kind == "episodic":
+    if kind == "episodic" and isinstance(record, EpisodicMemory):
         return _serialize_episodic(record)
     return {"id": str(getattr(record, "id", ""))}
 

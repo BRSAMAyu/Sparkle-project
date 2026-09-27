@@ -168,9 +168,9 @@ class TaskCompleted(Event):
         user_id: str,
         task_id: str,
         estimated_minutes: int,
-        actual_minutes: int,
+        actual_minutes: int | None,
         difficulty: int,
-        completion_rate: float,
+        completion_rate: float | None,
         user_note: str | None = None,
         plan_id: str | None = None,
         source: str = "personal",
@@ -735,8 +735,10 @@ class EventBus:
         return f"{stream}{self.dlq_suffix}"
 
     @staticmethod
-    def _serialize_stream_body(message: dict[str, Any]) -> dict[str, str]:
-        msg_body: dict[str, str] = {}
+    def _serialize_stream_body(message: dict[str, Any]) -> dict[Any, Any]:
+        # redis-py stub 的 xadd 形参是不变型 dict[FieldT, FieldT]，dict[str, str] 永远
+        # 不兼容（stub 设计局限，非调用方缺陷）；线协议体统一以 Any 键值显型。
+        msg_body: dict[Any, Any] = {}
         for key, value in message.items():
             if isinstance(value, (dict, list)):
                 msg_body[key] = json.dumps(value, ensure_ascii=False, default=str)
@@ -1387,7 +1389,7 @@ class EventBus:
             info = await self.redis.xinfo_stream(dlq_stream)
             message_count = info.get("length", 0)
 
-            oldest_age_seconds = 0
+            oldest_age_seconds: int | float = 0
             if message_count > 0:
                 first_entry = await self.redis.xrange(dlq_stream, count=1)
                 if first_entry:

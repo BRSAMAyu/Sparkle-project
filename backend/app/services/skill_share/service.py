@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import re
 import time
-from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -16,6 +15,7 @@ from app.config import settings
 from app.core.metrics import SPARKLE_SKILL_SHARE_PIPELINE_LATENCY_SECONDS
 from app.models.aurora_stage21 import SharedSkill, SkillShareModerationQueue, UserSkill
 from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
+from app.services.llm_service import LlmJsonFn
 
 PHONE_PATTERN = re.compile(r"\b(?:\+?\d[\d\- ]{6,}\d)\b")
 EMAIL_PATTERN = re.compile(r"\b[\w.\-]+@[\w.\-]+\.\w+\b")
@@ -35,7 +35,7 @@ class SkillShareService:
         self,
         db: AsyncSession,
         *,
-        llm_json: Callable[[list[dict[str, str]], Any], Awaitable[Any | None]] | None = None,
+        llm_json: LlmJsonFn | None = None,
     ) -> None:
         self.db = db
         self._llm_json = llm_json

@@ -58,7 +58,7 @@ class AuroraStage37LLMSafetyKillSwitchService:
             from app.config import settings
 
             mode = normalize_mode(
-                getattr(settings, _STAGE37_BINDING.settings_attr, _STAGE37_BINDING.fallback_mode),
+                getattr(settings, _STAGE37_BINDING.settings_attr or "", _STAGE37_BINDING.fallback_mode),
                 fallback=_STAGE37_BINDING.fallback_mode,
             )
             self._cached_mode = mode
@@ -71,7 +71,7 @@ class AuroraStage37LLMSafetyKillSwitchService:
             from app.config import settings
 
             mode = normalize_mode(
-                getattr(settings, _STAGE37_BINDING.settings_attr, _STAGE37_BINDING.fallback_mode),
+                getattr(settings, _STAGE37_BINDING.settings_attr or "", _STAGE37_BINDING.fallback_mode),
                 fallback=_STAGE37_BINDING.fallback_mode,
             )
             self._cached_mode = mode

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 from loguru import logger
-from sqlalchemy import and_, func, select
+from sqlalchemy import Insert, and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -125,7 +125,7 @@ class ShopService:
         dialect_name = bind.dialect.name if bind is not None else ""
 
         if dialect_name == "postgresql":
-            stmt = pg_insert(IdempotencyKey).values(**values).on_conflict_do_nothing(
+            stmt: Insert = pg_insert(IdempotencyKey).values(**values).on_conflict_do_nothing(
                 index_elements=[IdempotencyKey.key]
             )
             result = await self.db.execute(stmt)
@@ -254,7 +254,7 @@ class ShopService:
 
         return items_data
 
-    async def _check_item_ownership(self, user_id: str, item_id: str, item_type: ShopItemType) -> bool:
+    async def _check_item_ownership(self, user_id: str, item_id: str, item_type: str) -> bool:
         """
         检查用户是否已拥有物品
 

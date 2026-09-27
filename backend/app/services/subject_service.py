@@ -3,6 +3,7 @@
 Subject Service - 管理学科标准和映射 (v2.1)
 """
 import json
+from typing import Any
 
 from loguru import logger
 from sqlalchemy import func, select
@@ -40,7 +41,7 @@ _SECTOR_ANGLES = {
     "VOID": 0.0,
 }
 
-_DEFAULT_SUBJECTS = [
+_DEFAULT_SUBJECTS: list[dict[str, Any]] = [
     {
         "name": "数学",
         "category": "理学",

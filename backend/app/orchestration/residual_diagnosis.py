@@ -291,7 +291,8 @@ class ResidualDiagnosisRuntime:
 
         ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)
         primary_code, primary_score = ranked[0]
-        secondary_code, secondary_score = ranked[1]
+        secondary_code: str | None = ranked[1][0]
+        secondary_score = ranked[1][1]
         margin = primary_score - secondary_score
 
         if primary_score < 0.4:

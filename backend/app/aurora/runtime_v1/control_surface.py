@@ -184,8 +184,9 @@ class ControlSurfaceService:
             runtime_enabled=self.enabled,
         )
 
+    @classmethod
     def validate_harness_update(
-        self,
+        cls,
         updates: Mapping[str, Any],
         *,
         hard_bounds: AuroraHardBounds | None = None,
@@ -193,7 +194,7 @@ class ControlSurfaceService:
         if not isinstance(updates, Mapping):
             raise HarnessUpdateRejectedError(["harness update must be a mapping"])
 
-        unknown = sorted(set(updates.keys()) - self.ALLOWED_FIELDS)
+        unknown = sorted(set(updates.keys()) - cls.ALLOWED_FIELDS)
         if unknown:
             raise HarnessUpdateRejectedError([f"unsupported harness field: {field}" for field in unknown])
 

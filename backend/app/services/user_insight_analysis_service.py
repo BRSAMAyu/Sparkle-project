@@ -130,7 +130,7 @@ class UserInsightAnalysisService:
         recent_started = sum(
             1
             for task in tasks
-            if (task.started_at and task.started_at >= since) or task.created_at >= since
+            if (task.started_at is not None and task.started_at >= since) or task.created_at >= since
         )
         recent_completed = sum(1 for task in tasks if task.completed_at and task.completed_at >= since)
         pain_count = len(state.recent_pain_points)
@@ -199,7 +199,7 @@ class UserInsightAnalysisService:
         else:
             rhythm = "balanced"
 
-        started_count = sum(1 for task in tasks if task.started_at or task.created_at)
+        started_count = sum(1 for task in tasks if task.started_at is not None or task.created_at is not None)
         completed_count = sum(1 for task in tasks if task.status == TaskStatus.COMPLETED or task.completed_at is not None)
         completion_ratio = round(completed_count / max(started_count, 1), 3)
         if completion_ratio >= 0.8:
