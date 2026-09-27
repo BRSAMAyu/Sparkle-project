@@ -18,15 +18,21 @@ from app.tools.registry import tool_registry
 #: - IdempotencyConflict：同键前次调用仍在途，同键重放恒拒；换新键重试 =
 #:   第二次真执行，恰是冲突闸要防的 duplicate side effect；
 #: - IdempotencyArgsMismatch：同键已绑定不同参数，自动换键绕开参数一致性锚；
-#: - IdempotencyKeyRequired：side-effect 缺键的 fail-closed，自动换键把它洗成放行。
-#: executor（X-06/X-09）语义：重试换新幂等键是**显式决策**（"that's an explicit
-#: decision, not automatic behavior"），不由自动环代行。实录见
-#: v3-output/WT713-HUNT1/repro_idem_launder.py 与
-#: tests/unit/test_v3_fix417_idem_gate_no_launder.py。
+#: - IdempotencyKeyRequired：side-effect 缺键的 fail-closed，自动换键把它洗成放行；
+#: - V3-FIX-447 · IdempotencyInterrupted：前次调用中断且效果不可核实（X-09 两阶
+#:   段收敛产物，executor 幂等闸门第四类拒绝），同键重放恒拒；修正轮换新键 =
+#:   把「重试必须换新幂等键——那是显式决策」（executor X-09 注释自证）洗成自动
+#:   代行。/confirm 两面（chat.py :933/:963）无 :797 行内过滤形态，本集是唯一闸。
+#: /stream（:797）与 /task 批量面（:566/:573）已在漏斗前排除 Interrupted，本集
+#: 对其不可达（纵深防御，语义零变化）。实录见 v3-output/WT713-HUNT1/
+#: repro_idem_launder.py、v3-output/WT740-IDEM447/repro_idem447_confirm_launder.py
+#: 与 tests/unit/test_v3_fix417_idem_gate_no_launder.py、
+#: tests/unit/test_v3_fix447_idem_interrupted_confirm_no_launder.py。
 IDEMPOTENCY_GATE_ERROR_TYPES: tuple[str, ...] = (
     "IdempotencyConflict",
     "IdempotencyArgsMismatch",
     "IdempotencyKeyRequired",
+    "IdempotencyInterrupted",
 )
 
 
@@ -84,13 +90,25 @@ class AgentErrorHandler:
         # V3-FIX-417 · 幂等闸门拒绝不进自修正环：修正轮以 LLM 新生成 tool_call_id
         # 重调 executor（key = idempotency_key or tool_call_id）——等于自动换新幂
         # 等键，把 Conflict/ArgsMismatch/KeyRequired 三类闸门拒绝「洗白」成第二次
-        # 真执行（wt713 运行级实录 execute_count=2）。重试换键是显式决策，不由自动
-        # 环代行：诚实跳过并原样上报（chat.py 四喂入面全经本漏斗，含 batch 面）。
+        # 真执行（wt713 运行级实录 execute_count=2）。V3-FIX-447 补第四类
+        # IdempotencyInterrupted：/confirm 两面（chat.py :933/:963）无 X-09 行内
+        # 过滤，中断账本行（两阶段收敛产物）的重放恒拒被修正轮洗成新键真执行
+        # （repro_idem447_confirm_launder.py 运行级实录 execute_count=2）。
+        # 重试换键是显式决策，不由自动环代行：诚实跳过并原样上报。
         if tool_result.error_type in IDEMPOTENCY_GATE_ERROR_TYPES:
-            tool_result.suggestion = (
-                f"{tool_result.suggestion or ''}\n自动修正已跳过：幂等闸门拒绝（{tool_result.error_type}）"
-                "不能用换键重试自动绕过；请等待在途调用结束后显式重试。"
-            ).strip()
+            if tool_result.error_type == "IdempotencyInterrupted":
+                # V3-FIX-447 · 中断键永不重执行（X-09），「等待在途结束」不适用：
+                # 唯一出路是显式决策换新键，话术须如实区分。
+                skip_reason = (
+                    f"自动修正已跳过：前次调用中断且效果不可核实（{tool_result.error_type}），"
+                    "本键永不重执行；重试必须显式决策并使用新幂等键，不由自动环代行。"
+                )
+            else:
+                skip_reason = (
+                    f"自动修正已跳过：幂等闸门拒绝（{tool_result.error_type}）"
+                    "不能用换键重试自动绕过；请等待在途调用结束后显式重试。"
+                )
+            tool_result.suggestion = (f"{tool_result.suggestion or ''}\n{skip_reason}").strip()
             return tool_result
 
         # 构建修正提示
@@ -269,7 +287,8 @@ class AgentErrorHandler:
         # 2. 资源不存在且无法通过修正参数解决
         # 3. 参数类型错误但无法推断正确类型
         # 4. V3-FIX-417：幂等闸门拒绝（IdempotencyConflict/IdempotencyArgsMismatch/
-        #    IdempotencyKeyRequired）——同键重放恒拒，换键重试=显式决策，不由自动环代行
+        #    IdempotencyKeyRequired/IdempotencyInterrupted）——同键重放恒拒或键永不
+        #    重执行，换键重试=显式决策，不由自动环代行
         if not tool_result.error_message:
             return False
 
