@@ -153,9 +153,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bgmSectionTitle => '背景音乐';
 
   @override
-  String get bgmSectionSubtitle => '按页面自动切换氛围，也支持你偏向钢琴、空灵或温暖风格';
-
-  @override
   String get bgmLoadingSubtitle => '正在读取音乐偏好...';
 
   @override
@@ -441,9 +438,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get viewOfflineQueue => '查看离线队列状态与重试';
 
   @override
-  String get generationFailed => '生成失败，请稍后重试';
-
-  @override
   String generationFailedWithDetail(Object error) {
     return '生成失败: $error';
   }
@@ -495,9 +489,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get submitFailed => '提交失败，请重试';
-
-  @override
-  String get sendFailed => '发送失败，请重试';
 
   @override
   String get view => '查看';
@@ -1648,9 +1639,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get commonNo => '否';
-
-  @override
   String get commonOk => '确定';
 
   @override
@@ -2603,11 +2591,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get personaMyProfile => '我的画像';
-
-  @override
-  String personaLoadFailed(Object error) {
-    return '加载失败：$error';
-  }
 
   @override
   String get personaL1Title => 'L1 用户声明';
@@ -7351,9 +7334,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get studyMaterialsFilterClearNode => '清除节点筛选';
-
-  @override
-  String get studyMaterialsDate => '时间';
 
   @override
   String get studyMaterialsDateAll => '不限时间';
@@ -24371,15 +24351,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get groupNoMembersFound => '未找到成员';
 
   @override
-  String get groupOwner => '群主';
-
-  @override
-  String get groupAdmin => '管理员';
-
-  @override
-  String get groupMember => '成员';
-
-  @override
   String get groupDemoteToMember => '降为普通成员';
 
   @override
@@ -26574,9 +26545,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsPlanLinked => '计划结束时间';
-
-  @override
-  String get ebLoadError => '加载错题失败，请重试';
 
   @override
   String chatContextReceiptSummary(int used, int skipped) {
@@ -31660,9 +31628,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get auto_ => '%';
-
-  @override
-  String get auto_unknownerror => '未知错误';
 
   @override
   String get auto_flex => '高光炫耀';

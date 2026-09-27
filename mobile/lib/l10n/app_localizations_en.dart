@@ -159,10 +159,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bgmSectionTitle => 'Background Music';
 
   @override
-  String get bgmSectionSubtitle =>
-      'Auto-switch ambience by page, with piano, airy, or warm preferences';
-
-  @override
   String get bgmLoadingSubtitle => 'Loading music preferences...';
 
   @override
@@ -466,9 +462,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewOfflineQueue => 'View offline queue status and retry';
 
   @override
-  String get generationFailed => 'Generation failed, please try again later';
-
-  @override
   String generationFailedWithDetail(Object error) {
     return 'Generation failed: $error';
   }
@@ -520,9 +513,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get submitFailed => 'Submission failed, please retry';
-
-  @override
-  String get sendFailed => 'Failed to send, please retry';
 
   @override
   String get view => 'View';
@@ -1750,9 +1740,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get commonNo => 'No';
-
-  @override
   String get commonOk => 'OK';
 
   @override
@@ -2732,11 +2719,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get personaMyProfile => 'My Profile';
-
-  @override
-  String personaLoadFailed(Object error) {
-    return 'Load failed: $error';
-  }
 
   @override
   String get personaL1Title => 'L1 User Declaration';
@@ -7637,9 +7619,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyMaterialsFilterClearNode => 'Clear node filter';
-
-  @override
-  String get studyMaterialsDate => 'Date';
 
   @override
   String get studyMaterialsDateAll => 'Any time';
@@ -25422,15 +25401,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupNoMembersFound => 'No members found';
 
   @override
-  String get groupOwner => 'Owner';
-
-  @override
-  String get groupAdmin => 'Admins';
-
-  @override
-  String get groupMember => 'Members';
-
-  @override
   String get groupDemoteToMember => 'Demote to Member';
 
   @override
@@ -27739,9 +27709,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsPlanLinked => 'Planned end time';
-
-  @override
-  String get ebLoadError => 'Failed to load errors, please try again';
 
   @override
   String chatContextReceiptSummary(int used, int skipped) {
@@ -33043,9 +33010,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auto_ => '%';
-
-  @override
-  String get auto_unknownerror => 'Unknown error';
 
   @override
   String get auto_flex => 'Flex';

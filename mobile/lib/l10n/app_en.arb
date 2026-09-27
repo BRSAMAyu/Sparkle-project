@@ -48,7 +48,6 @@
   "sensoryAmbientSceneTitle": "Focus Ambience",
   "sensoryAmbientVolumeTitle": "Ambient Volume",
   "bgmSectionTitle": "Background Music",
-  "bgmSectionSubtitle": "Auto-switch ambience by page, with piano, airy, or warm preferences",
   "bgmLoadingSubtitle": "Loading music preferences...",
   "bgmEnabledTitle": "Enable Background Music",
   "bgmEnabledSubtitle": "Automatically switch BGM when entering different pages",
@@ -144,7 +143,6 @@
   "sync": "Sync",
   "syncCenter": "Sync Center",
   "viewOfflineQueue": "View offline queue status and retry",
-  "generationFailed": "Generation failed, please try again later",
   "generationFailedWithDetail": "Generation failed: {error}",
   "version": "Sparkle v2.1.0-stable\n© 2025 Sparkle Team",
   "editPlan": "Edit Plan",
@@ -160,7 +158,6 @@
   "sprintAbandoned": "Sprint abandoned",
   "networkErrorRetry": "Network error, please retry",
   "submitFailed": "Submission failed, please retry",
-  "sendFailed": "Failed to send, please retry",
   "view": "View",
   "ongoing": "Ongoing",
   "errorTitle": "Oops, something went wrong",
@@ -578,7 +575,6 @@
   "durationSeconds": "{count}s",
   "numberPercent": "{value}%",
   "numberProgress": "{value}% complete",
-  "commonNo": "No",
   "commonOk": "OK",
   "commonCancel": "Cancel",
   "commonSave": "Save",
@@ -903,7 +899,6 @@
   "achievementTaskDesc": "{username} performed excellently in this sprint\nYou truly deserve the efficiency star!",
   "personaGuide": "Persona Guide",
   "personaMyProfile": "My Profile",
-  "personaLoadFailed": "Load failed: {error}",
   "personaL1Title": "L1 User Declaration",
   "personaL2Title": "L2 Collaborative Calibration",
   "personaL3Title": "L3 System Inference",
@@ -3126,7 +3121,6 @@
     }
   },
   "studyMaterialsFilterClearNode": "Clear node filter",
-  "studyMaterialsDate": "Date",
   "studyMaterialsDateAll": "Any time",
   "studyMaterialsDate7d": "Last 7 days",
   "studyMaterialsDate30d": "Last 30 days",
@@ -8637,9 +8631,6 @@
   "groupSearchMembers": "Search members...",
   "groupNoMembersYet": "No members yet",
   "groupNoMembersFound": "No members found",
-  "groupOwner": "Owner",
-  "groupAdmin": "Admins",
-  "groupMember": "Members",
   "groupDemoteToMember": "Demote to Member",
   "groupPromoteToAdmin": "Promote to Admin",
   "groupTransferOwnership": "Transfer Ownership",
@@ -12150,7 +12141,6 @@
   "planPortfolioRetry": "Retry",
   "planViewDetails": "View details",
   "toolsPlanLinked": "Planned end time",
-  "ebLoadError": "Failed to load errors, please try again",
   "chatContextReceiptSummary": "Aurora · used {used} context item(s) / skipped {skipped}",
   "@chatContextReceiptSummary": {
     "placeholders": {
@@ -14854,10 +14844,6 @@
   "auto_": "%",
   "@auto_": {
     "description": "%"
-  },
-  "auto_unknownerror": "Unknown error",
-  "@auto_unknownerror": {
-    "description": "Unknown error"
   },
   "auto_flex": "Flex",
   "@auto_flex": {

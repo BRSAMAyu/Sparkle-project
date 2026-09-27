@@ -386,12 +386,6 @@ abstract class AppLocalizations {
   /// **'背景音乐'**
   String get bgmSectionTitle;
 
-  /// No description provided for @bgmSectionSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'按页面自动切换氛围，也支持你偏向钢琴、空灵或温暖风格'**
-  String get bgmSectionSubtitle;
-
   /// No description provided for @bgmLoadingSubtitle.
   ///
   /// In zh, this message translates to:
@@ -962,12 +956,6 @@ abstract class AppLocalizations {
   /// **'查看离线队列状态与重试'**
   String get viewOfflineQueue;
 
-  /// No description provided for @generationFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'生成失败，请稍后重试'**
-  String get generationFailed;
-
   /// No description provided for @generationFailedWithDetail.
   ///
   /// In zh, this message translates to:
@@ -1057,12 +1045,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'提交失败，请重试'**
   String get submitFailed;
-
-  /// No description provided for @sendFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'发送失败，请重试'**
-  String get sendFailed;
 
   /// No description provided for @view.
   ///
@@ -3134,12 +3116,6 @@ abstract class AppLocalizations {
   /// **'完成 {value}%'**
   String numberProgress(Object value);
 
-  /// No description provided for @commonNo.
-  ///
-  /// In zh, this message translates to:
-  /// **'否'**
-  String get commonNo;
-
   /// No description provided for @commonOk.
   ///
   /// In zh, this message translates to:
@@ -4879,12 +4855,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'我的画像'**
   String get personaMyProfile;
-
-  /// No description provided for @personaLoadFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载失败：{error}'**
-  String personaLoadFailed(Object error);
 
   /// No description provided for @personaL1Title.
   ///
@@ -13615,12 +13585,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'清除节点筛选'**
   String get studyMaterialsFilterClearNode;
-
-  /// No description provided for @studyMaterialsDate.
-  ///
-  /// In zh, this message translates to:
-  /// **'时间'**
-  String get studyMaterialsDate;
 
   /// No description provided for @studyMaterialsDateAll.
   ///
@@ -44481,24 +44445,6 @@ abstract class AppLocalizations {
   /// **'未找到成员'**
   String get groupNoMembersFound;
 
-  /// No description provided for @groupOwner.
-  ///
-  /// In zh, this message translates to:
-  /// **'群主'**
-  String get groupOwner;
-
-  /// No description provided for @groupAdmin.
-  ///
-  /// In zh, this message translates to:
-  /// **'管理员'**
-  String get groupAdmin;
-
-  /// No description provided for @groupMember.
-  ///
-  /// In zh, this message translates to:
-  /// **'成员'**
-  String get groupMember;
-
   /// No description provided for @groupDemoteToMember.
   ///
   /// In zh, this message translates to:
@@ -48501,12 +48447,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'计划结束时间'**
   String get toolsPlanLinked;
-
-  /// No description provided for @ebLoadError.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载错题失败，请重试'**
-  String get ebLoadError;
 
   /// No description provided for @chatContextReceiptSummary.
   ///
@@ -57612,12 +57552,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'%'**
   String get auto_;
-
-  /// No description provided for @auto_unknownerror.
-  ///
-  /// In zh, this message translates to:
-  /// **'未知错误'**
-  String get auto_unknownerror;
 
   /// No description provided for @auto_flex.
   ///
