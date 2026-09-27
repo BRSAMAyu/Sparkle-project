@@ -24,13 +24,14 @@
 
 ## B 级（明显降低体验）
 
-### B-04-L-01 · home：叙事区错误文案裸露在 demo 首屏【开放——V3-FIX-376 未收口本面，见 2026-09-25 补记】
+### B-04-L-01 · home：叙事区错误文案裸露在 demo 首屏【已收口——V3-FIX-376 补完（wt696）FIXED@e0777bd5+c69f55b7，见 2026-09-25 闭案补记】
 - 现象：`home__main__demo_data`（android/macos 两批一致），主叙事句（"早上好，今天先从一小步开始…"）正下方直接渲染「ⓘ 加载失败 轻触重试」。
 - rubric：State feedback 1 分——错误态可见性本身诚实，但 demo persona 首屏把「失败」当常态展示，与「今天适合保持节奏」的头部语气冲突，5 秒测试里构成误导性焦点。
 - 复现：home__main__demo_data__android__1080x2400@3.0__87b5f432.png 中部（d7a961da 首轮批同位相同）。
 - 建议裁决方向：demo 模式下叙事源失败应降级为隐藏/占位（demo 数据永不失败是 demo 契约的一部分），或 demo 数据补齐该 narrative 源。
 - 关联：Q03 基线（WT401 evidence C01_home_default.png）同位置同样存在——非本批新引入。
 - **2026-09-25 补记（wt693 重采批实拍归因）**：V3-FIX-376（wt686）给 `features/home/presentation/providers/understanding_snapshot_provider.dart` 的 `_fetch` 加了 demo 门控，但 golden home 首屏「Sparkle 对你的理解」回执卡（`UnderstandingSnapshotCard`）实际消费的是**同名双胞胎 provider**——`features/experience/presentation/providers/experience_provider.dart` 的 `understandingSnapshotProvider`（`FutureProvider.autoDispose` → `experienceRepository.getUnderstandingSnapshot()`，**无 demo 分支**）。临时探针实测（B-04 同源泵配方，isDemoMode=true）：该 provider 仍为 AsyncError(DioException 400)，错误卡父链 = CompactErrorCard < Semantics < UnderstandingSnapshotCard。87b5f432 重采 home ×3 批与 d7a961da **逐字节相同**，错误行仍在。FIX-376 收口的是 home understanding panel / chat understanding drawer 消费面（slot 系统内默认折叠，不入 golden 首屏）；本 ledger 面向的 golden 首屏回执卡未修。**L-01 保持开放**，待修面 = experience 孪生 provider（或其 repository 的 demo 分支）。
+- **2026-09-25 闭案补记（wt696 · V3-FIX-376 补完 FIXED@e0777bd5+c69f55b7）**：experience 孪生 provider 补同构 demo 门控（isDemoMode 返回内建空快照，卡片空态承载，非 demo 路径零改动）；wt693 临时探针固化为正式测试（`mobile/test/features/experience/presentation/providers/experience_understanding_snapshot_demo_test.dart`，修前 2 红/修后 2 绿）。home android 单面重采 `home__main__demo_data__android__1080x2400@3.0__e0777bd5.png`：亲验读图对照——旧图主叙事句下「ⓘ 加载失败 轻触重试」消失，回执卡以数据态空态承载（兜底叙事+0% 置信 pill）；android manifest 重建 9 条目 verify OK、coverage 9/9、探针 27 条保序换锚（pump_exception=0、截断候选=0）。注：macos 批 home 面仍锚 87b5f432（本批范围只采 android 权威文字面，ENV-1 口径；macos home 面待下轮全量重采顺带换锚，布局两批同源不受影响）。**L-01 关闭**。
 
 ### B-04-L-02 · chat：360dp 手机宽下消息列表下方大片死区
 - 现象：`chat__history_citations`（android 批），最后一条消息的反馈操作（不是这个方向/更短一点/直接出题/重新校准）与输入坞之间约 40% 屏高的空白，无任何内容或留白设计语言支撑。
