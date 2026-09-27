@@ -13,7 +13,7 @@ This service provides the feedback loop for the plan review system.
 """
 
 import copy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID
 
 from loguru import logger
@@ -141,7 +141,7 @@ class PlanFeedbackService:
         plan_id: UUID,
         content: str,
         decision: str = "needs_modification",
-        priority: str = "normal",
+        priority: Literal["high", "normal"] = "normal",
         related_task_id: UUID | None = None,
     ) -> dict[str, Any] | None:
         """

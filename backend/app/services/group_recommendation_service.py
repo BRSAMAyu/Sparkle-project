@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 import random
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -48,7 +49,7 @@ def _jaccard(a: set[str], b: set[str]) -> float:
     return len(a & b) / len(union)
 
 
-def _normalize_scores(values: dict[UUID, float]) -> dict[UUID, float]:
+def _normalize_scores(values: Mapping[UUID, float]) -> dict[UUID, float]:
     if not values:
         return {}
     max_value = max(values.values())

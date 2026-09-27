@@ -9,10 +9,11 @@ from typing import Any
 
 class ReportLogger:
     def __init__(self, base_dir: str | None = None):
-        resolved_dir = base_dir or os.getenv(
+        env_dir = os.getenv(
             "SPARKLE_REPORT_LOG_DIR",
             os.path.join(tempfile.gettempdir(), "sparkle_learning_reports"),
         )
+        resolved_dir = base_dir or env_dir
         self.base_dir = Path(resolved_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -144,7 +145,7 @@ def encode_source_state_key(source_state: dict[str, str] | None) -> str:
     return "|".join(f"{name}={normalized[name]}" for name in SOURCE_STATE_DIMENSION_ORDER)
 
 
-def estimate_state_space(value_map: dict[str, set[str] | list[str] | tuple[str, ...]]) -> int:
+def estimate_state_space(value_map: Mapping[str, set[str] | list[str] | tuple[str, ...]]) -> int:
     total = 1
     for name in SOURCE_STATE_DIMENSION_ORDER:
         options = value_map.get(name) or []

@@ -15,7 +15,7 @@ from typing import Any
 from loguru import logger
 
 from app.core.trace_spine import fingerprint
-from app.orchestration.schemas import ObservabilityEvent
+from app.orchestration.schemas import ObservabilityEvent, ObservabilityEventType
 
 
 class ObservabilityLogger:
@@ -485,7 +485,7 @@ class ObservabilityLogger:
 
     async def log_event(
         self,
-        event_type: str,
+        event_type: ObservabilityEventType,
         user_id: str = "",
         session_id: str = "",
         plan_id: str = "",

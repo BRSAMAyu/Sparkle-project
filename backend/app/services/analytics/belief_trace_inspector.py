@@ -407,7 +407,9 @@ class BeliefTraceInspector:
                 EvidenceCalibrationAnalyzer()
                 .evaluate(
                     [],
-                    correction_events=[_loads(item) for item in calibration_raw if _loads(item) is not None],
+                    correction_events=[
+                        _loaded for _item in calibration_raw if (_loaded := _loads(_item)) is not None
+                    ],
                 )
                 .to_dict()
             )

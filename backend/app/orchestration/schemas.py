@@ -464,16 +464,23 @@ class ShadowPrediction:
 
 # ============ Phase 3: Observability Event ============
 
+# 可观测性事件词表（封闭枚举）：log_event 全部实际发射值逐一对齐（含 expert_* 族与
+# user_feedback_bound，orchestrator 既有行为，此处仅声明面补登记，无运行变化）。
+ObservabilityEventType = Literal[
+    "route_decision", "langgraph_plan", "validation_failed",
+    "circuit_state_change", "collaboration_start", "collaboration_end",
+    "shadow_prediction", "tool_execution", "phase_a_decision",
+    "expert_selected", "expert_invoked", "expert_overridden", "expert_fallback",
+    "user_feedback_bound",
+]
+
+
 @dataclass
 class ObservabilityEvent:
     """可观测性事件 (Phase 3)"""
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: str = field(default_factory=_utcnow_iso)
-    event_type: Literal[
-        "route_decision", "langgraph_plan", "validation_failed",
-        "circuit_state_change", "collaboration_start", "collaboration_end",
-        "shadow_prediction", "tool_execution", "phase_a_decision"
-    ] = "route_decision"
+    event_type: ObservabilityEventType = "route_decision"
 
     # 事件数据
     user_id: str = ""

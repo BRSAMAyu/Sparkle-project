@@ -73,7 +73,9 @@ class UnifiedAnalysisService:
         pattern_name = result.primary_output.get("pattern_name") or "Behavior Pattern"
         root_cause = result.primary_output.get("root_cause") or ""
         summary = f"{pattern_name}: {root_cause}".strip(": ")
-        tags = [result.primary_output.get("pattern_type")] if result.primary_output.get("pattern_type") else None
+        # 安全收窄：falsy（None/空串）原样落到 tags=None，truthy 值取 str 与旧 f-string 语义一致
+        pattern_type = result.primary_output.get("pattern_type") or ""
+        tags = [pattern_type] if pattern_type else None
 
         if "user_id" not in result.metadata:
             return None

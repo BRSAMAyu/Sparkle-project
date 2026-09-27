@@ -32,7 +32,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.datetime_utils import _utcnow
 from app.models.community import Group, GroupMember, GroupRole, GroupType
-from app.schemas.community import GroupCreate
+from app.schemas.community import GroupCreate, GroupTypeEnum
 from app.schemas.community_squad import (
     SQUAD_MAX_MEMBERS,
     SQUAD_MIN_MEMBERS,
@@ -114,7 +114,7 @@ class SquadService:
         group_create = GroupCreate(
             name=data.name,
             description=data.description,
-            type=GroupType.SPRINT,
+            type=GroupTypeEnum.SPRINT,
             focus_tags=data.focus_tags,
             deadline=data.deadline,
             sprint_goal=data.sprint_goal,

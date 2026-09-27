@@ -245,7 +245,7 @@ class PersistenceLayerMixin:
                 plan_id=uuid.UUID(str(executable_plan.plan_id)),
                 feedback=feedback,
             )
-            return [record.to_dict() if hasattr(record, "to_dict") else record for record in (records or [])]
+            return [record if isinstance(record, dict) else record.to_dict() for record in (records or [])]
         except Exception as e:
             logger.opt(exception=e).warning(f"Failed to publish execution feedback: {e}")
             return []

@@ -159,6 +159,16 @@ def get_workflow_config(chat_mode: str | None) -> ModeStrategyOverride | None:
     return get_mode_strategy(chat_mode)
 
 
+# 团队模式白名单到字面量值的保型映射：键=用户配置词，值=ModeStrategyOverride.collaboration_mode
+# 词表成员（"auto" 仅作缺省回退，不作为配置键出现）。
+_TEAM_COLLABORATION_MODES: dict[str, Literal["auto", "sequential", "parallel", "debate", "delegation"]] = {
+    "sequential": "sequential",
+    "parallel": "parallel",
+    "debate": "debate",
+    "delegation": "delegation",
+}
+
+
 def build_team_strategy(team_spec: dict) -> ModeStrategyOverride:
     """Build a ModeStrategyOverride from user-configured team spec."""
     agents = [str(a).strip() for a in (team_spec.get("agents") or []) if str(a).strip()]
@@ -182,7 +192,8 @@ def build_team_strategy(team_spec: dict) -> ModeStrategyOverride:
     if not resolved_agents:
         return MODE_STRATEGIES[CHAT_MODE_STANDARD]
 
-    collaboration_mode = mode if mode in {"sequential", "parallel", "debate", "delegation"} else "auto"
+    # 同值查表替代集合成员判断（字面量保型，运行语义逐字节一致）
+    collaboration_mode = _TEAM_COLLABORATION_MODES.get(mode, "auto")
     answer_agents = [
         str(agent).strip()
         for agent in (team_spec.get("final_agents") or team_spec.get("answer_agents") or [])

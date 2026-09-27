@@ -251,7 +251,8 @@ class FeedbackDrivenGenerationService:
         # 更新反馈模式
         await self._update_feedback_pattern(user_id, feedback)
 
-        # 记录到历史服务
+        # 记录到历史服务（注：本文件 FeedbackType 与 review_history 的 ContentReviewFeedbackType
+        # 同名异型、词表不相交，历史上即传 .value 字符串落库；维持既有行为不动）
         await self._history_service.record_user_feedback(
             review_id=review_id,
             user_id=user_id,

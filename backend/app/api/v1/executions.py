@@ -422,7 +422,7 @@ async def _record_to_response(
         matches = []
         if isinstance(risk, dict):
             matches = [
-                item.get("label")
+                str(item.get("label") or "")
                 for item in list(risk.get("sensitive_signals") or [])
                 if isinstance(item, dict) and str(item.get("label") or "").strip()
             ]

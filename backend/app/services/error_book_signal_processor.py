@@ -3,7 +3,7 @@ Error book signal processor - infer preferences from error book patterns.
 """
 from __future__ import annotations
 
-from collections import Counter
+from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -94,7 +94,9 @@ class ErrorBookSignalProcessor:
         return filtered
 
     def _recurring_error_tags(self, errors: list[ErrorRecord]) -> list[str]:
-        weighted_tags: Counter[str] = Counter()
+        # recency_weight 返回 float，Counter 值类型固定 int（typeshed）故用 defaultdict 承接；
+        # 缺键 0.0 起加与 Counter 0 起加数值结果一致
+        weighted_tags: defaultdict[str, float] = defaultdict(float)
         for error in errors:
             weight = recency_weight(error.created_at, now=_utcnow(), half_life_days=5.0, min_weight=0.25)
             for tag in self._extract_tags(error):

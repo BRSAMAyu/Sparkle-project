@@ -106,7 +106,8 @@ class PersDynAttractorService:
     )
     HISTORY_DAYS = 14
     CONFIDENCE_LOOKBACK_DAYS = 28
-    REFLECTION_VALENCE_MAP = {
+    # 键含 None：_extract_reflection_category 无类别标签时返回 None，dict.get(None) 走缺省 0.4
+    REFLECTION_VALENCE_MAP: dict[str | None, float] = {
         "too_difficult": 0.25,
         "unclear": 0.35,
         "abandoned": 0.2,

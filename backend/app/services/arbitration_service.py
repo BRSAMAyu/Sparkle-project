@@ -654,6 +654,10 @@ class ArbitrationService:
 
         resolution_times = []
         for c in resolved_with_time:
+            if c.resolved_at is None:
+                # 上方列表推导已过滤无 resolved_at 的案件；此守卫仅为类型收窄，
+                # 不改变任何可达输入下的行为。
+                continue
             created = datetime.fromisoformat(c.created_at)
             resolved = datetime.fromisoformat(c.resolved_at)
             diff = (resolved - created).total_seconds() / 3600

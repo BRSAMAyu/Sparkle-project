@@ -16,6 +16,8 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.config.settings import settings
 from app.core.exceptions import QuotaExceededError
@@ -351,7 +353,7 @@ class PlanQuotaService:
             else_=5
         )
 
-        conditions = [Plan.user_id == user_id]
+        conditions: list[ColumnElement[bool] | InstrumentedAttribute[bool]] = [Plan.user_id == user_id]
         if not include_inactive:
             conditions.append(Plan.is_active)
 
