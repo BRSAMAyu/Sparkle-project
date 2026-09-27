@@ -316,17 +316,55 @@ async def _ensure_friendship(
     return friendship
 
 
+# ── V3-FIX-506：guest 种子演示群标记（S-03 验收「seed/demo group 明确标演示」
+# 的后端半边）──────────────────────────────────────────────────────────────
+# 缺陷（WT775-DOC-UPSG/S-line.md §S-03）：mobile demo-mode 的 mock 群一律在
+# 名称尾部带「（演示）」后缀（mock_community_repository.dart + l10n
+# demoGroupSuffix），而后端播种的 6 个真·访客可见演示群经 GET /groups（我的
+# 群组）、群详情、群聊天等读面展示时与真实群完全不可区分。
+#
+# 修法（最小诚实修，不加列不加迁移，与 J-01 ``Plan.source="example"`` 既有列
+# 同判——Group 无 source/is_demo 列，引入即触 schema；演示群标记的既有双端
+# 约定是「名称尾部后缀」）：种子建群单一出口 ``_ensure_group`` 统一落
+# 「基础名 + 后缀」标记名。name 进所有群读面（列表/详情/聊天/目录），任何
+# 读面（人或程序，经 ``is_demo_group_name``）可区分演示群与真实群。
+# 存量无标记种子群（修前已播种的库）在种子重播时就地改名收敛，不另建带标记
+# 副本留下无标记双份。
+GUEST_SEED_DEMO_GROUP_SUFFIX = "（演示）"
+
+
+def demo_group_name(base_name: str) -> str:
+    """种子演示群的落库名：基础名 + ``GUEST_SEED_DEMO_GROUP_SUFFIX``。"""
+    return f"{base_name}{GUEST_SEED_DEMO_GROUP_SUFFIX}"
+
+
+def is_demo_group_name(name: str) -> bool:
+    """读面程序化判定：群名是否为 guest 种子演示群（后缀标记契约）。"""
+    return name.endswith(GUEST_SEED_DEMO_GROUP_SUFFIX)
+
+
 async def _ensure_group(
     session: AsyncSession,
     *,
     name: str,
     defaults: dict,
 ) -> Group:
+    # name 语义（V3-FIX-506）：调用方传基础名；落库一律带演示后缀标记。
+    marked_name = demo_group_name(name)
     group = (
-        await session.execute(select(Group).where(Group.name == name))
+        await session.execute(select(Group).where(Group.name == marked_name))
     ).scalar_one_or_none()
     if not group:
-        group = Group(name=name, **defaults)
+        # 存量收敛：修前库里的无标记同名群就地改名（连同行内既有成员/消息/
+        # 任务归属），随后走统一覆写；不存在则新建带标记群。
+        legacy = (
+            await session.execute(select(Group).where(Group.name == name))
+        ).scalar_one_or_none()
+        if legacy:
+            legacy.name = marked_name
+            group = legacy
+    if not group:
+        group = Group(name=marked_name, **defaults)
         session.add(group)
         await session.flush()
         return group
