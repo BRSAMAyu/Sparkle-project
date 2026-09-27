@@ -84,8 +84,12 @@ func TestWebSocketLifecycle(t *testing.T) {
 	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws/chat"
 
 	t.Run("Connection Authentication Failed", func(t *testing.T) {
-		_, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+		_, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
 		assert.Error(t, err) // Should fail 401
+		// Failed handshakes still return a drained response body; close it.
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
 	})
 
 	t.Run("Connection Success & Message Flow", func(t *testing.T) {
@@ -93,6 +97,9 @@ func TestWebSocketLifecycle(t *testing.T) {
 		conn, resp, err := websocket.DefaultDialer.Dial(wsURL+"?token=valid-token", nil)
 		assert.NoError(t, err)
 		assert.Equal(t, 101, resp.StatusCode)
+		// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+		// that keeps the *http.Response lifecycle explicit.
+		defer resp.Body.Close()
 		defer conn.Close()
 
 		// Send Message
@@ -109,8 +116,9 @@ func TestWebSocketLifecycle(t *testing.T) {
 		conn.Close()
 		time.Sleep(10 * time.Millisecond)
 
-		conn2, _, err := websocket.DefaultDialer.Dial(wsURL+"?token=valid-token", nil)
+		conn2, resp2, err := websocket.DefaultDialer.Dial(wsURL+"?token=valid-token", nil)
 		assert.NoError(t, err)
+		defer resp2.Body.Close()
 		conn2.Close()
 	})
 }

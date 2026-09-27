@@ -318,11 +318,15 @@ func TestProxyRoutesHandler_ClientTelemetryAuthBoundary(t *testing.T) {
 
 	server := httptest.NewServer(router)
 	defer server.Close()
-	postResp, err := http.Post(
+	postReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
 		server.URL+"/api/v1/client-telemetry/events/batch",
-		"application/json",
 		bytes.NewBufferString(`{"events":[{"event_type":"screen_view"}]}`),
 	)
+	if err != nil {
+		t.Fatalf("failed to build anonymous telemetry ingest request: %v", err)
+	}
+	postReq.Header.Set("Content-Type", "application/json")
+	postResp, err := http.DefaultClient.Do(postReq)
 	if err != nil {
 		t.Fatalf("failed to post anonymous telemetry ingest: %v", err)
 	}
@@ -335,7 +339,11 @@ func TestProxyRoutesHandler_ClientTelemetryAuthBoundary(t *testing.T) {
 		t.Fatalf("expected anonymous telemetry ingest to bypass auth middleware, got %d calls", authCalls)
 	}
 
-	summaryResp, err := http.Get(server.URL + "/api/v1/client-telemetry/summary")
+	summaryReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL+"/api/v1/client-telemetry/summary", nil)
+	if err != nil {
+		t.Fatalf("failed to build telemetry summary request: %v", err)
+	}
+	summaryResp, err := http.DefaultClient.Do(summaryReq)
 	if err != nil {
 		t.Fatalf("failed to get telemetry summary: %v", err)
 	}
@@ -398,7 +406,11 @@ func TestProxyRoutesHandler_AdminExecutionsRequireAdmin(t *testing.T) {
 	adminServer := httptest.NewServer(newRouter(true))
 	defer adminServer.Close()
 
-	adminResp, err := http.Get(adminServer.URL + "/api/v1/admin/executions")
+	adminReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, adminServer.URL+"/api/v1/admin/executions", nil)
+	if err != nil {
+		t.Fatalf("failed to build admin request: %v", err)
+	}
+	adminResp, err := http.DefaultClient.Do(adminReq)
 	if err != nil {
 		t.Fatalf("expected admin request to proxy successfully: %v", err)
 	}

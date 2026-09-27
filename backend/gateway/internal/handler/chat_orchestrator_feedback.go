@@ -316,7 +316,7 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 	}
 
 	// Persist feedback for analytics/learning (best effort).
-	if err := h.persistActionFeedback(authToken, toolResultID, widgetType, action); err != nil {
+	if err := h.persistActionFeedback(ctx, authToken, toolResultID, widgetType, action); err != nil {
 		log.Printf("Failed to persist action feedback: %v", err)
 	}
 }
@@ -377,7 +377,7 @@ func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
 	}
 
 	endpoint := fmt.Sprintf("%s/api/v1/executions/records/%s/%s", h.backendURL, recordID, statusPath)
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
 			"message":     i18n.T(ctx, "feedback.execution.cannot_create_request"),
@@ -514,7 +514,7 @@ func extractErrorMessage(payload map[string]interface{}) string {
 	return ""
 }
 
-func (h *ChatOrchestrator) persistActionFeedback(authToken, toolResultID, widgetType, action string) error {
+func (h *ChatOrchestrator) persistActionFeedback(ctx context.Context, authToken, toolResultID, widgetType, action string) error {
 	if h.backendURL == "" || authToken == "" || toolResultID == "" {
 		return nil
 	}
@@ -535,7 +535,7 @@ func (h *ChatOrchestrator) persistActionFeedback(authToken, toolResultID, widget
 	}
 
 	endpoint := fmt.Sprintf("%s/api/v1/signals/feedback", h.backendURL)
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -664,6 +664,12 @@ func (h *ChatOrchestrator) handleInterventionFeedbackWithResponder(responder int
 	}
 
 	endpoint := fmt.Sprintf("%s/api/v1/interventions/requests/%s/feedback", h.backendURL, requestID)
+	// noctx known-legacy (wt635 batch 2): ctx is deliberately NOT threaded
+	// here yet. Rewriting this signature line re-flags the pre-existing
+	// unparam finding (userID unused) as a NEW issue under new-from-rev and
+	// turns CI red; unparam adjudication belongs to lint batch 3, which will
+	// rewrite this signature and can adopt NewRequestWithContext in the same
+	// stroke.
 	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		log.Printf("Failed to build intervention feedback request: %v", err)
@@ -912,7 +918,7 @@ func (h *ChatOrchestrator) handlePlanReviewFeedbackWithResponder(ctx context.Con
 }
 
 // handleFocusCompleted processes focus session completion events
-func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, userID, authToken string) {
+func (h *ChatOrchestrator) handleFocusCompleted(ctx context.Context, msgMap map[string]interface{}, userID, authToken string) {
 	sessionID, ok := msgMap["session_id"].(string)
 	if !ok {
 		log.Printf("Invalid focus_completed event: missing session_id field")
@@ -976,7 +982,7 @@ func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, u
 	}
 
 	endpoint := fmt.Sprintf("%s/api/v1/focus/sessions", h.backendURL)
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		log.Printf("Failed to build focus_completed request: %v", err)
 		return

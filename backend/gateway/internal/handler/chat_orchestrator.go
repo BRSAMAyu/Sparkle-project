@@ -466,7 +466,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					h.handlePlanReviewFeedback(writer, msgMap, userID, streamCtx)
 					return false
 				case "focus_completed":
-					h.handleFocusCompleted(msgMap, userID, authToken)
+					h.handleFocusCompleted(streamCtx, msgMap, userID, authToken)
 					return false
 				case "tool_result":
 					// Legacy JSON routing for tool results
@@ -676,7 +676,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid focus_completed payload", false)
 					return false
 				}
-				h.handleFocusCompleted(msgMap, userID, authToken)
+				h.handleFocusCompleted(msgCtx, msgMap, userID, authToken)
 				return false
 			case "update_node_mastery":
 				msgMap, err := decodePayloadMap(envelope.Payload["update_node_mastery"])

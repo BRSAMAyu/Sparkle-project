@@ -47,8 +47,11 @@ func TestMessageNackEmittedForInvalidJSON(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
+	conn, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
 	require.NoError(t, err)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+	// that keeps the *http.Response lifecycle explicit.
+	defer resp.Body.Close()
 	defer conn.Close()
 
 	// Send invalid JSON (unquoted garbage)
@@ -93,8 +96,11 @@ func TestMessageNackEmittedForEmptyMessage(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
+	conn, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
 	require.NoError(t, err)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+	// that keeps the *http.Response lifecycle explicit.
+	defer resp.Body.Close()
 	defer conn.Close()
 
 	// Send valid JSON with empty message
@@ -138,8 +144,11 @@ func TestMessageNackForUnknownMessageTypeIsPermanent(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
+	conn, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
 	require.NoError(t, err)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+	// that keeps the *http.Response lifecycle explicit.
+	defer resp.Body.Close()
 	defer conn.Close()
 
 	// Send unknown type to trigger fallback path
@@ -184,8 +193,11 @@ func TestNoLegacyErrorTypeInNackPaths(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
+	conn, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
 	require.NoError(t, err)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+	// that keeps the *http.Response lifecycle explicit.
+	defer resp.Body.Close()
 	defer conn.Close()
 
 	// Send invalid JSON to trigger error path

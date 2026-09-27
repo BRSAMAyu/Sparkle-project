@@ -36,6 +36,9 @@ func TestPlanReviewE2E(t *testing.T) {
 		wsConn, resp, err := websocket.DefaultDialer.Dial(wsURL+"?token=test-token", nil)
 		require.NoError(t, err)
 		require.Equal(t, 101, resp.StatusCode)
+		// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+		// that keeps the *http.Response lifecycle explicit.
+		defer resp.Body.Close()
 		defer wsConn.Close()
 
 		// Step 2: Send message requesting plan creation
@@ -323,6 +326,9 @@ func setupWebSocketConnection(t *testing.T, token string) *websocket.Conn {
 	wsConn, resp, err := websocket.DefaultDialer.Dial(wsURL+"?token="+token, nil)
 	require.NoError(t, err)
 	require.Equal(t, 101, resp.StatusCode)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op that
+	// keeps the *http.Response lifecycle explicit (the conn outlives this fn).
+	defer resp.Body.Close()
 	return wsConn
 }
 

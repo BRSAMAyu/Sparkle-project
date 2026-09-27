@@ -119,8 +119,11 @@ func TestWebSocketProxyRejectsPerConnectionRateLimit(t *testing.T) {
 	}))
 	defer gateway.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(gateway.URL), nil)
+	conn, resp, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(gateway.URL), nil)
 	require.NoError(t, err)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+	// that keeps the *http.Response lifecycle explicit.
+	defer resp.Body.Close()
 	defer conn.Close()
 
 	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"ping"}`)))

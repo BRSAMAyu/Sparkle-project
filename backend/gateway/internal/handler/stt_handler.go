@@ -148,7 +148,16 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 		pythonHeaders["Authorization"] = []string{"Bearer " + authToken}
 	}
 
-	pythonConn, _, err := websocket.DefaultDialer.Dial(h.pythonSTTUrl, pythonHeaders)
+	pythonConn, dialResp, err := websocket.DefaultDialer.Dial(h.pythonSTTUrl, pythonHeaders)
+	// gorilla always returns the handshake response with an already-drained
+	// NopCloser body (both the success and ErrBadHandshake paths slurp and
+	// replace it; raw transport failures return resp=nil), so this close is a
+	// no-op that never touches pythonConn's socket — kept explicit so the
+	// *http.Response lifecycle stays closed. The close error is unobservable
+	// on a NopCloser.
+	if dialResp != nil {
+		_ = dialResp.Body.Close()
+	}
 	if err != nil {
 		h.logger.Error("Failed to connect to Python STT service", zap.Error(err))
 		_ = clientWriter.WriteJSON(map[string]string{

@@ -65,12 +65,16 @@ func TestFileEventHub_FullIntegration(t *testing.T) {
 	wsURL := "ws" + server.URL[4:] + "/ws"
 
 	// Connect two clients
-	client1, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	client1, resp1, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	require.NoError(t, err)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+	// that keeps the *http.Response lifecycle explicit.
+	defer resp1.Body.Close()
 	defer client1.Close()
 
-	client2, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	client2, resp2, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	require.NoError(t, err)
+	defer resp2.Body.Close()
 	defer client2.Close()
 
 	// Wait for registration
@@ -110,8 +114,11 @@ func TestFileEventHub_UnregisterRemovesConnection(t *testing.T) {
 
 	wsURL := "ws" + server.URL[4:] + "/ws"
 
-	client, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	client, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	require.NoError(t, err)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+	// that keeps the *http.Response lifecycle explicit.
+	defer resp.Body.Close()
 
 	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, 1, hub.Count("user-a"))
@@ -154,8 +161,11 @@ func TestFileEventHub_SendRemovesBadConnections(t *testing.T) {
 	defer server.Close()
 
 	wsURL := "ws" + server.URL[4:] + "/ws"
-	client, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	client, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	require.NoError(t, err)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+	// that keeps the *http.Response lifecycle explicit.
+	defer resp.Body.Close()
 
 	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, 1, hub.Count("user-b"))

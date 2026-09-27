@@ -162,7 +162,7 @@ func TestPrepareUpload(t *testing.T) {
 		mockStorage.On("PresignPost", mock.Anything, objectKey, "image/png", int64(1), int64(10*1024*1024)).
 			Return("https://s3.example.com/upload", map[string]string{"key": "val"}, nil)
 
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
@@ -181,7 +181,7 @@ func TestPrepareUpload(t *testing.T) {
 		}
 		body, _ := json.Marshal(reqBody)
 
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
@@ -199,7 +199,7 @@ func TestPrepareUpload(t *testing.T) {
 
 		mockStorage.On("MaxUploadSize").Return(int64(10 * 1024 * 1024))
 
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
@@ -235,7 +235,7 @@ func TestPrepareUpload(t *testing.T) {
 		mockStorage.On("PresignPost", mock.Anything, objectKey, "image/png", int64(1), int64(10*1024*1024)).
 			Return("https://s3.example.com/upload", map[string]string{"key": "val"}, nil)
 
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
@@ -253,7 +253,7 @@ func TestPrepareUpload(t *testing.T) {
 
 		mockStorage.On("MaxUploadSize").Return(int64(10 * 1024 * 1024))
 
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
@@ -272,7 +272,7 @@ func TestPrepareUpload(t *testing.T) {
 
 		mockStorage.On("MaxUploadSize").Return(int64(10 * 1024 * 1024))
 
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
@@ -310,7 +310,7 @@ func TestCompleteUpload(t *testing.T) {
 			return req.FileID == fileID.String()
 		})).Return(nil)
 
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/complete", bytes.NewReader(body))
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/files/upload/complete", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
@@ -326,7 +326,7 @@ func TestCompleteUpload(t *testing.T) {
 		}
 		body, _ := json.Marshal(reqBody)
 
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/complete", bytes.NewReader(body))
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/files/upload/complete", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
@@ -343,7 +343,7 @@ func TestGetFile(t *testing.T) {
 		mockMetadata.On("GetFile", mock.Anything, fileID, userID).
 			Return(service.StoredFile{ID: fileID, UserID: userID, FileName: "test.txt"}, nil)
 
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/files/"+fileID.String(), nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/files/"+fileID.String(), nil)
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
@@ -355,7 +355,7 @@ func TestGetFile(t *testing.T) {
 		mockMetadata.On("GetFile", mock.Anything, fileID, userID).
 			Return(service.StoredFile{}, errors.New("not found"))
 
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/files/"+fileID.String(), nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/files/"+fileID.String(), nil)
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 

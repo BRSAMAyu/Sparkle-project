@@ -262,6 +262,9 @@ backend/gateway/chat-orchestrator-test
 dump.rdb
 tmp/
 backend/coverage.json
+backend/gateway/coverage.out
+backend/gateway/coverage.txt
+backend/gateway/coverage.html
 mobile/libisar.dylib
 login_debug_res.json
 login_new_res.json

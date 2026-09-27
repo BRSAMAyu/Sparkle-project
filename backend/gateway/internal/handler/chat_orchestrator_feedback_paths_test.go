@@ -205,14 +205,14 @@ func TestChatOrchestratorFeedbackHTTPCallbacks(t *testing.T) {
 	}, "user-1", "token-1")
 	require.Equal(t, "ok", sender.interventions[0].status)
 
-	h.handleFocusCompleted(map[string]interface{}{
+	h.handleFocusCompleted(ctx, map[string]interface{}{
 		"session_id":      "focus-1",
 		"actual_duration": 25.0,
 		"focus_type":      "deep_work",
 		"tasks_completed": []interface{}{"not-a-uuid", "11111111-2222-3333-4444-555555555555"},
 	}, "user-1", "token-1")
 
-	require.NoError(t, h.persistActionFeedback("token-1", "tool-1", "focus_card", "confirm"))
+	require.NoError(t, h.persistActionFeedback(ctx, "token-1", "tool-1", "focus_card", "confirm"))
 	require.Equal(t, 1, seen["/api/v1/executions/records/record-1/confirm"])
 	require.Equal(t, 1, seen["/api/v1/executions/records/record-2/reject"])
 	require.Equal(t, 1, seen["/api/v1/interventions/requests/request-1/feedback"])
@@ -224,13 +224,14 @@ func TestFocusCompletedEarlyReturns(t *testing.T) {
 	h := &ChatOrchestrator{}
 
 	require.NotPanics(t, func() {
-		h.handleFocusCompleted(map[string]interface{}{}, "user-1", "")
-		h.handleFocusCompleted(map[string]interface{}{"session_id": "focus-1"}, "user-1", "")
-		h.handleFocusCompleted(map[string]interface{}{
+		ctx := context.Background()
+		h.handleFocusCompleted(ctx, map[string]interface{}{}, "user-1", "")
+		h.handleFocusCompleted(ctx, map[string]interface{}{"session_id": "focus-1"}, "user-1", "")
+		h.handleFocusCompleted(ctx, map[string]interface{}{
 			"session_id":      "focus-1",
 			"actual_duration": 25.0,
 		}, "user-1", "")
-		h.handleFocusCompleted(map[string]interface{}{
+		h.handleFocusCompleted(ctx, map[string]interface{}{
 			"session_id":      "focus-1",
 			"actual_duration": 0.0,
 		}, "user-1", "token")

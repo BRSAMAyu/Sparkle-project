@@ -98,8 +98,11 @@ func newWSSafeWriterTestPair(t *testing.T) (*websocket.Conn, *websocket.Conn, fu
 		connCh <- conn
 	}))
 
-	clientConn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http"), nil)
+	clientConn, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http"), nil)
 	require.NoError(t, err)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op that
+	// keeps the *http.Response lifecycle explicit (the conn outlives this fn).
+	defer resp.Body.Close()
 
 	select {
 	case err := <-errCh:

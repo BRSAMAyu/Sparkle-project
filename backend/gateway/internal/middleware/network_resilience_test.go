@@ -226,11 +226,12 @@ func TestRetryableUpstreamProxy_Success(t *testing.T) {
 	cfg := DefaultNetworkResilienceConfig()
 	cfg.MaxRetries = 1
 
-	req, err := http.NewRequest(http.MethodGet, server.URL+"/api/test", nil)
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/api/test", nil)
 	require.NoError(t, err)
 
 	resp, err := RetryableUpstreamProxy(
-		context.Background(),
+		ctx,
 		&http.Client{Timeout: 10 * time.Second},
 		req,
 		cfg,
@@ -262,17 +263,19 @@ func TestRetryableUpstreamProxy_RetryOnTransient(t *testing.T) {
 	cfg.MaxRetries = 3
 	cfg.RetryBackoff = 10 * time.Millisecond
 
-	req, err := http.NewRequest(http.MethodGet, server.URL+"/api/retry", nil)
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/api/retry", nil)
 	require.NoError(t, err)
 
 	resp, err := RetryableUpstreamProxy(
-		context.Background(),
+		ctx,
 		&http.Client{Timeout: 10 * time.Second},
 		req,
 		cfg,
 		nil,
 	)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.GreaterOrEqual(t, attempts.Load(), int32(2))
 }
@@ -287,17 +290,19 @@ func TestRetryableUpstreamProxy_ExhaustedRetries(t *testing.T) {
 	cfg.MaxRetries = 1
 	cfg.RetryBackoff = 5 * time.Millisecond
 
-	req, err := http.NewRequest(http.MethodGet, server.URL+"/api/fail", nil)
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/api/fail", nil)
 	require.NoError(t, err)
 
 	resp, err := RetryableUpstreamProxy(
-		context.Background(),
+		ctx,
 		&http.Client{Timeout: 5 * time.Second},
 		req,
 		cfg,
 		nil,
 	)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 }
 
@@ -312,19 +317,24 @@ func TestRetryableUpstreamProxy_ContextCancelled(t *testing.T) {
 	cfg.MaxRetries = 2
 
 	ctx, cancel := context.WithCancel(context.Background())
-	req, err := http.NewRequest(http.MethodGet, server.URL+"/api/slow", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/api/slow", nil)
 	require.NoError(t, err)
 
 	// Cancel immediately
 	cancel()
 
-	_, err = RetryableUpstreamProxy(
+	resp, err := RetryableUpstreamProxy(
 		ctx,
 		&http.Client{Timeout: 5 * time.Second},
 		req,
 		cfg,
 		nil,
 	)
+	// A cancelled call can still surface a live response body; release it
+	// when present before asserting on the error.
+	if resp != nil && resp.Body != nil {
+		_ = resp.Body.Close()
+	}
 	assert.Error(t, err)
 }
 
@@ -342,7 +352,9 @@ func TestRetryableUpstreamProxy_RequestBodyRetained(t *testing.T) {
 	cfg.MaxRetries = 1
 
 	body := `{"task":"write","content":"hello world"}`
-	req, err := http.NewRequest(
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(
+		ctx,
 		http.MethodPost,
 		server.URL+"/api/body",
 		strings.NewReader(body),
@@ -350,13 +362,14 @@ func TestRetryableUpstreamProxy_RequestBodyRetained(t *testing.T) {
 	require.NoError(t, err)
 
 	resp, err := RetryableUpstreamProxy(
-		context.Background(),
+		ctx,
 		&http.Client{Timeout: 10 * time.Second},
 		req,
 		cfg,
 		nil,
 	)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, body, bodySnapshot)
 }

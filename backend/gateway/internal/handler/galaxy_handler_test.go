@@ -76,7 +76,7 @@ func TestGalaxyHandlerRegistersFrontendEndpoints(t *testing.T) {
 	}
 
 	for index, tc := range cases {
-		req, err := http.NewRequest(tc.method, gateway.URL+tc.path, nil)
+		req, err := http.NewRequestWithContext(context.Background(), tc.method, gateway.URL+tc.path, nil)
 		if err != nil {
 			t.Fatalf("new request: %v", err)
 		}

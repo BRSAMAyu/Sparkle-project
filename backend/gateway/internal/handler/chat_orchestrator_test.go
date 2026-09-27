@@ -46,8 +46,11 @@ func TestChatOrchestratorIdleTimeoutClosesFromHandlerLoop(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
+	conn, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
 	require.NoError(t, err)
+	// Handshake body is an empty NopCloser in gorilla; closing is a no-op
+	// that keeps the *http.Response lifecycle explicit.
+	defer resp.Body.Close()
 	defer conn.Close()
 
 	require.NoError(t, conn.SetReadDeadline(time.Now().Add(3*time.Second)))
@@ -80,8 +83,9 @@ func TestChatOrchestratorClientDisconnectClosesWithoutPanic(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
+	conn, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	require.NoError(t, conn.Close())
 
 	require.Eventually(t, func() bool {
