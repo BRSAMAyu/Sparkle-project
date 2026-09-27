@@ -170,9 +170,6 @@ class _FakeUserRepository implements UserRepository {
   Future<void> submitProfileCorrection(Map<String, dynamic> payload) async {}
 
   @override
-  Future<void> submitInsightControl(Map<String, dynamic> payload) async {}
-
-  @override
   Future<List<Map<String, dynamic>>> fetchSystemUpdates(
           {int limit = 50, int offset = 0,}) async =>
       <Map<String, dynamic>>[];

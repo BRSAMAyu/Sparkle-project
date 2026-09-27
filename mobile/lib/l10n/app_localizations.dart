@@ -45927,125 +45927,25 @@ abstract class AppLocalizations {
   /// **'加载中…'**
   String get userLoading;
 
-  /// No description provided for @userVisibleProfile.
-  ///
-  /// In zh, this message translates to:
-  /// **'可见画像'**
-  String get userVisibleProfile;
 
-  /// No description provided for @userVisibleProfileHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'open_editable / open_discussable 条目会在这里直接呈现。'**
-  String get userVisibleProfileHint;
 
-  /// No description provided for @userMediatedProfile.
-  ///
-  /// In zh, this message translates to:
-  /// **'中介画像'**
-  String get userMediatedProfile;
 
-  /// No description provided for @userMediatedProfileHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'sensitive_mediated 条目只在合适上下文里展开。'**
-  String get userMediatedProfileHint;
 
-  /// No description provided for @userTransparentProfile.
-  ///
-  /// In zh, this message translates to:
-  /// **'透明画像'**
-  String get userTransparentProfile;
 
-  /// No description provided for @userSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'概要'**
-  String get userSummary;
 
-  /// No description provided for @userCurrentUnknowns.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前未知项'**
-  String get userCurrentUnknowns;
 
-  /// No description provided for @userNoContent.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无内容。'**
-  String get userNoContent;
 
-  /// No description provided for @userRevertibleChanges.
-  ///
-  /// In zh, this message translates to:
-  /// **'可回退更改'**
-  String get userRevertibleChanges;
 
-  /// No description provided for @userRevertibleHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'这里只展示 Aurora 介入过的变化，不做静默覆盖。'**
-  String get userRevertibleHint;
 
-  /// No description provided for @userNoRevertibleActions.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无可回退动作。'**
-  String get userNoRevertibleActions;
 
-  /// No description provided for @userCorrectionHistoryTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'我纠正过 Aurora 什么'**
-  String get userCorrectionHistoryTitle;
 
-  /// No description provided for @userCorrectionHistoryHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'最近会影响后续判断的画像和聊天纠正。'**
-  String get userCorrectionHistoryHint;
 
-  /// No description provided for @userCorrectionHistoryEmpty.
-  ///
-  /// In zh, this message translates to:
-  /// **'还没有 Aurora 纠正记录。'**
-  String get userCorrectionHistoryEmpty;
 
-  /// No description provided for @userCorrectionHistoryUndo.
-  ///
-  /// In zh, this message translates to:
-  /// **'恢复原判断'**
-  String get userCorrectionHistoryUndo;
 
-  /// No description provided for @userTransparentNotEnabled.
-  ///
-  /// In zh, this message translates to:
-  /// **'透明画像暂未接入'**
-  String get userTransparentNotEnabled;
 
-  /// No description provided for @userTransparentNotEnabledHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'WS6 目前保持 inert，等后续路由或后端绑定补齐后再启用。'**
-  String get userTransparentNotEnabledHint;
 
-  /// No description provided for @userExamModeOnly.
-  ///
-  /// In zh, this message translates to:
-  /// **'仅考试模式'**
-  String get userExamModeOnly;
 
-  /// No description provided for @userMarkInaccurate.
-  ///
-  /// In zh, this message translates to:
-  /// **'标记不准确'**
-  String get userMarkInaccurate;
 
-  /// No description provided for @userMarkNeedsRecalibration.
-  ///
-  /// In zh, this message translates to:
-  /// **'标记需重校'**
-  String get userMarkNeedsRecalibration;
 
   /// No description provided for @userDownloadDataSubtitle.
   ///
@@ -50370,11 +50270,6 @@ abstract class AppLocalizations {
   /// **'回顾近期系统更新和重要账号行为变化。'**
   String get acctSecRecentActivity;
 
-  /// No description provided for @profTransSuggestion.
-  ///
-  /// In zh, this message translates to:
-  /// **'建议：{summary}'**
-  String profTransSuggestion(Object summary);
 
   /// No description provided for @modelChatTempFailed.
   ///
@@ -50394,17 +50289,7 @@ abstract class AppLocalizations {
   /// **'计划生成遇到问题：{error}'**
   String modelChatPlanIssue(Object error);
 
-  /// No description provided for @profTransRecordedAdjustment.
-  ///
-  /// In zh, this message translates to:
-  /// **'已记录「{targetId}」的画像调整。'**
-  String profTransRecordedAdjustment(Object targetId);
 
-  /// No description provided for @profTransHiddenItems.
-  ///
-  /// In zh, this message translates to:
-  /// **'隐藏条目 {count} 条，未进入透明面板。'**
-  String profTransHiddenItems(Object count);
 
   /// No description provided for @settGrowthChronicleSaving.
   ///

@@ -25177,67 +25177,25 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get userLoading => '加载中…';
 
-  @override
-  String get userVisibleProfile => '可见画像';
 
-  @override
-  String get userVisibleProfileHint =>
-      'open_editable / open_discussable 条目会在这里直接呈现。';
 
-  @override
-  String get userMediatedProfile => '中介画像';
 
-  @override
-  String get userMediatedProfileHint => 'sensitive_mediated 条目只在合适上下文里展开。';
 
-  @override
-  String get userTransparentProfile => '透明画像';
 
-  @override
-  String get userSummary => '概要';
 
-  @override
-  String get userCurrentUnknowns => '当前未知项';
 
-  @override
-  String get userNoContent => '暂无内容。';
 
-  @override
-  String get userRevertibleChanges => '可回退更改';
 
-  @override
-  String get userRevertibleHint => '这里只展示 Aurora 介入过的变化，不做静默覆盖。';
 
-  @override
-  String get userNoRevertibleActions => '暂无可回退动作。';
 
-  @override
-  String get userCorrectionHistoryTitle => '我纠正过 Aurora 什么';
 
-  @override
-  String get userCorrectionHistoryHint => '最近会影响后续判断的画像和聊天纠正。';
 
-  @override
-  String get userCorrectionHistoryEmpty => '还没有 Aurora 纠正记录。';
 
-  @override
-  String get userCorrectionHistoryUndo => '恢复原判断';
 
-  @override
-  String get userTransparentNotEnabled => '透明画像暂未接入';
 
-  @override
-  String get userTransparentNotEnabledHint =>
-      'WS6 目前保持 inert，等后续路由或后端绑定补齐后再启用。';
 
-  @override
-  String get userExamModeOnly => '仅考试模式';
 
-  @override
-  String get userMarkInaccurate => '标记不准确';
 
-  @override
-  String get userMarkNeedsRecalibration => '标记需重校';
 
   @override
   String get userDownloadDataSubtitle => '下载账号、学习与记忆相关数据';
@@ -27643,10 +27601,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get acctSecRecentActivity => '回顾近期系统更新和重要账号行为变化。';
 
-  @override
-  String profTransSuggestion(Object summary) {
-    return '建议：$summary';
-  }
 
   @override
   String modelChatTempFailed(Object error) {
@@ -27663,15 +27617,7 @@ class AppLocalizationsZh extends AppLocalizations {
     return '计划生成遇到问题：$error';
   }
 
-  @override
-  String profTransRecordedAdjustment(Object targetId) {
-    return '已记录「$targetId」的画像调整。';
-  }
 
-  @override
-  String profTransHiddenItems(Object count) {
-    return '隐藏条目 $count 条，未进入透明面板。';
-  }
 
   @override
   String get settGrowthChronicleSaving => '正在保存成长编年史可见性...';

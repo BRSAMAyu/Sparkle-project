@@ -26270,70 +26270,25 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get userLoading => 'Loading...';
 
-  @override
-  String get userVisibleProfile => 'Visible Profile';
 
-  @override
-  String get userVisibleProfileHint =>
-      'open_editable / open_discussable items are displayed here directly.';
 
-  @override
-  String get userMediatedProfile => 'Mediated Profile';
 
-  @override
-  String get userMediatedProfileHint =>
-      'sensitive_mediated items only expand in appropriate contexts.';
 
-  @override
-  String get userTransparentProfile => 'Transparent Profile';
 
-  @override
-  String get userSummary => 'Summary';
 
-  @override
-  String get userCurrentUnknowns => 'Current unknowns';
 
-  @override
-  String get userNoContent => 'No content.';
 
-  @override
-  String get userRevertibleChanges => 'Revertible Changes';
 
-  @override
-  String get userRevertibleHint =>
-      'Only showing Aurora-intervened changes, no silent overrides.';
 
-  @override
-  String get userNoRevertibleActions => 'No revertible actions.';
 
-  @override
-  String get userCorrectionHistoryTitle => 'What I corrected Aurora on';
 
-  @override
-  String get userCorrectionHistoryHint =>
-      'Recent profile and chat corrections that can change future judgments.';
 
-  @override
-  String get userCorrectionHistoryEmpty => 'No Aurora corrections yet.';
 
-  @override
-  String get userCorrectionHistoryUndo => 'Restore previous read';
 
-  @override
-  String get userTransparentNotEnabled => 'Transparent profile not yet enabled';
 
-  @override
-  String get userTransparentNotEnabledHint =>
-      'WS6 remains inert until routing or backend bindings are complete.';
 
-  @override
-  String get userExamModeOnly => 'Exam Mode Only';
 
-  @override
-  String get userMarkInaccurate => 'Mark Inaccurate';
 
-  @override
-  String get userMarkNeedsRecalibration => 'Mark for recalibration';
 
   @override
   String get userDownloadDataSubtitle =>
@@ -28837,10 +28792,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get acctSecRecentActivity =>
       'Review recent system updates and important account activity changes.';
 
-  @override
-  String profTransSuggestion(Object summary) {
-    return 'Suggestion: $summary';
-  }
 
   @override
   String modelChatTempFailed(Object error) {
@@ -28857,15 +28808,7 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Plan generation encountered an issue: $error';
   }
 
-  @override
-  String profTransRecordedAdjustment(Object targetId) {
-    return 'Recorded profile adjustment for \"$targetId\".';
-  }
 
-  @override
-  String profTransHiddenItems(Object count) {
-    return '$count hidden items, not shown on transparent profile.';
-  }
 
   @override
   String get settGrowthChronicleSaving =>

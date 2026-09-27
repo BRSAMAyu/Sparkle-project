@@ -378,16 +378,6 @@ class UserRepository {
     );
   }
 
-  Future<void> submitInsightControl(Map<String, dynamic> payload) async {
-    if (DemoDataService.isDemoMode) {
-      return;
-    }
-    await _apiClient.post<Map<String, dynamic>>(
-      '/profile/insights/control',
-      data: payload,
-    );
-  }
-
   Future<Map<String, dynamic>> updateMetacognitionPanelPreference({
     required bool hidden,
   }) async {
