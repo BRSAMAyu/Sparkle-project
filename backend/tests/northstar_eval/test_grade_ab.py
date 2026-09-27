@@ -40,6 +40,32 @@ def pack() -> dict:
     return load_pack(PACK_PATH)
 
 
+@pytest.fixture(autouse=True)
+def _deterministic_router_world(monkeypatch):
+    """钉死双档解析的确定性世界（E-06 同款坑；test-only 零产品码，wt603）。
+
+    本文件的路由断言（A=PRO→dashscope_reason、B=STANDARD→dashscope_standard_thinking、
+    成本锚点 0.2083）编码的是「LLM_PROVIDER=qwen 默认置首 + 无 LLM_TIER_* 覆盖 + 无 key
+    注册」的世界。host .env 若带 `LLM_TIER_PRO=dashscope_standard_thinking,glm_4_7_pro`
+    （B-QWEN 假设 A 的运维切换位，合法产品面），select_model(force_tier=PRO) 会按覆盖链
+    解析 → A 臂漂移成 dashscope_standard_thinking——主仓合并态 2 红、无 .env 的 worktree
+    绿，正是这一未声明环境依赖（冷启动 _model_health 空表无关：未记录 key 恒 healthy，
+    PRO 链候选恒非空，deepseek_chat 兜底支路不触发）。
+
+    与 tests/unit/test_llm_router_free_tier.py `_deterministic_env` 同配方：清空
+    settings 的 *_API_KEY/LLM_TIER_*、钉 LLM_PROVIDER=qwen（docstring 已申报的假设 A
+    前提），重建一次性 LLMRouter 并 monkeypatch 交换模块单例——零共享单例态污染，
+    测试后自动还原；不删任何断言，只把未声明的环境前提变成显式钉死。
+    """
+    import app.core.llm_router as llm_router_module
+    from app.config import settings
+
+    for k in [k for k in vars(settings) if k.endswith("_API_KEY") or k.startswith("LLM_TIER_")]:
+        monkeypatch.setattr(settings, k, "")
+    monkeypatch.setattr(settings, "LLM_PROVIDER", "qwen")
+    monkeypatch.setattr(llm_router_module, "llm_router", llm_router_module.LLMRouter())
+
+
 def test_pack_meets_floor_and_split(pack: dict) -> None:
     composition = pack_composition(pack)
     assert composition["question_count"] >= MIN_PACK_QUESTIONS
@@ -189,6 +215,8 @@ def test_cli_dry_run_end_to_end(tmp_path, capsys) -> None:
 
     key 在场性是环境依赖面（主仓 .env 有真实 key、worktree 没有）——
     按 fleet env 依赖测试惯例钉死为无 key 世界（记忆: env-dependent-test-pitfall）。
+    wt603：该钉死由模块级 `_deterministic_router_world` 真正落实（含 LLM_TIER_*/
+    LLM_PROVIDER 面——此前仅申报未实现，主仓 .env 的 LLM_TIER_PRO 曾致 A 臂漂移红）。
     """
     from app.config import settings as app_settings
     from tests.northstar_eval.grade_ab import main
