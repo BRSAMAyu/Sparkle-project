@@ -34,6 +34,7 @@ from app.services.aurora_stage29_srl_kill_switch_service import (
 from app.services.srl_phase_traits import derive_coldstart_phase_from_traits
 from app.services.srl_phase_types import (
     INACTIVE_TIMEOUT_HOURS,
+    SRL_PHASE_SOURCE_BY_VALUE,
     SRLPhase,
     SRLPhaseState,
     get_transition_rule,
@@ -381,7 +382,7 @@ class SRLPhaseTrackerService:
             current_phase=SRLPhase.UNKNOWN,
             previous_phase=None,
             phase_started_at=now,
-            transition_evidence_ids=(),
+            transition_evidence_ids=[],
             confidence=0.0,
             source="default",
             updated_at=now,
@@ -571,7 +572,9 @@ class SRLPhaseTrackerService:
             ),
             transition_evidence_ids=list(record.transition_evidence_ids or []),
             confidence=float(record.confidence or 0.0),
-            source=record.source,
+            # DB 列是裸 str：查表归一，非法值回退到字段默认 "default"，
+            # 不让损坏行炸状态恢复
+            source=SRL_PHASE_SOURCE_BY_VALUE.get(record.source, "default"),
             updated_at=record.updated_at,
         )
 

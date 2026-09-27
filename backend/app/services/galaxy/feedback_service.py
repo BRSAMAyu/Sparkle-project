@@ -83,7 +83,14 @@ class GalaxyFeedbackService:
         user_id = event_data.get("user_id")
         node_id = event_data.get("node_id")
 
-        if not all([event_type, user_id, node_id]):
+        # 契约校验：type 必须是非空 str，user_id/node_id 必须是 UUID
+        # （文档化的事件载荷形状；非法载荷在这里拒收，而不是在下游炸）。
+        if (
+            not isinstance(event_type, str)
+            or not event_type
+            or not isinstance(user_id, UUID)
+            or not isinstance(node_id, UUID)
+        ):
             logger.warning(f"Missing required fields in event_data: {event_data}")
             return None
 
@@ -166,6 +173,9 @@ class GalaxyFeedbackService:
     async def _calculate_feedback_score(self, event_data: dict[str, Any]) -> float:
         """计算反馈分数"""
         event_type = event_data.get("type")
+        if not isinstance(event_type, str):
+            # 未知/缺失事件类型：按中性分数处理（与 FEEDBACK_SCORES.get(None, 0.0) 等价）
+            return 0.0
 
         if event_type == FeedbackType.STUDY_SESSION:
             # 学习时长反馈：30分钟=1.0分

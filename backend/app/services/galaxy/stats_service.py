@@ -143,6 +143,10 @@ class GalaxyStatsService:
 
         # 2. 计算掌握度
         node = await self.db.get(KnowledgeNode, node_id)
+        if node is None:
+            # 节点不存在属于脏状态（UserNodeStatus 已建但 KnowledgeNode 缺失），
+            # 越过这里只会在属性访问上炸 AttributeError——显式失败更可诊断。
+            raise ValueError(f"KnowledgeNode {node_id} not found for spark_node(user={user_id})")
         old_mastery = status.mastery_score
         is_first_unlock = not status.is_unlocked
 
@@ -489,9 +493,12 @@ class GalaxyStatsService:
                     break
 
         if target_node_id:
-            node = await self.db.get(KnowledgeNode, target_node_id)
+            # 独立命名，避免与上方 for 循环里的 node（KnowledgeNode）类型合并
+            target_node = await self.db.get(KnowledgeNode, target_node_id)
+            if target_node is None:
+                return None
             status = await self._get_user_status(user_id, target_node_id)
-            return cast("NodeWithStatus | None", (NodeWithStatus.from_models(node, status)))
+            return cast("NodeWithStatus | None", (NodeWithStatus.from_models(target_node, status)))
 
         return None
 

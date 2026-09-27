@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
-from typing import Any, cast
+from typing import cast
 from uuid import UUID
 
 from loguru import logger
@@ -233,8 +233,9 @@ class CollaborativeFilteringService:
             else:
                 other_id, other_type = sim.item_id_1, sim.item_type_1
 
-            # 获取物品详情
-            title = await self._get_item_title(other_id, other_type)
+            # 获取物品详情（_get_item_title 只接受 item_id；原多传的 other_type
+            # 会直接 TypeError——helper 按 id 先探 KnowledgeNode 再探 Task）
+            title = await self._get_item_title(other_id)
 
             items.append(ItemSimilarity(
                 item_id=other_id,
@@ -403,9 +404,10 @@ class CollaborativeFilteringService:
     ) -> list[CollaborativeRecommendation]:
         """基于相似用户生成推荐"""
         recommendations = []
-        item_scores: dict[str, Any] = defaultdict(float)
-        item_users = defaultdict(set)
-        item_details = {}
+        # 键都是 UUID（UserItemInteraction.item_id），不是 str
+        item_scores: dict[UUID, float] = defaultdict(float)
+        item_users: dict[UUID, set[UUID]] = defaultdict(set)
+        item_details: dict[UUID, dict[str, str | None]] = {}
 
         for similar_user in similar_users:
             # 获取该相似用户学过的物品
@@ -457,7 +459,8 @@ class CollaborativeFilteringService:
             recommendations.append(CollaborativeRecommendation(
                 item_id=item_id,
                 item_type=RecommendationItemType(await self._get_item_type(item_id)),
-                title=details.get("title", "推荐内容"),
+                # title 可能为 None（物品详情缺失）：回退默认文案
+                title=details.get("title") or "推荐内容",
                 description=details.get("description"),
                 reason="和你进度相似的同学也在学",
                 similar_users=list(item_users[item_id]),
@@ -528,8 +531,8 @@ class CollaborativeFilteringService:
 
         return None
 
-    async def _get_item_type(self, item_id: UUID) -> str | None:
-        """获取物品类型"""
+    async def _get_item_type(self, item_id: UUID) -> str:
+        """获取物品类型（未知物品返回 "unknown"，不返回 None）"""
         node = await self.db.get(KnowledgeNode, item_id)
         if node:
             return "knowledge_node"

@@ -77,7 +77,9 @@ async def test_fatigue_check_emits_event_on_consecutive_dismissals():
             mock_bus.publish.assert_called_once()
             call_kwargs = mock_bus.publish.call_args
             assert call_kwargs.kwargs["event_type"] == "notification.fatigue_detected"
-            assert call_kwargs.kwargs["data"]["consecutive_dismissals"] == 3
+            # EventBus.publish 的载荷形参是 payload（原断言 data 记录的是
+            # 调用侧错参 kwarg——运行时会 TypeError 被外层 except 吞掉）
+            assert call_kwargs.kwargs["payload"]["consecutive_dismissals"] == 3
 
 
 @pytest.mark.asyncio

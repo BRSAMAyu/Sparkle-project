@@ -22,6 +22,14 @@ class SRLPhase(StrEnum):
 
 SRLPhaseSource = Literal["event_triggered", "trait_primed", "default"]
 
+# 运行期可用的合法来源表（供 DB 记录回读归一；非法值回退到字段默认 "default"）
+SRL_PHASE_SOURCE_BY_VALUE: dict[str, SRLPhaseSource] = {
+    "event_triggered": "event_triggered",
+    "trait_primed": "trait_primed",
+    "default": "default",
+}
+SRL_PHASE_SOURCES: tuple[str, ...] = tuple(SRL_PHASE_SOURCE_BY_VALUE)
+
 
 class SRLPhaseState(BaseModel):
     user_id: UUID

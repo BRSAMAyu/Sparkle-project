@@ -390,7 +390,8 @@ class CognitiveService:
                             .limit(phase5_config.RAG_RAW_RETRIEVAL_LIMIT)
                         )
                         rag_result = await self.db.execute(rag_query)
-                        similar_fragments = rag_result.scalars().all()
+                        # scalars().all() 返回 Sequence，落回声明的 list 容器
+                        similar_fragments = list(rag_result.scalars().all())
                     except SQLAlchemyError as exc:
                         if self._is_vector_runtime_error(exc):
                             await self._disable_vector_runtime_for_user(user_id, str(exc))
@@ -401,7 +402,8 @@ class CognitiveService:
 
                 # HyDE: only for short queries
                 hyde_fragments: list[CognitiveFragment] = []
-                use_hyde = (
+                # bool(): and 链里 fragment.content 是 str，真值语义收拢为显式布尔
+                use_hyde = bool(
                     vector_runtime_enabled
                     and
                     phase5_config.HYDE_ENABLED
@@ -427,7 +429,8 @@ class CognitiveService:
                                     .limit(phase5_config.RAG_HYDE_RETRIEVAL_LIMIT)
                                 )
                                 hyde_result = await self.db.execute(hyde_query)
-                                hyde_fragments = hyde_result.scalars().all()
+                                # 同上：Sequence → 声明的 list 容器
+                                hyde_fragments = list(hyde_result.scalars().all())
                             except SQLAlchemyError as exc:
                                 if self._is_vector_runtime_error(exc):
                                     await self._disable_vector_runtime_for_user(user_id, str(exc))

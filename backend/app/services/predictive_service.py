@@ -14,6 +14,7 @@ import asyncio
 import json
 import statistics
 from collections import defaultdict
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from time import perf_counter
 from typing import Any, cast
@@ -58,7 +59,7 @@ from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.task import Task, TaskStatus
 from app.models.user import PushPreference
-from app.schemas.foresight import ForesightSnapshot
+from app.schemas.foresight import Deviation, ForesightHint, ForesightSnapshot
 from app.services.aurora_stage27_foresight_kill_switch_service import (
     AuroraStage27ForesightKillSwitchService,
 )
@@ -228,8 +229,8 @@ class PredictiveService:
         subject_difficulty = await self._build_subject_difficulty_projection(normalized_user_id)
 
         attractors = {}
-        deviations = ()
-        hints = ()
+        deviations: tuple[Deviation, ...] = ()
+        hints: tuple[ForesightHint, ...] = ()
         if mode != "off":
             attractor_service = PersDynAttractorService(self.db)
             if await kill_switch.is_feature_enabled("attractor"):
@@ -427,7 +428,7 @@ class PredictiveService:
                 risk_level="unknown",
             )
 
-    def _analyze_weekday_pattern(self, records: list[StudyRecord]) -> dict[int, int]:
+    def _analyze_weekday_pattern(self, records: Sequence[StudyRecord]) -> dict[int, int]:
         """分析星期模式 (0=Monday, 6=Sunday)"""
         pattern = dict.fromkeys(range(7), 0)
         for record in records:
@@ -435,7 +436,7 @@ class PredictiveService:
             pattern[weekday] += 1
         return pattern
 
-    def _analyze_hour_pattern(self, records: list[StudyRecord]) -> dict[int, int]:
+    def _analyze_hour_pattern(self, records: Sequence[StudyRecord]) -> dict[int, int]:
         """分析小时模式 (0-23)"""
         pattern = dict.fromkeys(range(24), 0)
         for record in records:

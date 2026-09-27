@@ -146,7 +146,8 @@ class CapabilitySelectionEvaluator:
                 current_context=current_context,
                 mode_strategy={"strategy_mode": _strip(current_context.get("session_mode"))},
             )
-            summary = selection.get("summary") if isinstance(selection.get("summary"), dict) else {}
+            raw_summary = selection.get("summary")
+            summary: dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
             notes: list[str] = []
 
             retrieval_score = self._score_retrieval(

@@ -7,6 +7,7 @@ Provides unified access to system notifications and intervention requests.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
@@ -1175,7 +1176,9 @@ class NotificationCenterService:
                 await event_bus.publish(
                     stream="sparkle_events",
                     event_type="notification.fatigue_detected",
-                    data={
+                    # EventBus.publish 的载荷形参名是 payload（原 data 是错参，
+                    # 运行时会 TypeError 并被外层 except 吞掉）
+                    payload={
                         "user_id": str(user_id),
                         "consecutive_dismissals": consecutive,
                         "notification_type": notification_type,
@@ -1485,7 +1488,7 @@ class NotificationCenterService:
 
     async def _load_intervention_records_for_notifications(
         self,
-        notifications: list[Notification],
+        notifications: Sequence[Notification],
     ) -> dict[UUID, InterventionRecord]:
         record_ids_by_notification: dict[UUID, UUID] = {}
         for notification in notifications:
@@ -1535,7 +1538,7 @@ class NotificationCenterService:
 
     async def _load_push_records_for_notifications(
         self,
-        notifications: list[Notification],
+        notifications: Sequence[Notification],
     ) -> dict[UUID, PushDeliveryRecord]:
         notification_ids = [notification.id for notification in notifications]
         if not notification_ids:

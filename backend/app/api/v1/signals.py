@@ -178,10 +178,12 @@ async def get_feedback_stats(
             .where(CandidateActionFeedback.deleted_at.is_(None))
             .group_by(CandidateActionFeedback.feedback_type)
         )
-        feedback_type_breakdown = {
-            row.feedback_type: row.count
-            for row in feedback_type_result
-        }
+        # 列别名 "count" 与 Sequence.count 方法同名，属性访问会被类型检查器解析成
+        # tuple.count；显式解包按列取值，语义不变。
+        feedback_type_breakdown: dict[str, int] = {}
+        for row in feedback_type_result:
+            feedback_type, feedback_count = row
+            feedback_type_breakdown[feedback_type] = feedback_count
 
         # Breakdown by action_type
         action_type_result = await db.execute(
@@ -193,10 +195,10 @@ async def get_feedback_stats(
             .where(CandidateActionFeedback.deleted_at.is_(None))
             .group_by(CandidateActionFeedback.action_type)
         )
-        action_type_breakdown = {
-            row.action_type: row.count
-            for row in action_type_result
-        }
+        action_type_breakdown: dict[str, int] = {}
+        for row in action_type_result:
+            action_type, action_count = row
+            action_type_breakdown[action_type] = action_count
 
         # CTR calculation
         impressions = feedback_type_breakdown.get('impression', 0)
