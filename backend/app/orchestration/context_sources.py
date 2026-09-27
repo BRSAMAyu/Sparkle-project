@@ -49,10 +49,15 @@ key 恒在。tests/unit/test_context_source_contract.py 钉死两面的 key 集�
 - control  —— 显式非世界模型桶：kill-switch 模式、请求参数（use_document_context
   等）。不混入四类，避免污染封闭词表。
 
-seed/demo 标记口径与 registration_source 对齐（guest_cleanup/guest_seed_service/
+seed/demo 标记口径与 registration_source 对齐（guest_seed_service/
 simulation_runner 现状）：registration_source ∈ {seed, system, guest} 为用户级标记；
 memory 记录 source_type == "startup_seed" 为条目级标记；种子库 few-shot 内容本身
 恒为 seed 内容。
+（V3-FIX-339：原 guest_cleanup 清理任务已退役删除——其批量 DELETE users 会被
+权威 schema 中 88 个 NO ACTION 外键阻断（decision_records/aurora_judgment_records
+等，199 个 users 引用仅 111 个带 CASCADE），且自创建起零 include/零 beat/零入队
+从未接线；游客保留策略如需执行面须按 purge_deleted_account 的有序删除形态重新
+立项，不得以本注释旧口径宣称 guest_cleanup 为活机制。）
 """
 
 from __future__ import annotations
