@@ -1,0 +1,13 @@
+[scenario1 no-freeze-card] ring1 B stale read under A uncommitted: last=2026-09-24 S=5 → delta=2
+[scenario1 no-freeze-card] ring2 B stale stats UPDATE blocked on A row lock: done=False
+[scenario1 no-freeze-card] ring2 B stale UPDATE applied after A commit (EvalPlanQual pk re-check pass)
+[scenario1 no-freeze-card] ring3 day0 located: ACTIVE → overwrite MISSED
+[scenario1 no-freeze-card] FINAL: S=1(correct 7) last=2026-09-26(correct 2026-09-26) charges=0(before 0) day0=MISSED(correct ACTIVE)
+[scenario1 no-freeze-card] RED: straddle race diverged from serialized outcome
+[scenario2 with-freeze-card] ring1 B stale read under A uncommitted: last=2026-09-24 S=5 → delta=2
+[scenario2 with-freeze-card] ring2 B stale stats UPDATE blocked on A row lock: done=False
+[scenario2 with-freeze-card] ring2 B stale UPDATE applied after A commit (EvalPlanQual pk re-check pass)
+[scenario2 with-freeze-card] ring3 day0 located: ACTIVE → overwrite FROZEN
+[scenario2 with-freeze-card] FINAL: S=6(correct 7) last=2026-09-26(correct 2026-09-26) charges=0(before 1) day0=FROZEN(correct ACTIVE)
+[scenario2 with-freeze-card] RED: straddle race diverged from serialized outcome
+[scenario3 serialized-control] FINAL: S=7 day0=ACTIVE → GREEN (correct)
