@@ -13,3 +13,4 @@
 | H-005 | l10n 49 冻结键的最终文案裁决（FIX-182 后续） | 用户/文案拍板 | OPEN | 台账 V3-FIX-182 |
 | H-006 | FIX-97 第二纠正入口形态（B 类产品裁决族） | 产品/用户拍板（wt695 B 类 13 条清单在 v3-output/WT695-AUDIT/eod.md） | OPEN | 台账 V3-FIX-97 |
 | H-007 | FIX-290 处置 | 用户拍板 | OPEN | 台账 V3-FIX-290 |
+| H-008 | V3-FIX-189 部署前盘查：仓外显式 legacy-only=false 的存量部署，stage19 三态门收编后 extractor 会从「关」翻「开」——上线前核生产 env 该 binding 值 | 真实生产 env 核查（.env.prod 盘查） | OPEN | 台账 V3-FIX-189 闭账注记；wt707 风险披露 |
