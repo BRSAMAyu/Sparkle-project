@@ -98,7 +98,11 @@ async def main_async() -> int:
             return 2
         import redis.asyncio as aioredis
 
-        client = aioredis.from_url(args.redis_url)
+        # REVIEWER-PATCH-WT771: decode_responses=True 与生产 cache_service 客户端同构
+        # （cache.py:73）。交付版缺该参数 → read_mode 取回 bytes，normalize_mode
+        # str(b'shadow') 落 fallback 'live' → 回滚判 current=live 与史 from 相同
+        # → NoRollbackPointError 且旗滞留 shadow（wt771 对本地 sparkle_redis 实录）。
+        client = aioredis.from_url(args.redis_url, decode_responses=True)
     else:
         import fakeredis.aioredis
 
