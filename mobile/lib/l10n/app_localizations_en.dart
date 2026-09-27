@@ -4911,10 +4911,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorBookTabNeedReview => 'Need Review';
 
   @override
-  String get errorBookAddError => 'Add Error';
+  String get errorBookAddError => 'Add error';
 
   @override
-  String get errorBookAddFirst => 'Add First Error';
+  String get errorBookAddFirst => 'Add first error';
 
   @override
   String get errorBookFilterTitle => 'Filter Options';
@@ -7400,7 +7400,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityCreateTaskTitle => 'Create Group Task';
 
   @override
-  String get communityTaskTitleField => 'Task Title';
+  String get communityTaskTitleField => 'Task title';
 
   @override
   String get communityTaskTitleHint => 'e.g. Complete Chapter 3 exercises';
@@ -22835,10 +22835,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebUploadImage => 'Upload Question Image';
 
   @override
-  String get ebEditError => 'Edit Error';
+  String get ebEditError => 'Edit error';
 
   @override
-  String get ebAddError => 'Add Error';
+  String get ebAddError => 'Add error';
 
   @override
   String ebLoadErrorFailed(String error) {
@@ -23081,7 +23081,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebSaveChanges => 'Save Changes';
 
   @override
-  String get ebSaveError => 'Save Error';
+  String get ebSaveError => 'Save this error';
 
   @override
   String get ebSavingPleaseWait => 'Saving...';
@@ -28667,7 +28667,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newPlanLabel => 'New Plan';
 
   @override
-  String get sendMessageLabel => 'Send Message';
+  String get sendMessageLabel => 'Send message';
 
   @override
   String get taskResumeFailed => 'Could not resume task, try again';
