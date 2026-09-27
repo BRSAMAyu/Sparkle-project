@@ -27,6 +27,24 @@ logger = logging.getLogger(__name__)
 # 无持锁者且无等待者时条目自动回收（等待中的协程帧持有 Lock 强引用）。
 _user_state_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 
+# V3-FIX-418: 上面的锁是进程内的，而调用面天然跨进程——chat 请求落任意 uvicorn
+# worker，TaskEventConsumer 在每个 worker lifespan 各起一个（main.py），HPA
+# 多副本下 sparkle_events 消费组把事件分发到任一 pod；两进程各过各锁即后写者
+# 整块覆盖前写者融合结果（运行级实证 last_evidence_ids=['ev-a']，ev-b 丢失）。
+# 修法沿 V3-FIX-193/wt705 先例（最终源头 batch_worklane._try_claim）：进程内锁
+# 保留为快速路径，锁内再取 per-user Redis SET NX EX claim 串行化跨进程读改写。
+_FUSION_CLAIM_PREFIX = "aurora:belief_state_claim:v1:"
+# claim TTL：只须盖住"读→融→写"（global + scoped 两次落盘）时长，正常远小于
+# 1s。持锁进程崩溃后残留键到期自清，行为退化回进程内锁 + 有界覆盖（TTL 7d、
+# append_trace 另有账），不会永久卡死某用户的信念写入。
+_FUSION_CLAIM_TTL_SECONDS = 10
+# 对端进程持 claim 时的有界等待预算：等它提交并释放后抢到 claim，重读即拿到
+# 对端已融合的状态，在其上追加本次证据。预算耗尽仍抢不到 → 放行（fail-open，
+# 与 batch_worklane / V3-FIX-193 先例一致）：残留的后写覆盖是已定价的有界危害，
+# 融合写路径存活不依赖 Redis。
+_FUSION_CLAIM_WAIT_SECONDS = 1.0
+_FUSION_CLAIM_RETRY_INTERVAL_SECONDS = 0.05
+
 
 class FusionEngine:
     """
@@ -477,6 +495,59 @@ class FusionEngine:
             await redis.set(key, payload)
             await redis.expire(key, self.BELIEF_STATE_TTL_SECONDS)
 
+    @staticmethod
+    def _claim_key(user_id: str) -> str:
+        return f"{_FUSION_CLAIM_PREFIX}{user_id}"
+
+    @staticmethod
+    async def _try_claim(redis: Any, user_id: str) -> bool:
+        """SET NX per-user claim（先例 batch_worklane._try_claim / V3-FIX-193）。
+
+        True = 抢到（本进程负责本次读融写）；False = 另一进程（其他 uvicorn
+        worker / 其他 HPA 副本的 TaskEventConsumer）正在写同一用户的信念态。
+        claim 存储就是传入的 redis——生产各调用方共享同一 cache_service.redis。
+        Redis 缺席/故障时返回 True：退化为既有进程内锁（fail-open），融合
+        写路径存活不依赖 Redis。
+        """
+        if redis is None:
+            return True
+        try:
+            acquired = await redis.set(FusionEngine._claim_key(user_id), "1", nx=True, ex=_FUSION_CLAIM_TTL_SECONDS)
+            # set(nx=True) 返回 True = 抢到；None/False = 已被占
+            return bool(acquired)
+        except TypeError:
+            # 某些 fake/客户端不支持 nx/ex —— 降级为 get-then-set（测试环境）
+            try:
+                if await redis.get(FusionEngine._claim_key(user_id)):
+                    return False
+                await redis.set(FusionEngine._claim_key(user_id), "1")
+                return True
+            except Exception:  # noqa: BLE001
+                return True
+        except Exception as exc:  # noqa: BLE001 — 存储故障不阻塞融合写
+            logger.warning("FusionEngine cross-process claim failed (proceeding): %s", exc)
+            return True
+
+    @staticmethod
+    async def _await_claim(redis: Any, user_id: str) -> bool:
+        """对端持 claim 时有界等待其提交释放；抢到返回 True，预算耗尽返回 False。"""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + _FUSION_CLAIM_WAIT_SECONDS
+        while loop.time() < deadline:
+            await asyncio.sleep(_FUSION_CLAIM_RETRY_INTERVAL_SECONDS)
+            if await FusionEngine._try_claim(redis, user_id):
+                return True
+        return False
+
+    @staticmethod
+    async def _release_claim(redis: Any, user_id: str) -> None:
+        if redis is None:
+            return
+        try:
+            await redis.delete(FusionEngine._claim_key(user_id))
+        except Exception:  # noqa: BLE001 — 残留 claim 由 TTL 兜底
+            pass
+
     async def update_user_state(
         self,
         redis: Any,
@@ -492,32 +563,47 @@ class FusionEngine:
             raise ValueError("user_id is required to load belief state")
         state_lock = _user_state_locks.setdefault(resolved_user_id, asyncio.Lock())
         async with state_lock:
-            global_state = await self.load_state(redis, resolved_user_id)
-            global_state = self.fuse_many(global_state, evidence_items)
-            await self.save_state(redis, global_state)
+            # V3-FIX-418: 进程内锁只护单进程；调用面跨进程（uvicorn 多 worker ×
+            # HPA 多副本 TaskEventConsumer），故在锁内再取 per-user Redis SET NX
+            # claim（先例 V3-FIX-193/wt705 + batch_worklane._try_claim）。对端持
+            # claim 时有界等待其提交释放，抢到后下方 load_state 重读即拿到对端
+            # 已融合的状态，本次证据在其上追加而非覆盖。预算耗尽仍抢不到则放行
+            # （fail-open）：残留的后写覆盖是有界危害，链路不被 Redis 故障卡死。
+            # 未抢到时不释放 claim——那是对端的锁。claim 覆盖下方 global +
+            # scoped 两次落盘，进程崩溃残留键由 TTL 自清。
+            claimed = await self._try_claim(redis, resolved_user_id)
+            if not claimed:
+                claimed = await self._await_claim(redis, resolved_user_id)
+            try:
+                global_state = await self.load_state(redis, resolved_user_id)
+                global_state = self.fuse_many(global_state, evidence_items)
+                await self.save_state(redis, global_state)
 
-            scope_level, scope_id = self.scope_from_evidence(evidence_items)
-            if not scope_level or not scope_id:
-                global_state.scope_metadata = {  # type: ignore[attr-defined]
-                    "belief_scope_level": "global",
-                    "belief_scope_id": None,
+                scope_level, scope_id = self.scope_from_evidence(evidence_items)
+                if not scope_level or not scope_id:
+                    global_state.scope_metadata = {  # type: ignore[attr-defined]
+                        "belief_scope_level": "global",
+                        "belief_scope_id": None,
+                        "global_belief_state_id": global_state.state_id,
+                        "scoped_belief_state_id": None,
+                    }
+                    return global_state
+
+                scoped_state = await self.load_state(
+                    redis, resolved_user_id, scope_level=scope_level, scope_id=scope_id
+                )
+                scoped_state = self.fuse_many(scoped_state, evidence_items)
+                await self.save_state(redis, scoped_state, scope_level=scope_level, scope_id=scope_id)
+                scoped_state.scope_metadata = {  # type: ignore[attr-defined]
+                    "belief_scope_level": scope_level,
+                    "belief_scope_id": scope_id,
                     "global_belief_state_id": global_state.state_id,
-                    "scoped_belief_state_id": None,
+                    "scoped_belief_state_id": scoped_state.state_id,
                 }
-                return global_state
-
-            scoped_state = await self.load_state(
-                redis, resolved_user_id, scope_level=scope_level, scope_id=scope_id
-            )
-            scoped_state = self.fuse_many(scoped_state, evidence_items)
-            await self.save_state(redis, scoped_state, scope_level=scope_level, scope_id=scope_id)
-            scoped_state.scope_metadata = {  # type: ignore[attr-defined]
-                "belief_scope_level": scope_level,
-                "belief_scope_id": scope_id,
-                "global_belief_state_id": global_state.state_id,
-                "scoped_belief_state_id": scoped_state.state_id,
-            }
-            return scoped_state
+                return scoped_state
+            finally:
+                if claimed:
+                    await self._release_claim(redis, resolved_user_id)
 
     async def append_trace(self, redis: Any, *, user_id: str, trace: dict[str, Any]) -> None:
         key = self.BELIEF_TRACE_KEY.format(user_id=user_id)
