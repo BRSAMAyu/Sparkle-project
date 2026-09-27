@@ -25,8 +25,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sparkle/gateway/internal/config"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 // backendCapture 记录后端实际收到的请求头与 Host。

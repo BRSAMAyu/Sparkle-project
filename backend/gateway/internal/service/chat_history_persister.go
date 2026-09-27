@@ -433,12 +433,11 @@ func (p *ChatHistoryPersister) writeBatchToDB(ctx context.Context, batch []ChatH
 	return tx.Commit(ctx)
 }
 
-// requeueMessages pushes failed messages back to the Redis queue. It returns
-// the number of messages that could NOT be re-queued; the count is also
-// accumulated in the requeue_failed stat. V3-FIX-427: LPush errors used to be
-// discarded entirely, so a flush against an unreachable Redis dropped the
-// batch without any signal.
-func (p *ChatHistoryPersister) requeueMessages(ctx context.Context, batch []ChatHistoryMessage) int {
+// requeueMessages pushes failed messages back to the Redis queue. Failures are
+// logged per-message and accumulated in the requeue_failed stat. V3-FIX-427:
+// LPush errors used to be discarded entirely, so a flush against an
+// unreachable Redis dropped the batch without any signal.
+func (p *ChatHistoryPersister) requeueMessages(ctx context.Context, batch []ChatHistoryMessage) {
 	queueKey := "queue:persist:history"
 	failed := 0
 
@@ -457,7 +456,6 @@ func (p *ChatHistoryPersister) requeueMessages(ctx context.Context, batch []Chat
 	}
 
 	p.requeueFailed += int64(failed)
-	return failed
 }
 
 // GetStats returns persister statistics
