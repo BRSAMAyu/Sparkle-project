@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import select
 
 from app.core.aurora_decision import AuroraDecisionContract
 from app.core.intervention_lifecycle import (
@@ -730,3 +731,289 @@ class TestOutboxEmission:
             await db_session.execute(text("SELECT event_type FROM event_outbox"))
         ).fetchall()
         assert [r[0] for r in rows] == ["intervention.exposed"]  # 仅 exposure 一条
+
+
+# ---------------------------------------------------------------------------
+# 6. FIX-31 P3 批清（wt662 D-05 增量）：水印全集指纹/并发双写/窗末上界/
+#    畸形 decision_id 降级/global fallback 单值不套全体/ilfe id 面
+# ---------------------------------------------------------------------------
+
+
+class TestFix31P3Batch:
+    async def _bulk_exposures(self, db_session, user, *, n: int, start: datetime) -> None:
+        """直插 exposure 行（绕过服务逐条记录的开销；水印测试用）。"""
+        from app.models.intervention_lifecycle import InterventionLifecycleEvent
+
+        for i in range(n):
+            db_session.add(
+                InterventionLifecycleEvent(
+                    user_id=user.id,
+                    decision_id=f"aurora_{i:032x}",
+                    event_type=LifecycleEventType.EXPOSED.value,
+                    intervention_type="rescope",
+                    execution_mode="hybrid",
+                    goal_type="unknown",
+                    friction_tag="unattributed",
+                    linkage={},
+                    detail={"window_hours": 72},
+                    dedupe_subkey="",
+                    occurred_at=start + timedelta(minutes=i),
+                )
+            )
+        await db_session.commit()
+
+    async def test_watermark_matches_summary_watermark_beyond_1000_events(self, db_session):
+        """FIX-31 P3-1：公开 watermark() 与摘要内水印必须构造性相等（>1000 事件
+        不再因公开侧 limit 1000 / 摘要侧 limit 5000 的行集分裂而分叉）。"""
+        user = await _make_user(db_session)
+        await self._bulk_exposures(db_session, user, n=1001, start=_T0)
+        svc = InterventionLifecycleService(db_session)
+        wm_public = await svc.watermark(user_id=user.id)
+        summary = await svc.association_summary(user_id=user.id, now=_T0 + timedelta(hours=48))
+        assert summary.watermark == wm_public
+        assert wm_public != "empty"
+
+    async def test_watermark_full_fingerprint_sensitive_to_non_max_row_change(self, db_session):
+        """FIX-31 P3-1：水印是行集全集指纹——集合内任意 (occurred_at, id) 对变更
+        都移动印记，而非仅对 count/max 敏感（改最老一行时间戳、行数与 max 不变
+        → 印记必须变）。"""
+        from app.models.intervention_lifecycle import InterventionLifecycleEvent
+
+        user = await _make_user(db_session)
+        await self._bulk_exposures(db_session, user, n=5, start=_T0)
+        svc = InterventionLifecycleService(db_session)
+        wm_before = await svc.watermark(user_id=user.id)
+
+        # 改最老一行 occurred_at（仍是集合内最老、行数与 max 均不变）
+        row = (
+            await db_session.execute(
+                select(InterventionLifecycleEvent)
+                .where(
+                    InterventionLifecycleEvent.user_id == user.id,
+                    InterventionLifecycleEvent.event_type == LifecycleEventType.EXPOSED.value,
+                )
+                .order_by(InterventionLifecycleEvent.occurred_at.asc())
+                .limit(1)
+            )
+        ).scalar_one()
+        row.occurred_at = row.occurred_at + timedelta(seconds=30)
+        await db_session.commit()
+
+        wm_after = await svc.watermark(user_id=user.id)
+        assert wm_after != wm_before
+
+    async def test_concurrent_double_write_exactly_once(self, tmp_path):
+        """FIX-31 P3-2：并发双写显式测试——两个独立连接同一文件库并发记录同一
+        decision 的 exposure，唯一约束 + ON CONFLICT 保证恰一行、恰一次 recorded。"""
+        import asyncio
+        import os
+
+        from sqlalchemy import func, select
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+        from app.db.session import Base
+        from app.models.intervention_lifecycle import InterventionLifecycleEvent
+
+        db_path = tmp_path / "d05_concurrency.db"
+        engine = create_async_engine(
+            f"sqlite+aiosqlite:///{os.fspath(db_path)}",
+            connect_args={"check_same_thread": False, "timeout": 15},
+        )
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+            async with maker() as setup, maker() as s1, maker() as s2:
+                user = User(
+                    username=f"conc{uuid4().hex[:8]}",
+                    email=f"{uuid4().hex[:8]}@t.co",
+                    hashed_password="x",
+                )
+                setup.add(user)
+                await setup.commit()
+
+                decision = _decision(user.id, salt="concurrency")
+                results = await asyncio.gather(
+                    InterventionLifecycleService(s1).record_exposure(
+                        decision=decision, user_id=user.id, occurred_at=_T0, emit=False
+                    ),
+                    InterventionLifecycleService(s2).record_exposure(
+                        decision=decision, user_id=user.id, occurred_at=_T0, emit=False
+                    ),
+                )
+            recorded_flags = sorted(r.recorded for r in results)
+            assert recorded_flags == [False, True]
+            async with maker() as verify:
+                total = (
+                    await verify.execute(
+                        select(func.count())
+                        .select_from(InterventionLifecycleEvent)
+                        .where(InterventionLifecycleEvent.event_type == LifecycleEventType.EXPOSED.value)
+                    )
+                ).scalar_one()
+                assert total == 1
+        finally:
+            await engine.dispose()
+
+    async def test_observed_counting_respects_window_end(self, db_session):
+        """FIX-31 P3-4：聚合计数循环必须带窗末上界——窗内正例 + 窗外（直接落库的）
+        负例只计窗内一条；窗外行永不进 rate 分子分母。"""
+        from sqlalchemy import select as _select
+
+        from app.models.intervention_lifecycle import InterventionLifecycleEvent
+
+        user = await _make_user(db_session)
+        svc = InterventionLifecycleService(db_session)
+        task_id = str(uuid4())
+        decision = _decision(user.id, salt="windowbound", task_ref=f"task://{task_id}")
+        exposed = await svc.record_exposure(decision=decision, user_id=user.id, occurred_at=_T0, window_hours=1)
+        assert exposed.recorded
+        exposure_row = (
+            await db_session.execute(
+                _select(InterventionLifecycleEvent).where(
+                    InterventionLifecycleEvent.decision_id == exposed.decision_id,
+                    InterventionLifecycleEvent.event_type == LifecycleEventType.EXPOSED.value,
+                )
+            )
+        ).scalar_one()
+        common_link = dict(exposure_row.linkage or {})
+        assert common_link  # task 关联键已被 exposure 捕获
+        # 直插两条 outcome_observed 镜像行（服务层会拒窗外行；这里直插模拟历史
+        # 脏数据/未来口径漂移，防御性聚合必须自带窗末界）。
+        for i, (delta, polarity) in enumerate(
+            [
+                (timedelta(minutes=30), "positive"),  # 窗内（1h 窗）
+                (timedelta(hours=2), "negative"),  # 窗外
+            ]
+        ):
+            db_session.add(
+                InterventionLifecycleEvent(
+                    user_id=user.id,
+                    decision_id=exposed.decision_id,
+                    event_type=LifecycleEventType.OUTCOME_OBSERVED.value,
+                    intervention_type="rescope",
+                    execution_mode="hybrid",
+                    goal_type="unknown",
+                    friction_tag="unattributed",
+                    linkage=common_link,
+                    outcome_source="task_completion",
+                    outcome_ref=f"outc_{'a' * 32}_{i}",
+                    outcome_polarity=polarity,
+                    outcome_truth_class="actual",
+                    detail=None,
+                    dedupe_subkey=f"outc_{'a' * 32}_{i}",
+                    occurred_at=_T0 + delta,
+                )
+            )
+        await db_session.commit()
+
+        summary = await svc.association_summary(user_id=user.id, now=_T0 + timedelta(hours=48), user_last_active_at=_T0)
+        assert summary.n_exposures_total == 1
+        target = [s for s in summary.slices if s.n_observed or s.n_censored_window_closed]
+        assert len(target) == 1
+        slice_summary = target[0]
+        assert slice_summary.n_positive == 1  # 仅窗内正例（修前 2：窗外行误计）
+        assert slice_summary.n_negative == 0  # 窗外负例不入分母（修前 1）
+        assert slice_summary.positive_association_rate == 1.0  # 修前 0.5
+
+    async def test_malformed_decision_id_refused_not_raised(self, db_session):
+        """FIX-31 P3-5：畸形 decision_id 理论路径必须可观测降级（recorded=False +
+        reason），不得让 contract 层 ValueError 冒到调用方。"""
+        from app.models.intervention_lifecycle import InterventionLifecycleEvent
+
+        user = await _make_user(db_session)
+        svc = InterventionLifecycleService(db_session)
+        malformed = "legacy-bad-decision-id"  # 非 aurora_<32hex>
+        db_session.add(
+            InterventionLifecycleEvent(
+                user_id=user.id,
+                decision_id=malformed,  # 直插损坏行（正常入口不可能产出的理论路径）
+                event_type=LifecycleEventType.EXPOSED.value,
+                intervention_type="rescope",
+                execution_mode="hybrid",
+                goal_type="unknown",
+                friction_tag="unattributed",
+                linkage={"task_id": str(uuid4())},
+                detail={"window_hours": 72},
+                dedupe_subkey="",
+                occurred_at=_T0,
+            )
+        )
+        await db_session.commit()
+
+        response = await svc.record_response(
+            decision_id=malformed,
+            user_id=user.id,
+            event_type=LifecycleEventType.ACCEPTED,
+            occurred_at=_T0 + timedelta(minutes=1),
+        )
+        assert response.recorded is False
+        assert response.reason == "decision_id_malformed"
+
+        # 关联路径同样先过格式门：损坏行的 linkage 与 outcome 对齐时，修前会在
+        # _insert_once 派生 id 处抛 ValueError（红），修后在入口即降级。
+        exposure_row = (
+            await db_session.execute(
+                select(InterventionLifecycleEvent).where(
+                    InterventionLifecycleEvent.decision_id == malformed,
+                )
+            )
+        ).scalar_one()
+        task_key = (exposure_row.linkage or {}).get("task_id")
+        outcome = _outcome(user.id, at=_T0 + timedelta(minutes=2), correlation={"task_id": task_key})
+        association = await svc.record_outcome_association(decision_id=malformed, outcome=outcome)
+        assert association.recorded is False
+        assert association.reason == "decision_id_malformed"
+
+    async def test_global_scope_does_not_apply_single_fallback_to_all_users(self, db_session):
+        """FIX-31 P3-6：global scope 的显式 last_active 单值不得套全体用户——
+        per-user 解析（users.last_login_at，缺失=churned）兜底；per-user scope
+        的显式 fallback 语义保持（M-06 透传面不回退）。"""
+        user_a = await _make_user(db_session)
+        user_b = await _make_user(db_session)
+        svc = InterventionLifecycleService(db_session)
+        for i, u in enumerate((user_a, user_b)):
+            decision = _decision(u.id, salt=f"fallback{i}")
+            assert (await svc.record_exposure(decision=decision, user_id=u.id, occurred_at=_T0)).recorded
+
+        # 两用户 users.last_login_at 均缺失（None）；窗口 72h，now 在窗末之后。
+        now = _T0 + timedelta(hours=100)
+        global_summary = await svc.association_summary(
+            user_id=None, now=now, user_last_active_at=_T0 + timedelta(hours=80)
+        )
+        assert global_summary.n_exposures_total == 2
+        assert sum(s.n_censored_user_churned for s in global_summary.slices) == 2
+        assert sum(s.n_censored_window_closed for s in global_summary.slices) == 0
+
+        # per-user scope：显式 fallback 仍生效（≥窗末 → 在场而未行动）
+        per_user = await svc.association_summary(
+            user_id=user_a.id, now=now, user_last_active_at=_T0 + timedelta(hours=80)
+        )
+        assert per_user.n_exposures_total == 1
+        assert sum(s.n_censored_window_closed for s in per_user.slices) == 1
+        assert sum(s.n_censored_user_churned for s in per_user.slices) == 0
+
+    async def test_record_result_event_id_is_derived_id(self, db_session):
+        """FIX-31 P3-3 钉面：``ilfe_`` 确定性 id 的存储幂等真本体是唯一约束
+        ``uq_intervention_lifecycle_once``（在场）；派生 id 是消费方可观测面——
+        结果载体与 (decision_id, event_type, dedupe_subkey) 派生值恒等。"""
+        from app.core.intervention_lifecycle import derive_lifecycle_event_id
+
+        user = await _make_user(db_session)
+        svc = InterventionLifecycleService(db_session)
+        ilfe_task_id = str(uuid4())
+        decision = _decision(user.id, salt="ilfe", task_ref=f"task://{ilfe_task_id}")
+        exposed = await svc.record_exposure(decision=decision, user_id=user.id, occurred_at=_T0)
+        assert exposed.recorded
+        assert exposed.event_id == derive_lifecycle_event_id(
+            decision_id=exposed.decision_id, event_type=LifecycleEventType.EXPOSED.value
+        )
+
+        outcome = _outcome(user.id, at=_T0 + timedelta(minutes=5), correlation={"task_id": ilfe_task_id})
+        linked = await svc.record_outcome_association(decision_id=exposed.decision_id, outcome=outcome)
+        assert linked.recorded
+        assert linked.event_id == derive_lifecycle_event_id(
+            decision_id=exposed.decision_id,
+            event_type=LifecycleEventType.OUTCOME_OBSERVED.value,
+            dedupe_subkey=outcome.outcome_id,
+        )

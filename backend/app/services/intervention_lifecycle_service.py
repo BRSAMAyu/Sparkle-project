@@ -23,8 +23,10 @@
   Wilson 区间、证据档位、非因果 claim 模板——统计谦抑语义全部来自契约纯
   函数，本层只做聚合。
 - **增量/缓存钩**（M-06 Context retrieval 预留）：``watermark()`` 是事件集
-  的内容印记（行数 + 最新时刻 + id 摘要）——事件集不变则印记不变，M-06 可
-  以 (cache_key, watermark) 做摘要缓存失效，无需理解内部结构。
+  的内容印记（行集全集指纹——全部 (occurred_at, id) 对的 canonical 序哈希；
+  FIX-31 P3-1）——事件集不变则印记不变，且公开 ``watermark()`` 与摘要内水印
+  共享同一查询形状与指纹本体（构造性相等），M-06 可以 (cache_key, watermark)
+  做摘要缓存失效，无需理解内部结构。
 
 边界（不重建真源）：
 - outcome 事实 → D-02 ``OutcomeLedgerService``（本服务只读消费）；
@@ -71,6 +73,7 @@ from app.core.intervention_lifecycle import (
     friction_tag_from_state_key,
     goal_slice,
     is_exposable_intervention,
+    is_valid_decision_id,
     is_whitelisted_outcome_source,
     linkage_keys,
     outcome_links_exposure,
@@ -230,6 +233,10 @@ class InterventionLifecycleService:
         kind = LifecycleEventType(event_type)
         if kind.value not in USER_RESPONSE_EVENT_TYPES:
             raise ValueError(f"event_type {event_type!r} is not a user-response lifecycle event")
+        if not is_valid_decision_id(decision_id):
+            # FIX-31 P3-5：畸形 id 在构造幂等键前降级（refused），不让 contract 层
+            # ValueError 冒到调用方；正常入口不可能产出，此门兜历史脏数据。
+            return self._refused(str(decision_id), kind.value, "decision_id_malformed")
 
         exposure = await self._get_exposure(decision_id=decision_id, user_id=user_id)
         if exposure is None:
@@ -266,6 +273,9 @@ class InterventionLifecycleService:
         3. 窗口内时序（exposed_at ≤ outcome.occurred_at ≤ 窗口末）+ 关联键
            匹配（``outcome_links_exposure``）。
         """
+        if not is_valid_decision_id(decision_id):
+            # FIX-31 P3-5：同 record_response——格式门先于白名单/窗口/关联键。
+            return self._refused(str(decision_id), LifecycleEventType.OUTCOME_OBSERVED.value, "decision_id_malformed")
         if not is_whitelisted_outcome_source(outcome.source):
             return self._refused(str(decision_id), LifecycleEventType.OUTCOME_OBSERVED.value, "outcome_source_not_whitelisted")
 
@@ -400,9 +410,11 @@ class InterventionLifecycleService:
           不另立第二套 cohort 分类学）。
         - 切片过滤（goal/friction/execution_mode/intervention_type）在存储列上
           下推；摘要内再按 SituationSignature 分组。
-        - ``user_last_active_at`` 缺省时按 ``users.last_login_at`` 解析（churned
-          判定的活跃面；这是观察能力的度量，不是 outcome 信号——chat 内容
-          永不进入本管线）。
+        - ``user_last_active_at`` 仅 per-user scope 生效（调用方对单个用户的
+          活跃面显式兜底，M-06 透传面）；global scope 一律按 ``users.last_login_at``
+          逐用户解析——单值套全体会把 churned 集体误判成 window_closed
+          （FIX-31 P3-6）。这是观察能力的度量，不是 outcome 信号——chat 内容
+          永不进入本管线。
         """
         if user_id is not None:
             scope = ("user", str(UUID(str(user_id))))
@@ -446,7 +458,14 @@ class InterventionLifecycleService:
             rows = await self._exclude_demo_cohort_rows(rows)
 
         watermark = self._watermark_of(rows)
-        slices = await self._aggregate_slices(rows, now_naive=now_naive, user_last_active_at=user_last_active_at, scope=scope)
+        slices = await self._aggregate_slices(
+            rows,
+            now_naive=now_naive,
+            # FIX-31 P3-6：显式单值活跃面只在 per-user scope 生效；global scope
+            # 逐用户解析（缺失用户无条目 → None → churned，不集体误判）。
+            user_last_active_at=user_last_active_at if user_filter_uuid is not None else None,
+            scope=scope,
+        )
         return AssociationSummary(
             scope=scope,
             generated_at=now_naive,
@@ -457,7 +476,22 @@ class InterventionLifecycleService:
         )
 
     async def watermark(self, *, user_id: UUID | str | None = None) -> str:
-        """事件集内容印记（M-06 摘要缓存失效钩；事件集不变 → 印记不变）。"""
+        """事件集内容印记（M-06 摘要缓存失效钩；事件集不变 → 印记不变）。
+
+        FIX-31 P3-1：与摘要走同一查询形状（``_watermark_pairs``：同谓词
+        not_deleted+可选 user、同序 ASC、同 cap），per-user 无过滤场景下公开
+        印记与 ``association_summary().watermark`` 构造性相等；指纹本体是行集
+        全集哈希（``_watermark_of_pairs``）。
+        """
+        return self._watermark_of_pairs(await self._watermark_pairs(user_id=user_id))
+
+    async def _watermark_pairs(self, *, user_id: UUID | str | None = None) -> list[tuple[datetime | None, str]]:
+        """水印行集加载（公开 watermark() 与摘要水印共享的单一查询形状）。
+
+        cap 复用 ``_SUMMARY_EVENT_CAP``：摘要按该 cap 载入聚合，水印按同一 cap
+        取对——两侧行集在 ≤cap 时恒等，>cap 时同侧截断（截断可见性归消费面
+        truncated 旗标，FIX-31 P2-1 消费面已落）。
+        """
         predicates = [InterventionLifecycleEvent.not_deleted_filter()]
         if user_id is not None:
             predicates.append(InterventionLifecycleEvent.user_id == UUID(str(user_id)))
@@ -466,13 +500,13 @@ class InterventionLifecycleService:
                 await self.db.execute(
                     select(InterventionLifecycleEvent.occurred_at, InterventionLifecycleEvent.id)
                     .where(*predicates)
-                    .order_by(InterventionLifecycleEvent.occurred_at.desc())
-                    .limit(1000)
+                    .order_by(InterventionLifecycleEvent.occurred_at.asc(), InterventionLifecycleEvent.id.asc())
+                    .limit(_SUMMARY_EVENT_CAP)
                 )
             ).all()
             or []
         )
-        return self._watermark_of_pairs(rows)
+        return [(occurred_at, str(row_id)) for occurred_at, row_id in rows]
 
     @staticmethod
     def summary_cache_key(
@@ -673,8 +707,11 @@ class InterventionLifecycleService:
                     user_last_active_at=facts.last_active,
                 )
                 if status is ObservationStatus.OBSERVED:
+                    # FIX-31 P3-4：计数与 resolve_observation_status 同窗界——
+                    # 窗末上界防止历史脏数据/口径漂移的窗外行混入分子分母。
+                    window_end = facts.exposure.occurred_at + timedelta(hours=self._window_hours_of(facts.exposure))
                     for r in facts.outcome_rows:
-                        if r.occurred_at and facts.exposure.occurred_at <= r.occurred_at:
+                        if r.occurred_at and facts.exposure.occurred_at <= r.occurred_at <= window_end:
                             if r.outcome_polarity == "positive":
                                 n_positive += 1
                             elif r.outcome_polarity == "negative":
@@ -767,18 +804,17 @@ class InterventionLifecycleService:
 
     @staticmethod
     def _watermark_of_pairs(pairs: list) -> str:
+        """行集全集指纹（FIX-31 P3-1）：对全部 (occurred_at, id) 对做 canonical
+        序哈希——集合内任意行的时间/身份变更都移动印记，而非仅 count/max 敏感。
+        空集 → ``"empty"``（幂等锚点，与摘要水印共享）。"""
         import hashlib
 
         if not pairs:
             return "empty"
-        newest = max(pairs, key=lambda pair: (pair[0] or datetime.min, str(pair[1])))
+        canonical = sorted(pairs, key=lambda pair: (pair[0] or datetime.min, str(pair[1])))
         seed = json.dumps(
-            {
-                "n": len(pairs),
-                "max_occurred_at": newest[0].isoformat() if newest[0] else None,
-                "max_id": str(newest[1]),  # GUID 列返回 UUID 对象；印记一律 canonical str
-            },
-            sort_keys=True,
+            [[pair[0].isoformat() if pair[0] else None, str(pair[1])] for pair in canonical],
+            ensure_ascii=False,
             separators=(",", ":"),
         )
         return "wm_" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]

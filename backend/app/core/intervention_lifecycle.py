@@ -329,6 +329,16 @@ def clamp_observation_window_hours(hours: int | float | None) -> int:
 # ---------------------------------------------------------------------------
 
 
+def is_valid_decision_id(decision_id: str | None) -> bool:
+    """decision_id 格式门（``aurora_<32hex>``，A-01 内容寻址形态）。
+
+    服务层记录入口在构造幂等键之前调用——畸形 id 走可观测降级（refused +
+    reason），而非让 :func:`derive_lifecycle_event_id` 的 ValueError 冒到调用方
+    （FIX-31 P3-5：正常入口不可能产出畸形行，此门兜历史脏数据/未来漂移）。
+    """
+    return bool(_DECISION_ID_RE.match(str(decision_id or "")))
+
+
 def derive_lifecycle_event_id(
     *,
     decision_id: str,
@@ -699,6 +709,7 @@ __all__ = [
     "friction_tag_from_state_key",
     "goal_slice",
     "is_exposable_intervention",
+    "is_valid_decision_id",
     "is_whitelisted_outcome_source",
     "linkage_keys",
     "outcome_links_exposure",
