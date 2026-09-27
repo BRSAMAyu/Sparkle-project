@@ -110,6 +110,10 @@ type cqrsBundle struct {
 	outboxPublisherRun func()
 	outboxCleanerRun   func()
 	dlqCleanerRun      func()
+	// V3-FIX-487: periodic purge of the processed_events idempotency gate
+	// (real INSERT per processed event since V3-FIX-469; without this runner
+	// the table grew monotonically — the DB mirror of V3-FIX-481).
+	processedEventsCleanerRun func()
 }
 
 type proxyBundle struct {
@@ -373,6 +377,13 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 	outboxCleaner := outbox.NewCleaner(outboxRepo, cqrsMetrics, logger)
 	dlqHandler := cqrsWorker.NewDLQHandler(rdb, logger)
 	dlqCleaner := cqrsWorker.NewDLQCleaner(dlqHandler, 24*time.Hour, logger)
+	// V3-FIX-487: give the processed_events durable gate its own retention
+	// purge (7d window, daily sweep — see processed_events_cleaner.go for the
+	// retention-window argument). The workers construct their own
+	// ProcessedEventsRepository; the cleaner only needs cleanup access, so a
+	// private instance on the shared pool is enough.
+	processedEventsCleaner := outbox.NewProcessedEventsCleaner(
+		outbox.NewProcessedEventsRepository(dbh.pool), logger)
 
 	projectionManager := projection.NewManager(dbh.pool, logger)
 	snapshotManager := projection.NewSnapshotManager(dbh.pool, logger)
@@ -447,6 +458,9 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 		dlqCleanerRun: func() {
 			cqrsWorker.LogRunnerStopped(ctx, logger, "DLQ cleaner", dlqCleaner.Run(ctx))
 		},
+		processedEventsCleanerRun: func() {
+			cqrsWorker.LogRunnerStopped(ctx, logger, "Processed events cleaner", processedEventsCleaner.Run(ctx))
+		},
 	}
 }
 
@@ -454,6 +468,7 @@ func startCQRSWorkers(ctx context.Context, cqrs *cqrsBundle, log *zap.Logger) {
 	go cqrs.outboxPublisherRun()
 	go cqrs.outboxCleanerRun()
 	go cqrs.dlqCleanerRun()
+	go cqrs.processedEventsCleanerRun()
 
 	// PROD-LOG #8: runner stop logging is level-graded by LogRunnerStopped —
 	// shutdown-period cancellations are INFO, live-process failures stay ERROR.
