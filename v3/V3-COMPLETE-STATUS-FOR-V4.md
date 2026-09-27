@@ -136,7 +136,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 ## 6. 测试与 CI 态势
 
 - **测试规模**（首次完整裁决时点数；当前规模详 §9）：backend ~12,340（139F/12,340P 裁决时）→现 13,799；gateway 692→现 746 测试函数（静态 grep 口径）；flutter 2,636→现 2,628（差值=group 包裹/参数化计数口径，详 metrics.md L131-L132）；integration/e2e 面多层
-- **CI：第 23 次 push-run 首次全绿（2026-09-28 04:15，run 36343384107）**——22 次失败后洋葱 21 层剥尽（proto 双布局→goimports→PEL 竞态→OpenAPI 重冻结→BA-ROUTES→backend 三分片→flutter→coverage merge→build artifacts→journey smoke）；12 个执行 job 全 ✓（Simulation Benchmark 系 PR 事件专属设计跳过）。**V4 教训固化：从未全量跑过的管线自带腐烂——21 层缺陷没有一层能在部分运行中暴露，V4 初期就应建立全绿基线**
+- **CI：两连绿基线确立（第 23 次 36343384107 + 第 25 次 36350830485，2026-09-28）**——第 24 次红系 wt777 FIX-510 调用形状修复（不在 23 次树）暴露的测试钉旧 bug 形状+ope_gatekeeper 预存孤儿（FIX-537）双问题，均已正修；mypy 基线按 CI 实数对齐 77（本地口径 55）；首绿时点 04:15——22 次失败后洋葱 21 层剥尽（proto 双布局→goimports→PEL 竞态→OpenAPI 重冻结→BA-ROUTES→backend 三分片→flutter→coverage merge→build artifacts→journey smoke）；12 个执行 job 全 ✓（Simulation Benchmark 系 PR 事件专属设计跳过）。**V4 教训固化：从未全量跑过的管线自带腐烂——21 层缺陷没有一层能在部分运行中暴露，V4 初期就应建立全绿基线**
 - **mypy 棘轮**：922→132→113→94→91→76→70→**55**（十一批+wt777 探针，零 cast/零 ignore/真 bug 停手登记纪律——顺带挖出 491/492/529 等真 bug；CI 侧口径差异待第 24 次实测对齐）
 - **ruff/l10n**：evidence 目录全净；en/zh 10061 键双向零缺失；EN 占位符清零
 
