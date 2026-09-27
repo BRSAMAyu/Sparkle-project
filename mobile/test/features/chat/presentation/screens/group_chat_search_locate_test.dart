@@ -114,7 +114,10 @@ void main() {
         .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
         .where((container) {
       final decoration = container.decoration as BoxDecoration?;
-      return decoration?.border?.top.color.alpha != 0;
+      final topBorderColor = decoration?.border?.top.color;
+      // Color.alpha 已弃用：官方迁移式 (*  .a * 255.0).round().clamp(0, 255)。
+      return topBorderColor != null &&
+          (topBorderColor.a * 255.0).round().clamp(0, 255) != 0;
     }).toList();
     expect(highlighted, isNotEmpty);
   });

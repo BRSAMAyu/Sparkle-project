@@ -40,7 +40,9 @@ void main() {
               ),
             ),
           ],
-          onPopPage: (route, result) => route.didPop(result),
+          // pages 为静态列表且 pop 后不重建 Navigator：移除由框架完成，
+          // 无宿主列表需同步，空实现即可。
+          onDidRemovePage: (Page<Object?> page) {},
         ),
       ),
     );
