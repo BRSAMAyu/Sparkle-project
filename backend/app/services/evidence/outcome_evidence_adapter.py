@@ -51,8 +51,10 @@ def _scope(event: dict[str, Any]) -> dict[str, Any]:
         "event_type": event.get("event_type"),
         "task_id": event.get("task_id"),
         "plan_id": event.get("plan_id"),
-        "route_history_decision_id": event.get("route_history_decision_id") or metadata.get("route_history_decision_id"),
-        "routing_outcome_signal_id": event.get("routing_outcome_signal_id") or metadata.get("routing_outcome_signal_id"),
+        "route_history_decision_id": event.get("route_history_decision_id")
+        or metadata.get("route_history_decision_id"),
+        "routing_outcome_signal_id": event.get("routing_outcome_signal_id")
+        or metadata.get("routing_outcome_signal_id"),
         "routing_trace_id": event.get("routing_trace_id") or metadata.get("routing_trace_id"),
     }
 
