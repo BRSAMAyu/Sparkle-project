@@ -4,9 +4,14 @@
 在原有 KnowledgeService 基础上增加图数据库支持
 
 V3-FIX-341（wt646）注：唯一生产消费者 graph_monitor router 已随假开关撤面
-删除；本服务暂以测试为唯一调用方保留（AGE 双写/探针基础设施资产）。
-后续卡须二选一：给它接真实消费面，或整体退役。勿再新增无消费面的调用方。
+删除；本服务为 AGE 双写/探针基础设施资产，按 orphan-by-design 暂留
+（预留消费方=后续 GraphRAG 可视化/运维面：ENABLE_GRAPHRAG_FASTPATH 翻开
+后的节点同步 sync_all_to_age 与探针面）。重建该消费面时移除 rule_at
+豁免条目；若下一卡裁决不建消费面，则本服务整体退役（含探针测试族）。
 """
+
+# rule-at: orphan-by-design 唯一生产消费者 graph_monitor router 随 V3-FIX-341 撤面删除；
+# 预留消费方=后续 GraphRAG 可视化/运维面（见 docs/aurora/rule_at_exceptions.md 条目）
 
 from __future__ import annotations
 
