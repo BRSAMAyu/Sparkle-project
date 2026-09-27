@@ -155,8 +155,9 @@ def test_main_stderr_sink_form_unchanged():
         and node.args[0].attr == "stderr"
     ]
     assert len(stderr_adds) == 1, "uvicorn 进程 stderr sink 必须有且仅有一处"
-    assert {kw.arg for kw in stderr_adds[0].keywords} == {"level", "serialize"}, (
-        "stderr sink 形制（level/serialize）不得被本卡改动"
+    assert {kw.arg for kw in stderr_adds[0].keywords} == {"level", "serialize", "diagnose"}, (
+        "stderr sink 形制（level/serialize/diagnose）不得被随意改动；"
+        "diagnose=False 系 V3-FIX-298 根因修复（repr 副作用 IO 毒化会话）的有意变更"
     )
 
 
