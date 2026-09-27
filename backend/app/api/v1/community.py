@@ -457,6 +457,13 @@ async def get_feed(
     return [_post_to_response(p, liked_post_ids=liked_post_ids) for p in posts]
 
 
+# V3-FIX-192：帖子可见性取值域 = Post.visibility 列域（app/models/community.py）。
+# 读侧（get_feed）按 public/friends 过滤；写侧此前硬编码 "public"（V3-FIX-192），
+# 现按请求值闸：域外值 422 人话错误，缺省保持既有产品口径（发帖默认公开）。
+# 缺省是否改口径、PUBLIC_COMMUNITY 旗 off 时写侧是否 403，均为产品裁决（另卡处理）。
+POST_VISIBILITY_VALUES: tuple[str, ...] = ("public", "friends", "private")
+
+
 # route-tier: authed
 @router.post("/posts", summary="发布社区动态", status_code=201)
 @limiter.limit("5/minute")
@@ -467,12 +474,22 @@ async def create_post(
 ):
     """创建社区动态帖子"""
     body = await request.json()
+    raw_visibility = body.get("visibility")
+    if raw_visibility is None:
+        visibility = "public"
+    else:
+        visibility = str(raw_visibility).strip().lower()
+        if visibility not in POST_VISIBILITY_VALUES:
+            raise HTTPException(
+                status_code=422,
+                detail=f"visibility 仅支持 {'/'.join(POST_VISIBILITY_VALUES)}，收到: {raw_visibility!r}",
+            )
     post = Post(
         user_id=current_user.id,
         content=body.get("content", ""),
         topic=body.get("topic"),
         image_urls=body.get("image_urls", []),
-        visibility="public",
+        visibility=visibility,
         like_count=0,
         comment_count=0,
     )
