@@ -189,13 +189,13 @@ func TestShouldReconnect_TableDriven(t *testing.T) {
 
 func TestReconnect_NilClient(t *testing.T) {
 	var c *Client
-	err := c.reconnect(context.Background())
+	err := c.reconnect()
 	assert.Equal(t, ErrServiceUnavailable, err)
 }
 
 func TestReconnect_NilConfig(t *testing.T) {
 	c := &Client{config: nil}
-	err := c.reconnect(context.Background())
+	err := c.reconnect()
 	assert.Equal(t, ErrServiceUnavailable, err)
 }
 

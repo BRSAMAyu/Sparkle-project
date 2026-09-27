@@ -5,8 +5,8 @@ import (
 	"context"
 )
 
-// EventBus defines the interface for publishing domain events.
-type EventBus interface {
+// Bus defines the interface for publishing domain events.
+type Bus interface {
 	// Publish publishes a single event to the appropriate stream.
 	Publish(ctx context.Context, event DomainEvent) error
 
@@ -17,12 +17,12 @@ type EventBus interface {
 	Close() error
 }
 
-// EventConsumer defines the interface for consuming events from a stream.
-type EventConsumer interface {
+// Consumer defines the interface for consuming events from a stream.
+type Consumer interface {
 	// Subscribe starts consuming events from a stream.
 	// The handler is called for each event. If the handler returns an error,
 	// the event may be retried based on the retry policy.
-	Subscribe(ctx context.Context, streamKey, group, consumer string, handler EventHandler) error
+	Subscribe(ctx context.Context, streamKey, group, consumer string, handler Handler) error
 
 	// Acknowledge marks an event as successfully processed.
 	Acknowledge(ctx context.Context, streamKey, group, messageID string) error
@@ -34,9 +34,9 @@ type EventConsumer interface {
 	Close() error
 }
 
-// EventHandler processes a single domain event.
+// Handler processes a single domain event.
 // The messageID is the Redis Stream message ID, used for acknowledgment.
-type EventHandler func(ctx context.Context, event DomainEvent, messageID string) error
+type Handler func(ctx context.Context, event DomainEvent, messageID string) error
 
 // StreamPosition represents a position in an event stream.
 type StreamPosition struct {

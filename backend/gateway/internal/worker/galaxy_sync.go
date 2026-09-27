@@ -80,7 +80,7 @@ type GalaxySyncWorker struct {
 // GalaxySyncWorkerConfig configures the galaxy sync worker.
 type GalaxySyncWorkerConfig struct {
 	ConsumerName string
-	Options      cqrsWorker.WorkerOptions
+	Options      cqrsWorker.Options
 }
 
 // DefaultGalaxySyncWorkerConfig returns sensible defaults.

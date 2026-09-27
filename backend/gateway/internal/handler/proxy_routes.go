@@ -38,7 +38,9 @@ func NewProxyRoutesHandler(
 	}
 }
 
-// registerREST registers GET, POST, PUT, PATCH, DELETE for the given relative path.
+// registerREST registers GET, POST, PUT, PATCH, DELETE on the wildcard
+// path "/*path" of the given group. Every call site passes "/*path", so the
+// path is fixed here (unparam).
 //
 // For wildcard groups ("/*path") it additionally:
 //  1. registers the bare collection path ("") — gin's httprouter does NOT match
@@ -51,22 +53,21 @@ func NewProxyRoutesHandler(
 //  2. trims trailing slashes on wildcard-matched paths before proxying, since
 //     FastAPI canonicalizes to non-slash routes and its 307 Location would leak
 //     the internal topology to clients.
-func (h *ProxyRoutesHandler) registerREST(rg *gin.RouterGroup, relativePath string) {
+func (h *ProxyRoutesHandler) registerREST(rg *gin.RouterGroup) {
 	handler := h.proxyWithHeaders
-	if relativePath == "/*path" {
-		// Bare collection path ("/api/v1/<group>") must proxy directly.
-		rg.GET("", handler)
-		rg.POST("", handler)
-		rg.PUT("", handler)
-		rg.PATCH("", handler)
-		rg.DELETE("", handler)
-		handler = h.proxyWithHeadersTrailingSlashTrimmed
-	}
-	rg.GET(relativePath, handler)
-	rg.POST(relativePath, handler)
-	rg.PUT(relativePath, handler)
-	rg.PATCH(relativePath, handler)
-	rg.DELETE(relativePath, handler)
+	// Bare collection path ("/api/v1/<group>") must proxy directly.
+	rg.GET("", handler)
+	rg.POST("", handler)
+	rg.PUT("", handler)
+	rg.PATCH("", handler)
+	rg.DELETE("", handler)
+	handler = h.proxyWithHeadersTrailingSlashTrimmed
+	const wildcardPath = "/*path"
+	rg.GET(wildcardPath, handler)
+	rg.POST(wildcardPath, handler)
+	rg.PUT(wildcardPath, handler)
+	rg.PATCH(wildcardPath, handler)
+	rg.DELETE(wildcardPath, handler)
 }
 
 // RegisterProxyRoutes registers all explicit proxy routes to Python Backend
@@ -336,7 +337,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	users := api.Group("/users")
 	users.Use(authMiddleware)
 	{
-		h.registerREST(users, "/*path")
+		h.registerREST(users)
 	}
 	h.logger.Info("Registered users proxy routes")
 
@@ -344,7 +345,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	user := api.Group("/user")
 	user.Use(authMiddleware)
 	{
-		h.registerREST(user, "/*path")
+		h.registerREST(user)
 	}
 	h.logger.Info("Registered user proxy routes")
 
@@ -434,7 +435,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	experiments := api.Group("/experiments")
 	experiments.Use(authMiddleware)
 	{
-		h.registerREST(experiments, "/*path")
+		h.registerREST(experiments)
 	}
 	h.logger.Info("Registered experiments proxy routes")
 
@@ -442,7 +443,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	agentStats := api.Group("/agent-stats")
 	agentStats.Use(authMiddleware)
 	{
-		h.registerREST(agentStats, "/*path")
+		h.registerREST(agentStats)
 	}
 	h.logger.Info("Registered agent-stats proxy routes")
 
@@ -450,7 +451,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	assets := api.Group("/assets")
 	assets.Use(authMiddleware)
 	{
-		h.registerREST(assets, "/*path")
+		h.registerREST(assets)
 	}
 	h.logger.Info("Registered assets proxy routes")
 
@@ -458,7 +459,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	multiAgent := api.Group("/multi-agent")
 	multiAgent.Use(authMiddleware)
 	{
-		h.registerREST(multiAgent, "/*path")
+		h.registerREST(multiAgent)
 	}
 	h.logger.Info("Registered multi-agent proxy routes")
 
@@ -751,7 +752,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	interventions.Use(authMiddleware)
 	{
 		// route-tier: authed
-		h.registerREST(interventions, "/*path")
+		h.registerREST(interventions)
 	}
 	h.logger.Info("Registered interventions proxy routes")
 
@@ -759,7 +760,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	dashboard := api.Group("/dashboard")
 	dashboard.Use(authMiddleware)
 	{
-		h.registerREST(dashboard, "/*path")
+		h.registerREST(dashboard)
 	}
 	h.logger.Info("Registered dashboard proxy routes")
 
@@ -769,7 +770,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	growth.Use(authMiddleware)
 	{
 		// route-tier: authed
-		h.registerREST(growth, "/*path")
+		h.registerREST(growth)
 	}
 	h.logger.Info("Registered growth proxy routes")
 
@@ -825,7 +826,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	reviews := api.Group("/reviews")
 	reviews.Use(authMiddleware)
 	{
-		h.registerREST(reviews, "/*path")
+		h.registerREST(reviews)
 	}
 	h.logger.Info("Registered reviews proxy routes")
 
@@ -833,7 +834,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	stats := api.Group("/stats")
 	stats.Use(authMiddleware)
 	{
-		h.registerREST(stats, "/*path")
+		h.registerREST(stats)
 	}
 	h.logger.Info("Registered statistics proxy routes")
 
@@ -841,7 +842,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	events := api.Group("/events")
 	events.Use(authMiddleware)
 	{
-		h.registerREST(events, "/*path")
+		h.registerREST(events)
 	}
 	h.logger.Info("Registered events proxy routes")
 
@@ -849,7 +850,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	signals := api.Group("/signals")
 	signals.Use(authMiddleware)
 	{
-		h.registerREST(signals, "/*path")
+		h.registerREST(signals)
 	}
 	h.logger.Info("Registered signals proxy routes")
 
@@ -857,7 +858,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	preferences := api.Group("/preferences")
 	preferences.Use(authMiddleware)
 	{
-		h.registerREST(preferences, "/*path")
+		h.registerREST(preferences)
 	}
 	h.logger.Info("Registered preferences proxy routes")
 
@@ -865,7 +866,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	notifications := api.Group("/notifications")
 	notifications.Use(authMiddleware)
 	{
-		h.registerREST(notifications, "/*path")
+		h.registerREST(notifications)
 	}
 	h.logger.Info("Registered notifications proxy routes")
 
@@ -873,7 +874,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	notificationCenter := api.Group("/notification-center")
 	notificationCenter.Use(authMiddleware)
 	{
-		h.registerREST(notificationCenter, "/*path")
+		h.registerREST(notificationCenter)
 	}
 	h.logger.Info("Registered notification-center proxy routes")
 
@@ -902,7 +903,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	devices := api.Group("/devices")
 	devices.Use(authMiddleware)
 	{
-		h.registerREST(devices, "/*path")
+		h.registerREST(devices)
 	}
 	h.logger.Info("Registered devices proxy routes")
 
@@ -910,7 +911,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	omnibar := api.Group("/omnibar")
 	omnibar.Use(authMiddleware)
 	{
-		h.registerREST(omnibar, "/*path")
+		h.registerREST(omnibar)
 	}
 	h.logger.Info("Registered omnibar proxy routes")
 
@@ -919,7 +920,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	prediction := api.Group("/prediction")
 	prediction.Use(authMiddleware)
 	{
-		h.registerREST(prediction, "/*path")
+		h.registerREST(prediction)
 	}
 	h.logger.Info("Registered prediction proxy routes")
 
@@ -928,7 +929,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	multiIntent := api.Group("/multi-intent")
 	multiIntent.Use(authMiddleware)
 	{
-		h.registerREST(multiIntent, "/*path")
+		h.registerREST(multiIntent)
 	}
 	h.logger.Info("Registered multi-intent proxy routes")
 
@@ -937,7 +938,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	subjects := api.Group("/subjects")
 	subjects.Use(authMiddleware)
 	{
-		h.registerREST(subjects, "/*path")
+		h.registerREST(subjects)
 	}
 	h.logger.Info("Registered subjects proxy routes")
 
@@ -965,7 +966,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	predictive := api.Group("/predictive")
 	predictive.Use(authMiddleware)
 	{
-		h.registerREST(predictive, "/*path")
+		h.registerREST(predictive)
 	}
 	h.logger.Info("Registered predictive proxy routes")
 
@@ -973,14 +974,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	ingestion := api.Group("/ingestion")
 	ingestion.Use(authMiddleware)
 	{
-		h.registerREST(ingestion, "/*path")
+		h.registerREST(ingestion)
 	}
 	h.logger.Info("Registered ingestion proxy routes")
 
 	documents := api.Group("/documents")
 	documents.Use(authMiddleware)
 	{
-		h.registerREST(documents, "/*path")
+		h.registerREST(documents)
 	}
 	h.logger.Info("Registered documents proxy routes")
 
@@ -1000,7 +1001,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	sources.Use(authMiddleware)
 	{
 		// route-tier: authed
-		h.registerREST(sources, "/*path")
+		h.registerREST(sources)
 	}
 	h.logger.Info("Registered sources proxy routes")
 
@@ -1024,7 +1025,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	focus := api.Group("/focus")
 	focus.Use(authMiddleware)
 	{
-		h.registerREST(focus, "/*path")
+		h.registerREST(focus)
 	}
 	h.logger.Info("Registered focus proxy routes")
 
@@ -1032,7 +1033,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	vocabulary := api.Group("/vocabulary")
 	vocabulary.Use(authMiddleware)
 	{
-		h.registerREST(vocabulary, "/*path")
+		h.registerREST(vocabulary)
 	}
 	h.logger.Info("Registered vocabulary proxy routes")
 
@@ -1040,7 +1041,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	translation := api.Group("/translation")
 	translation.Use(authMiddleware)
 	{
-		h.registerREST(translation, "/*path")
+		h.registerREST(translation)
 	}
 	h.logger.Info("Registered translation proxy routes")
 
@@ -1048,7 +1049,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	decay := api.Group("/decay")
 	decay.Use(authMiddleware)
 	{
-		h.registerREST(decay, "/*path")
+		h.registerREST(decay)
 	}
 	h.logger.Info("Registered decay proxy routes")
 
@@ -1066,7 +1067,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	leaderboards := api.Group("/leaderboards")
 	leaderboards.Use(authMiddleware)
 	{
-		h.registerREST(leaderboards, "/*path")
+		h.registerREST(leaderboards)
 	}
 	h.logger.Info("Registered leaderboards proxy routes")
 
@@ -1074,7 +1075,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	cognitive := api.Group("/cognitive")
 	cognitive.Use(authMiddleware)
 	{
-		h.registerREST(cognitive, "/*path")
+		h.registerREST(cognitive)
 	}
 	h.logger.Info("Registered cognitive proxy routes")
 
@@ -1082,7 +1083,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	memory := api.Group("/memory")
 	memory.Use(authMiddleware)
 	{
-		h.registerREST(memory, "/*path")
+		h.registerREST(memory)
 	}
 	h.logger.Info("Registered memory proxy routes")
 
@@ -1090,7 +1091,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	visualElements := api.Group("/visual-elements")
 	visualElements.Use(authMiddleware)
 	{
-		h.registerREST(visualElements, "/*path")
+		h.registerREST(visualElements)
 	}
 	h.logger.Info("Registered visual-elements proxy routes")
 
@@ -1100,7 +1101,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	profileTransparency.Use(authMiddleware)
 	{
 		// route-tier: authed
-		h.registerREST(profileTransparency, "/*path")
+		h.registerREST(profileTransparency)
 	}
 	h.logger.Info("Registered profile-transparency proxy routes")
 
@@ -1108,7 +1109,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	experience := api.Group("/experience")
 	experience.Use(authMiddleware)
 	{
-		h.registerREST(experience, "/*path")
+		h.registerREST(experience)
 	}
 	h.logger.Info("Registered experience proxy routes")
 
@@ -1146,7 +1147,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	simulation.Use(authMiddleware)
 	{
 		// route-tier: authed
-		h.registerREST(simulation, "/*path")
+		h.registerREST(simulation)
 	}
 	h.logger.Info("Registered simulation proxy routes")
 
@@ -1156,7 +1157,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	executions.Use(authMiddleware)
 	{
 		// route-tier: authed
-		h.registerREST(executions, "/*path")
+		h.registerREST(executions)
 	}
 	h.logger.Info("Registered executions proxy routes")
 
@@ -1166,7 +1167,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	runs.Use(authMiddleware)
 	{
 		// route-tier: authed
-		h.registerREST(runs, "/*path")
+		h.registerREST(runs)
 	}
 	h.logger.Info("Registered agent runs proxy routes")
 
@@ -1176,7 +1177,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	actionProposals.Use(authMiddleware)
 	{
 		// route-tier: authed
-		h.registerREST(actionProposals, "/*path")
+		h.registerREST(actionProposals)
 	}
 	h.logger.Info("Registered action proposals proxy routes")
 
@@ -1186,7 +1187,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	actionPermissions.Use(authMiddleware)
 	{
 		// route-tier: authed
-		h.registerREST(actionPermissions, "/*path")
+		h.registerREST(actionPermissions)
 	}
 	h.logger.Info("Registered action permissions proxy routes")
 
@@ -1196,7 +1197,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	journey.Use(authMiddleware)
 	{
 		// route-tier: authed
-		h.registerREST(journey, "/*path")
+		h.registerREST(journey)
 	}
 	h.logger.Info("Registered journey first-action proxy routes")
 
@@ -1204,7 +1205,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	learningReports := api.Group("/learning-reports")
 	learningReports.Use(authMiddleware)
 	{
-		h.registerREST(learningReports, "/*path")
+		h.registerREST(learningReports)
 	}
 	h.logger.Info("Registered learning-reports proxy routes")
 
@@ -1212,14 +1213,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	shop := api.Group("/shop")
 	shop.Use(authMiddleware)
 	{
-		h.registerREST(shop, "/*path")
+		h.registerREST(shop)
 	}
 	h.logger.Info("Registered shop proxy routes")
 
 	photons := api.Group("/photons")
 	photons.Use(authMiddleware)
 	{
-		h.registerREST(photons, "/*path")
+		h.registerREST(photons)
 	}
 	h.logger.Info("Registered photons proxy routes")
 
@@ -1227,7 +1228,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	inventory := api.Group("/inventory")
 	inventory.Use(authMiddleware)
 	{
-		h.registerREST(inventory, "/*path")
+		h.registerREST(inventory)
 	}
 	h.logger.Info("Registered inventory proxy routes")
 
@@ -1236,7 +1237,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	aurora := api.Group("/aurora")
 	aurora.Use(authMiddleware)
 	{
-		h.registerREST(aurora, "/*path")
+		h.registerREST(aurora)
 	}
 	h.logger.Info("Registered aurora proxy routes (catch-all)")
 
@@ -1272,7 +1273,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	} {
 		rg := api.Group(r.prefix)
 		rg.Use(authMiddleware)
-		h.registerREST(rg, "/*path")
+		h.registerREST(rg)
 		h.logger.Info("Registered " + r.name + " proxy routes")
 	}
 	// R2-08 §2.2 #14: the GET /cqrs/dlq/stats proxy group is removed — the
@@ -1293,7 +1294,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	admin := api.Group("/admin")
 	admin.Use(authMiddleware, middleware.RequireAdmin)
 	{
-		h.registerREST(admin, "/*path")
+		h.registerREST(admin)
 	}
 	h.logger.Info("Registered admin proxy routes (catch-all)")
 

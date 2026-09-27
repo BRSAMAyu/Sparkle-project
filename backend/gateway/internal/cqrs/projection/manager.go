@@ -22,30 +22,30 @@ import (
 	"github.com/sparkle/gateway/internal/db"
 )
 
-// ProjectionStatus represents the status of a projection.
-type ProjectionStatus string
+// Status represents the status of a projection.
+type Status string
 
 const (
-	StatusActive   ProjectionStatus = "active"
-	StatusPaused   ProjectionStatus = "paused"
-	StatusError    ProjectionStatus = "error"
-	StatusBuilding ProjectionStatus = "building"
+	StatusActive   Status = "active"
+	StatusPaused   Status = "paused"
+	StatusError    Status = "error"
+	StatusBuilding Status = "building"
 )
 
-// ProjectionInfo contains runtime information about a projection.
-type ProjectionInfo struct {
-	Name                  string           `json:"name"`
-	Status                ProjectionStatus `json:"status"`
-	LastProcessedPosition int64            `json:"last_processed_position,omitempty"`
-	LastProcessedAt       *time.Time       `json:"last_processed_at,omitempty"`
-	Version               int              `json:"version"`
-	ErrorMessage          string           `json:"error_message,omitempty"`
-	CreatedAt             time.Time        `json:"created_at"`
-	UpdatedAt             time.Time        `json:"updated_at"`
+// Info contains runtime information about a projection.
+type Info struct {
+	Name                  string     `json:"name"`
+	Status                Status     `json:"status"`
+	LastProcessedPosition int64      `json:"last_processed_position,omitempty"`
+	LastProcessedAt       *time.Time `json:"last_processed_at,omitempty"`
+	Version               int        `json:"version"`
+	ErrorMessage          string     `json:"error_message,omitempty"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
 }
 
-// ProjectionHandler defines the interface for handling projection events.
-type ProjectionHandler interface {
+// Handler defines the interface for handling projection events.
+type Handler interface {
 	// Name returns the projection name.
 	Name() string
 	// HandleEvent processes a single event.
@@ -59,7 +59,7 @@ type Manager struct {
 	pool       *pgxpool.Pool
 	queries    *db.Queries
 	logger     *zap.Logger
-	handlers   map[string]ProjectionHandler
+	handlers   map[string]Handler
 	handlersMu sync.RWMutex
 }
 
@@ -69,12 +69,12 @@ func NewManager(pool *pgxpool.Pool, logger *zap.Logger) *Manager {
 		pool:     pool,
 		queries:  db.New(pool),
 		logger:   logger.Named("projection-manager"),
-		handlers: make(map[string]ProjectionHandler),
+		handlers: make(map[string]Handler),
 	}
 }
 
 // RegisterHandler registers a projection handler.
-func (m *Manager) RegisterHandler(handler ProjectionHandler) error {
+func (m *Manager) RegisterHandler(handler Handler) error {
 	m.handlersMu.Lock()
 	defer m.handlersMu.Unlock()
 
@@ -96,7 +96,7 @@ func (m *Manager) RegisterHandler(handler ProjectionHandler) error {
 }
 
 // GetHandler returns a registered handler by name.
-func (m *Manager) GetHandler(name string) (ProjectionHandler, bool) {
+func (m *Manager) GetHandler(name string) (Handler, bool) {
 	m.handlersMu.RLock()
 	defer m.handlersMu.RUnlock()
 	handler, ok := m.handlers[name]
@@ -104,15 +104,15 @@ func (m *Manager) GetHandler(name string) (ProjectionHandler, bool) {
 }
 
 // GetProjectionInfo retrieves current projection metadata.
-func (m *Manager) GetProjectionInfo(ctx context.Context, name string) (*ProjectionInfo, error) {
+func (m *Manager) GetProjectionInfo(ctx context.Context, name string) (*Info, error) {
 	meta, err := m.queries.GetProjectionMetadata(ctx, name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get projection metadata: %w", err)
 	}
 
-	info := &ProjectionInfo{
+	info := &Info{
 		Name:      meta.ProjectionName,
-		Status:    ProjectionStatus(meta.Status),
+		Status:    Status(meta.Status),
 		Version:   int(meta.Version),
 		CreatedAt: meta.CreatedAt.Time,
 		UpdatedAt: meta.UpdatedAt.Time,
@@ -136,17 +136,17 @@ func (m *Manager) GetProjectionInfo(ctx context.Context, name string) (*Projecti
 }
 
 // GetAllProjections retrieves all projection statuses.
-func (m *Manager) GetAllProjections(ctx context.Context) ([]ProjectionInfo, error) {
+func (m *Manager) GetAllProjections(ctx context.Context) ([]Info, error) {
 	metas, err := m.queries.GetAllProjectionMetadata(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all projection metadata: %w", err)
 	}
 
-	infos := make([]ProjectionInfo, 0, len(metas))
+	infos := make([]Info, 0, len(metas))
 	for _, meta := range metas {
-		info := ProjectionInfo{
+		info := Info{
 			Name:      meta.ProjectionName,
-			Status:    ProjectionStatus(meta.Status),
+			Status:    Status(meta.Status),
 			Version:   int(meta.Version),
 			CreatedAt: meta.CreatedAt.Time,
 			UpdatedAt: meta.UpdatedAt.Time,
@@ -181,7 +181,7 @@ func (m *Manager) UpdatePosition(ctx context.Context, name string, position int6
 }
 
 // SetStatus updates the status of a projection.
-func (m *Manager) SetStatus(ctx context.Context, name string, status ProjectionStatus, errorMsg string) error {
+func (m *Manager) SetStatus(ctx context.Context, name string, status Status, errorMsg string) error {
 	return m.queries.SetProjectionStatus(ctx, db.SetProjectionStatusParams{
 		ProjectionName: name,
 		Status:         string(status),

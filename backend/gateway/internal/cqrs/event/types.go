@@ -13,63 +13,63 @@ import (
 	"github.com/google/uuid"
 )
 
-// EventType represents the type of a domain event.
-type EventType string
+// Type represents the type of a domain event.
+type Type string
 
 // Domain event types organized by aggregate.
 const (
 	// Community events
-	EventPostCreated EventType = "community.post.created"
-	EventPostUpdated EventType = "community.post.updated"
-	EventPostDeleted EventType = "community.post.deleted"
-	EventPostLiked   EventType = "community.post.liked"
-	EventPostUnliked EventType = "community.post.unliked"
+	EventPostCreated Type = "community.post.created"
+	EventPostUpdated Type = "community.post.updated"
+	EventPostDeleted Type = "community.post.deleted"
+	EventPostLiked   Type = "community.post.liked"
+	EventPostUnliked Type = "community.post.unliked"
 
 	// Task events
-	EventTaskCreated   EventType = "task.created"
-	EventTaskUpdated   EventType = "task.updated"
-	EventTaskStarted   EventType = "task.started"
-	EventTaskCompleted EventType = "task.completed"
-	EventTaskAbandoned EventType = "task.abandoned"
-	EventTaskDeleted   EventType = "task.deleted"
-	EventTaskPaused    EventType = "task.paused"
-	EventTaskResumed   EventType = "task.resumed"
-	EventTaskStuck     EventType = "task.stuck"
-	EventTaskReopened  EventType = "task.reopened"
+	EventTaskCreated   Type = "task.created"
+	EventTaskUpdated   Type = "task.updated"
+	EventTaskStarted   Type = "task.started"
+	EventTaskCompleted Type = "task.completed"
+	EventTaskAbandoned Type = "task.abandoned"
+	EventTaskDeleted   Type = "task.deleted"
+	EventTaskPaused    Type = "task.paused"
+	EventTaskResumed   Type = "task.resumed"
+	EventTaskStuck     Type = "task.stuck"
+	EventTaskReopened  Type = "task.reopened"
 
 	// Plan events
-	EventPlanCreated   EventType = "plan.created"
-	EventPlanUpdated   EventType = "plan.updated"
-	EventPlanCompleted EventType = "plan.completed"
-	EventPlanDeleted   EventType = "plan.deleted"
+	EventPlanCreated   Type = "plan.created"
+	EventPlanUpdated   Type = "plan.updated"
+	EventPlanCompleted Type = "plan.completed"
+	EventPlanDeleted   Type = "plan.deleted"
 
 	// Knowledge Galaxy events
-	EventNodeCreated      EventType = "galaxy.node.created"
-	EventNodeUnlocked     EventType = "galaxy.node.unlocked"
-	EventNodeExpanded     EventType = "galaxy.node.expanded"
-	EventMasteryUpdated   EventType = "galaxy.mastery.updated"
-	EventRelationCreated  EventType = "galaxy.relation.created"
-	EventStudyRecordAdded EventType = "galaxy.study.recorded"
+	EventNodeCreated      Type = "galaxy.node.created"
+	EventNodeUnlocked     Type = "galaxy.node.unlocked"
+	EventNodeExpanded     Type = "galaxy.node.expanded"
+	EventMasteryUpdated   Type = "galaxy.mastery.updated"
+	EventRelationCreated  Type = "galaxy.relation.created"
+	EventStudyRecordAdded Type = "galaxy.study.recorded"
 
 	// Chat events
-	EventMessageSent     EventType = "chat.message.sent"
-	EventMessageReceived EventType = "chat.message.received"
-	EventSessionCreated  EventType = "chat.session.created"
-	EventSessionEnded    EventType = "chat.session.ended"
+	EventMessageSent     Type = "chat.message.sent"
+	EventMessageReceived Type = "chat.message.received"
+	EventSessionCreated  Type = "chat.session.created"
+	EventSessionEnded    Type = "chat.session.ended"
 
 	// User events
-	EventUserCreated         EventType = "user.created"
-	EventUserUpdated         EventType = "user.updated"
-	EventUserDeleted         EventType = "user.deleted"
-	EventUserStatusChanged   EventType = "user.status.changed"
-	EventPreferencesUpdated  EventType = "user.preferences.updated"
-	EventPreferencesInferred EventType = "user.preferences.inferred"
+	EventUserCreated         Type = "user.created"
+	EventUserUpdated         Type = "user.updated"
+	EventUserDeleted         Type = "user.deleted"
+	EventUserStatusChanged   Type = "user.status.changed"
+	EventPreferencesUpdated  Type = "user.preferences.updated"
+	EventPreferencesInferred Type = "user.preferences.inferred"
 
 	// Push notification events
-	EventPushScheduled EventType = "push.scheduled"
-	EventPushSent      EventType = "push.sent"
-	EventPushDelivered EventType = "push.delivered"
-	EventPushClicked   EventType = "push.clicked"
+	EventPushScheduled Type = "push.scheduled"
+	EventPushSent      Type = "push.sent"
+	EventPushDelivered Type = "push.delivered"
+	EventPushClicked   Type = "push.clicked"
 )
 
 // AggregateType represents the type of aggregate that owns an event.
@@ -88,17 +88,17 @@ const (
 // DomainEvent represents a domain event with full metadata.
 type DomainEvent struct {
 	ID            string                 `json:"id"`
-	Type          EventType              `json:"type"`
+	Type          Type                   `json:"type"`
 	Version       int                    `json:"version"`
 	AggregateType AggregateType          `json:"aggregate_type"`
 	AggregateID   uuid.UUID              `json:"aggregate_id"`
 	Timestamp     time.Time              `json:"timestamp"`
 	Payload       map[string]interface{} `json:"payload"`
-	Metadata      EventMetadata          `json:"metadata"`
+	Metadata      Metadata               `json:"metadata"`
 }
 
-// EventMetadata contains tracing and context information.
-type EventMetadata struct {
+// Metadata contains tracing and context information.
+type Metadata struct {
 	TraceID       string    `json:"trace_id,omitempty"`
 	SpanID        string    `json:"span_id,omitempty"`
 	UserID        uuid.UUID `json:"user_id,omitempty"`
@@ -112,7 +112,7 @@ type OutboxEntry struct {
 	ID             uuid.UUID
 	AggregateType  AggregateType
 	AggregateID    uuid.UUID
-	EventType      EventType
+	EventType      Type
 	EventVersion   int
 	Payload        []byte
 	Metadata       []byte
@@ -121,12 +121,12 @@ type OutboxEntry struct {
 	PublishedAt    *time.Time
 }
 
-// EventStoreEntry represents a persisted event in the event store.
-type EventStoreEntry struct {
+// StoreEntry represents a persisted event in the event store.
+type StoreEntry struct {
 	ID             uuid.UUID
 	AggregateType  AggregateType
 	AggregateID    uuid.UUID
-	EventType      EventType
+	EventType      Type
 	EventVersion   int
 	SequenceNumber int64
 	Payload        []byte
@@ -136,11 +136,11 @@ type EventStoreEntry struct {
 
 // NewDomainEvent creates a new domain event with generated ID and timestamp.
 func NewDomainEvent(
-	eventType EventType,
+	eventType Type,
 	aggregateType AggregateType,
 	aggregateID uuid.UUID,
 	payload map[string]interface{},
-	metadata EventMetadata,
+	metadata Metadata,
 ) DomainEvent {
 	return DomainEvent{
 		ID:            uuid.New().String(),
@@ -185,7 +185,7 @@ func (o *OutboxEntry) ToDomainEvent() (*DomainEvent, error) {
 		return nil, err
 	}
 
-	var metadata EventMetadata
+	var metadata Metadata
 	if o.Metadata != nil {
 		if err := json.Unmarshal(o.Metadata, &metadata); err != nil {
 			return nil, err
@@ -205,7 +205,7 @@ func (o *OutboxEntry) ToDomainEvent() (*DomainEvent, error) {
 }
 
 // StreamKey returns the Redis stream key for an event type.
-func (e EventType) StreamKey() string {
+func (e Type) StreamKey() string {
 	switch {
 	case e == EventPostCreated || e == EventPostUpdated || e == EventPostDeleted ||
 		e == EventPostLiked || e == EventPostUnliked:
@@ -235,7 +235,7 @@ func (e EventType) StreamKey() string {
 }
 
 // ConsumerGroup returns the recommended consumer group name for an event type.
-func (e EventType) ConsumerGroup() string {
+func (e Type) ConsumerGroup() string {
 	switch {
 	case e == EventPostCreated || e == EventPostUpdated || e == EventPostDeleted ||
 		e == EventPostLiked || e == EventPostUnliked:

@@ -71,7 +71,7 @@ type TaskSyncWorker struct {
 // TaskSyncWorkerConfig configures the task sync worker.
 type TaskSyncWorkerConfig struct {
 	ConsumerName string
-	Options      cqrsWorker.WorkerOptions
+	Options      cqrsWorker.Options
 }
 
 // DefaultTaskSyncWorkerConfig returns sensible defaults.

@@ -150,12 +150,13 @@ func writeWSJSONLogged(writer *wsSafeWriter, operation string, payload interface
 	return true
 }
 
-func writeWSMessageLogged(writer *wsSafeWriter, operation string, messageType int, data []byte) bool {
+// writeWSMessageLogged writes a raw WebSocket frame and logs write failures.
+// Callers treat a failed close-frame write as terminal, so there is no
+// useful success value to return.
+func writeWSMessageLogged(writer *wsSafeWriter, operation string, messageType int, data []byte) {
 	if err := writer.WriteMessage(messageType, data); err != nil {
 		logWebSocketWriteError(operation, err)
-		return false
 	}
-	return true
 }
 
 func sendChatAccepted(responder interface{}, requestID string) bool {
@@ -210,35 +211,35 @@ func workflowIDForChatMode(mode string) string {
 	}
 }
 
-func (h *ChatOrchestrator) resolveUserIdentity(ctx context.Context, userID string) (uuid.UUID, string, *db.User, error) {
+func (h *ChatOrchestrator) resolveUserIdentity(ctx context.Context, userID string) (uuid.UUID, string, *db.User) {
 	if parsed, err := uuid.Parse(userID); err == nil {
 		if h.userIdentity == nil {
-			return parsed, userID, nil, nil
+			return parsed, userID, nil
 		}
 		user, err := h.userIdentity.GetUserByUUID(ctx, parsed)
 		if err != nil {
-			return parsed, userID, nil, nil
+			return parsed, userID, nil
 		}
-		return parsed, userID, &user, nil
+		return parsed, userID, &user
 	}
 
 	if h.userIdentity == nil {
-		return uuid.Nil, userID, nil, nil
+		return uuid.Nil, userID, nil
 	}
 
 	user, err := h.userIdentity.GetUserByEmail(ctx, userID)
 	if err != nil {
-		return uuid.Nil, userID, nil, nil
+		return uuid.Nil, userID, nil
 	}
 	if !user.ID.Valid {
-		return uuid.Nil, userID, nil, nil
+		return uuid.Nil, userID, nil
 	}
 
 	parsed, err := uuid.FromBytes(user.ID.Bytes[:])
 	if err != nil {
-		return uuid.Nil, userID, nil, nil
+		return uuid.Nil, userID, nil
 	}
-	return parsed, parsed.String(), &user, nil
+	return parsed, parsed.String(), &user
 }
 
 func buildAgentUserProfile(inputNickname, userContextJSON string, snapshot *service.ChatUserProfileSnapshot, fallbackUser *db.User) *agentv1.UserProfile {
@@ -335,7 +336,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	// Canonicalize the authenticated identity before any session history write/read.
 	// WS auth may provide an email or legacy subject, while chat history ownership
 	// and downstream AI context should consistently use the resolved UUID.
-	userUUID, resolvedUserID, resolvedUser, _ := h.resolveUserIdentity(ctx, userID)
+	userUUID, resolvedUserID, resolvedUser := h.resolveUserIdentity(ctx, userID)
 	if resolvedUserID != "" {
 		userID = resolvedUserID
 	}
@@ -566,7 +567,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		userID,
 		normalizedChatMode,
 		userContextJSON,
-		input.FileIds,
+		input.FileIDs,
 		input.IncludeReferences,
 		input.ActiveTools,
 		input.ExtraContext,
@@ -702,7 +703,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		UserId:            userID,
 		SessionId:         sessionID,
 		History:           historyMessages,
-		FileIds:           input.FileIds,
+		FileIds:           input.FileIDs,
 		DocumentFilter:    documentFilter,
 		IncludeReferences: input.IncludeReferences,
 		ActiveTools:       input.ActiveTools,

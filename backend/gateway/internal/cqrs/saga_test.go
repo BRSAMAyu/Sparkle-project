@@ -201,7 +201,7 @@ func TestCopyMap(t *testing.T) {
 // Coordinator tests (in-memory, no DB)
 // ---------------------------------------------------------------------------
 
-func newTestCoordinator(bus event.EventBus) *SagaCoordinator {
+func newTestCoordinator(bus event.Bus) *SagaCoordinator {
 	mr, _ := miniredis.Run()
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	_ = rdb // not used by coordinator directly but satisfies constructor
@@ -285,7 +285,7 @@ func TestCoordinator_Execute_AllStepsSucceed(t *testing.T) {
 	// Verify saga event published.
 	published := bus.getPublished()
 	assert.Len(t, published, 1)
-	assert.Equal(t, event.EventType("saga.completed"), published[0].Type)
+	assert.Equal(t, event.Type("saga.completed"), published[0].Type)
 }
 
 func TestCoordinator_Execute_Step2Fails_Compensates1(t *testing.T) {

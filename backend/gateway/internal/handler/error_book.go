@@ -14,14 +14,14 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	errorbookv1 "github.com/sparkle/gateway/gen/proto/error_book"
-	"github.com/sparkle/gateway/internal/error_book"
+	"github.com/sparkle/gateway/internal/errorbook"
 )
 
 type ErrorBookHandler struct {
-	client *error_book.Client
+	client *errorbook.Client
 }
 
-func NewErrorBookHandler(client *error_book.Client) *ErrorBookHandler {
+func NewErrorBookHandler(client *errorbook.Client) *ErrorBookHandler {
 	return &ErrorBookHandler{client: client}
 }
 

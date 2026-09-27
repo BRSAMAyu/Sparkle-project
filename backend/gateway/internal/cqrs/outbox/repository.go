@@ -101,7 +101,7 @@ func (r *PostgresRepository) GetUnpublished(ctx context.Context, limit int) ([]*
 			ID:             fromPgUUID(row.ID),
 			AggregateType:  event.AggregateType(row.AggregateType),
 			AggregateID:    aggID,
-			EventType:      event.EventType(row.EventType),
+			EventType:      event.Type(row.EventType),
 			EventVersion:   int(row.EventVersion),
 			Payload:        row.Payload,
 			Metadata:       row.Metadata,
@@ -170,7 +170,7 @@ func NewEventStoreRepository(pool *pgxpool.Pool) *EventStoreRepository {
 }
 
 // SaveWithTx saves an event to the event store within an existing transaction.
-func (r *EventStoreRepository) SaveWithTx(ctx context.Context, tx pgx.Tx, entry *event.EventStoreEntry) error {
+func (r *EventStoreRepository) SaveWithTx(ctx context.Context, tx pgx.Tx, entry *event.StoreEntry) error {
 	params := db.InsertEventStoreEntryParams{
 		AggregateType:  string(entry.AggregateType),
 		AggregateID:    toPgUUID(entry.AggregateID),
@@ -198,7 +198,7 @@ func (r *EventStoreRepository) GetByAggregate(
 	ctx context.Context,
 	aggregateType event.AggregateType,
 	aggregateID uuid.UUID,
-) ([]*event.EventStoreEntry, error) {
+) ([]*event.StoreEntry, error) {
 	params := db.GetEventsByAggregateParams{
 		AggregateType: string(aggregateType),
 		AggregateID:   toPgUUID(aggregateID),
@@ -218,7 +218,7 @@ func (r *EventStoreRepository) GetAfterSequence(
 	aggregateType event.AggregateType,
 	aggregateID uuid.UUID,
 	afterSequence int64,
-) ([]*event.EventStoreEntry, error) {
+) ([]*event.StoreEntry, error) {
 	params := db.GetEventsAfterSequenceParams{
 		AggregateType:  string(aggregateType),
 		AggregateID:    toPgUUID(aggregateID),
@@ -252,15 +252,15 @@ func (r *EventStoreRepository) GetNextSequenceNumber(
 	return int64(nextSeq), nil
 }
 
-func (r *EventStoreRepository) mapEventStoreEntries(rows []db.EventStore) []*event.EventStoreEntry {
-	entries := make([]*event.EventStoreEntry, len(rows))
+func (r *EventStoreRepository) mapEventStoreEntries(rows []db.EventStore) []*event.StoreEntry {
+	entries := make([]*event.StoreEntry, len(rows))
 	for i, row := range rows {
 		aggID := fromPgUUID(row.AggregateID)
-		entries[i] = &event.EventStoreEntry{
+		entries[i] = &event.StoreEntry{
 			ID:             uuid.Nil, // DB uses int64 auto-increment; no UUID equivalent
 			AggregateType:  event.AggregateType(row.AggregateType),
 			AggregateID:    aggID,
-			EventType:      event.EventType(row.EventType),
+			EventType:      event.Type(row.EventType),
 			EventVersion:   int(row.EventVersion),
 			SequenceNumber: row.SequenceNumber,
 			Payload:        row.Payload,
@@ -399,7 +399,7 @@ func (c *TransactionContext) SaveEventToStore(ctx context.Context, domainEvent *
 		return fmt.Errorf("marshal metadata: %w", err)
 	}
 
-	entry := &event.EventStoreEntry{
+	entry := &event.StoreEntry{
 		ID:             uuid.Nil,
 		AggregateType:  domainEvent.AggregateType,
 		AggregateID:    domainEvent.AggregateID,

@@ -94,8 +94,8 @@ func TestDecodeChatRequestEnvelopeProtoJSON(t *testing.T) {
 	if input.Nickname != "tester" {
 		t.Fatalf("unexpected nickname: %q", input.Nickname)
 	}
-	if len(input.FileIds) != 2 {
-		t.Fatalf("unexpected file ids: %#v", input.FileIds)
+	if len(input.FileIDs) != 2 {
+		t.Fatalf("unexpected file ids: %#v", input.FileIDs)
 	}
 	if input.UseDocumentContext == nil || *input.UseDocumentContext {
 		t.Fatalf("expected use document context false, got %#v", input.UseDocumentContext)
@@ -229,12 +229,14 @@ func TestExtractTraceContextFromEnvelopeRejectsOversizedTraceparent(t *testing.T
 	env := &wsEnvelopeIn{
 		Traceparent: "00-" + strings.Repeat("a", maxTraceparentLen+1) + "-01",
 	}
-	ctx := context.WithValue(context.Background(), "sentinel", "ok")
+	// typed key avoids the basic-string context key that revive/context-keys-type forbids
+	type sentinelKey struct{}
+	ctx := context.WithValue(context.Background(), sentinelKey{}, "ok")
 	got := extractTraceContextFromEnvelope(ctx, env)
 	if got == nil {
 		t.Fatal("expected non-nil context")
 	}
-	if got.Value("sentinel") != "ok" {
+	if got.Value(sentinelKey{}) != "ok" {
 		t.Fatal("expected original context to remain unchanged")
 	}
 }

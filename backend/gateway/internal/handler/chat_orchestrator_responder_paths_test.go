@@ -32,10 +32,10 @@ func TestEnvelopeResponderWritesAllPayloadShapes(t *testing.T) {
 
 	writer := newWSSafeWriter(serverConn, time.Second)
 	defer writer.Close()
-	responder := newEnvelopeResponder(writer, &wsEnvelopeIn{
+	responder := newEnvelopeResponder(context.Background(), writer, &wsEnvelopeIn{
 		MessageID: "msg-1",
 		RequestID: "req-1",
-	}, context.Background())
+	})
 
 	responder.SendAck()
 	require.Contains(t, readTextEnvelope(t, clientConn)["payload"], "ack")
@@ -77,12 +77,12 @@ func TestProtobufResponderWritesAllPayloadShapes(t *testing.T) {
 
 	writer := newWSSafeWriter(serverConn, time.Second)
 	defer writer.Close()
-	responder := newProtobufResponder(writer, &pbws.WebSocketMessage{
+	responder := newProtobufResponder(context.Background(), writer, &pbws.WebSocketMessage{
 		Version:   "2.0",
 		Type:      "chat",
 		RequestId: "req-1",
 		TraceId:   "trace-1",
-	}, context.Background())
+	})
 
 	readProto := func(wantType string) {
 		t.Helper()

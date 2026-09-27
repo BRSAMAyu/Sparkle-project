@@ -28,7 +28,7 @@ type envelopeResponder struct {
 	ctx      context.Context
 }
 
-func newEnvelopeResponder(writer *wsSafeWriter, env *wsEnvelopeIn, ctx context.Context) *envelopeResponder {
+func newEnvelopeResponder(ctx context.Context, writer *wsSafeWriter, env *wsEnvelopeIn) *envelopeResponder {
 	return &envelopeResponder{
 		writer:   writer,
 		envelope: env,
@@ -278,7 +278,7 @@ type protobufResponder struct {
 	ctx    context.Context
 }
 
-func newProtobufResponder(writer *wsSafeWriter, msg *pbws.WebSocketMessage, ctx context.Context) *protobufResponder {
+func newProtobufResponder(ctx context.Context, writer *wsSafeWriter, msg *pbws.WebSocketMessage) *protobufResponder {
 	return &protobufResponder{
 		writer: writer,
 		msg:    msg,

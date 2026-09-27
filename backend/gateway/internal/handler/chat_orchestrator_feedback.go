@@ -807,12 +807,12 @@ func (h *ChatOrchestrator) handleInterventionFeedback(ctx context.Context, write
 	h.handleInterventionFeedbackWithResponder(ctx, legacyInterventionResponder{writer: writer}, msgMap, authToken)
 }
 
-func (h *ChatOrchestrator) handleResponseFeedback(writer *wsSafeWriter, msgMap map[string]interface{}, userID string, ctx context.Context) {
+func (h *ChatOrchestrator) handleResponseFeedback(ctx context.Context, writer *wsSafeWriter, msgMap map[string]interface{}, userID string) {
 	h.handleResponseFeedbackWithResponder(ctx, legacyResponseFeedbackResponder{writer: writer}, msgMap, userID)
 }
 
 // handlePlanReviewFeedback processes user feedback on plan reviews (legacy wrapper)
-func (h *ChatOrchestrator) handlePlanReviewFeedback(writer *wsSafeWriter, msgMap map[string]interface{}, userID string, ctx context.Context) {
+func (h *ChatOrchestrator) handlePlanReviewFeedback(ctx context.Context, writer *wsSafeWriter, msgMap map[string]interface{}, userID string) {
 	h.handlePlanReviewFeedbackWithResponder(ctx, legacyPlanReviewStatusSender{writer: writer}, msgMap, userID)
 }
 
@@ -1001,6 +1001,6 @@ func (h *ChatOrchestrator) handleFocusCompleted(ctx context.Context, msgMap map[
 }
 
 // handleUpdateNodeMastery forwards mastery updates to Python backend via gRPC and sends ACK
-func (h *ChatOrchestrator) handleUpdateNodeMastery(writer *wsSafeWriter, msgMap map[string]interface{}, userID string, ctx context.Context) {
+func (h *ChatOrchestrator) handleUpdateNodeMastery(ctx context.Context, writer *wsSafeWriter, msgMap map[string]interface{}, userID string) {
 	h.handleUpdateNodeMasteryWithResponder(ctx, legacyUpdateNodeResponder{writer: writer}, msgMap, userID)
 }

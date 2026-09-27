@@ -36,7 +36,7 @@ func testMetrics(t *testing.T) *metrics.CQRSMetrics {
 	return sharedMetrics
 }
 
-var noopHandler event.EventHandler = func(_ context.Context, _ event.DomainEvent, _ string) error {
+var noopHandler event.Handler = func(_ context.Context, _ event.DomainEvent, _ string) error {
 	return nil
 }
 
@@ -95,7 +95,7 @@ func TestRunLiveProcessFailureStillLogsError(t *testing.T) {
 	core, observed := observer.New(zapcore.InfoLevel)
 	w := NewBaseWorker(rdb, nil, testMetrics(t), zap.New(core),
 		"cqrs:stream:failure-test", "grp-failure", "consumer-1",
-		WorkerOptions{
+		Options{
 			BatchSize:        10,
 			BlockTimeout:     20 * time.Millisecond,
 			IdempotencyCheck: false,

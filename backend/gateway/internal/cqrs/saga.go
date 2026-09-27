@@ -188,7 +188,7 @@ var (
 type SagaCoordinator struct {
 	pool     *pgxpool.Pool
 	uow      *outbox.UnitOfWork
-	eventBus event.EventBus
+	eventBus event.Bus
 	logger   *zap.Logger
 
 	mu       sync.RWMutex
@@ -198,7 +198,7 @@ type SagaCoordinator struct {
 // NewSagaCoordinator creates a new saga coordinator.
 func NewSagaCoordinator(
 	pool *pgxpool.Pool,
-	eventBus event.EventBus,
+	eventBus event.Bus,
 	logger *zap.Logger,
 ) *SagaCoordinator {
 	return &SagaCoordinator{
@@ -526,7 +526,7 @@ func (c *SagaCoordinator) publishSagaEvent(ctx context.Context, inst *SagaInstan
 		return
 	}
 	evt := event.NewDomainEvent(
-		event.EventType(eventType),
+		event.Type(eventType),
 		event.AggregateType("Saga"),
 		inst.ID,
 		map[string]interface{}{
@@ -536,7 +536,7 @@ func (c *SagaCoordinator) publishSagaEvent(ctx context.Context, inst *SagaInstan
 			"error":          inst.Error,
 			"correlation_id": inst.CorrelationID,
 		},
-		event.EventMetadata{
+		event.Metadata{
 			CorrelationID: inst.CorrelationID,
 			Source:        "saga_coordinator",
 		},

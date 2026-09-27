@@ -150,7 +150,7 @@ func (b *RedisEventBus) Close() error {
 	return nil
 }
 
-// RedisEventConsumer implements EventConsumer using Redis Streams consumer groups.
+// RedisEventConsumer implements Consumer using Redis Streams consumer groups.
 type RedisEventConsumer struct {
 	client  *redis.Client
 	options SubscriptionOptions
@@ -173,7 +173,7 @@ func NewRedisEventConsumer(client *redis.Client, opts ...SubscriptionOptions) *R
 func (c *RedisEventConsumer) Subscribe(
 	ctx context.Context,
 	streamKey, group, consumer string,
-	handler EventHandler,
+	handler Handler,
 ) error {
 	// Create consumer group if it doesn't exist
 	err := c.client.XGroupCreateMkStream(ctx, streamKey, group, "0").Err()
@@ -198,7 +198,7 @@ func (c *RedisEventConsumer) Subscribe(
 func (c *RedisEventConsumer) processMessages(
 	ctx context.Context,
 	streamKey, group, consumer string,
-	handler EventHandler,
+	handler Handler,
 ) error {
 	entries, err := c.client.XReadGroup(ctx, &redis.XReadGroupArgs{
 		Group:    group,
@@ -278,7 +278,7 @@ func parseRedisMessage(msg redis.XMessage) (*DomainEvent, error) {
 	if !ok {
 		return nil, fmt.Errorf("missing or invalid event type")
 	}
-	event.Type = EventType(eventType)
+	event.Type = Type(eventType)
 
 	aggregateType, ok := msg.Values["aggregate_type"].(string)
 	if !ok {
@@ -328,7 +328,7 @@ func parseRedisMessage(msg redis.XMessage) (*DomainEvent, error) {
 	if metadata, ok := msg.Values["metadata"].(string); ok && metadata != "" {
 		if err := json.Unmarshal([]byte(metadata), &event.Metadata); err != nil {
 			// Non-fatal: metadata is optional
-			event.Metadata = EventMetadata{}
+			event.Metadata = Metadata{}
 		}
 	}
 

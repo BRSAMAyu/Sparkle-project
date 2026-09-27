@@ -28,13 +28,13 @@ type interventionPushPayload struct {
 type interventionContentPayload struct {
 	RenderedMessage  string            `json:"rendered_message"`
 	IntentType       string            `json:"intent_type"`
-	TemplateId       string            `json:"template_id"`
+	TemplateID       string            `json:"template_id"`
 	ScaffoldingLevel int32             `json:"scaffolding_level"`
 	ContextVariables map[string]string `json:"context_variables"`
 }
 
 type interventionActionPayload struct {
-	Id    string `json:"id"`
+	ID    string `json:"id"`
 	Label string `json:"label"`
 	Type  string `json:"type"`
 }
@@ -57,7 +57,7 @@ func (h *InterventionPushHandler) HandlePush(c *gin.Context) {
 	content := &pbws.InterventionContent{
 		RenderedMessage:  req.Intervention.Content.RenderedMessage,
 		IntentType:       req.Intervention.Content.IntentType,
-		TemplateId:       req.Intervention.Content.TemplateId,
+		TemplateId:       req.Intervention.Content.TemplateID,
 		ScaffoldingLevel: req.Intervention.Content.ScaffoldingLevel,
 		ContextVariables: req.Intervention.Content.ContextVariables,
 	}
@@ -65,7 +65,7 @@ func (h *InterventionPushHandler) HandlePush(c *gin.Context) {
 	actions := make([]*pbws.InterventionAction, len(req.Intervention.Actions))
 	for i, action := range req.Intervention.Actions {
 		actions[i] = &pbws.InterventionAction{
-			Id:    action.Id,
+			Id:    action.ID,
 			Label: action.Label,
 			Type:  action.Type,
 		}

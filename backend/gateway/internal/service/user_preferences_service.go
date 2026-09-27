@@ -89,7 +89,7 @@ func (s *UserPreferencesService) UpdatePreferences(
 			event.AggregateUser,
 			userID,
 			map[string]interface{}{"data": string(payloadBytes)},
-			event.EventMetadata{UserID: userID, Source: "user_preferences_service"},
+			event.Metadata{UserID: userID, Source: "user_preferences_service"},
 		)
 
 		return txCtx.SaveEventToOutbox(ctx, &evt)

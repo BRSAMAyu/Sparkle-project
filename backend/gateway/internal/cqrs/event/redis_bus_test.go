@@ -46,7 +46,7 @@ func TestRedisEventBus_Integration(t *testing.T) {
 	aggregateID := uuid.New()
 	event := DomainEvent{
 		ID:            uuid.New().String(),
-		Type:          EventType("test.event"),
+		Type:          Type("test.event"),
 		AggregateType: AggregateType("TestAggregate"),
 		AggregateID:   aggregateID,
 		Timestamp:     time.Now().UTC(),
@@ -54,9 +54,9 @@ func TestRedisEventBus_Integration(t *testing.T) {
 	}
 
 	// Override stream key for testing
-	// In production it uses EventType.StreamKey(), but for test isolation we might want to check if we can mock it
-	// Since EventType is a string, we can't easily override its methods.
-	// We'll use a real EventType that maps to a known stream.
+	// In production it uses Type.StreamKey(), but for test isolation we might want to check if we can mock it
+	// Since Type is a string, we can't easily override its methods.
+	// We'll use a real Type that maps to a known stream.
 	event.Type = EventTaskCreated
 	realStreamKey := event.Type.StreamKey()
 	client.Del(context.Background(), realStreamKey)

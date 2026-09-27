@@ -50,7 +50,7 @@ type chatInput struct {
 	SessionID          string                 `json:"session_id"`
 	RequestID          string                 `json:"request_id,omitempty"`
 	Nickname           string                 `json:"nickname,omitempty"`
-	FileIds            []string               `json:"file_ids,omitempty"`
+	FileIDs            []string               `json:"file_ids,omitempty"`
 	IncludeReferences  bool                   `json:"include_references,omitempty"`
 	ActiveTools        []string               `json:"active_tools,omitempty"`
 	ExtraContext       map[string]interface{} `json:"extra_context,omitempty"`
@@ -102,7 +102,7 @@ func (c *chatInput) Reset() {
 	c.SessionID = ""
 	c.RequestID = ""
 	c.Nickname = ""
-	c.FileIds = nil
+	c.FileIDs = nil
 	c.IncludeReferences = false
 	c.ActiveTools = nil
 	c.ExtraContext = nil
@@ -421,7 +421,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 		// P2: Support Binary Protobuf Protocol
 		if msgType == websocket.BinaryMessage {
-			h.handleProtobufMessage(writer, msg, userID, tracer, streamCtx)
+			h.handleProtobufMessage(streamCtx, writer, msg, userID, tracer)
 			continue
 		}
 
@@ -460,10 +460,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					h.handleInterventionFeedback(streamCtx, writer, msgMap, authToken)
 					return false
 				case "response_feedback":
-					h.handleResponseFeedback(writer, msgMap, userID, streamCtx)
+					h.handleResponseFeedback(streamCtx, writer, msgMap, userID)
 					return false
 				case "plan_review_feedback":
-					h.handlePlanReviewFeedback(writer, msgMap, userID, streamCtx)
+					h.handlePlanReviewFeedback(streamCtx, writer, msgMap, userID)
 					return false
 				case "focus_completed":
 					h.handleFocusCompleted(streamCtx, msgMap, userID, authToken)
@@ -514,7 +514,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 						return h.handleChatMessage(ctx2, writer, userID, toolInput, toolInput.RequestID)
 					}()
 				case "update_node_mastery":
-					h.handleUpdateNodeMastery(writer, msgMap, userID, streamCtx)
+					h.handleUpdateNodeMastery(streamCtx, writer, msgMap, userID)
 					return false
 				case "message", "":
 					// Continue with normal chat message handling
@@ -554,13 +554,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 				// 🔧 P1-2: 消息长度检查
 				if len(input.Message) > maxMessageLength {
-					if !writeWSJSONLogged(writer, "message length error", gin.H{
+					return !writeWSJSONLogged(writer, "message length error", gin.H{
 						"type":    "error",
 						"message": i18n.T(streamCtx, "chat.message_length_exceeded", map[string]string{"max_length": fmt.Sprintf("%d", maxMessageLength)}),
-					}) {
-						return true
-					}
-					return false
+					})
 				}
 
 				// 🔧 P1-2: XSS 过滤
@@ -602,7 +599,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			)
 			defer span.End()
 
-			responder := newEnvelopeResponder(writer, envelope, msgCtx)
+			responder := newEnvelopeResponder(msgCtx, writer, envelope)
 			responder.SendAck()
 
 			switch payloadType := envelopePayloadType(envelope.Payload); payloadType {

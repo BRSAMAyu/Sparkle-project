@@ -84,7 +84,7 @@ func (f *fakeBus) Close() error { return nil }
 // default prometheus registerer via promauto, which panics on duplicates.
 var testMetrics = metrics.NewCQRSMetrics("sparkle_test_outbox")
 
-func newTestPublisher(repo Repository, bus event.EventBus) (*Publisher, *observer.ObservedLogs) {
+func newTestPublisher(repo Repository, bus event.Bus) (*Publisher, *observer.ObservedLogs) {
 	core, logs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 	p := NewPublisher(repo, bus, testMetrics, logger, PublisherConfig{

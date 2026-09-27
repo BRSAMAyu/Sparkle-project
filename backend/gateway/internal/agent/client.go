@@ -50,7 +50,7 @@ type Client struct {
 	dialOptions     []grpc.DialOption
 
 	// Health checker (optional)
-	healthChecker *AgentHealthChecker
+	healthChecker *HealthChecker
 }
 
 type traceIDKey struct{}
@@ -72,19 +72,15 @@ func traceIDFromContext(ctx context.Context) string {
 }
 
 func NewClient(cfg *config.Config) (*Client, error) {
-	timeoutSeconds := cfg.GRPCTimeoutSeconds
-	if timeoutSeconds <= 0 {
-		timeoutSeconds = 5
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
-	defer cancel()
-
 	dialOptions, err := buildDialOptions(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := grpc.DialContext(ctx, cfg.AgentAddress, dialOptions...)
+	// grpc.NewClient keeps the lazy (non-blocking) connect semantics of the
+	// legacy non-blocking grpc.DialContext; the passthrough scheme preserves
+	// Dial's default target resolution for plain host:port addresses.
+	conn, err := grpc.NewClient("passthrough:///"+cfg.AgentAddress, dialOptions...)
 	if err != nil {
 		zap.L().Error("Failed to connect to agent service",
 			zap.String("address", cfg.AgentAddress),
@@ -188,7 +184,7 @@ func (c *Client) currentAPI() agentv1.AgentServiceClient {
 	return c.api
 }
 
-func (c *Client) reconnect(ctx context.Context) error {
+func (c *Client) reconnect() error {
 	if c == nil || c.config == nil {
 		return ErrServiceUnavailable
 	}
@@ -218,15 +214,9 @@ func (c *Client) reconnect(ctx context.Context) error {
 		}
 	}
 
-	timeoutSeconds := c.config.GRPCTimeoutSeconds
-	if timeoutSeconds <= 0 {
-		timeoutSeconds = 5
-	}
-
-	reconnectCtx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
-	defer cancel()
-
-	newConn, err := grpc.DialContext(reconnectCtx, c.config.AgentAddress, c.dialOptions...)
+	// grpc.NewClient is lazy like the legacy non-blocking grpc.DialContext;
+	// passthrough preserves Dial's default host:port resolution.
+	newConn, err := grpc.NewClient("passthrough:///"+c.config.AgentAddress, c.dialOptions...)
 	if err != nil {
 		zap.L().Error("Agent client reconnect failed",
 			zap.String("address", c.config.AgentAddress),
@@ -303,7 +293,7 @@ func (c *Client) Close() {
 }
 
 // GetHealthChecker returns the health checker (may be nil if not configured)
-func (c *Client) GetHealthChecker() *AgentHealthChecker {
+func (c *Client) GetHealthChecker() *HealthChecker {
 	return c.healthChecker
 }
 
@@ -366,7 +356,7 @@ func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agen
 		grpcCallDuration.WithLabelValues("StreamChat", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return stream, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		grpcCallDuration.WithLabelValues("StreamChat", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return nil, err
 	}
@@ -425,7 +415,7 @@ func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.Respon
 		grpcCallDuration.WithLabelValues("SubmitResponseFeedback", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		grpcCallDuration.WithLabelValues("SubmitResponseFeedback", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return nil, err
 	}
@@ -444,7 +434,7 @@ func (c *Client) SubmitPlanReview(ctx context.Context, req *agentv1.PlanReviewRe
 		grpcCallDuration.WithLabelValues("SubmitPlanReview", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		grpcCallDuration.WithLabelValues("SubmitPlanReview", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return nil, err
 	}
@@ -463,7 +453,7 @@ func (c *Client) RetrieveMemory(ctx context.Context, req *agentv1.MemoryQuery) (
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -477,7 +467,7 @@ func (c *Client) GetUserProfile(ctx context.Context, req *agentv1.ProfileRequest
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -491,7 +481,7 @@ func (c *Client) GetWeeklyReport(ctx context.Context, req *agentv1.WeeklyReportR
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -505,7 +495,7 @@ func (c *Client) SubmitContentReviewFeedback(ctx context.Context, req *agentv1.C
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -519,7 +509,7 @@ func (c *Client) SubmitReviewOverride(ctx context.Context, req *agentv1.ReviewOv
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -533,7 +523,7 @@ func (c *Client) SubmitReviewAppeal(ctx context.Context, req *agentv1.ReviewAppe
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -547,7 +537,7 @@ func (c *Client) GetAppealStatus(ctx context.Context, req *agentv1.AppealStatusR
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -561,7 +551,7 @@ func (c *Client) SubmitReviewFeedback(ctx context.Context, req *agentv1.ReviewFe
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -575,7 +565,7 @@ func (c *Client) RequestRegeneration(ctx context.Context, req *agentv1.Regenerat
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -589,7 +579,7 @@ func (c *Client) GetFeedbackStatistics(ctx context.Context, req *agentv1.Feedbac
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -603,7 +593,7 @@ func (c *Client) GetArbitrationQueue(ctx context.Context, req *agentv1.GetArbitr
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -617,7 +607,7 @@ func (c *Client) AssignArbitrationCase(ctx context.Context, req *agentv1.AssignA
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -631,7 +621,7 @@ func (c *Client) SubmitArbitrationDecision(ctx context.Context, req *agentv1.Sub
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -645,7 +635,7 @@ func (c *Client) GetArbitrationQueueStats(ctx context.Context, req *agentv1.GetA
 	if !shouldReconnect(err) {
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -665,7 +655,7 @@ func (c *Client) GetRequestResult(ctx context.Context, req *agentv1.GetRequestRe
 		grpcCallDuration.WithLabelValues("GetRequestResult", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return resp, err
 	}
-	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+	if reconnectErr := c.reconnect(); reconnectErr != nil {
 		grpcCallDuration.WithLabelValues("GetRequestResult", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return nil, err
 	}

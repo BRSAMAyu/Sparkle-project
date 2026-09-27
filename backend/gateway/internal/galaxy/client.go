@@ -37,19 +37,15 @@ type Client struct {
 }
 
 func NewClient(cfg *config.Config) (*Client, error) {
-	timeoutSeconds := cfg.GRPCTimeoutSeconds
-	if timeoutSeconds <= 0 {
-		timeoutSeconds = 5
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
-	defer cancel()
-
 	dialOptions, err := buildDialOptions(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := grpc.DialContext(ctx, cfg.AgentAddress, dialOptions...)
+	// grpc.NewClient keeps the lazy (non-blocking) connect semantics of the
+	// legacy non-blocking grpc.DialContext; passthrough preserves Dial's
+	// default host:port resolution.
+	conn, err := grpc.NewClient("passthrough:///"+cfg.AgentAddress, dialOptions...)
 	if err != nil {
 		log.Printf("Failed to connect to galaxy service at %s: %v", cfg.AgentAddress, err)
 		return nil, err
@@ -124,7 +120,7 @@ func (c *Client) currentAPI() galaxyv1.GalaxyServiceClient {
 	return c.api
 }
 
-func (c *Client) reconnect(ctx context.Context) error {
+func (c *Client) reconnect() error {
 	if c == nil || c.config == nil {
 		return nil
 	}
@@ -152,8 +148,9 @@ func (c *Client) reconnect(ctx context.Context) error {
 		}
 	}
 
-	// Create new connection
-	conn, err := grpc.DialContext(ctx, c.config.AgentAddress, c.dialOptions...)
+	// grpc.NewClient is lazy like the legacy non-blocking grpc.DialContext;
+	// passthrough preserves Dial's default host:port resolution.
+	conn, err := grpc.NewClient("passthrough:///"+c.config.AgentAddress, c.dialOptions...)
 	if err != nil {
 		log.Printf("Failed to reconnect to galaxy service: %v", err)
 		return err
@@ -179,7 +176,7 @@ func (c *Client) Close() {
 func (c *Client) UpdateNodeMastery(ctx context.Context, userID, nodeID string, mastery int32, version time.Time, reason string) (*galaxyv1.UpdateNodeMasteryResponse, error) {
 	api := c.currentAPI()
 	if api == nil {
-		if err := c.reconnect(ctx); err != nil {
+		if err := c.reconnect(); err != nil {
 			return nil, err
 		}
 		api = c.currentAPI()
@@ -198,7 +195,7 @@ func (c *Client) UpdateNodeMastery(ctx context.Context, userID, nodeID string, m
 func (c *Client) GetUserGalaxy(ctx context.Context, userID string) (*galaxyv1.GetUserGalaxyResponse, error) {
 	api := c.currentAPI()
 	if api == nil {
-		if err := c.reconnect(ctx); err != nil {
+		if err := c.reconnect(); err != nil {
 			return nil, err
 		}
 		api = c.currentAPI()
@@ -211,7 +208,7 @@ func (c *Client) GetUserGalaxy(ctx context.Context, userID string) (*galaxyv1.Ge
 func (c *Client) RecordNodeInteraction(ctx context.Context, userID, nodeID, interactionType string, metadata map[string]string) (*galaxyv1.RecordNodeInteractionResponse, error) {
 	api := c.currentAPI()
 	if api == nil {
-		if err := c.reconnect(ctx); err != nil {
+		if err := c.reconnect(); err != nil {
 			return nil, err
 		}
 		api = c.currentAPI()
@@ -229,7 +226,7 @@ func (c *Client) RecordNodeInteraction(ctx context.Context, userID, nodeID, inte
 func (c *Client) GetNodeDetail(ctx context.Context, userID, nodeID string) (*galaxyv1.GetNodeDetailResponse, error) {
 	api := c.currentAPI()
 	if api == nil {
-		if err := c.reconnect(ctx); err != nil {
+		if err := c.reconnect(); err != nil {
 			return nil, err
 		}
 		api = c.currentAPI()
@@ -242,7 +239,7 @@ func (c *Client) GetNodeDetail(ctx context.Context, userID, nodeID string) (*gal
 func (c *Client) SearchNodes(ctx context.Context, userID, query string, limit int32) (*galaxyv1.SearchNodesResponse, error) {
 	api := c.currentAPI()
 	if api == nil {
-		if err := c.reconnect(ctx); err != nil {
+		if err := c.reconnect(); err != nil {
 			return nil, err
 		}
 		api = c.currentAPI()
@@ -255,7 +252,7 @@ func (c *Client) SearchNodes(ctx context.Context, userID, query string, limit in
 func (c *Client) GetLearningPath(ctx context.Context, userID, fromNodeID, toNodeID string) (*galaxyv1.GetLearningPathResponse, error) {
 	api := c.currentAPI()
 	if api == nil {
-		if err := c.reconnect(ctx); err != nil {
+		if err := c.reconnect(); err != nil {
 			return nil, err
 		}
 		api = c.currentAPI()
@@ -268,7 +265,7 @@ func (c *Client) GetLearningPath(ctx context.Context, userID, fromNodeID, toNode
 func (c *Client) GetNodeDependencies(ctx context.Context, userID, nodeID string) (*galaxyv1.GetNodeDependenciesResponse, error) {
 	api := c.currentAPI()
 	if api == nil {
-		if err := c.reconnect(ctx); err != nil {
+		if err := c.reconnect(); err != nil {
 			return nil, err
 		}
 		api = c.currentAPI()
@@ -281,7 +278,7 @@ func (c *Client) GetNodeDependencies(ctx context.Context, userID, nodeID string)
 func (c *Client) GetGalaxyStats(ctx context.Context, userID string) (*galaxyv1.GetGalaxyStatsResponse, error) {
 	api := c.currentAPI()
 	if api == nil {
-		if err := c.reconnect(ctx); err != nil {
+		if err := c.reconnect(); err != nil {
 			return nil, err
 		}
 		api = c.currentAPI()
@@ -294,7 +291,7 @@ func (c *Client) GetGalaxyStats(ctx context.Context, userID string) (*galaxyv1.G
 func (c *Client) GetRecommendedNodes(ctx context.Context, userID string, limit int32) (*galaxyv1.GetRecommendedNodesResponse, error) {
 	api := c.currentAPI()
 	if api == nil {
-		if err := c.reconnect(ctx); err != nil {
+		if err := c.reconnect(); err != nil {
 			return nil, err
 		}
 		api = c.currentAPI()
@@ -307,7 +304,7 @@ func (c *Client) GetRecommendedNodes(ctx context.Context, userID string, limit i
 func (c *Client) SyncCollaborativeGalaxy(ctx context.Context, galaxyID string, partialUpdate []byte, userID string) (*galaxyv1.SyncCollaborativeGalaxyResponse, error) {
 	api := c.currentAPI()
 	if api == nil {
-		if err := c.reconnect(ctx); err != nil {
+		if err := c.reconnect(); err != nil {
 			return nil, err
 		}
 		api = c.currentAPI()

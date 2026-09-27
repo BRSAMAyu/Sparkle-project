@@ -99,8 +99,8 @@ type HealthStatus struct {
 	Failures     int
 }
 
-// AgentHealthChecker performs periodic health checks on the gRPC agent service
-type AgentHealthChecker struct {
+// HealthChecker performs periodic health checks on the gRPC agent service
+type HealthChecker struct {
 	client   *Client
 	interval time.Duration
 	timeout  time.Duration
@@ -128,8 +128,8 @@ type AgentHealthChecker struct {
 }
 
 // NewAgentHealthChecker creates a new health checker
-func NewAgentHealthChecker(client *Client, interval, timeout time.Duration, cbConfig CircuitBreakerConfig) *AgentHealthChecker {
-	return &AgentHealthChecker{
+func NewAgentHealthChecker(client *Client, interval, timeout time.Duration, cbConfig CircuitBreakerConfig) *HealthChecker {
+	return &HealthChecker{
 		client:       client,
 		interval:     interval,
 		timeout:      timeout,
@@ -140,23 +140,23 @@ func NewAgentHealthChecker(client *Client, interval, timeout time.Duration, cbCo
 }
 
 // SetOnStateChange sets a callback for circuit state changes
-func (h *AgentHealthChecker) SetOnStateChange(fn func(old, new CircuitState)) {
+func (h *HealthChecker) SetOnStateChange(fn func(old, new CircuitState)) {
 	h.onStateChange = fn
 }
 
 // Start begins periodic health checking
-func (h *AgentHealthChecker) Start() {
+func (h *HealthChecker) Start() {
 	h.wg.Add(1)
 	go h.run()
 }
 
 // Stop stops the health checker
-func (h *AgentHealthChecker) Stop() {
+func (h *HealthChecker) Stop() {
 	close(h.stopCh)
 	h.wg.Wait()
 }
 
-func (h *AgentHealthChecker) run() {
+func (h *HealthChecker) run() {
 	defer h.wg.Done()
 
 	// Do initial check
@@ -175,7 +175,7 @@ func (h *AgentHealthChecker) run() {
 	}
 }
 
-func (h *AgentHealthChecker) check() {
+func (h *HealthChecker) check() {
 	ctx, cancel := context.WithTimeout(context.Background(), h.timeout)
 	defer cancel()
 
@@ -216,7 +216,7 @@ func (h *AgentHealthChecker) check() {
 	}
 }
 
-func (h *AgentHealthChecker) checkConnectionState(ctx context.Context) error {
+func (h *HealthChecker) checkConnectionState(ctx context.Context) error {
 	if h.client == nil || h.client.currentConn() == nil {
 		return status.Error(codes.Unavailable, "agent client connection unavailable")
 	}
@@ -233,7 +233,7 @@ func (h *AgentHealthChecker) checkConnectionState(ctx context.Context) error {
 		if isHealthyConnectionState(nextState) {
 			return nil
 		}
-		if h.client.reconnect(ctx) == nil {
+		if h.client.reconnect() == nil {
 			return nil
 		}
 		return status.Error(codes.DeadlineExceeded, fmt.Sprintf("agent connection state=%s", nextState.String()))
@@ -243,7 +243,7 @@ func (h *AgentHealthChecker) checkConnectionState(ctx context.Context) error {
 	if isHealthyConnectionState(nextState) {
 		return nil
 	}
-	if h.client.reconnect(ctx) == nil {
+	if h.client.reconnect() == nil {
 		return nil
 	}
 
@@ -254,7 +254,7 @@ func isHealthyConnectionState(state connectivity.State) bool {
 	return state == connectivity.Ready || state == connectivity.Idle
 }
 
-func (h *AgentHealthChecker) recordFailure() {
+func (h *HealthChecker) recordFailure() {
 	h.failures++
 	h.successes = 0
 
@@ -268,7 +268,7 @@ func (h *AgentHealthChecker) recordFailure() {
 	}
 }
 
-func (h *AgentHealthChecker) recordSuccess() {
+func (h *HealthChecker) recordSuccess() {
 	h.failures = 0
 	h.successes++
 
@@ -285,7 +285,7 @@ func (h *AgentHealthChecker) recordSuccess() {
 	}
 }
 
-func (h *AgentHealthChecker) transitionTo(newState CircuitState) {
+func (h *HealthChecker) transitionTo(newState CircuitState) {
 	if h.circuitState == newState {
 		return
 	}
@@ -319,7 +319,7 @@ func (h *AgentHealthChecker) transitionTo(newState CircuitState) {
 }
 
 // GetStatus returns the current health status
-func (h *AgentHealthChecker) GetStatus() HealthStatus {
+func (h *HealthChecker) GetStatus() HealthStatus {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -334,21 +334,21 @@ func (h *AgentHealthChecker) GetStatus() HealthStatus {
 }
 
 // IsHealthy returns true if the agent service is healthy
-func (h *AgentHealthChecker) IsHealthy() bool {
+func (h *HealthChecker) IsHealthy() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.isHealthy
 }
 
 // GetCircuitState returns the current circuit breaker state
-func (h *AgentHealthChecker) GetCircuitState() CircuitState {
+func (h *HealthChecker) GetCircuitState() CircuitState {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.circuitState
 }
 
 // AllowRequest checks if a request should be allowed based on circuit state
-func (h *AgentHealthChecker) AllowRequest() bool {
+func (h *HealthChecker) AllowRequest() bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -376,7 +376,7 @@ func (h *AgentHealthChecker) AllowRequest() bool {
 
 // RecordRequestResult records the result of a request for circuit breaker tracking
 // This should be called after every request (success or failure)
-func (h *AgentHealthChecker) RecordRequestResult(err error) {
+func (h *HealthChecker) RecordRequestResult(err error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -400,7 +400,7 @@ func (h *AgentHealthChecker) RecordRequestResult(err error) {
 }
 
 // ForceOpen forces the circuit to open (for manual intervention)
-func (h *AgentHealthChecker) ForceOpen() {
+func (h *HealthChecker) ForceOpen() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.transitionTo(CircuitOpen)
@@ -408,7 +408,7 @@ func (h *AgentHealthChecker) ForceOpen() {
 }
 
 // ForceClose forces the circuit to close (for manual intervention)
-func (h *AgentHealthChecker) ForceClose() {
+func (h *HealthChecker) ForceClose() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.transitionTo(CircuitClosed)
@@ -417,7 +417,7 @@ func (h *AgentHealthChecker) ForceClose() {
 }
 
 // CheckNow performs an immediate health check (synchronous)
-func (h *AgentHealthChecker) CheckNow() HealthStatus {
+func (h *HealthChecker) CheckNow() HealthStatus {
 	h.check()
 	return h.GetStatus()
 }
@@ -433,7 +433,7 @@ type HealthCheckerMetrics struct {
 }
 
 // GetMetrics returns current metrics for monitoring
-func (h *AgentHealthChecker) GetMetrics() HealthCheckerMetrics {
+func (h *HealthChecker) GetMetrics() HealthCheckerMetrics {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -461,15 +461,19 @@ type GRPCHealthClient struct {
 
 // NewGRPCHealthClient creates a new health check client
 func NewGRPCHealthClient(address string) (*GRPCHealthClient, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, address,
+	// grpc.NewClient replaced the deprecated grpc.DialContext; the explicit
+	// wait below preserves the former grpc.WithBlock semantics of returning
+	// only once the channel is Ready (or failing after the 5s deadline).
+	conn, err := grpc.NewClient("passthrough:///"+address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
 		grpc.WithIdleTimeout(30*time.Second),
 	)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := waitForConnReady(conn, 5*time.Second); err != nil {
+		_ = conn.Close()
 		return nil, err
 	}
 
@@ -477,6 +481,25 @@ func NewGRPCHealthClient(address string) (*GRPCHealthClient, error) {
 		conn:   conn,
 		client: agentv1.NewAgentServiceClient(conn),
 	}, nil
+}
+
+// waitForConnReady blocks until conn reaches connectivity.Ready or the timeout
+// elapses, mirroring the removed grpc.DialContext+grpc.WithBlock dial mode.
+func waitForConnReady(conn *grpc.ClientConn, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	for {
+		state := conn.GetState()
+		if state == connectivity.Ready {
+			return nil
+		}
+		if state == connectivity.Idle {
+			conn.Connect()
+		}
+		if !conn.WaitForStateChange(ctx, state) {
+			return fmt.Errorf("connection not ready within %s (state=%s)", timeout, conn.GetState())
+		}
+	}
 }
 
 // Close closes the health check client

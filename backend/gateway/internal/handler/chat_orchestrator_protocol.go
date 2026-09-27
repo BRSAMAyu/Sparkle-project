@@ -546,7 +546,7 @@ func decodeChatRequestEnvelope(raw json.RawMessage, input *chatInput) error {
 	input.RequestID = req.GetRequestId()
 	input.ChatMode = req.GetChatMode()
 	input.Nickname = req.GetUserProfile().GetNickname()
-	input.FileIds = req.GetFileIds()
+	input.FileIDs = req.GetFileIds()
 	if req.UseDocumentContext != nil {
 		value := req.GetUseDocumentContext()
 		input.UseDocumentContext = &value
@@ -592,7 +592,7 @@ func generateRequestID() string {
 	return "req_" + strings.ReplaceAll(id.String(), "-", "")
 }
 
-func (h *ChatOrchestrator) handleProtobufMessage(writer *wsSafeWriter, msg []byte, userID string, tracer trace.Tracer, baseCtx context.Context) {
+func (h *ChatOrchestrator) handleProtobufMessage(ctx context.Context, writer *wsSafeWriter, msg []byte, userID string, tracer trace.Tracer) {
 	wsMsg := &pbws.WebSocketMessage{}
 	if err := proto.Unmarshal(msg, wsMsg); err != nil {
 		log.Printf("Failed to unmarshal protobuf message: %v", err)
@@ -601,7 +601,6 @@ func (h *ChatOrchestrator) handleProtobufMessage(writer *wsSafeWriter, msg []byt
 
 	// Extract trace context
 	// TRACKED(TD-009): Map TraceId from proto to OpenTelemetry context if it's a valid traceparent
-	ctx := baseCtx
 	ctx, span := tracer.Start(ctx, "HandleMessage.Proto")
 	span.SetAttributes(
 		attribute.String("user_id", userID),
@@ -610,7 +609,7 @@ func (h *ChatOrchestrator) handleProtobufMessage(writer *wsSafeWriter, msg []byt
 	)
 	defer span.End()
 
-	responder := newProtobufResponder(writer, wsMsg, ctx)
+	responder := newProtobufResponder(ctx, writer, wsMsg)
 
 	switch wsMsg.Type {
 	case "chat":

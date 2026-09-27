@@ -58,15 +58,15 @@ type BaseWorker struct {
 	consumerName  string
 
 	retryConfig RetryConfig
-	options     WorkerOptions
+	options     Options
 
 	// State
 	running      atomic.Bool
 	processedIDs sync.Map // In-memory cache for recent events
 }
 
-// WorkerOptions configures worker behavior.
-type WorkerOptions struct {
+// Options configures worker behavior.
+type Options struct {
 	// BatchSize is the maximum number of events to fetch per read.
 	BatchSize int64
 
@@ -84,8 +84,8 @@ type WorkerOptions struct {
 }
 
 // DefaultWorkerOptions returns sensible defaults.
-func DefaultWorkerOptions() WorkerOptions {
-	return WorkerOptions{
+func DefaultWorkerOptions() Options {
+	return Options{
 		BatchSize:        10,
 		BlockTimeout:     2 * time.Second,
 		IdempotencyCheck: true,
@@ -119,7 +119,7 @@ func NewBaseWorker(
 	metrics *metrics.CQRSMetrics,
 	logger *zap.Logger,
 	streamKey, consumerGroup, consumerName string,
-	opts ...WorkerOptions,
+	opts ...Options,
 ) *BaseWorker {
 	options := DefaultWorkerOptions()
 	if len(opts) > 0 {
@@ -140,7 +140,7 @@ func NewBaseWorker(
 }
 
 // Run starts the worker loop. Blocks until context is cancelled.
-func (w *BaseWorker) Run(ctx context.Context, handler event.EventHandler) error {
+func (w *BaseWorker) Run(ctx context.Context, handler event.Handler) error {
 	if !w.running.CompareAndSwap(false, true) {
 		return nil // Already running
 	}
@@ -179,7 +179,7 @@ func (w *BaseWorker) Run(ctx context.Context, handler event.EventHandler) error 
 	}
 }
 
-func (w *BaseWorker) processMessages(ctx context.Context, handler event.EventHandler) error {
+func (w *BaseWorker) processMessages(ctx context.Context, handler event.Handler) error {
 	// Read messages from stream
 	entries, err := w.redis.XReadGroup(ctx, &redis.XReadGroupArgs{
 		Group:    w.consumerGroup,
@@ -239,7 +239,7 @@ func isNoGroupError(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "NOGROUP")
 }
 
-func (w *BaseWorker) processMessage(ctx context.Context, msg redis.XMessage, handler event.EventHandler) {
+func (w *BaseWorker) processMessage(ctx context.Context, msg redis.XMessage, handler event.Handler) {
 	messageID := msg.ID
 	startTime := time.Now()
 
@@ -296,7 +296,7 @@ func (w *BaseWorker) processWithRetry(
 	ctx context.Context,
 	evt *event.DomainEvent,
 	messageID string,
-	handler event.EventHandler,
+	handler event.Handler,
 ) error {
 	var lastErr error
 	backoff := w.retryConfig.InitialBackoff
@@ -422,7 +422,7 @@ func parseRedisMessage(msg redis.XMessage) (*event.DomainEvent, error) {
 	if !ok {
 		return nil, fmt.Errorf("missing or invalid event type")
 	}
-	evt.Type = event.EventType(eventType)
+	evt.Type = event.Type(eventType)
 
 	aggregateType, ok := msg.Values["aggregate_type"].(string)
 	if !ok {
@@ -472,7 +472,7 @@ func parseRedisMessage(msg redis.XMessage) (*event.DomainEvent, error) {
 	if metadata, ok := msg.Values["metadata"].(string); ok && metadata != "" {
 		if err := json.Unmarshal([]byte(metadata), &evt.Metadata); err != nil {
 			// Non-fatal: metadata is optional
-			evt.Metadata = event.EventMetadata{}
+			evt.Metadata = event.Metadata{}
 		}
 	}
 

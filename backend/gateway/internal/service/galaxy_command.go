@@ -162,7 +162,7 @@ func (s *GalaxyCommandService) CreateNode(ctx context.Context, req CreateNodeReq
 				"importance_level": req.ImportanceLevel,
 				"is_seed":          req.IsSeed,
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: req.UserID,
 				Source: "galaxy_command_service",
 			},
@@ -216,7 +216,7 @@ func (s *GalaxyCommandService) UnlockNode(ctx context.Context, req UnlockNodeReq
 				"node_id": req.NodeID.String(),
 				"user_id": req.UserID.String(),
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: req.UserID,
 				Source: "galaxy_command_service",
 			},
@@ -270,7 +270,7 @@ func (s *GalaxyCommandService) UpdateMastery(ctx context.Context, req UpdateMast
 				"study_minutes": req.StudyMinutes,
 				"activity_type": req.ActivityType,
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: req.UserID,
 				Source: "galaxy_command_service",
 			},
@@ -321,7 +321,7 @@ func (s *GalaxyCommandService) CreateRelation(ctx context.Context, req CreateRel
 				"strength":       req.Strength,
 				"user_id":        req.UserID.String(),
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: req.UserID,
 				Source: "galaxy_command_service",
 			},
@@ -416,7 +416,7 @@ func (s *GalaxyCommandService) RecordStudy(ctx context.Context, userID, nodeID u
 				"performance_score": performanceScore,
 				"mastery_delta":     masteryDelta,
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "galaxy_command_service",
 			},
@@ -462,7 +462,7 @@ func (s *GalaxyCommandService) ExpandNode(ctx context.Context, userID, nodeID uu
 				"node_id": nodeID.String(),
 				"user_id": userID.String(),
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "galaxy_command_service",
 			},

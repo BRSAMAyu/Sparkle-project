@@ -37,7 +37,7 @@ type CommunitySyncWorker struct {
 // CommunitySyncWorkerConfig configures the community sync worker.
 type CommunitySyncWorkerConfig struct {
 	ConsumerName string
-	Options      cqrsWorker.WorkerOptions
+	Options      cqrsWorker.Options
 }
 
 // DefaultCommunitySyncWorkerConfig returns sensible defaults.

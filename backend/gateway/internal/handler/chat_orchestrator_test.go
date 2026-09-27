@@ -126,7 +126,7 @@ func TestChatInputUnmarshalWithFiles(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "hi", input.Message)
 	assert.Equal(t, "s1", input.SessionID)
-	assert.Equal(t, []string{"f1", "f2"}, input.FileIds)
+	assert.Equal(t, []string{"f1", "f2"}, input.FileIDs)
 	assert.True(t, input.IncludeReferences)
 	assert.Equal(t, []string{"search", "plan"}, input.ActiveTools)
 }

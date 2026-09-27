@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -93,8 +94,7 @@ func TestGRPCClientResilience(t *testing.T) {
 func TestClientConnectionConfig(t *testing.T) {
 	// Verify that we are using appropriate dial options
 	opts := []grpc.DialOption{
-		grpc.WithInsecure(), // For dev
-		grpc.WithBlock(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()), // For dev
 	}
 
 	// Just verify we can create the config without panic

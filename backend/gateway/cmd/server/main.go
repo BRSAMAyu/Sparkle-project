@@ -81,10 +81,7 @@ func main() {
 	}
 	defer errorBookClient.Close()
 
-	handlers, err := initHandlers(cfg, dbh, rdb, services, agentClient, galaxyClient, errorBookClient, logger.Log)
-	if err != nil {
-		log.Fatalf("Unable to initialize handlers: %v", err)
-	}
+	handlers := initHandlers(cfg, dbh, rdb, services, agentClient, galaxyClient, errorBookClient, logger.Log)
 
 	// Background-worker context: cancelled during graceful shutdown so all
 	// long-lived goroutines (CQRS workers, file event subscriber, file GC)
@@ -114,7 +111,7 @@ func main() {
 		log.Fatalf("Failed to setup backend proxy: %v", err)
 	}
 
-	r := setupRouter(cfg, dbh, rdb, services, handlers, cqrs, proxy, agentClient, logger.Log)
+	r := setupRouter(cfg, dbh, rdb, handlers, cqrs, proxy, agentClient, logger.Log)
 
 	// --- Graceful shutdown ---
 	srv := &http.Server{

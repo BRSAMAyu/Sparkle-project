@@ -21,7 +21,7 @@ import (
 // Publisher polls the outbox table and publishes events to the event bus.
 type Publisher struct {
 	repo     Repository
-	eventBus event.EventBus
+	eventBus event.Bus
 	metrics  *metrics.CQRSMetrics
 	logger   *zap.Logger
 
@@ -68,7 +68,7 @@ func DefaultPublisherConfig() PublisherConfig {
 // NewPublisher creates a new outbox publisher.
 func NewPublisher(
 	repo Repository,
-	eventBus event.EventBus,
+	eventBus event.Bus,
 	metrics *metrics.CQRSMetrics,
 	logger *zap.Logger,
 	config ...PublisherConfig,

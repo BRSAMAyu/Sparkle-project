@@ -122,8 +122,8 @@ func newWrapperClient(t *testing.T) (*Client, *wrapperAgentServer, func()) {
 		_ = grpcServer.Serve(listener)
 	}()
 
-	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet",
+	// passthrough keeps the legacy Dial target resolution required by bufnet.
+	conn, err := grpc.NewClient("passthrough:///bufnet",
 		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
 			return listener.Dial()
 		}),

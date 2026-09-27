@@ -40,7 +40,7 @@ import (
 	"github.com/sparkle/gateway/internal/cqrs/projection"
 	cqrsWorker "github.com/sparkle/gateway/internal/cqrs/worker"
 	"github.com/sparkle/gateway/internal/db"
-	"github.com/sparkle/gateway/internal/error_book"
+	"github.com/sparkle/gateway/internal/errorbook"
 	"github.com/sparkle/gateway/internal/galaxy"
 	"github.com/sparkle/gateway/internal/handler"
 	otelinfra "github.com/sparkle/gateway/internal/infra/otel"
@@ -236,7 +236,7 @@ func initServices(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	}, nil
 }
 
-func initClients(cfg *config.Config) (*agent.Client, *galaxy.Client, *error_book.Client, error) {
+func initClients(cfg *config.Config) (*agent.Client, *galaxy.Client, *errorbook.Client, error) {
 	healthCheckInterval := time.Duration(cfg.AgentHealthCheckInterval) * time.Second
 	if healthCheckInterval <= 0 {
 		healthCheckInterval = 10 * time.Second
@@ -256,7 +256,7 @@ func initClients(cfg *config.Config) (*agent.Client, *galaxy.Client, *error_book
 		galaxyClient = nil // explicit nil; downstream handlers check for nil
 	}
 
-	errorBookClient, err := error_book.NewClient(cfg)
+	errorBookClient, err := errorbook.NewClient(cfg)
 	if err != nil {
 		if galaxyClient != nil {
 			galaxyClient.Close()
@@ -268,7 +268,7 @@ func initClients(cfg *config.Config) (*agent.Client, *galaxy.Client, *error_book
 	return agentClient, galaxyClient, errorBookClient, nil
 }
 
-func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, agentClient *agent.Client, galaxyClient *galaxy.Client, errorBookClient *error_book.Client, logger *zap.Logger) (*handlerBundle, error) {
+func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, agentClient *agent.Client, galaxyClient *galaxy.Client, errorBookClient *errorbook.Client, logger *zap.Logger) *handlerBundle {
 	wsFactory := handler.NewWebSocketFactory(cfg)
 	wsTicketHandler := handler.NewWSTicketHandler(cfg, rdb)
 	chatHistoryHandler := handler.NewChatHistoryHandler(services.chatHistory)
@@ -335,7 +335,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 		wsProxy:                 wsProxy,
 		authHandler:             authHandler,
 		galaxyHandler:           galaxyHandler,
-	}, nil
+	}
 }
 
 func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, logger *zap.Logger) *cqrsBundle {
@@ -466,7 +466,7 @@ func startCQRSWorkers(ctx context.Context, cqrs *cqrsBundle, log *zap.Logger) {
 	}()
 }
 
-func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle, agentClient *agent.Client, logger *zap.Logger) *gin.Engine {
+func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle, agentClient *agent.Client, logger *zap.Logger) *gin.Engine {
 	r := gin.Default()
 
 	// Configure trusted proxies for accurate ClientIP() behind load balancers

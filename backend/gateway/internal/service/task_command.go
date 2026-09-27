@@ -176,7 +176,7 @@ func (s *TaskCommandService) CreateTask(ctx context.Context, req CreateTaskReque
 				"estimated_minutes": req.EstimatedMinutes,
 				"priority":          req.Priority,
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: req.UserID,
 				Source: "task_command_service",
 			},
@@ -221,7 +221,7 @@ func (s *TaskCommandService) StartTask(ctx context.Context, userID, taskID uuid.
 				"task_id": taskID.String(),
 				"user_id": userID.String(),
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "task_command_service",
 			},
@@ -260,7 +260,7 @@ func (s *TaskCommandService) ReopenTask(ctx context.Context, userID, taskID uuid
 				"task_id": taskID.String(),
 				"user_id": userID.String(),
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "task_command_service",
 			},
@@ -306,7 +306,7 @@ func (s *TaskCommandService) CompleteTask(ctx context.Context, userID, taskID uu
 				"user_id":        userID.String(),
 				"actual_minutes": actualMinutes,
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "task_command_service",
 			},
@@ -351,7 +351,7 @@ func (s *TaskCommandService) AbandonTask(ctx context.Context, userID, taskID uui
 				"user_id": userID.String(),
 				"reason":  reason,
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "task_command_service",
 			},
@@ -390,7 +390,7 @@ func (s *TaskCommandService) DeleteTask(ctx context.Context, userID, taskID uuid
 				"task_id": taskID.String(),
 				"user_id": userID.String(),
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "task_command_service",
 			},
@@ -497,7 +497,7 @@ func (s *TaskCommandService) UpdateTask(ctx context.Context, req UpdateTaskReque
 				"user_id": req.UserID.String(),
 				"updates": updates,
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: req.UserID,
 				Source: "task_command_service",
 			},
@@ -543,7 +543,7 @@ func (s *TaskCommandService) ConfirmGeneratedTasks(ctx context.Context, userID u
 				"tool_result_id": toolResultID,
 				"count":          rowsAffected,
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "task_command_service",
 			},
@@ -582,7 +582,7 @@ func (s *TaskCommandService) PauseTask(ctx context.Context, userID, taskID uuid.
 				"task_id": taskID.String(),
 				"user_id": userID.String(),
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "task_command_service",
 			},
@@ -619,7 +619,7 @@ func (s *TaskCommandService) ResumeTask(ctx context.Context, userID, taskID uuid
 				"task_id": taskID.String(),
 				"user_id": userID.String(),
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "task_command_service",
 			},
@@ -656,7 +656,7 @@ func (s *TaskCommandService) MarkStuck(ctx context.Context, userID, taskID uuid.
 				"task_id": taskID.String(),
 				"user_id": userID.String(),
 			},
-			event.EventMetadata{
+			event.Metadata{
 				UserID: userID,
 				Source: "task_command_service",
 			},

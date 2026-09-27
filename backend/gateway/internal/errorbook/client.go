@@ -4,16 +4,18 @@
 //
 // 错题本引擎桥接客户端.
 
-package error_book
+package errorbook
 
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"log"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -34,8 +36,6 @@ func NewClient(cfg *config.Config) (*Client, error) {
 	if timeoutSeconds <= 0 {
 		timeoutSeconds = 5
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
-	defer cancel()
 
 	creds := insecure.NewCredentials()
 	if cfg.AgentTLSEnabled {
@@ -54,9 +54,12 @@ func NewClient(cfg *config.Config) (*Client, error) {
 		}
 	}
 
-	conn, err := grpc.DialContext(ctx, addr,
+	// grpc.NewClient replaced the deprecated grpc.DialContext; the explicit
+	// wait below preserves the former grpc.WithBlock fail-fast startup
+	// semantics (refuse to start unless the engine answers within the
+	// configured timeout). passthrough keeps Dial's host:port resolution.
+	conn, err := grpc.NewClient("passthrough:///"+addr,
 		grpc.WithTransportCredentials(creds),
-		grpc.WithBlock(),
 		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 	)
 	if err != nil {
@@ -64,8 +67,33 @@ func NewClient(cfg *config.Config) (*Client, error) {
 		return nil, err
 	}
 
+	if err := waitForConnReady(conn, time.Duration(timeoutSeconds)*time.Second); err != nil {
+		_ = conn.Close()
+		log.Printf("Failed to connect to error book service at %s: %v", addr, err)
+		return nil, err
+	}
+
 	client := errorbookv1.NewErrorBookServiceClient(conn)
 	return &Client{conn: conn, api: client}, nil
+}
+
+// waitForConnReady blocks until conn reaches connectivity.Ready or the timeout
+// elapses, mirroring the removed grpc.DialContext+grpc.WithBlock dial mode.
+func waitForConnReady(conn *grpc.ClientConn, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	for {
+		state := conn.GetState()
+		if state == connectivity.Ready {
+			return nil
+		}
+		if state == connectivity.Idle {
+			conn.Connect()
+		}
+		if !conn.WaitForStateChange(ctx, state) {
+			return fmt.Errorf("connection not ready within %s (state=%s)", timeout, conn.GetState())
+		}
+	}
 }
 
 func (c *Client) Close() {
