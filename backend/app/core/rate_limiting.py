@@ -26,6 +26,59 @@ def _trusted_proxy_count() -> int:
         return 0
 
 
+def _forwarded_for_parts(request: Request) -> list[str] | None:
+    """X-Forwarded-For 规范化：按逗号切分、去空白、剔空段；头缺席返回 None。"""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if not forwarded:
+        return None
+    return [p.strip() for p in forwarded.split(",") if p.strip()]
+
+
+def get_client_ip(request: Request) -> str | None:
+    """
+    真实客户端 IP 归因单一出口（V3-FIX-426；右起解析同 EI-09）。
+
+    审计（auth_audit_log.ip_address）、设备会话（user_sessions.ip_address）、
+    知情同意合规存证等 IP 归因面统一走本函数，禁再散抄 XFF 首段：按
+    ``TRUSTED_PROXY_COUNT`` 取 XFF **右起**第 N 段——可信网关追加的段在右，
+    客户端注入的伪造段居左天然弃用；链条短于 N（有代理未追加，右段可能是
+    客户端注入）或 N=0 时退回 TCP 对端地址。与 :func:`get_real_ip` 的差异：
+    不带路径后缀，且不读 ``X-Real-IP``（历史归因面未采信该头，不引入新信任面）。
+    """
+    n = _trusted_proxy_count()
+    peer = request.client.host if request.client else None
+    if n > 0:
+        parts = _forwarded_for_parts(request)
+        if parts is not None:
+            if len(parts) >= n:
+                return parts[-n]
+            return peer
+    return peer
+
+
+def forwarded_chain_trusted(request: Request) -> bool:
+    """
+    X-Forwarded-Host/Proto 等转发头是否可信（V3-FIX-428 引擎侧判据）。
+
+    与 EI-09 同源：XFF 右起第 ``TRUSTED_PROXY_COUNT`` 段 == TCP 对端地址——
+    可信网关追加的段在最右、与引擎视角对端一致，请求确证经过可信代理链。
+    直连引擎（无 XFF 或链条短于 N 或最右段与对端不一致）时一律不可信：这些
+    头对直连方而言恒为客户端可选值。采信转发头的消费方（如
+    ``vocabulary._external_base_url`` 拼客户端可达绝对 URL）必须先过本判断，
+    不可信时降级 ``request.base_url`` 等自证值。
+    """
+    peer = request.client.host if request.client else None
+    if not peer:
+        return False
+    n = _trusted_proxy_count()
+    if n <= 0:
+        return False
+    parts = _forwarded_for_parts(request)
+    if parts is None or len(parts) < n:
+        return False
+    return parts[-n] == peer
+
+
 def get_real_ip(request: Request) -> str:
     """
     获取真实客户端 IP（按可信代理数从 X-Forwarded-For 右起解析，EI-09）。
@@ -47,14 +100,13 @@ def get_real_ip(request: Request) -> str:
       （login_attempt 机制）为准，不依赖本限流。
     """
     peer = get_remote_address(request)
-    forwarded = request.headers.get("X-Forwarded-For")
     real_ip = request.headers.get("X-Real-IP")
     n = _trusted_proxy_count()
 
     ip = peer
     if n > 0:
-        if forwarded:
-            parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+        parts = _forwarded_for_parts(request)
+        if parts is not None:
             if len(parts) >= n:
                 ip = parts[-n]
         elif real_ip:

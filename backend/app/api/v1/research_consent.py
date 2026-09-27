@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core.rate_limiting import get_client_ip
 from app.models.user import User
 from app.signals.research_mode import ConsentTracker
 
@@ -42,12 +43,10 @@ class ConsentRevokeRequest(BaseModel):
 
 
 def _client_ip(request: Request) -> str | None:
-    forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        return forwarded_for.split(",", 1)[0].strip()
-    if request.client:
-        return request.client.host
-    return None
+    # V3-FIX-426：IP 归因统一走 get_client_ip 单一出口（XFF 右起第
+    # TRUSTED_PROXY_COUNT 段，EI-09 同款）——禁再散抄首段（客户端可伪造；
+    # 本面落 grant/revoke_ip_hash 合规存证，投毒面同源）。
+    return get_client_ip(request)
 
 
 def _serialize_record(record: dict[str, Any]) -> ConsentRecordResponse:

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.config.settings import settings
+from app.core.rate_limiting import forwarded_chain_trusted
 from app.db.session import get_db
 from app.models.learning_assets import AssetKind, AssetStatus
 from app.models.user import User
@@ -41,15 +42,18 @@ def _external_base_url(request: Request) -> str:
     if gateway_base.startswith(("http://", "https://")):
         return gateway_base.rstrip("/")
 
-    forwarded_proto = request.headers.get("x-forwarded-proto")
-    forwarded_host = request.headers.get("x-forwarded-host")
     forwarded_prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
 
-    scheme = forwarded_proto or request.url.scheme
-    host = forwarded_host or request.headers.get("host") or request.url.netloc
-
-    if host:
-        return f"{scheme}://{host}{forwarded_prefix}".rstrip("/")
+    # V3-FIX-428：XFH/XFP 仅在请求确证经过可信代理链时采信（判据见
+    # rate_limiting.forwarded_chain_trusted）；不可信时降级 request.base_url——
+    # 历史实现无条件采信 XFH（网关旧 Director 覆写 Host 后兜底更恒写内网主机
+    # sparkle_api:8000），返回给客户端的词典包下载地址为不可达坏链+内部拓扑
+    # 外泄，且客户端自带伪造 XFH 会被原样采信。
+    if forwarded_chain_trusted(request):
+        scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+        host = request.headers.get("x-forwarded-host") or request.url.netloc
+        if host:
+            return f"{scheme}://{host}{forwarded_prefix}".rstrip("/")
 
     return str(request.base_url).rstrip("/")
 

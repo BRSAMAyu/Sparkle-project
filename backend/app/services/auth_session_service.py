@@ -13,6 +13,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
+from app.core.rate_limiting import get_client_ip
 from app.models.auth_security import UserSession
 
 SESSION_REVOKED_PREFIX = "session_revoked:"
@@ -30,14 +31,11 @@ def _utcnow_naive() -> datetime:
 
 
 def _client_ip(request: Request | None) -> str | None:
+    # V3-FIX-426：IP 归因统一走 get_client_ip 单一出口（XFF 右起第
+    # TRUSTED_PROXY_COUNT 段，EI-09 同款）——禁再散抄首段（客户端可伪造）。
     if request is None:
         return None
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return None
+    return get_client_ip(request)
 
 
 def extract_client_metadata(request: Request | None) -> dict[str, str | None]:
