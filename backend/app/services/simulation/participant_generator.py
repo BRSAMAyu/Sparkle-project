@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
@@ -122,7 +123,7 @@ async def _fetch_graph_participants(
         )
         .limit(max(limit * 4, 6))
     )
-    rows = (await db.execute(stmt)).all()
+    rows = (await db.execute(stmt)).tuples().all()
     candidates = _normalize_graph_candidates(rows, prefer_scholars=prefer_scholars)
 
     if not candidates and prefer_scholars:
@@ -149,14 +150,14 @@ async def _fetch_graph_participants(
             )
             .limit(max(limit * 2, 4))
         )
-        fallback_rows = (await db.execute(fallback_stmt)).all()
+        fallback_rows = (await db.execute(fallback_stmt)).tuples().all()
         candidates = _normalize_graph_candidates(fallback_rows, prefer_scholars=True)
 
     return candidates[:limit]
 
 
 def _normalize_graph_candidates(
-    rows: list[tuple[str, str | None, list[str] | None, int | None, float | None]],
+    rows: Sequence[tuple[str, str | None, list[str] | None, int | None, float | None]],
     *,
     prefer_scholars: bool,
 ) -> list[dict[str, str]]:

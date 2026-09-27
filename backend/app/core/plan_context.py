@@ -22,8 +22,9 @@ filter), registered in
 tests/contract/test_telemetry_boundary_contract.py WAIVED_MODULES.
 """
 
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -32,6 +33,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plan import Plan
 from app.services.plan_state_service import PlanStateService
+
+if TYPE_CHECKING:
+    from app.models.cognitive import BehaviorPattern
 
 # Default budget for plan_context section (tokens)
 PLAN_CONTEXT_DEFAULT_BUDGET = 500
@@ -405,7 +409,7 @@ class PlanContextBuilder:
 
         return enriched
 
-    def _derive_insights_from_patterns(self, patterns: list) -> dict[str, Any]:
+    def _derive_insights_from_patterns(self, patterns: Sequence[BehaviorPattern]) -> dict[str, Any]:
         """
         Derive learning insights from behavior patterns.
 

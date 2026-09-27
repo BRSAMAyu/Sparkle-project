@@ -749,7 +749,7 @@ class FocusService:
         if task_ids:
             task_stmt = select(Task.id, Task.title).where(Task.id.in_(task_ids))
             task_result = await db.execute(task_stmt)
-            task_title_map = dict(task_result.all())
+            task_title_map = dict(task_result.tuples().all())
 
         session_details = []
         for session in sessions:

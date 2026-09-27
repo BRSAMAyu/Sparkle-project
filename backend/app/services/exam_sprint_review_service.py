@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from uuid import UUID, uuid4
@@ -1114,7 +1115,7 @@ class ExamSprintReviewService:
             node_ids.append(node_id)
             baseline_by_id[node_id] = item
 
-        current_status_rows: list[UserNodeStatus] = []
+        current_status_rows: Sequence[UserNodeStatus] = []
         if node_ids:
             result = await self.db.execute(
                 select(UserNodeStatus).where(
@@ -1621,7 +1622,7 @@ class ExamSprintReviewService:
             .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
             .where(UserNodeStatus.user_id == user_id)
         )
-        return list(result.all())
+        return list(result.tuples().all())
 
     def _weak_node_matches_galaxy_node(self, weak_node: dict[str, Any], node: KnowledgeNode) -> bool:
         terms = self._weak_node_match_terms(weak_node)

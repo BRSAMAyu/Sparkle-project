@@ -37,7 +37,7 @@ class TaskDocumentService:
             .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             .order_by(TaskDocument.created_at.asc(), StoredFile.file_name.asc())
         )
-        return list(result.all())
+        return list(result.tuples().all())
 
     @staticmethod
     async def attach_document(
@@ -151,14 +151,13 @@ class TaskDocumentService:
         *,
         task: Task,
     ) -> list[TaskDocument]:
-        existing = (
-            await db.execute(
-                select(TaskDocument)
-                .where(TaskDocument.task_id == task.id)
-                .where(TaskDocument.deleted_at.is_(None))
-                .order_by(TaskDocument.created_at.asc())
-            )
-        ).scalars().all()
+        result = await db.execute(
+            select(TaskDocument)
+            .where(TaskDocument.task_id == task.id)
+            .where(TaskDocument.deleted_at.is_(None))
+            .order_by(TaskDocument.created_at.asc())
+        )
+        existing = list(result.scalars().all())
         if existing:
             return existing
         return await TaskDocumentService.auto_link_from_task_context(db, task=task, linked_by="ai")

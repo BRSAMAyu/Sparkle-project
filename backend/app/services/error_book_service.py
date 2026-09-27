@@ -13,6 +13,7 @@ import json
 import random
 import re
 from collections import defaultdict
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import Any, cast
 from uuid import UUID
@@ -176,7 +177,7 @@ class ErrorBookService:
             return None
         return self._coerce_uuid(linked_ids[0])
 
-    async def _attach_knowledge_links(self, records: list[ErrorRecord]) -> None:
+    async def _attach_knowledge_links(self, records: Sequence[ErrorRecord]) -> None:
         """Attach transient knowledge link summaries for API responses."""
         node_ids: set[UUID] = set()
         normalized_links_by_error: dict[UUID, list[UUID]] = {}

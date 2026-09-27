@@ -210,8 +210,8 @@ def blend_sector_colors(sector_weights: dict[str, int]) -> tuple[str, str]:
     if total <= 0:
         return SECTOR_COLORS[SectorCode.VOID]
 
-    base = _rgb_to_hex(tuple(int(channel / total) for channel in rgb_sum))
-    glow = _rgb_to_hex(tuple(int(channel / total) for channel in glow_sum))
+    base = _rgb_to_hex((int(rgb_sum[0] / total), int(rgb_sum[1] / total), int(rgb_sum[2] / total)))
+    glow = _rgb_to_hex((int(glow_sum[0] / total), int(glow_sum[1] / total), int(glow_sum[2] / total)))
     return base, glow
 
 

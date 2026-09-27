@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from statistics import NormalDist
 
@@ -103,7 +103,7 @@ def benjamini_hochberg(p_values: Sequence[float]) -> list[float]:
 
 
 def correlate_dimensions(
-    series_by_dim: dict[str, Sequence[float | None]],
+    series_by_dim: Mapping[str, Sequence[float | None]],
     *,
     density_min_rank_pairs: int = 150,
     density_min_coverage: float = 0.70,
