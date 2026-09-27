@@ -68,6 +68,10 @@ class _FilePickerWithPresignedUploadState
       _error = null;
     });
 
+    // 异步 gap 前同步取好 l10n；catch 内仅在 mounted 时更新 UI，
+    // onError 回调不依赖挂载状态，始终透传。
+    final l10n = context.l10n;
+
     try {
       final service = ref.read(fileUploadServiceProvider);
       final file = _resumeSession == null
@@ -99,7 +103,6 @@ class _FilePickerWithPresignedUploadState
       _resumeSession = null;
       widget.onUploaded?.call(file);
     } on UploadInterruptedException catch (e) {
-      final l10n = context.l10n;
       if (mounted) {
         setState(() {
           _resumeSession = e.session;
@@ -108,7 +111,7 @@ class _FilePickerWithPresignedUploadState
       }
       widget.onError?.call(l10n.fileUploadNetworkError);
     } catch (e) {
-      final message = context.l10n.fileUploadFailed(e.toString());
+      final message = l10n.fileUploadFailed(e.toString());
       widget.onError?.call(message);
       if (mounted) {
         setState(() {

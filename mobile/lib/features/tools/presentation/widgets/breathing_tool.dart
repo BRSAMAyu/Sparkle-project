@@ -233,6 +233,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
 
   Future<void> _restoreState() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final savedPatternIndex =
         (prefs.getInt(_prefsPatternKey) ?? _selectedPatternIndex)
             .clamp(0, _patternsFor(context).length - 1);
@@ -273,6 +274,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
         return;
       }
 
+      if (!mounted) return;
       final patternIndex =
           ((json['selectedPatternIndex'] as num?)?.toInt() ?? savedPatternIndex)
               .clamp(0, _patternsFor(context).length - 1);

@@ -597,7 +597,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           ref.read(understandingOverviewProvider.notifier).refresh(),
           ref.read(_memoryPanelDataProvider.notifier).loadAll(includeMemories: false),
         ]);
-        if (!mounted) {
+        // context 为 _buildV2Panel 入参，用其自身 mounted 守卫。
+        if (!context.mounted) {
           return;
         }
         final partialError =

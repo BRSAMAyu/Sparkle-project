@@ -51,8 +51,9 @@ class _TranslationHistoryScreenState
     unawaited(
   showDialog<void>(
         context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
+        // dialogContext 仅用于关闭弹层；静态文案走 State.context。
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
             title: Text(context.l10n.translationRating),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -94,7 +95,7 @@ class _TranslationHistoryScreenState
             actions: [
               SparkleButton.ghost(
                 label: context.l10n.commonCancel,
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
               ),
               // CAPSULE-VARIANT 对话框按钮归一：评分确认=primary 确认档。
               SparkleButton(
@@ -104,7 +105,8 @@ class _TranslationHistoryScreenState
                       .read(translationHistoryProvider.notifier)
                       .updateRating(id, newRating);
                   _selectedRatings.remove(id);
-                  if (mounted) Navigator.pop(context);
+                  if (!dialogContext.mounted) return;
+                  Navigator.pop(dialogContext);
                 },
                 label: context.l10n.commonOk,
               ),

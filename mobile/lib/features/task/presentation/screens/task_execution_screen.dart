@@ -958,7 +958,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final shouldPop = await _onWillPop();
-        if (!mounted) return;
+        if (!context.mounted) return;
         if (shouldPop) {
           Navigator.of(context).pop();
         }
@@ -974,7 +974,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 semanticLabel: context.l10n.back,
                 onPressed: () async {
                   final shouldPop = await _onWillPop();
-                  if (mounted && shouldPop) {
+                  if (context.mounted && shouldPop) {
                     context.pop();
                   }
                 },

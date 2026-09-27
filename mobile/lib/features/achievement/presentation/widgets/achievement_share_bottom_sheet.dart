@@ -190,6 +190,13 @@ class _AchievementShareBottomSheetState
     }
   }
 
+  /// N37 超时/非 2xx 抛错文案：仅在仍挂载时走 l10n；卸载后异常文案不会被
+  /// 展示（_prepareShareCard 的 catch 只在 mounted 时 setState），故给兜底串。
+  String _downloadFailedMessage(int statusCode) {
+    if (!mounted) return 'Share card download failed: $statusCode';
+    return context.l10n.shareCardDownloadFailed(statusCode);
+  }
+
   Future<File> _downloadCardToTempFile(
     String url,
     AchievementShareCard? shareCard,
@@ -200,7 +207,7 @@ class _AchievementShareBottomSheetState
         .get(Uri.parse(url))
         .timeout(ApiTimeouts.shareCardDownloadTimeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(context.l10n.shareCardDownloadFailed(response.statusCode));
+      throw Exception(_downloadFailedMessage(response.statusCode));
     }
 
     final tempDir = await getTemporaryDirectory();
@@ -618,12 +625,15 @@ class _AchievementShareBottomSheetState
   Future<void> _shareToSystem() async {
     if (_shareCardFile == null) return;
 
+    // l10n 文案在异步 gap 前同步取好，避免 await 后使用 build context。
+    final shareText =
+        context.l10n.shareUnlockMessage(widget.achievementName);
     try {
       await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
       await share_plus.SharePlus.instance.share(
         share_plus.ShareParams(
           files: [share_plus.XFile(_shareCardFile!.path)],
-          text: context.l10n.shareUnlockMessage(widget.achievementName),
+          text: shareText,
         ),
       );
     } catch (e) {
@@ -634,9 +644,13 @@ class _AchievementShareBottomSheetState
   }
 
   Future<void> _shareToCommunity() async {
-    await SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen);
+    // Navigator/l10n 均在异步 gap 前同步取好；pop 之后本组件卸载，
+    // 后续只使用仍存活的 rootContext（带自身 mounted 守卫）。
     final rootContext = Navigator.of(context, rootNavigator: true).context;
-    Navigator.of(context).pop();
+    final sheetNavigator = Navigator.of(context);
+    final subtitle = context.l10n.shareUnlockMessage(widget.achievementName);
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen);
+    sheetNavigator.pop();
 
     if (widget.onCommunityShare != null) {
       widget.onCommunityShare!();
@@ -644,12 +658,13 @@ class _AchievementShareBottomSheetState
     }
 
     // Default: show community share sheet
+    if (!rootContext.mounted) return;
     await showShareResourceSheet(
       rootContext,
       resourceType: 'achievement',
       resourceId: widget.achievementId,
       title: widget.achievementName,
-      subtitle: context.l10n.shareUnlockMessage(widget.achievementName),
+      subtitle: subtitle,
     );
   }
 

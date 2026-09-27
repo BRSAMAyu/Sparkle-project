@@ -280,9 +280,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
             planId: persistedPlan.id,
             tags: <String>[
               if (draft.type == PlanType.growth)
-                context.l10n.planTypeGrowth
+                l10n.planTypeGrowth
               else
-                context.l10n.planTypeSprint,
+                l10n.planTypeSprint,
               if (draft.subject.trim().isNotEmpty) draft.subject.trim(),
             ],
             dueDate: taskDraft.dueDate,

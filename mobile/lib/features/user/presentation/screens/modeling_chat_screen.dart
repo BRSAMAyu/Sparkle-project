@@ -820,6 +820,9 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       _planningErrorMessage = null;
     });
 
+    // 异步 gap 前同步取好 l10n，避免 await 后（含 onTimeout 闭包内）使用 build context。
+    final l10n = context.l10n;
+
     try {
       await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
       ref.invalidate(profileContextProvider);
@@ -833,7 +836,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       String? resolvedPlanRoute;
 
       final stream = ref.read(chatRepositoryProvider).chatStream(
-        context.l10n.userStartPlanning,
+        l10n.userStartPlanning,
         _conversationId,
         userId: userId,
         requestId: _nextRequestId(),
@@ -849,7 +852,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
             ..add(
               ErrorEvent(
                 code: 'PLANNING_TIMEOUT',
-                message: context.l10n.userPlanTimeoutMessage,
+                message: l10n.userPlanTimeoutMessage,
                 retryable: true,
               ),
             )
@@ -882,7 +885,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       resolvedPlanRoute ??=
           await _resolveFallbackPlanRoute(preferredPlanId: resolvedPlanId);
       if (resolvedPlanRoute == null || resolvedPlanRoute.isEmpty) {
-        throw Exception(context.l10n.userPlanNotReady);
+        throw Exception(l10n.userPlanNotReady);
       }
 
       if (!mounted) return;

@@ -189,6 +189,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
             if (success) {
               unawaited(
                   SensoryFeedbackService.emit(SensoryFeedbackEvent.success),);
+              if (!dialogContext.mounted) return;
               Navigator.of(dialogContext).pop();
               AppFeedback.success(
                 context,

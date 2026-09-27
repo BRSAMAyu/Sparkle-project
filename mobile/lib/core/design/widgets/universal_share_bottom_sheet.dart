@@ -971,6 +971,7 @@ class _UniversalShareBottomSheetState
 
       final rootContext = rootNavigator.context;
       modalNavigator.pop();
+      if (!rootContext.mounted) return;
 
       if (widget.onCommunityShare != null) {
         widget.onCommunityShare!();

@@ -124,6 +124,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
 
     // 检查权限
     final hasPermission = await _checkPermissions();
+    if (!mounted) return;
     if (!hasPermission) {
       widget.onError(context.l10n.voiceInputNoPermission);
       return;

@@ -1278,6 +1278,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       return;
     }
     setState(() => _isGeneratingReport = true);
+    // 异步 gap 前同步取好 l10n，避免 await 后使用 build context。
+    final l10n = context.l10n;
     try {
       final response = await ref.read(apiClientProvider).post<dynamic>(
         ApiEndpoints.learningReportsGenerate,
@@ -1288,7 +1290,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       );
       final data = response.data;
       if (data is! Map<String, dynamic>) {
-        throw Exception(context.l10n.simulationReportReturnException);
+        throw Exception(l10n.simulationReportReturnException);
       }
       final report = LearningReport.fromJson(data);
       if (!mounted) {

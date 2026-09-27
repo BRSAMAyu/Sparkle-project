@@ -537,6 +537,10 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
 
     setState(() => _isSharing = true);
 
+    // 异步 gap 前同步取好分享文案，避免 await 后使用 build context。
+    final shareText =
+        context.l10n.visualElementShareMessage(widget.element.name);
+
     try {
       final image = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -555,7 +559,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
       await share_plus.SharePlus.instance.share(
         share_plus.ShareParams(
           files: [share_plus.XFile(file.path)],
-          text: context.l10n.visualElementShareMessage(widget.element.name),
+          text: shareText,
         ),
       );
     } catch (e) {

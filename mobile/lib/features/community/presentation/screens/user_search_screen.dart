@@ -42,7 +42,9 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
     unawaited(
       showSensoryModalBottomSheet<void>(
         context: context,
-        builder: (context) => SafeArea(
+        // sheetContext 仅用于关闭弹层；反馈等后续 UI 走 State.context，
+        // 避免在 sheet pop（已卸载）后仍持有失效 context。
+        builder: (sheetContext) => SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -63,7 +65,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                 leading: Icon(Icons.person_add, color: DS.primaryBase),
                 title: Text(context.l10n.communitySendFriendRequest),
                 onTap: () async {
-                  Navigator.pop(context);
+                  Navigator.pop(sheetContext);
                   try {
                     await ref
                         .read(communityRepositoryProvider)
@@ -85,7 +87,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                 leading: Icon(Icons.chat, color: DS.primaryBase),
                 title: Text(context.l10n.sendMessageLabel),
                 onTap: () {
-                  Navigator.pop(context);
+                  Navigator.pop(sheetContext);
                   unawaited(
   context.push(
                       '/chat/private/${user.id}?name=${Uri.encodeComponent(user.displayName)}',

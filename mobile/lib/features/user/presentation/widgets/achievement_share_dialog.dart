@@ -69,10 +69,13 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
   Future<void> _prepareCard() async {
     setState(() => _isGenerating = true);
 
+    // 异步 gap 前同步取好 l10n，避免 await 后使用 build context。
+    final l10n = context.l10n;
+
     try {
       final shareCard = await widget.shareCardFuture;
       if (shareCard == null) {
-        throw Exception(context.l10n.shareCardGenerateFailed);
+        throw Exception(l10n.shareCardGenerateFailed);
       }
 
       final downloader = widget.downloadCard ?? _downloadCardToTempFile;
@@ -118,6 +121,8 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
   Future<void> _saveToGallery() async {
     if (_imageFile == null || _shareCard == null) return;
 
+    // 异步 gap 前同步取好 l10n（catch 抛错文案）。
+    final l10n = context.l10n;
     try {
       final photoStatus = await Permission.photos.request();
       PermissionStatus? storageStatus;
@@ -138,7 +143,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
                 : AppPermissionKind.photos,
           );
         }
-        throw Exception(context.l10n.noGalleryPermission);
+        throw Exception(l10n.noGalleryPermission);
       }
 
       final saveFile = widget.saveFileToGallery ?? _saveImageToGallery;

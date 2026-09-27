@@ -730,15 +730,17 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
       await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
       final success = await widget.onSubmit(feedback);
 
-      if (mounted) {
-        if (success) {
-          await SensoryFeedbackService.emit(SensoryFeedbackEvent.success);
-          Navigator.pop(context, feedback);
-          AppFeedback.success(context, context.l10n.reviewRatingSubmitSuccess);
-        } else {
-          await SensoryFeedbackService.emit(SensoryFeedbackEvent.error);
-          AppFeedback.error(context, context.l10n.reviewRatingSubmitFailed);
-        }
+      if (success) {
+        await SensoryFeedbackService.emit(SensoryFeedbackEvent.success);
+      } else {
+        await SensoryFeedbackService.emit(SensoryFeedbackEvent.error);
+      }
+      if (!mounted) return;
+      if (success) {
+        Navigator.pop(context, feedback);
+        AppFeedback.success(context, context.l10n.reviewRatingSubmitSuccess);
+      } else {
+        AppFeedback.error(context, context.l10n.reviewRatingSubmitFailed);
       }
     } finally {
       if (mounted) {

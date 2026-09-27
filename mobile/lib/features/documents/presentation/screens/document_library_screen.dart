@@ -423,7 +423,8 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
         expandChild: true,
         child: FutureBuilder<List<GroupListItem>>(
           future: groupsFuture,
-          builder: (context, snapshot) {
+          // fbContext is only used to get the Theme; share feedback goes through State.context.
+          builder: (fbContext, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
               return const SparkleListSkeleton();
             }
@@ -434,7 +435,7 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
                   padding: const EdgeInsets.all(DS.spacing16),
                   child: Text(
                     l10n.studyMaterialsShareLoadGroupsError,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    style: Theme.of(fbContext).textTheme.bodyMedium?.copyWith(
                           color: DS.textSecondary,
                         ),
                     textAlign: TextAlign.center,
@@ -450,7 +451,7 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
                   padding: const EdgeInsets.all(DS.spacing16),
                   child: Text(
                     l10n.studyMaterialsShareEmptyGroups,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    style: Theme.of(fbContext).textTheme.bodyMedium?.copyWith(
                           color: DS.textSecondary,
                         ),
                     textAlign: TextAlign.center,
@@ -462,9 +463,11 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
             return ListView.separated(
               shrinkWrap: true,
               itemCount: groups.length,
-              separatorBuilder: (context, index) =>
+              separatorBuilder: (sepContext, index) =>
                   Divider(color: DS.borderSubtle),
-              itemBuilder: (context, index) {
+              // itemContext 仅作列表项挂载 context；分享结果反馈走
+              // State.context（sheet pop 后 sheet 子树已卸载）。
+              itemBuilder: (itemContext, index) {
                 final group = groups[index];
                 return ListTile(
                   contentPadding: EdgeInsets.zero,

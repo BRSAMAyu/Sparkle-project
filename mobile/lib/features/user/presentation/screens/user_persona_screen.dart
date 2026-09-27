@@ -821,7 +821,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           curve: Curves.easeOutCubic,
         );
       }
-      if (!mounted) {
+      if (!context.mounted) {
         return;
       }
       final matchedItem = match;

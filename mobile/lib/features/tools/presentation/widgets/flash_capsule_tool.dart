@@ -330,6 +330,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
       setState(() => _isSubmitting = true);
     }
 
+    // 异步 gap 前同步取好 l10n，避免 await 后使用 build context。
+    final l10n = context.l10n;
+
     try {
       final selectedSubject = _subjectOptions.firstWhere(
         (item) => item.code == _selectedSubjectCode,
@@ -342,7 +345,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                 taskId: widget.taskId,
               );
       if (fragment == null) {
-        throw Exception(context.l10n.fcSaveFailed);
+        throw Exception(l10n.fcSaveFailed);
       }
 
       var syncedToErrorBook = true;

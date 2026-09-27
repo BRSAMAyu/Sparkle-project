@@ -2130,7 +2130,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       await ref.read(capsuleStatsProvider.notifier).fetchStats();
       await ref.read(generationJobsProvider.notifier).fetchJobs();
 
-      if (mounted) {
+      if (context.mounted) {
         AppFeedback.success(context, l10n.capsuleGenerated);
         await showSensoryModalBottomSheet<void>(
           context: context,
@@ -2182,7 +2182,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         AppFeedback.error(
           context,
           l10n.generationFailedWithDetail(e.toString()),

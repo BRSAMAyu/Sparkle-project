@@ -121,7 +121,7 @@ class _TaskReminderSettingsScreenState
                     enabled: value,
                   );
             } catch (e) {
-              if (!context.mounted) return;
+              if (!mounted) return;
               AppFeedback.error(
                 context,
                 context.l10n.taskReminderUpdateFailed(e.toString().replaceFirst('Exception: ', '').trim()),
@@ -176,7 +176,7 @@ class _TaskReminderSettingsScreenState
                                 reminders: newReminders,
                               );
                         } catch (e) {
-                          if (!context.mounted) return;
+                          if (!mounted) return;
                           AppFeedback.error(
                             context,
                             context.l10n.taskReminderTimeFailed(e.toString().replaceFirst('Exception: ', '').trim()),

@@ -370,7 +370,7 @@ class _OpenClawExecutionPreferencesCardState
                       final ok = await ref
                           .read(openClawExecutionPreferencesProvider)
                           .savePreferences(_draft ?? draft);
-                      if (!mounted) {
+                      if (!context.mounted) {
                         return;
                       }
                       if (ok) {

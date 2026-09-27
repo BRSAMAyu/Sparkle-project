@@ -218,6 +218,7 @@ class _OpenClawConnectionPanelState
   ) async {
     final clipboard = await Clipboard.getData('text/plain');
     final raw = clipboard?.text?.trim() ?? '';
+    if (!mounted) return;
     final payload = OpenClawConnectionService.parsePairingPayload(raw);
     if (payload == null) {
       _showSnackBar(
@@ -391,7 +392,7 @@ class _OpenClawConnectionPanelState
       ),
     );
     controller.dispose();
-    if (rawValue == null || rawValue.trim().isEmpty) return;
+    if (rawValue == null || rawValue.trim().isEmpty || !mounted) return;
 
     final gatewayUrl = buildUrl(rawValue.trim());
     _applyConfigDraft(
@@ -1034,7 +1035,7 @@ class _OpenClawConnectionPanelState
                                 await Clipboard.setData(
                                   ClipboardData(text: pairingSession.code),
                                 );
-                                if (!mounted) return;
+                                if (!context.mounted) return;
                                 _showSnackBar(
                                     context.l10n.openclawPairingCodeCopied,);
                               },

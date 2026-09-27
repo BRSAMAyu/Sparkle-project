@@ -2795,13 +2795,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     ref.read(chatProvider.notifier).cancelActiveRun(reason: 'history_switch');
+    // 异步 gap 前同步取好超时文案，避免 catch 内使用 build context。
+    final openTimeoutText = context.l10n.chatHistoryOpenTimeout;
     try {
       await ref
           .read(chatProvider.notifier)
           .loadConversationHistory(sessionId)
           .timeout(const Duration(seconds: 12));
     } on TimeoutException {
-      return l10n.chatHistoryLoadFailed(context.l10n.chatHistoryOpenTimeout);
+      return l10n.chatHistoryLoadFailed(openTimeoutText);
     }
     if (mounted && _scrollController.hasClients) {
       _scrollController.jumpTo(0);
@@ -3522,9 +3524,11 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
 
   Future<List<Map<String, dynamic>>> _fetchHistory() async {
     final notifier = ref.read(chatProvider.notifier);
+    // onTimeout 闭包在 await 后触发，文案须在 gap 前同步取好。
+    final timeoutText = context.l10n.chatLoadHistoryTimeout;
     return notifier.getRecentConversations().timeout(
           const Duration(seconds: 8),
-          onTimeout: () => throw Exception(context.l10n.chatLoadHistoryTimeout),
+          onTimeout: () => throw Exception(timeoutText),
         );
   }
 
@@ -3549,10 +3553,12 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
       _openingSessionId = sessionId;
       _inlineError = null;
     });
+    // onTimeout 闭包在 await 后触发，文案须在 gap 前同步取好。
+    final openTimeoutText = context.l10n.chatHistoryOpenTimeout;
     final error = await widget.onSelectSession(sessionId).timeout(
           const Duration(seconds: 12),
           onTimeout: () => I18nService.instance.l10n.chatHistoryLoadFailed(
-            context.l10n.chatHistoryOpenTimeout,
+            openTimeoutText,
           ),
         );
     if (!mounted) {

@@ -647,7 +647,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       if (fragment != null) {
         // Navigate to capsule screen after successful creation
         final context = navigatorKey.currentContext;
-        if (context != null) {
+        if (context != null && context.mounted) {
           unawaited(GoRouter.of(context).push('/curiosity-capsule'));
         }
       }
@@ -655,7 +655,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       debugPrint('Error creating cognitive fragment: $e');
       // Still navigate to capsule screen even if creation fails
       final context = navigatorKey.currentContext;
-      if (context != null) {
+      if (context != null && context.mounted) {
         unawaited(GoRouter.of(context).push('/curiosity-capsule'));
       }
     }

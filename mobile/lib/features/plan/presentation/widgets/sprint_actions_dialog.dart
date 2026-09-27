@@ -215,11 +215,11 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
       builder: (context) => _ConfirmCompleteDialog(planName: widget.planName),
     );
 
-    if ((confirmed ?? false) && mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       final success = await ref
           .read(sprintActionsProvider.notifier)
           .completeSprint(widget.planId);
-      if (success && mounted) {
+      if (success && context.mounted) {
         Navigator.of(context).pop();
       }
     }
@@ -232,11 +232,11 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
       builder: (context) => _ExtendSprintDialog(planName: widget.planName),
     );
 
-    if (days != null && days > 0 && mounted) {
+    if (days != null && days > 0 && context.mounted) {
       final success = await ref
           .read(sprintActionsProvider.notifier)
           .extendSprint(widget.planId, days);
-      if (success && mounted) {
+      if (success && context.mounted) {
         Navigator.of(context).pop();
       }
     }
@@ -248,11 +248,11 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
       builder: (context) => _ConfirmAbandonDialog(planName: widget.planName),
     );
 
-    if ((confirmed ?? false) && mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       final success = await ref
           .read(sprintActionsProvider.notifier)
           .abandonSprint(widget.planId, '');
-      if (success && mounted) {
+      if (success && context.mounted) {
         Navigator.of(context).pop();
       }
     }

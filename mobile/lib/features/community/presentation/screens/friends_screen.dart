@@ -530,6 +530,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                                     await resolveExistingAccountabilityRouteOnConflict(
                                   ref.read(accountabilityRepositoryProvider),
                                 );
+                                if (!context.mounted) return;
                                 AppFeedback.info(
                                   context,
                                   context.l10n.friendPartnerConflict,
@@ -760,6 +761,7 @@ class _RecommendationsTab extends ConsumerWidget {
       target: prompt.target,
     );
     if (draft == null) return;
+    if (!context.mounted) return;
 
     await _submitFriendFeedback(
       context,
@@ -786,6 +788,7 @@ class _RecommendationsTab extends ConsumerWidget {
       target: recommendation.target,
     );
     if (draft == null) return;
+    if (!context.mounted) return;
 
     await _submitFriendFeedback(
       context,

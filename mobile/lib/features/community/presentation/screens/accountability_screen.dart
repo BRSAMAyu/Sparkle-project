@@ -216,6 +216,7 @@ class _PartnershipCard extends ConsumerWidget {
         final route = await resolveExistingAccountabilityRouteOnConflict(
           ref.read(accountabilityRepositoryProvider),
         );
+        if (!context.mounted) return;
         AppFeedback.info(
           context,
           context.l10n.accountabilityAlreadyHavePartner,

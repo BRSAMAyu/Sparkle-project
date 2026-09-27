@@ -121,11 +121,13 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
       if (mounted) {
         await SensoryFeedbackService.emit(SensoryFeedbackEvent.success);
+        if (!mounted) return;
         context.go('/community/groups/${group.id}');
       }
     } catch (e) {
       if (mounted) {
         await SensoryFeedbackService.emit(SensoryFeedbackEvent.error);
+        if (!mounted) return;
         AppFeedback.error(context,
             context.l10n.communityCreateGroupFailed(UserFacingError.from(e)),);
       }
@@ -287,6 +289,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                           await SensoryFeedbackService.emit(
                             SensoryFeedbackEvent.dialogOpen,
                           );
+                          if (!context.mounted) return;
                           final date = await showDatePicker(
                             context: context,
                             initialDate:

@@ -416,6 +416,9 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
     } catch (e) {
       saveError = e;
     }
+    if (!mounted) {
+      return;
+    }
     if (saveError != null) {
       debugPrint('Focus session save failed: $saveError');
       if (!suppressForegroundNotification) {

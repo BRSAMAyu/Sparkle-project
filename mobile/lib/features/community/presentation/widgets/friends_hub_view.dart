@@ -380,15 +380,14 @@ class _PartnerHero extends ConsumerWidget {
                           final result = await ref
                               .read(accountabilityActionsProvider)
                               .nudgePartner(ref, active.id);
+                          if (!context.mounted) return;
                           final deliverySummary =
                               (result['delivery_summary'] as String?) ??
                                   context.l10n.communityNudgeDelivered;
-                          if (context.mounted) {
-                            AppFeedback.success(
-                              context,
-                              deliverySummary,
-                            );
-                          }
+                          AppFeedback.success(
+                            context,
+                            deliverySummary,
+                          );
                         } catch (e) {
                           if (context.mounted) {
                             final message = e.toString();

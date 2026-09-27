@@ -464,6 +464,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
             ),
           );
       if (!feedbackContext.mounted) return;
+      if (!mounted) return;
       AppFeedback.success(feedbackContext, context.l10n.lpTaskCreated);
       _clearInlineFeedback();
       _closeThenPushFromRoot(
@@ -472,6 +473,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
+      if (!mounted) return;
       _setInlineError(context.l10n.insCreateFailed(e.toString()));
     }
   }
@@ -496,6 +498,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                     : const [],
               );
       if (!feedbackContext.mounted) return;
+      if (!mounted) return;
       final message = response.message ?? context.l10n.lpPlanGenerated;
       if (response.retry ?? false) {
         AppFeedback.warning(feedbackContext, message);
@@ -509,6 +512,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
+      if (!mounted) return;
       _setInlineError(context.l10n.insGenFailed(e.toString()));
     } finally {
       if (mounted) {
