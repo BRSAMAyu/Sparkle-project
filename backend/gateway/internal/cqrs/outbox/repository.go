@@ -18,6 +18,7 @@ import (
 
 	"github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/intsafe"
 )
 
 // Repository handles outbox table operations.
@@ -63,7 +64,7 @@ func (r *PostgresRepository) InsertWithTx(ctx context.Context, tx pgx.Tx, entry 
 		AggregateType: string(entry.AggregateType),
 		AggregateID:   toPgUUID(entry.AggregateID),
 		EventType:     string(entry.EventType),
-		EventVersion:  int32(entry.EventVersion),
+		EventVersion:  entry.EventVersion,
 		Payload:       entry.Payload,
 		Metadata:      entry.Metadata,
 		CreatedAt: pgtype.Timestamptz{
@@ -89,7 +90,11 @@ func (r *PostgresRepository) Insert(ctx context.Context, entry *event.OutboxEntr
 
 // GetUnpublished retrieves unpublished entries ordered by creation time.
 func (r *PostgresRepository) GetUnpublished(ctx context.Context, limit int) ([]*event.OutboxEntry, error) {
-	rows, err := r.queries.GetUnpublishedOutboxEntries(ctx, int32(limit))
+	limit32, err := intsafe.CheckedInt32(limit)
+	if err != nil {
+		return nil, fmt.Errorf("query unpublished: %w", err)
+	}
+	rows, err := r.queries.GetUnpublishedOutboxEntries(ctx, limit32)
 	if err != nil {
 		return nil, fmt.Errorf("query unpublished: %w", err)
 	}
@@ -102,7 +107,7 @@ func (r *PostgresRepository) GetUnpublished(ctx context.Context, limit int) ([]*
 			AggregateType:  event.AggregateType(row.AggregateType),
 			AggregateID:    aggID,
 			EventType:      event.Type(row.EventType),
-			EventVersion:   int(row.EventVersion),
+			EventVersion:   row.EventVersion,
 			Payload:        row.Payload,
 			Metadata:       row.Metadata,
 			SequenceNumber: row.SequenceNumber,
@@ -137,7 +142,11 @@ func (r *PostgresRepository) MarkPublished(ctx context.Context, ids []uuid.UUID)
 
 // DeleteOld removes published entries older than the retention period.
 func (r *PostgresRepository) DeleteOld(ctx context.Context, retentionDays int) (int64, error) {
-	count, err := r.queries.DeleteOldOutboxEntries(ctx, int32(retentionDays))
+	retentionDays32, err := intsafe.CheckedInt32(retentionDays)
+	if err != nil {
+		return 0, fmt.Errorf("delete old: %w", err)
+	}
+	count, err := r.queries.DeleteOldOutboxEntries(ctx, retentionDays32)
 	if err != nil {
 		return 0, fmt.Errorf("delete old: %w", err)
 	}
@@ -175,7 +184,7 @@ func (r *EventStoreRepository) SaveWithTx(ctx context.Context, tx pgx.Tx, entry 
 		AggregateType:  string(entry.AggregateType),
 		AggregateID:    toPgUUID(entry.AggregateID),
 		EventType:      string(entry.EventType),
-		EventVersion:   int32(entry.EventVersion),
+		EventVersion:   entry.EventVersion,
 		SequenceNumber: entry.SequenceNumber,
 		Payload:        entry.Payload,
 		Metadata:       entry.Metadata,
@@ -261,7 +270,7 @@ func (r *EventStoreRepository) mapEventStoreEntries(rows []db.EventStore) []*eve
 			AggregateType:  event.AggregateType(row.AggregateType),
 			AggregateID:    aggID,
 			EventType:      event.Type(row.EventType),
-			EventVersion:   int(row.EventVersion),
+			EventVersion:   row.EventVersion,
 			SequenceNumber: row.SequenceNumber,
 			Payload:        row.Payload,
 			Metadata:       row.Metadata,
@@ -322,7 +331,11 @@ func (r *ProcessedEventsRepository) MarkProcessed(ctx context.Context, eventID, 
 
 // Cleanup removes old processed event records.
 func (r *ProcessedEventsRepository) Cleanup(ctx context.Context, retentionDays int) (int64, error) {
-	count, err := r.queries.CleanupOldProcessedEvents(ctx, int32(retentionDays))
+	retentionDays32, err := intsafe.CheckedInt32(retentionDays)
+	if err != nil {
+		return 0, fmt.Errorf("cleanup processed events: %w", err)
+	}
+	count, err := r.queries.CleanupOldProcessedEvents(ctx, retentionDays32)
 	if err != nil {
 		return 0, fmt.Errorf("cleanup: %w", err)
 	}

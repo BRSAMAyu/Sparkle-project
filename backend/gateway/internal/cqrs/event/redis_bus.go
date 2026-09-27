@@ -308,11 +308,11 @@ func parseRedisMessage(msg redis.XMessage) (*DomainEvent, error) {
 
 	// Parse version (optional, default to 1)
 	if version, ok := msg.Values["version"].(string); ok {
-		var v int
-		// Best-effort parse: an unparseable version keeps v at 0 (pre-existing
-		// behavior); the field is advisory metadata and never gates delivery.
-		_, _ = fmt.Sscanf(version, "%d", &v)
-		event.Version = v
+		// Best-effort parse: an unparseable version keeps the zero value
+		// (pre-existing behavior); the field is advisory metadata and never
+		// gates delivery. Scanned straight into int32 to match
+		// DomainEvent.Version.
+		_, _ = fmt.Sscanf(version, "%d", &event.Version)
 	} else {
 		event.Version = 1
 	}

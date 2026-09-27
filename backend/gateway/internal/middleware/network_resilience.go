@@ -205,13 +205,26 @@ func RetryableUpstreamProxy(
 	var lastResp *http.Response
 	var lastErr error
 
+	// Exponential backoff carried across attempts with a hard cap, matching
+	// the retry loops in cqrs/worker and the persisters. The previous
+	// 1<<uint(attempt-1) form narrowed int to uint unchecked (gosec G115)
+	// and grew without bound for large MaxRetries. With the defaults
+	// (RetryBackoff 200ms, MaxRetries 2) the wait sequence is unchanged and
+	// the 30s cap is never reached; it only bounds extreme configurations.
+	const maxRetryBackoff = 30 * time.Second
+	backoff := cfg.RetryBackoff
+
 	for attempt := 0; attempt <= cfg.MaxRetries; attempt++ {
 		if attempt > 0 {
-			backoff := cfg.RetryBackoff * time.Duration(1<<uint(attempt-1))
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			case <-time.After(backoff):
+			}
+
+			backoff *= 2
+			if backoff > maxRetryBackoff {
+				backoff = maxRetryBackoff
 			}
 
 			networkResilienceRetries.WithLabelValues(req.URL.Path, "attempt").Inc()

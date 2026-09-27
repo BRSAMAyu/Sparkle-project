@@ -101,6 +101,14 @@ func NewClient(cfg *config.Config) (*Client, error) {
 func buildDialOptions(cfg *config.Config) ([]grpc.DialOption, error) {
 	creds := insecure.NewCredentials()
 	if cfg.AgentTLSEnabled {
+		// InsecureSkipVerify is the AGENT_TLS_INSECURE operator switch, a
+		// deliberate development escape hatch for environments without a CA
+		// chain: config validation refuses to start with it set outside
+		// development (config.go: "AGENT_TLS_INSECURE must be false in
+		// non-development environments"), and loading AGENT_TLS_CA_CERT
+		// below re-enables verification. TLS 1.2 floor is kept. gosec G402
+		// is adjudicated here as config-gated by design; no nolint (repo
+		// has none), the switch and its guards are the record.
 		tlsCfg := &tls.Config{
 			MinVersion:         tls.VersionTLS12,
 			ServerName:         cfg.AgentTLSServerName,

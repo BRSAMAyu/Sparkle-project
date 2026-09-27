@@ -237,8 +237,10 @@ func (h *GalaxyHandler) UpdateMastery(c *gin.Context) {
 		return
 	}
 
+	// Mastery is int32 to match the gRPC field; JSON unmarshal rejects
+	// out-of-range numbers instead of narrowing them (gosec G115).
 	var req struct {
-		Mastery int    `json:"mastery"`
+		Mastery int32  `json:"mastery"`
 		Reason  string `json:"reason"`
 	}
 	rawBody, err := io.ReadAll(c.Request.Body)
@@ -267,7 +269,7 @@ func (h *GalaxyHandler) UpdateMastery(c *gin.Context) {
 		ctx,
 		userID,
 		nodeID,
-		int32(req.Mastery),
+		req.Mastery,
 		time.Now(),
 		req.Reason,
 	)
@@ -313,8 +315,10 @@ func (h *GalaxyHandler) RecordStudy(c *gin.Context) {
 		return
 	}
 
+	// Minutes is int32 to match the gRPC field; JSON unmarshal rejects
+	// out-of-range numbers instead of narrowing them (gosec G115).
 	var req struct {
-		Minutes          int     `json:"minutes"`
+		Minutes          int32   `json:"minutes"`
 		PerformanceScore float64 `json:"performance_score"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -347,7 +351,7 @@ func (h *GalaxyHandler) RecordStudy(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	if err := h.galaxyCommand.RecordStudy(ctx, parsedUserID, parsedNodeID, int32(req.Minutes), req.PerformanceScore); err != nil {
+	if err := h.galaxyCommand.RecordStudy(ctx, parsedUserID, parsedNodeID, req.Minutes, req.PerformanceScore); err != nil {
 		log.Printf("RecordStudy CQRS failed for node %s user %s: %v", nodeID, hashUserIDForLog(userID), err)
 		h.ProxyToBackend(c)
 		return

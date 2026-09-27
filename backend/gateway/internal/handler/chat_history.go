@@ -8,6 +8,7 @@ package handler
 
 import (
 	"errors"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -61,6 +62,34 @@ func clampLimit(limit, maxVal, defaultVal int) int {
 		return maxVal
 	}
 	return limit
+}
+
+// clampLimit32 is clampLimit for sinks that take int32 (gRPC limit/offset
+// fields). The clamped result is bounds-checked against the int32 range so
+// the narrowing cannot wrap (gosec G115); with maxVal far below the bound
+// the fallback return is unreachable in practice.
+func clampLimit32(limit, maxVal, defaultVal int) int32 {
+	v := clampLimit(limit, maxVal, defaultVal)
+	if v > math.MaxInt32 || v < math.MinInt32 {
+		return 0
+	}
+	return int32(v)
+}
+
+// paginationParam parses a pagination query parameter for gRPC page fields.
+// It replaces the previous unchecked strconv.Atoi result, where garbage
+// input narrowed whatever Atoi returned straight into int32 (gosec G109):
+// garbage now falls back to def, and ParseInt with bitSize 32 guarantees
+// the value fits int32, so out-of-range input can no longer wrap.
+func paginationParam(c *gin.Context, name string, def int32) int32 {
+	v, err := strconv.ParseInt(c.DefaultQuery(name, strconv.Itoa(int(def))), 10, 32)
+	if err != nil {
+		return def
+	}
+	if v < 1 {
+		return def
+	}
+	return int32(v)
 }
 
 func mustAtoi(s string) int {

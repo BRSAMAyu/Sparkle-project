@@ -56,10 +56,10 @@ func (h *GroupChatHandler) GetMessages(c *gin.Context) {
 		return
 	}
 
-	limit := clampLimit(mustAtoi(c.DefaultQuery("limit", "50")), 200, 50)
-	offset := clampLimit(mustAtoi(c.DefaultQuery("offset", "0")), 100000, 0)
+	limit := clampLimit32(mustAtoi(c.DefaultQuery("limit", "50")), 200, 50)
+	offset := clampLimit32(mustAtoi(c.DefaultQuery("offset", "0")), 100000, 0)
 
-	messages, err := h.groupChat.GetGroupMessages(c.Request.Context(), groupID, int32(limit), int32(offset))
+	messages, err := h.groupChat.GetGroupMessages(c.Request.Context(), groupID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch messages"})
 		return

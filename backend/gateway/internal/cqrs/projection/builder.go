@@ -18,6 +18,7 @@ import (
 	"github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/metrics"
 	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/intsafe"
 )
 
 // RebuildOptions configures projection rebuilding.
@@ -115,7 +116,14 @@ func (b *Builder) RebuildFromEventStore(
 		return nil, fmt.Errorf("failed to reset projection: %w", err)
 	}
 
-	// Process events in batches
+	// Process events in batches. The batch size is bounded once up front so
+	// the int32 SQL LIMIT cannot wrap on a bad Options value (gosec G115).
+	batchSize32, err := intsafe.CheckedInt32(opts.BatchSize)
+	if err != nil {
+		_ = b.manager.SetStatus(ctx, projectionName, StatusError, err.Error())
+		return nil, fmt.Errorf("invalid batch size: %w", err)
+	}
+
 	var processedCount int64
 	lastSequence := opts.FromSequence
 
@@ -129,7 +137,7 @@ func (b *Builder) RebuildFromEventStore(
 		}
 
 		// Fetch batch of events
-		events, err := b.getEventBatch(ctx, aggregateType, lastSequence, int32(opts.BatchSize))
+		events, err := b.getEventBatch(ctx, aggregateType, lastSequence, batchSize32)
 		if err != nil {
 			_ = b.manager.SetStatus(ctx, projectionName, StatusError, err.Error())
 			return nil, fmt.Errorf("failed to fetch events: %w", err)

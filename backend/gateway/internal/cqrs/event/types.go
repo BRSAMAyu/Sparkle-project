@@ -87,9 +87,11 @@ const (
 
 // DomainEvent represents a domain event with full metadata.
 type DomainEvent struct {
-	ID            string                 `json:"id"`
-	Type          Type                   `json:"type"`
-	Version       int                    `json:"version"`
+	ID   string `json:"id"`
+	Type Type   `json:"type"`
+	// Version is int32 to match the event_version column (sqlc model), so no
+	// narrowing conversion happens at the persistence boundary (gosec G115).
+	Version       int32                  `json:"version"`
 	AggregateType AggregateType          `json:"aggregate_type"`
 	AggregateID   uuid.UUID              `json:"aggregate_id"`
 	Timestamp     time.Time              `json:"timestamp"`
@@ -109,11 +111,13 @@ type Metadata struct {
 
 // OutboxEntry represents a pending event in the outbox table.
 type OutboxEntry struct {
-	ID             uuid.UUID
-	AggregateType  AggregateType
-	AggregateID    uuid.UUID
-	EventType      Type
-	EventVersion   int
+	ID            uuid.UUID
+	AggregateType AggregateType
+	AggregateID   uuid.UUID
+	EventType     Type
+	// EventVersion is int32 to match the event_version column (sqlc model);
+	// see DomainEvent.Version.
+	EventVersion   int32
 	Payload        []byte
 	Metadata       []byte
 	SequenceNumber int64
@@ -123,11 +127,13 @@ type OutboxEntry struct {
 
 // StoreEntry represents a persisted event in the event store.
 type StoreEntry struct {
-	ID             uuid.UUID
-	AggregateType  AggregateType
-	AggregateID    uuid.UUID
-	EventType      Type
-	EventVersion   int
+	ID            uuid.UUID
+	AggregateType AggregateType
+	AggregateID   uuid.UUID
+	EventType     Type
+	// EventVersion is int32 to match the event_version column (sqlc model);
+	// see DomainEvent.Version.
+	EventVersion   int32
 	SequenceNumber int64
 	Payload        []byte
 	Metadata       []byte

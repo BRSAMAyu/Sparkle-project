@@ -114,9 +114,15 @@ func main() {
 	r := setupRouter(cfg, dbh, rdb, handlers, cqrs, proxy, agentClient, logger.Log)
 
 	// --- Graceful shutdown ---
+	// ReadHeaderTimeout bounds Slowloris-style header stalls (gosec G112):
+	// 10s comfortably covers legitimate client header delivery while
+	// refusing to hold sockets for stalled peers. Read/WriteTimeout are
+	// deliberately not set — established WebSocket streams are long-lived
+	// and must not be cut by whole-connection deadlines.
 	srv := &http.Server{
-		Addr:    ":" + cfg.Port,
-		Handler: r,
+		Addr:              ":" + cfg.Port,
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// Start server in a goroutine

@@ -18,6 +18,7 @@ import (
 	"github.com/sparkle/gateway/internal/cqrs/outbox"
 	cqrsWorker "github.com/sparkle/gateway/internal/cqrs/worker"
 	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/intsafe"
 )
 
 const (
@@ -401,7 +402,10 @@ func (w *GalaxySyncWorker) handleMasteryUpdated(ctx context.Context, evt cqrsEve
 	wasMastered := view.MasteryScore >= 80.0
 	// P1-1 fix: clamp to 0-100 (matching DB scale), not 0-1
 	view.MasteryScore = clamp(view.MasteryScore+masteryDelta, 0, 100)
-	view.TotalMinutes += int32(studyMinutes)
+	// Saturate instead of wrapping: study_minutes comes from the event
+	// payload, and an absurd value must not wrap TotalMinutes negative
+	// (gosec G115). In-range values pass through unchanged.
+	view.TotalMinutes += intsafe.SaturateInt32(studyMinutes)
 	view.StudyCount++
 	now := time.Now()
 	view.LastStudyAt = &now

@@ -47,6 +47,13 @@ func NewClient(cfg *config.Config) (*Client, error) {
 			}
 			creds = tlsCreds
 		} else {
+			// InsecureSkipVerify is the AGENT_TLS_INSECURE operator switch,
+			// a deliberate development escape hatch for environments without
+			// a CA chain: config validation refuses to start with it set
+			// outside development, and the AGENT_TLS_CA_CERT branch above
+			// (NewClientTLSFromFile) takes precedence with verification on.
+			// gosec G402 is adjudicated as config-gated by design; no nolint
+			// (repo has none).
 			creds = credentials.NewTLS(&tls.Config{
 				ServerName:         cfg.AgentTLSServerName,
 				InsecureSkipVerify: cfg.AgentTLSInsecure,

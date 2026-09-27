@@ -153,8 +153,8 @@ func (h *ErrorBookHandler) ListErrors(c *gin.Context) {
 	injectAuthContext(c)
 	userID := c.GetString("user_id")
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page := paginationParam(c, "page", 1)
+	pageSize := paginationParam(c, "page_size", 20)
 
 	subjectCode := c.Query("subject_code")
 	if subjectCode == "" {
@@ -167,8 +167,8 @@ func (h *ErrorBookHandler) ListErrors(c *gin.Context) {
 		Chapter:            c.Query("chapter"),
 		ErrorType:          c.Query("error_type"),
 		Keyword:            c.Query("keyword"),
-		Page:               int32(page),
-		PageSize:           int32(pageSize),
+		Page:               page,
+		PageSize:           pageSize,
 		CognitiveDimension: c.Query("cognitive_dimension"),
 	}
 
@@ -337,13 +337,13 @@ func (h *ErrorBookHandler) GetTodayReviews(c *gin.Context) {
 	injectAuthContext(c)
 	userID := c.GetString("user_id")
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page := paginationParam(c, "page", 1)
+	pageSize := paginationParam(c, "page_size", 20)
 
 	req := &errorbookv1.GetTodayReviewsRequest{
 		UserId:   userID,
-		Page:     int32(page),
-		PageSize: int32(pageSize),
+		Page:     page,
+		PageSize: pageSize,
 	}
 
 	resp, err := h.client.GetTodayReviews(c.Request.Context(), req)
