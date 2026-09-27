@@ -24,7 +24,7 @@
 
 修前 7/7 failed 全部 `TypeError: '<=' not supported between instances of 'str' and 'int'` @:956（与 wt767 台账运行级探针签名一致）。修后 7/7 绿；497 既有 5 钉测零回退；plan_review 直触族 64 passed + openclaw/perceptible 15 passed 零回退。
 
-## 观察① last_activity_date 漂移——确证，登记 V3-FIX-508（OPEN，不动）⚠️→📋
+## 观察① last_activity_date 漂移——确证，登记 V3-FIX-524（OPEN，不动）⚠️→📋
 
 `UserStreakStats` 三列（achievement.py:219/:223-224）`Mapped[date|None]` 套 `DateTime`。wt768 静态观察**属实**，且实探发现比注解漂移更深一层：
 
@@ -32,16 +32,16 @@
 - **漂移是活的**：`date == datetime` 恒 False（探针亲证）→ :2053 归一比较每次读都判不等、每次重写；mypy 基线 streak_signal_processor.py:46 `recency_weight(observed_at: datetime|None)` arg-type 一条即此投影；`date <= datetime` 混型排序直接 TypeError。
 - **双写者语义分裂（新发现）**：achievement_engine 9 处写用户本地日 `date`（列=日界语义，V3-FIX-293）；guest_seed_service :855/:1838/:2692 写 `now-timedelta(hours=2)` 非零点 `datetime`（列=时刻语义）。
 
-**处置**：两条修法都非纯声明面——列改 Date 属迁移面（按任务口径只登记）；注解改 datetime 则 9 处 date 写面连带翻+归一舞/delta 计算运行时邻接面。登记 **V3-FIX-508 OPEN**，未动任何行。
+**处置**：两条修法都非纯声明面——列改 Date 属迁移面（按任务口径只登记）；注解改 datetime 则 9 处 date 写面连带翻+归一舞/delta 计算运行时邻接面。登记 **V3-FIX-524 OPEN**，未动任何行。
 
-## 观察② leaderboard selectinload——探针证真且升级，修 ✅ FIXED@749341e1（V3-FIX-509）
+## 观察② leaderboard selectinload——探针证真且升级，修 ✅ FIXED@749341e1（V3-FIX-525）
 
 - **探针实录（SA 2.0.48）**：`selectinload(GroupMember)`（映射类，非关系属性；User 全文件零 GroupMember 引用）在**选项构造时**即抛 `ArgumentError: expected ORM mapped attribute for loader strategy argument`——wt768 猜想「无效 loader」实为**群组榜（带 group_id）必炸 500**（路由 leaderboards.py `except Exception → 500` 兜底），非静默。
 - **双重死码**：即便合法也无消费——flame_contribution 来自 :493 独立 members 查询，loader 产物零读者。无合法形态可修（无关系路径可指）→ 整块摘除 `.options(...)` + import。
 - **红→绿**：`tests/unit/test_leaderboard_group_loader_invalid.py` 2 钉——①真实 async sqlite 端到端（三成员贡献 30/20/10：出榜序、my_rank、my_score、total_participants 数值断言；修前 ArgumentError）②AST 源码扫描永久禁 selectinload 回流。percentile guard 5 测零回退。
 - **意外收获**：mypy 基线中 `Argument 1 to "selectinload" has incompatible type "type[GroupMember]"` arg-type 一条即此病灶投影，摘除随之烧减。
 
-## 观察③ call-arg 五条——逐条核真全为活路径，修 ✅ FIXED@749341e1（V3-FIX-510）
+## 观察③ call-arg 五条——逐条核真全为活路径，修 ✅ FIXED@749341e1（V3-FIX-526）
 
 批十后基线 76 中 5 条 call-arg 逐条对照被调方真实签名+调用链可达性，**无一死面**，全部为「TypeError 被 except 吞掉→功能静默全死」族：
 
@@ -64,6 +64,6 @@
 
 ## 遗留与移交
 
-- V3-FIX-508（streak 三列语义统一）OPEN：修法 (a) 列迁移 Date+种子路径改写为域正解方向，需迁移面授权；烧减基线 streak_signal_processor:46 那条须连写面一起处置。
+- V3-FIX-524（streak 三列语义统一）OPEN：修法 (a) 列迁移 Date+种子路径改写为域正解方向，需迁移面授权；烧减基线 streak_signal_processor:46 那条须连写面一起处置。
 - ①③④⑤ kwargs 回归的静态防线=mypy call-arg；②⑤新增运行时钉补零覆盖面。
 - 号段消费实录：508=观察①登记（OPEN）、509=观察②（FIXED@749341e1）、510=观察③（FIXED@749341e1）；证伪号段零消耗（本批三观察无一证伪，探针证据均为证真方向）。
