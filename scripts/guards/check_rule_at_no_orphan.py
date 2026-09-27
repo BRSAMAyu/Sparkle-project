@@ -26,7 +26,10 @@ def _iter_python_files(root: Path) -> list[Path]:
 
 def _module_name(path: Path, backend_app: Path) -> str:
     rel = path.relative_to(backend_app).with_suffix("")
-    return ".".join(("app", *rel.parts))
+    parts = rel.parts
+    if parts and parts[-1] == "__init__":
+        parts = parts[:-1]
+    return ".".join(("app", *parts))
 
 
 def _load_exemption_doc(exceptions_doc: Path) -> str:
@@ -197,7 +200,28 @@ def scan_rule_at(*, repo_root: Path | None = None) -> list[str]:
     changed_candidates = _changed_python_files(repo_root)
     if changed_candidates is not None:
         candidate_files = [path for path in candidate_files if path in changed_candidates]
-    module_to_path = {_module_name(path, backend_app): path for path in _iter_python_files(backend_app)}
+    # 解析映射须含 __init__.py：`from pkg import Class` 经包再导出的导入在
+    # 「包不在映射/类名非模块」两头都解析不到（run 36316568689 AT001 对
+    # conversational_extractor 的误判即此）。候选扫描面仍由 _is_scannable 排除之。
+    resolution_files = [
+        path
+        for path in backend_app.rglob("*.py")
+        if "_deprecated" not in path.parts and "tests" not in path.parts
+    ]
+    module_to_path = {_module_name(path, backend_app): path for path in resolution_files}
+    # 包再导出信用（一跳）：importer 导入包 __init__ 时，把 __init__ 模块级
+    # 导入的候选模块也视为被该 importer 运行时加载。更深链路的惰性导入归
+    # 各文件自身与直接导入边负责，不无限传播。
+    init_exports: dict[Path, set[Path]] = {}
+    for path in resolution_files:
+        if path.name != "__init__.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        exports: set[Path] = set()
+        for node in ast.walk(tree):
+            for resolved in _resolve_import_targets(node, module_to_path):
+                exports.add(resolved)
+        init_exports[path] = exports
     reverse_refs: dict[Path, set[Path]] = {path: set() for path in candidate_files}
     violations: list[str] = []
     exceptions_doc_text = _load_exemption_doc(exceptions_doc)
@@ -208,6 +232,9 @@ def scan_rule_at(*, repo_root: Path | None = None) -> list[str]:
             for resolved in _resolve_import_targets(node, module_to_path):
                 if resolved in reverse_refs and resolved != importer:
                     reverse_refs[resolved].add(importer)
+                for exported in init_exports.get(resolved, ()):
+                    if exported in reverse_refs and exported != importer:
+                        reverse_refs[exported].add(importer)
 
     for path in candidate_files:
         rel = path.relative_to(repo_root).as_posix()
