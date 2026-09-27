@@ -23,10 +23,10 @@ from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from sqlalchemy import create_engine, inspect, text
 
-from app.models.base import Base
 import app.models.memory  # noqa: F401 - register metadata
-import app.models.user_memory_settings  # noqa: F401 - register metadata
 import app.models.user  # noqa: F401 - register metadata (FK target)
+import app.models.user_memory_settings  # noqa: F401 - register metadata
+from app.models.base import Base
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 MIGRATION_PATH = BACKEND_ROOT / "alembic" / "versions" / "m01a_20260919_memory_v3_epistemic.py"

@@ -16,7 +16,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import select
 
-from app.models.memory import EpisodicMemory, MemoryPreference
+from app.models.memory import MemoryPreference
 from app.models.user import User
 from app.models.user_memory_settings import UserMemorySettings
 from app.services.memory_epistemic_contract import (

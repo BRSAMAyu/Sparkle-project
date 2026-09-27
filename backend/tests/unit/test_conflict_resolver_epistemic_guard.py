@@ -10,7 +10,6 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select
 
 from app.models.memory import EpisodicMemory
 from app.models.user import User

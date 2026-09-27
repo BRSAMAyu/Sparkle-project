@@ -14,8 +14,8 @@ from types import SimpleNamespace
 
 from app.services.conflict_resolver_service import ConflictResolverService
 from app.services.memory_epistemic_contract import (
-    EPOCH_BUMP_CORRECTION_ACTIONS,
     EPISODIC_EPISTEMIC_CLASSES,
+    EPOCH_BUMP_CORRECTION_ACTIONS,
     EXPLICIT_SOURCE_LANES,
     MEMORY_EPISTEMIC_CONTRACT_VERSION,
     RESERVED_UNREGISTERED_LANES,
@@ -140,7 +140,7 @@ def test_classify_episodic_class_rules():
 
 def test_user_statement_source_types_evidence_based():
     """用户陈述集与 dev 库实证一致：仅 user_registered（机器写型不进集合）。"""
-    assert USER_STATEMENT_SOURCE_TYPES == {"user_registered"}
+    assert {"user_registered"} == USER_STATEMENT_SOURCE_TYPES
     for machine_type in ("chat_turn", "analysis", "reflection", "error_analysis", "practice_outcome"):
         assert machine_type not in USER_STATEMENT_SOURCE_TYPES
 
@@ -210,6 +210,6 @@ def test_inferred_lane_supersede_guard_truth_table():
 
 
 def test_epoch_bump_action_set_covers_destructive_actions_only():
-    assert EPOCH_BUMP_CORRECTION_ACTIONS == {"delete", "reject", "no_longer_applicable"}
+    assert {"delete", "reject", "no_longer_applicable"} == EPOCH_BUMP_CORRECTION_ACTIONS
     assert "confirm" not in EPOCH_BUMP_CORRECTION_ACTIONS
     assert "lower_confidence" not in EPOCH_BUMP_CORRECTION_ACTIONS
