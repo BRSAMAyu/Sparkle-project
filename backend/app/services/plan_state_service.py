@@ -120,15 +120,15 @@ class PlanStateService:
                 PlanState.deleted_at.is_(None),
             )
         )
-        state = result.scalar_one_or_none()
+        db_state = result.scalar_one_or_none()
 
-        if state is None:
+        if db_state is None:
             return None
 
         # Update cache
-        await self._set_cache(state)
+        await self._set_cache(db_state)
 
-        return state
+        return db_state
 
     async def get_active_plan_states(
         self,

@@ -108,16 +108,16 @@ class RoutingParameterEffectivenessService:
         results = list(grouped.values())
 
         # Update Prometheus gauges
-        for row in results:
+        for eff_row in results:
             ROUTING_PARAMETER_EFFECTIVENESS.labels(
-                parameter_version=row.parameter_version,
-                dominant_signal=row.dominant_signal,
-                routing_mode=row.routing_mode,
-            ).set(row.success_rate)
+                parameter_version=eff_row.parameter_version,
+                dominant_signal=eff_row.dominant_signal,
+                routing_mode=eff_row.routing_mode,
+            ).set(eff_row.success_rate)
             ROUTING_PARAMETER_EFFECTIVENESS_SAMPLES.labels(
-                parameter_version=row.parameter_version,
-                dominant_signal=row.dominant_signal,
-            ).set(row.total)
+                parameter_version=eff_row.parameter_version,
+                dominant_signal=eff_row.dominant_signal,
+            ).set(eff_row.total)
 
         # Cache in Redis
         if self.redis is not None:

@@ -826,11 +826,11 @@ class OutcomeLedgerService:
 
         verified: dict[Any, frozenset[str]] = {}
         for task in tasks:
-            refs = declared_refs.get(task.id)
-            if not refs:
+            task_refs = declared_refs.get(task.id)
+            if not task_refs:
                 continue
             kinds: set[str] = set()
-            for kind, scheme, raw_id in refs:
+            for kind, scheme, raw_id in task_refs:
                 if scheme == "document" and (str(task.id), raw_id) in task_doc_links:
                     kinds.add(kind)
             if kinds:

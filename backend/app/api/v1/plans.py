@@ -2049,7 +2049,7 @@ async def get_learning_path_progress(
     user_statuses = {str(s.node_id): s for s in status_result.scalars().all()}
 
     nodes_progress = []
-    total_mastery = 0
+    total_mastery: float = 0
     mastered_count = 0
 
     for node_id_str in path_node_ids:

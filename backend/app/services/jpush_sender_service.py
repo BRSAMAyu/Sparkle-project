@@ -27,7 +27,7 @@ from loguru import logger
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.jpush_config import get_jpush_settings, initialize_jpush, is_jpush_available
+from app.core.jpush_config import JPushSettings, get_jpush_settings, initialize_jpush, is_jpush_available
 from app.models.user import UserDevice
 
 
@@ -81,7 +81,7 @@ class JPushSenderService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self._initialized = False
-        self._settings = None
+        self._settings: JPushSettings | None = None
         self._client: httpx.AsyncClient | None = None
 
     async def _ensure_initialized(self) -> bool:

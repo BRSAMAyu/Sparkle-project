@@ -785,9 +785,9 @@ class ExamSprintReviewService:
                     points.append(label)
         for item in entry.get("underprepared_topics") or []:
             if isinstance(item, dict):
-                label = self._first_non_empty(item.get("node_name"), item.get("label"))
-                if label:
-                    points.append(label)
+                topic_label = self._first_non_empty(item.get("node_name"), item.get("label"))
+                if topic_label:
+                    points.append(topic_label)
         return self._unique_strs(points)
 
     def _archive_proud_nodes(self, *, summary: dict[str, Any], strongest_area: str | None) -> list[str]:

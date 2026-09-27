@@ -531,7 +531,7 @@ class ShareCardService:
         line_spacing: int,
         max_lines: int,
     ) -> None:
-        current_top = top
+        current_top: float = top
         for index, line in enumerate(self._wrap_text(draw, text, font, max_width, max_lines)):
             if index >= max_lines:
                 break

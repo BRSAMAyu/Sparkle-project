@@ -72,7 +72,7 @@ class ProfileSnapshotService:
     ) -> dict[str, Any]:
         if profile_context is not None:
             tags = [pattern.pattern_name for pattern in profile_context.cognitive_summary.active_patterns]
-            capabilities = {
+            capabilities: dict[str, Any] = {
                 "mastery_avg": float(profile_context.knowledge_summary.overall_mastery or 0.0),
                 "active_subjects": profile_context.knowledge_summary.active_learning_subjects,
             }

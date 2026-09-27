@@ -499,14 +499,14 @@ class ToolExecutor:
                 denied_permissions=run_permissions.get("denied"),
             )
         else:
-            run_permissions = ctx.get("run_permissions")
-            run_permissions = run_permissions if isinstance(run_permissions, dict) else {}
+            ctx_permissions = ctx.get("run_permissions")
+            ctx_run_permissions = ctx_permissions if isinstance(ctx_permissions, dict) else {}
             decision = decide_tool_permission(
                 tool_name=tool_name,
                 metadata=metadata,
                 allowed_tools=ctx.get("allowed_tools"),
-                granted_permissions=run_permissions.get("granted"),
-                denied_permissions=run_permissions.get("denied"),
+                granted_permissions=ctx_run_permissions.get("granted"),
+                denied_permissions=ctx_run_permissions.get("denied"),
             )
         if not decision.allowed:
             guard.reject_permission(tool_name, decision.reason)

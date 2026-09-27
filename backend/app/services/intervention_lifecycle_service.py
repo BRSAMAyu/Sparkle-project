@@ -417,7 +417,7 @@ class InterventionLifecycleService:
           永不进入本管线。
         """
         if user_id is not None:
-            scope = ("user", str(UUID(str(user_id))))
+            scope: tuple[str, ...] = ("user", str(UUID(str(user_id))))
             user_filter_uuid: UUID | None = UUID(str(user_id))
         else:
             scope = ("global",)

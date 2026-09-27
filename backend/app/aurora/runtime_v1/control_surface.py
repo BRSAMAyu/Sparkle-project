@@ -232,9 +232,9 @@ class ControlSurfaceService:
         except Exception as exc:
             raise HarnessUpdateRejectedError([str(exc)]) from exc
 
-        agenda_priority = normalized.get("agenda_priority")
-        if bounds.is_privacy_blocked(agenda_priority):
-            errors.append(f"agenda_priority '{agenda_priority}' crosses a privacy boundary")
+        final_agenda_priority = normalized.get("agenda_priority")
+        if bounds.is_privacy_blocked(final_agenda_priority):
+            errors.append(f"agenda_priority '{final_agenda_priority}' crosses a privacy boundary")
 
         next_wake_at = normalized.get("next_wake_at")
         if next_wake_at is not None and bounds.is_action_disabled("proactive_follow_up"):

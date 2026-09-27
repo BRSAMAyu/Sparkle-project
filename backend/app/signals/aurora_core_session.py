@@ -296,6 +296,7 @@ class AuroraCoreSessionService:
         active_states = active_states or []
         recent_outcomes = recent_outcomes or []
         recent_corrections = recent_corrections or []
+        normalized_entry_reason: AuroraCoreSessionEntryReason | None
         if isinstance(entry_reason, AuroraCoreSessionEntryReason):
             normalized_entry_reason = entry_reason
         else:

@@ -83,7 +83,7 @@ class FSMState:
     # 用于断点续传
     last_processed_message: str | None = None
     accumulated_response: str = ""
-    tool_calls_in_progress: list = None
+    tool_calls_in_progress: list[Any] | None = None
 
     def __post_init__(self):
         if self.tool_calls_in_progress is None:

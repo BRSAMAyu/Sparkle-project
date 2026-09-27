@@ -1773,9 +1773,9 @@ class LLMRouter:
                 return AgentRole(role_value)
             except ValueError:
                 return AgentRole.GENERATION
-        role_value = getattr(agent_role, "value", None)
-        if role_value:
-            role_value = str(role_value).lower()
+        enum_role_value = getattr(agent_role, "value", None)
+        if enum_role_value:
+            enum_role_value = str(enum_role_value).lower()
             role_aliases = {
                 "math": AgentRole.MATH_AGENT,
                 "code": AgentRole.CODE_AGENT,
@@ -1783,10 +1783,10 @@ class LLMRouter:
                 "science": AgentRole.SCIENCE_AGENT,
                 "search": AgentRole.SEARCH_AGENT,
             }
-            if role_value in role_aliases:
-                return role_aliases[role_value]
+            if enum_role_value in role_aliases:
+                return role_aliases[enum_role_value]
             try:
-                return AgentRole(role_value)
+                return AgentRole(enum_role_value)
             except ValueError:
                 return AgentRole.GENERATION
         return AgentRole.GENERATION

@@ -437,7 +437,7 @@ class LLMSecurityWrapper:
                 )
 
             # 过滤对话历史
-            safe_history = None
+            safe_history: list[dict[str, Any]] | None = None
             if conversation_history:
                 safe_history = []
                 for msg in conversation_history:

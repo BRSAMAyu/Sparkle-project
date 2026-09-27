@@ -154,11 +154,11 @@ def evidence_requirements_for_patch(patch: PolicyPatch) -> tuple[frozenset[str],
     if patch.surface == "allocation_preference":
         preference = str(patch.payload.get("preference", ""))
         mode_map = {"prefer_agent": "agent", "prefer_human": "human", "prefer_mixed": "hybrid"}
-        mode = mode_map.get(preference)
-        if mode is None:
+        preferred_mode = mode_map.get(preference)
+        if preferred_mode is None:
             return None
         # 目标干预不限（步绑定族皆可），mode 精确限定。
-        return (frozenset(), "positive", frozenset({mode}))
+        return (frozenset(), "positive", frozenset({preferred_mode}))
     return None
 
 

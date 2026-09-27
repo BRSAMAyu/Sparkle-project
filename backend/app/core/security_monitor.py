@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 from contextlib import suppress
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
@@ -79,7 +79,7 @@ class SecurityEvent:
     action: str | None = None
     details: dict[str, Any] | None = None
     threat_level: ThreatLevel = ThreatLevel.LOW
-    timestamp: datetime = None
+    timestamp: datetime = field(default_factory=_utcnow)
 
     def __post_init__(self):
         if self.timestamp is None:

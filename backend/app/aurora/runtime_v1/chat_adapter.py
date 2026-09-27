@@ -385,9 +385,9 @@ class ChatLayerAdapter:
         if pack_id and str(pack_id).strip():
             subject, version = self._split_sprint_pack_id(str(pack_id).strip())
             return load_pack(subject, version)
-        subject = cold_start.get("subject") or exam_policy.get("subject")
-        if subject and str(subject).strip():
-            return load_pack(str(subject).strip())
+        fallback_subject = cold_start.get("subject") or exam_policy.get("subject")
+        if fallback_subject and str(fallback_subject).strip():
+            return load_pack(str(fallback_subject).strip())
         return None
 
     def _split_sprint_pack_id(self, pack_id: str) -> tuple[str, str]:

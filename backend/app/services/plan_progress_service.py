@@ -131,13 +131,13 @@ class PlanProgressService:
             severity = "warning"
             recommended_action = "adjust"
 
-        lag = None
+        critical_lag: float | None = None
         if time_progress is not None:
-            lag = time_progress - completion_rate
+            critical_lag = time_progress - completion_rate
 
         if (
             severe_overrun_count >= self.OVERRUN_COUNT_CRITICAL
-            or (lag is not None and lag >= self.PROGRESS_LAG_CRITICAL)
+            or (critical_lag is not None and critical_lag >= self.PROGRESS_LAG_CRITICAL)
             or feedback_stats.get("too_difficult", 0) >= self.FEEDBACK_COUNT_THRESHOLD + 1
         ):
             severity = "critical"
@@ -152,12 +152,12 @@ class PlanProgressService:
             "severe_overrun_count": severe_overrun_count,
             "feedback_stats": feedback_stats,
             "time_progress": time_progress,
-            "progress_lag": lag,
+            "progress_lag": critical_lag,
             "days_since_last_activity": days_since_last_activity,
         }
         health_score = self._compute_health_score(
             severity=severity,
-            lag=lag,
+            lag=critical_lag,
             avg_overrun=avg_overrun,
             overrun_count=overrun_count,
             severe_overrun_count=severe_overrun_count,
