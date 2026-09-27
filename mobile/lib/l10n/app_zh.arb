@@ -2422,6 +2422,8 @@
   },
   "memoryEvidenceMissing": "证据缺失",
   "memoryEvidenceRedacted": "证据已隐藏",
+  "memoryEvidenceScoreLabel": "证据强度",
+  "memoryCorrectionCountLabel": "纠错次数",
   "memoryExpandEvidenceDetails": "展开证据详情",
   "memoryFieldContent": "内容",
   "memoryFieldCreatedAt": "创建",
@@ -4304,7 +4306,7 @@
   "aiOpsOpenAnalysis": "打开 AI 运营分析页",
   "aiOpsOpenAdminPanel": "打开管理员运营面板",
   "memoryDeclaration": "声明",
-  "memoryEvidenceToken": "证据 Token",
+  "memoryEvidenceToken": "依据编号",
   "memoryDecayPolicy": "衰减策略",
   "memoryUpdateValue": "更新: {date}",
   "@memoryUpdateValue": {
@@ -12685,7 +12687,7 @@
   "goalDetailPlanHealth": "计划健康状态",
   "goalDetailAccountability": "责任伙伴",
   "goalDetailRelatedSources": "相关资料来源",
-  "studyMaterialsArchiveSuccess": "资料已归档，不会再进入 RAG 上下文。",
+  "studyMaterialsArchiveSuccess": "资料已归档，之后的学习参考不会再用到它。",
   "studyMaterialsArchiveFailed": "归档失败：{error}",
   "@studyMaterialsArchiveFailed": {
     "placeholders": {

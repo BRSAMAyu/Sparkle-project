@@ -5493,6 +5493,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryEvidenceRedacted => '证据已隐藏';
 
   @override
+  String get memoryEvidenceScoreLabel => '证据强度';
+
+  @override
+  String get memoryCorrectionCountLabel => '纠错次数';
+
+  @override
   String get memoryExpandEvidenceDetails => '展开证据详情';
 
   @override
@@ -9937,7 +9943,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryDeclaration => '声明';
 
   @override
-  String get memoryEvidenceToken => '证据 Token';
+  String get memoryEvidenceToken => '依据编号';
 
   @override
   String get memoryDecayPolicy => '衰减策略';
@@ -27338,7 +27344,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get goalDetailRelatedSources => '相关资料来源';
 
   @override
-  String get studyMaterialsArchiveSuccess => '资料已归档，不会再进入 RAG 上下文。';
+  String get studyMaterialsArchiveSuccess => '资料已归档，之后的学习参考不会再用到它。';
 
   @override
   String studyMaterialsArchiveFailed(String error) {

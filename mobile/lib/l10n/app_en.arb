@@ -2423,6 +2423,8 @@
   },
   "memoryEvidenceMissing": "Evidence missing",
   "memoryEvidenceRedacted": "Evidence redacted",
+  "memoryEvidenceScoreLabel": "Evidence strength",
+  "memoryCorrectionCountLabel": "Corrections",
   "memoryExpandEvidenceDetails": "Expand evidence details",
   "memoryFieldContent": "Content",
   "memoryFieldCreatedAt": "Created",
@@ -4102,7 +4104,7 @@
     }
   },
   "memoryDeclaration": "Declaration",
-  "memoryEvidenceToken": "Evidence Token",
+  "memoryEvidenceToken": "Evidence ID",
   "memoryDecayPolicy": "Decay Policy",
   "memoryUpdateValue": "Updated: {date}",
   "@memoryUpdateValue": {
@@ -12671,7 +12673,7 @@
   "goalDetailPlanHealth": "Plan health",
   "goalDetailAccountability": "Accountability",
   "goalDetailRelatedSources": "Related sources",
-  "studyMaterialsArchiveSuccess": "Material archived — it will no longer enter RAG context.",
+  "studyMaterialsArchiveSuccess": "Material archived — it won't be used as a study reference anymore.",
   "studyMaterialsArchiveFailed": "Archive failed: {error}",
   "@studyMaterialsArchiveFailed": {
     "placeholders": {

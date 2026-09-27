@@ -5713,6 +5713,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryEvidenceRedacted => 'Evidence redacted';
 
   @override
+  String get memoryEvidenceScoreLabel => 'Evidence strength';
+
+  @override
+  String get memoryCorrectionCountLabel => 'Corrections';
+
+  @override
   String get memoryExpandEvidenceDetails => 'Expand evidence details';
 
   @override
@@ -10341,7 +10347,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryDeclaration => 'Declaration';
 
   @override
-  String get memoryEvidenceToken => 'Evidence Token';
+  String get memoryEvidenceToken => 'Evidence ID';
 
   @override
   String get memoryDecayPolicy => 'Decay Policy';
@@ -28516,7 +28522,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyMaterialsArchiveSuccess =>
-      'Material archived — it will no longer enter RAG context.';
+      'Material archived — it won\'t be used as a study reference anymore.';
 
   @override
   String studyMaterialsArchiveFailed(String error) {

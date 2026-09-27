@@ -10232,6 +10232,18 @@ abstract class AppLocalizations {
   /// **'证据已隐藏'**
   String get memoryEvidenceRedacted;
 
+  /// No description provided for @memoryEvidenceScoreLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据强度'**
+  String get memoryEvidenceScoreLabel;
+
+  /// No description provided for @memoryCorrectionCountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'纠错次数'**
+  String get memoryCorrectionCountLabel;
+
   /// No description provided for @memoryExpandEvidenceDetails.
   ///
   /// In zh, this message translates to:
@@ -18313,7 +18325,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryEvidenceToken.
   ///
   /// In zh, this message translates to:
-  /// **'证据 Token'**
+  /// **'依据编号'**
   String get memoryEvidenceToken;
 
   /// No description provided for @memoryDecayPolicy.
@@ -49862,7 +49874,7 @@ abstract class AppLocalizations {
   /// No description provided for @studyMaterialsArchiveSuccess.
   ///
   /// In zh, this message translates to:
-  /// **'资料已归档，不会再进入 RAG 上下文。'**
+  /// **'资料已归档，之后的学习参考不会再用到它。'**
   String get studyMaterialsArchiveSuccess;
 
   /// No description provided for @studyMaterialsArchiveFailed.

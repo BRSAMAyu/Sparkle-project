@@ -264,28 +264,26 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               ],
             ),
             const SizedBox(height: DS.md),
-            _buildKeyValue('Key', widget.args.prefKey ?? '-'),
             _buildKeyValue(
-              'Value',
-              _preference?.prefValue.toString() ?? '-',
-            ),
+                context.l10n.memoryFieldName, widget.args.prefKey ?? '-',),
             _buildKeyValue(
-              'Confidence',
-              _confidence?.toStringAsFixed(2) ?? '-',
-            ),
+                context.l10n.memoryFieldContent,
+                _preference?.prefValue.toString() ?? '-',),
             _buildKeyValue(
-              'Evidence',
-              _evidenceScore?.toStringAsFixed(2) ?? '-',
-            ),
-            _buildKeyValue('Corrections', _correctionCount.toString()),
+                context.l10n.memoryConfidence,
+                _confidence?.toStringAsFixed(2) ?? '-',),
             _buildKeyValue(
-              'Updated',
-              _formatDate(_preference?.updatedAt),
-            ),
+                context.l10n.memoryEvidenceScoreLabel,
+                _evidenceScore?.toStringAsFixed(2) ?? '-',),
             _buildKeyValue(
-              'Retracted',
-              _formatDate(_retractedAt),
-            ),
+                context.l10n.memoryCorrectionCountLabel,
+                _correctionCount.toString(),),
+            _buildKeyValue(
+                context.l10n.memoryLastUpdated,
+                _formatDate(_preference?.updatedAt),),
+            _buildKeyValue(
+                context.l10n.memoryRetractedAt,
+                _formatDate(_retractedAt),),
             if (AppFeatureFlags.enableMemoryCorrection) ...[
               const SizedBox(height: DS.md),
               _buildCorrectionActions(context),
@@ -329,8 +327,12 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             context.l10n.memoryDeadline, _formatDate(goal?.expiresAt),),
         _buildKeyValue(
             context.l10n.memoryLastUpdated, _formatDate(goal?.updatedAt),),
-        _buildKeyValue('Evidence', _evidenceScore?.toStringAsFixed(2) ?? '-'),
-        _buildKeyValue('Corrections', _correctionCount.toString()),
+        _buildKeyValue(
+            context.l10n.memoryEvidenceScoreLabel,
+            _evidenceScore?.toStringAsFixed(2) ?? '-',),
+        _buildKeyValue(
+            context.l10n.memoryCorrectionCountLabel,
+            _correctionCount.toString(),),
         _buildKeyValue(
             context.l10n.memoryRetractedAt, _formatDate(_retractedAt),),
         if (AppFeatureFlags.enableMemoryCorrection) ...[
@@ -369,8 +371,12 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             context.l10n.memoryEvidenceToken, episodic?.evidenceToken ?? '-',),
         _buildKeyValue(
             context.l10n.memoryDecayPolicy, episodic?.decayPolicy ?? '-',),
-        _buildKeyValue('Evidence', _evidenceScore?.toStringAsFixed(2) ?? '-'),
-        _buildKeyValue('Corrections', _correctionCount.toString()),
+        _buildKeyValue(
+            context.l10n.memoryEvidenceScoreLabel,
+            _evidenceScore?.toStringAsFixed(2) ?? '-',),
+        _buildKeyValue(
+            context.l10n.memoryCorrectionCountLabel,
+            _correctionCount.toString(),),
         _buildKeyValue(
             context.l10n.memoryLastUpdated, _formatDate(episodic?.updatedAt),),
         _buildKeyValue(
