@@ -7,6 +7,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/extensions/confidence_band.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/memory/memory.dart';
@@ -1070,8 +1071,12 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     final reason = metadata['reason']?.toString() ?? '';
     final level = metadata['level']?.toString() ?? 'readonly';
     final confidence = metadata['confidence'];
+    // V3-FIX-361：raw 0.xx 改定性档位词（数值进百分比特化参数）。
     final confidenceLabel = confidence is num
-        ? confidence.toStringAsFixed(2)
+        ? l10n.personaConfidence(
+            confidenceBandToken(confidence.toDouble()),
+            confidencePercent(confidence.toDouble()),
+          )
         : confidence?.toString();
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing6),
@@ -1100,7 +1105,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             Padding(
               padding: const EdgeInsets.only(left: DS.spacing16, top: 2),
               child: Text(
-                l10n.personaConfidence(confidenceLabel),
+                confidenceLabel,
                 style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
               ),
             ),

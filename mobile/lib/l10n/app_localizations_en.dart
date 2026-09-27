@@ -2783,8 +2783,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaLevelReadonly => 'Read Only';
 
   @override
-  String personaConfidence(Object value) {
-    return 'Confidence $value';
+  String personaConfidence(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': 'I\'m fairly confident',
+        'medium': 'I\'m somewhat confident',
+        'low': 'I\'m not quite sure yet',
+        'other': 'Confidence',
+      },
+    );
+    return '$_temp0 ($percent%)';
   }
 
   @override
@@ -3177,8 +3186,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get systemUpdatesAll => 'All';
 
   @override
-  String systemUpdatesConfidence(Object value) {
-    return 'Confidence $value%';
+  String systemUpdatesConfidence(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': 'I\'m fairly confident',
+        'medium': 'I\'m somewhat confident',
+        'low': 'I\'m not quite sure yet',
+        'other': 'Confidence',
+      },
+    );
+    return '$_temp0 ($percent%)';
   }
 
   @override
@@ -5678,7 +5696,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryCorrectionNoLongerApplies => 'No longer applies';
 
   @override
-  String get memoryCorrectionLowerConfidence => 'Lower confidence';
+  String get memoryCorrectionLowerConfidence => 'Not so sure about this';
+
+  @override
+  String confidenceWithBand(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': 'I\'m fairly confident',
+        'medium': 'I\'m somewhat confident',
+        'low': 'I\'m not quite sure yet',
+        'other': 'Confidence',
+      },
+    );
+    return '$_temp0 ($percent%)';
+  }
 
   @override
   String get memoryCorrectionMerge => 'Merge';
@@ -8587,7 +8619,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get planReviewConfidenceTitle => 'Plan Review Confidence Title';
+  String get planReviewConfidenceTitle => 'How confident I am';
 
   @override
   String get planReviewDecisionApproved => 'Plan Review Decision Approved';
@@ -27907,8 +27939,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String sourceExplanationConfidence(int percent) {
-    return '$percent% confidence';
+  String sourceExplanationConfidence(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': 'I\'m fairly confident',
+        'medium': 'I\'m somewhat confident',
+        'low': 'I\'m not quite sure yet',
+        'other': 'Confidence',
+      },
+    );
+    return '$_temp0 ($percent%)';
   }
 
   @override
@@ -30621,8 +30662,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get intentCorrectionLabel => 'Or I got it wrong —';
 
   @override
-  String intentConfidenceLabel(Object percent) {
-    return '$percent% confidence';
+  String intentConfidenceLabel(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': 'I\'m fairly confident',
+        'medium': 'I\'m somewhat confident',
+        'low': 'I\'m not quite sure yet',
+        'other': 'Confidence',
+      },
+    );
+    return '$_temp0 ($percent%)';
   }
 
   @override

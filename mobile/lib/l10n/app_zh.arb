@@ -919,7 +919,7 @@
   "personaLevelEditable": "可编辑",
   "personaLevelWarn": "建议修正",
   "personaLevelReadonly": "只读",
-  "personaConfidence": "置信度 {value}",
+  "personaConfidence": "{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）",
   "personaEdit": "编辑",
   "personaRollback": "回滚",
   "personaSuggestCorrection": "建议修正",
@@ -1044,7 +1044,7 @@
   "systemUpdatesCount": "共 {count} 条",
   "systemUpdatesNoItems": "暂无系统更新",
   "systemUpdatesAll": "全部",
-  "systemUpdatesConfidence": "置信度 {value}%",
+  "systemUpdatesConfidence": "{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）",
   "systemUpdatesNextWeekAdjust": "下周继续适配：{value}",
   "systemUpdatesBeforeLabel": "之前",
   "systemUpdatesAfterLabel": "现在",
@@ -2359,7 +2359,7 @@
   "memoryOccurredAt": "发生时间",
   "memoryImportanceScore": "重要度",
   "memoryRetractedAt": "撤回时间",
-  "memoryConfidence": "置信度",
+  "memoryConfidence": "把握程度",
   "memoryDiff": "差异",
   "memoryRevertToVersion": "撤回到此版本",
   "memoryNeedEnableRetraction": "需要开启 ENABLE_MEMORY_RETRACTION",
@@ -2385,7 +2385,7 @@
   "memoryCorrectionActions": "纠错操作",
   "memoryCorrectionReject": "不正确",
   "memoryCorrectionNoLongerApplies": "不再适用",
-  "memoryCorrectionLowerConfidence": "置信度较低",
+  "memoryCorrectionLowerConfidence": "别太信这条",
   "memoryCorrectionMerge": "合并",
   "memoryMergeComingSoon": "合并功能暂未开放",
   "memoryHistoryLoadFailed": "历史记录加载失败",
@@ -3610,7 +3610,7 @@
   "planReviewAdditionalNotesRequired": "请填写备注",
   "planReviewApproveExecute": "批准并执行",
   "planReviewConfidenceTierLabel": "{arg0}",
-  "planReviewConfidenceTitle": "置信度评估",
+  "planReviewConfidenceTitle": "把握有多大",
   "planReviewDecisionApproved": "已批准",
   "planReviewDecisionNeedsModification": "需要修改",
   "planReviewDecisionRejected": "已拒绝",
@@ -4318,7 +4318,7 @@
       }
     }
   },
-  "memoryConfidenceValue": "置信度: {value}",
+  "memoryConfidenceValue": "把握程度：{value}",
   "@memoryConfidenceValue": {
     "placeholders": {
       "value": {
@@ -12337,9 +12337,12 @@
       }
     }
   },
-  "sourceExplanationConfidence": "置信度 {percent}%",
+  "sourceExplanationConfidence": "{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）",
   "@sourceExplanationConfidence": {
     "placeholders": {
+      "band": {
+        "type": "String"
+      },
       "percent": {
         "type": "int"
       }
@@ -13614,7 +13617,7 @@
   },
   "intentSuggestedActionLabel": "我建议先这样做",
   "intentCorrectionLabel": "或者我猜错了——",
-  "intentConfidenceLabel": "置信度 {percent}%",
+  "intentConfidenceLabel": "{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）",
   "intentExamRescue": "考试抢救",
   "intentExamBuild": "考试备战",
   "intentJobSearch": "求职冲刺",
@@ -15985,5 +15988,46 @@
   "calCheckinUnknownTitle": "当日状态未知",
   "calCheckinUnknownDesc": "无法识别的当日状态，已按中性样式显示。",
   "todayCockpitExampleBadge": "示例",
-  "authTryExample": "体验一个示例"
+  "authTryExample": "体验一个示例",
+  "confidenceWithBand": "{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）",
+  "@intentConfidenceLabel": {
+    "placeholders": {
+      "band": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "@personaConfidence": {
+    "placeholders": {
+      "band": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "@systemUpdatesConfidence": {
+    "placeholders": {
+      "band": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "@confidenceWithBand": {
+    "placeholders": {
+      "band": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  }
 }

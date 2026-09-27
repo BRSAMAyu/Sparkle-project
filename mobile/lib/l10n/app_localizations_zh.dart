@@ -2653,8 +2653,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personaLevelReadonly => '只读';
 
   @override
-  String personaConfidence(Object value) {
-    return '置信度 $value';
+  String personaConfidence(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': '我比较确定',
+        'medium': '有一定把握',
+        'low': '我还不太确定',
+        'other': '把握',
+      },
+    );
+    return '$_temp0（$percent%）';
   }
 
   @override
@@ -3040,8 +3049,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get systemUpdatesAll => '全部';
 
   @override
-  String systemUpdatesConfidence(Object value) {
-    return '置信度 $value%';
+  String systemUpdatesConfidence(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': '我比较确定',
+        'medium': '有一定把握',
+        'low': '我还不太确定',
+        'other': '把握',
+      },
+    );
+    return '$_temp0（$percent%）';
   }
 
   @override
@@ -5380,7 +5398,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryRetractedAt => '撤回时间';
 
   @override
-  String get memoryConfidence => '置信度';
+  String get memoryConfidence => '把握程度';
 
   @override
   String get memoryDiff => '差异';
@@ -5458,7 +5476,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryCorrectionNoLongerApplies => '不再适用';
 
   @override
-  String get memoryCorrectionLowerConfidence => '置信度较低';
+  String get memoryCorrectionLowerConfidence => '别太信这条';
+
+  @override
+  String confidenceWithBand(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': '我比较确定',
+        'medium': '有一定把握',
+        'low': '我还不太确定',
+        'other': '把握',
+      },
+    );
+    return '$_temp0（$percent%）';
+  }
 
   @override
   String get memoryCorrectionMerge => '合并';
@@ -8268,7 +8300,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get planReviewConfidenceTitle => '置信度评估';
+  String get planReviewConfidenceTitle => '把握有多大';
 
   @override
   String get planReviewDecisionApproved => '已批准';
@@ -9961,7 +9993,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String memoryConfidenceValue(Object value) {
-    return '置信度: $value';
+    return '把握程度：$value';
   }
 
   @override
@@ -26753,8 +26785,17 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String sourceExplanationConfidence(int percent) {
-    return '置信度 $percent%';
+  String sourceExplanationConfidence(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': '我比较确定',
+        'medium': '有一定把握',
+        'low': '我还不太确定',
+        'other': '把握',
+      },
+    );
+    return '$_temp0（$percent%）';
   }
 
   @override
@@ -29339,8 +29380,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get intentCorrectionLabel => '或者我猜错了——';
 
   @override
-  String intentConfidenceLabel(Object percent) {
-    return '置信度 $percent%';
+  String intentConfidenceLabel(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': '我比较确定',
+        'medium': '有一定把握',
+        'low': '我还不太确定',
+        'other': '把握',
+      },
+    );
+    return '$_temp0（$percent%）';
   }
 
   @override

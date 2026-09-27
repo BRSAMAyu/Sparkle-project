@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/confidence_band.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/goal/data/models/goal_intent_models.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -151,7 +152,11 @@ class _ModeChip extends StatelessWidget {
         ),
         if (confidence > 0)
           Text(
-            l10n.intentConfidenceLabel((confidence * 100).round()),
+            // V3-FIX-361：定性档位词 + 百分比细节。
+            l10n.intentConfidenceLabel(
+              confidenceBandToken(confidence),
+              confidencePercent(confidence),
+            ),
             style: TextStyle(color: DS.textSecondary, fontSize: 11),
           ),
       ],

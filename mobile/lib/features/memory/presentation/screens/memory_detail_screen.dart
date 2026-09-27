@@ -8,6 +8,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+import 'package:sparkle/core/extensions/confidence_band.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
@@ -97,6 +98,14 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
   DateTime? _retractedAt;
   MemorySettingsModel? _memorySettings;
   String? _settingsError;
+
+  /// V3-FIX-361：置信度改「定性档位词（百分比细节）」，禁 raw 0.xx 直出。
+  String? _confidenceCopy(BuildContext context, double? value) => value == null
+      ? null
+      : context.l10n.confidenceWithBand(
+          confidenceBandToken(value),
+          confidencePercent(value),
+        );
 
   @override
   void initState() {
@@ -272,7 +281,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
                 _preference?.prefValue.toString() ?? '-',),
             _buildKeyValue(
                 context.l10n.memoryConfidence,
-                _confidence?.toStringAsFixed(2) ?? '-',),
+                _confidenceCopy(context, _confidence) ?? '-',),
             _buildKeyValue(
                 context.l10n.memoryEvidenceScoreLabel,
                 _evidenceScore?.toStringAsFixed(2) ?? '-',),
@@ -367,7 +376,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
           episodic?.importanceScore?.toStringAsFixed(2) ?? '-',
         ),
         _buildKeyValue(context.l10n.memoryConfidence,
-            episodic?.confidence?.toStringAsFixed(2) ?? '-',),
+            _confidenceCopy(context, episodic?.confidence) ?? '-',),
         _buildKeyValue(
             context.l10n.memoryEvidenceToken, episodic?.evidenceToken ?? '-',),
         _buildKeyValue(
@@ -491,7 +500,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             const SizedBox(height: DS.sm),
             Text(context.l10n.memoryUpdateValue(_formatDate(item.updatedAt))),
             Text(context.l10n.memoryConfidenceValue(
-                item.confidence?.toStringAsFixed(2) ?? '-',),),
+                _confidenceCopy(context, item.confidence) ?? '-',),),
             if (diff.isNotEmpty) ...[
               const SizedBox(height: DS.sm),
               Text(context.l10n.memoryDiff,

@@ -4979,8 +4979,8 @@ abstract class AppLocalizations {
   /// No description provided for @personaConfidence.
   ///
   /// In zh, this message translates to:
-  /// **'置信度 {value}'**
-  String personaConfidence(Object value);
+  /// **'{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）'**
+  String personaConfidence(String band, int percent);
 
   /// No description provided for @personaEdit.
   ///
@@ -5729,8 +5729,8 @@ abstract class AppLocalizations {
   /// No description provided for @systemUpdatesConfidence.
   ///
   /// In zh, this message translates to:
-  /// **'置信度 {value}%'**
-  String systemUpdatesConfidence(Object value);
+  /// **'{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）'**
+  String systemUpdatesConfidence(String band, int percent);
 
   /// No description provided for @systemUpdatesNextWeekAdjust.
   ///
@@ -10025,7 +10025,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryConfidence.
   ///
   /// In zh, this message translates to:
-  /// **'置信度'**
+  /// **'把握程度'**
   String get memoryConfidence;
 
   /// No description provided for @memoryDiff.
@@ -10181,8 +10181,13 @@ abstract class AppLocalizations {
   /// No description provided for @memoryCorrectionLowerConfidence.
   ///
   /// In zh, this message translates to:
-  /// **'置信度较低'**
+  /// **'别太信这条'**
   String get memoryCorrectionLowerConfidence;
+  /// No description provided for @confidenceWithBand.
+  ///
+  /// In zh, this message translates to:
+  /// **'{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）'**
+  String confidenceWithBand(String band, int percent);
 
   /// No description provided for @memoryCorrectionMerge.
   ///
@@ -15245,7 +15250,7 @@ abstract class AppLocalizations {
   /// No description provided for @planReviewConfidenceTitle.
   ///
   /// In zh, this message translates to:
-  /// **'置信度评估'**
+  /// **'把握有多大'**
   String get planReviewConfidenceTitle;
 
   /// No description provided for @planReviewDecisionApproved.
@@ -18355,7 +18360,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryConfidenceValue.
   ///
   /// In zh, this message translates to:
-  /// **'置信度: {value}'**
+  /// **'把握程度：{value}'**
   String memoryConfidenceValue(Object value);
 
   /// No description provided for @memoryAllowedCaptureSummary.
@@ -48793,8 +48798,8 @@ abstract class AppLocalizations {
   /// No description provided for @sourceExplanationConfidence.
   ///
   /// In zh, this message translates to:
-  /// **'置信度 {percent}%'**
-  String sourceExplanationConfidence(int percent);
+  /// **'{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）'**
+  String sourceExplanationConfidence(String band, int percent);
 
   /// No description provided for @sourceExplanationCorrectSource.
   ///
@@ -53512,8 +53517,8 @@ abstract class AppLocalizations {
   /// No description provided for @intentConfidenceLabel.
   ///
   /// In zh, this message translates to:
-  /// **'置信度 {percent}%'**
-  String intentConfidenceLabel(Object percent);
+  /// **'{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）'**
+  String intentConfidenceLabel(String band, int percent);
 
   /// No description provided for @intentExamRescue.
   ///

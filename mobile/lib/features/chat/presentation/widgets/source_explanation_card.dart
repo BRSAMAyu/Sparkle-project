@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/extensions/confidence_band.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/providers/source_explanation_provider.dart';
 
@@ -401,8 +402,6 @@ class _ConfidencePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final normalized = confidence <= 1 ? confidence * 100 : confidence;
-    final value = normalized.clamp(0, 100).round();
 
     return Container(
       margin: const EdgeInsets.only(right: 4),
@@ -412,7 +411,11 @@ class _ConfidencePill extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        context.l10n.sourceExplanationConfidence(value),
+        // V3-FIX-361：置信度改「定性档位词（百分比细节）」，禁 raw 直出。
+        context.l10n.sourceExplanationConfidence(
+          confidenceBandToken(confidence),
+          confidencePercent(confidence),
+        ),
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: scheme.onPrimaryContainer,
               fontWeight: FontWeight.w700,

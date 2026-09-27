@@ -30,6 +30,9 @@
 | `q06_chaos_engine.sh` | wt406：chaos 引擎启停（:50062 + redis db2 + 上游三 base_url→mock 的 .env 段落式覆盖/恢复；stop 按端口精确杀，不触常驻 :50051） |
 | `q06_smoke_tier.py` | wt406：tier 分层 smoke 探针（free/deep/pro/提权封堵四形态 → :50061；非交付物，报告引用输出） |
 | `ci_suite_profile.py` | wt577：CI 套件时长画像（解析 GH Actions `pytest -v` job 终态日志，逐测试估时 → Top 慢测试/文件/目录占比 + 文件粒度 LPT 分片模拟，Markdown 输出；只读不连网；用法见脚本 docstring；报告见 `v3-output/WT577-PROFILE/report.md`） |
+| `count_en_placeholder_keys.py` | wt685/V3-FIX-362：EN 占位翻译债计数口径复现器（EN-DRAFT=Title-Case 词组且以 9 个占位词尾结尾；多词子集=台账 136 计量口径；*Zh CJK 变体另计；只读测量非守卫） |
+| `apply_wt685_en_translations.py` | wt685/V3-FIX-362 实施批：132 键 en 值显式人工翻译映射一次性应用（幂等；留审键不入表，见 `v3-output/WT685-L10NDEBT/REPORT.md`） |
+| `apply_wt685_confidence_qualitative.py` | wt685/V3-FIX-361 实施批：8 键置信度定性化 + 新键 confidenceWithBand 的 arb 值/占位符 schema 一次性应用（幂等；select 语法经 gen-l10n 生成） |
 | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |
 | `demo_start.sh` | Demo 演示启动脚本（历史演示用途） |
 | `TEST_INSTRUCTIONS.sh` | 全功能验收测试操作说明（历史） |

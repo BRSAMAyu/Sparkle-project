@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/confidence_band.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -893,7 +894,11 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                     ),
               ),
               Text(
-                '${(widget.review.confidence * 100).toInt()}%',
+                // V3-FIX-361：定性档位词 + 百分比细节（替换 raw % 直出）。
+                context.l10n.confidenceWithBand(
+                  confidenceBandToken(widget.review.confidence),
+                  confidencePercent(widget.review.confidence),
+                ),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.neutral900,
                       fontWeight: DS.fontWeightSemibold,

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+import 'package:sparkle/core/extensions/confidence_band.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -257,7 +258,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
     if (evolutionKind == 'proactive_insight') {
       final insightText = metadata['insight_text']?.toString() ?? '';
       final evidenceSummary = metadata['evidence_summary']?.toString() ?? '';
-      final confidence = metadata['confidence'];
+      final confidence = (metadata['confidence'] as num?)?.toDouble();
       return [
         if (insightText.isNotEmpty) ...[
           const SizedBox(height: DS.spacing8),
@@ -279,8 +280,10 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
         if (confidence != null) ...[
           const SizedBox(height: DS.spacing8),
           _pill(
+            // V3-FIX-361：定性档位词 + 百分比细节。
             context.l10n.systemUpdatesConfidence(
-              ((confidence as num).toDouble() * 100).toInt(),
+              confidenceBandToken(confidence),
+              confidencePercent(confidence),
             ),
             DS.info.withValues(alpha: 0.12),
             DS.info,
