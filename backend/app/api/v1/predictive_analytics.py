@@ -51,7 +51,7 @@ async def get_engagement_forecast(
         - dropout_risk: 流失风险 (low/medium/high)
         - recommended_intervention: 建议干预
 
-        V3-FIX-347：原 typical_weekdays / typical_hours / prediction_factors
+        V3-FIX-352：原 typical_weekdays / typical_hours / prediction_factors
         为硬编码空列表冒充的未接线承诺键，已删除（全仓零消费方）。
     """
     try:
@@ -91,7 +91,7 @@ async def get_difficulty_prediction(
         - prerequisites_ready: 前置知识是否就绪
         - missing_prerequisites: 缺失的前置知识
 
-        V3-FIX-347：原 difficulty_factors 为硬编码空列表冒充的未接线
+        V3-FIX-352：原 difficulty_factors 为硬编码空列表冒充的未接线
         承诺键，已删除（全仓零消费方）。
     """
     try:
