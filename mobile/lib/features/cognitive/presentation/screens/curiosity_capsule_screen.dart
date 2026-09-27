@@ -4,9 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/state/staged_loading.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_archive_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -110,16 +111,14 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => LoadingIndicator.circular(
-          showText: true,
-          loadingText: I18nService.instance.isChinese
-              ? '正在整理今日胶囊...'
-              : 'Preparing today\'s capsule...',
-        ),
+        // U-06 续：统一分阶等待——替换手写双语 loading 字面量
+        // （I18nService 直读绕过 arb 单源），组件按 arb 出阶段文案。
+        loading: () => const StagedSurfaceLoader(),
         error: (err, stack) => CustomErrorWidget.page(
           context: context,
           title: context.l10n.cogCapsuleListFailed,
-          message: l10n.capsuleLoadFailed('$err'),
+          // 错误文案单源：类别人话（error_lexicon），不透传原始异常。
+          message: uiErrorMessage(l10n, categorizeUiError(err)),
           onRetry: () =>
               ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
         ),

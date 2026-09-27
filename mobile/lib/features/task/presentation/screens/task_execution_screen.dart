@@ -523,9 +523,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         sheetTask = result.task;
       } catch (error) {
         if (!mounted) return;
+        // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
+        final detail = uiErrorMessage(context.l10n, categorizeUiError(error));
         AppFeedback.error(
           context,
-          context.l10n.taskExecutionAuroraDiagnosticUnavailable('$error'),
+          context.l10n.taskExecutionAuroraDiagnosticUnavailable(detail),
         );
       }
     }

@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -71,14 +72,19 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                         .read(communityRepositoryProvider)
                         .sendFriendRequest(user.id);
                     if (mounted) {
+                      // 成功文案对齐既有 arb 词条（原为手写英文字面量）。
                       AppFeedback.success(
                         context,
-                        'Friend request sent to ${user.displayName}',
+                        context.l10n.friendRequestSent,
                       );
                     }
                   } catch (e) {
                     if (mounted) {
-                      AppFeedback.error(context, 'Failed to send request: $e');
+                      // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
+                      AppFeedback.error(
+                        context,
+                        uiErrorMessage(context.l10n, categorizeUiError(e)),
+                      );
                     }
                   }
                 },

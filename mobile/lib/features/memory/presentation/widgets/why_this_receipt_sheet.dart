@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/memory/data/memory_provenance_models.dart';
 import 'package:sparkle/features/memory/data/memory_provenance_repository.dart';
@@ -336,7 +337,8 @@ class _WhyThisSheetState extends ConsumerState<_WhyThisSheet> {
         AppFeedback.error(
           context,
           context.l10n.understandingToastFailedDetail(
-            provenanceErrorDetail(e) ?? '$e',
+            provenanceErrorDetail(e) ??
+                uiErrorMessage(context.l10n, categorizeUiError(e)),
           ),
         );
       }

@@ -487,8 +487,12 @@ class _TaskDetailView extends ConsumerWidget {
         if (!context.mounted) return;
         final loadZh =
             Localizations.localeOf(context).languageCode == 'zh';
+        // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
+        final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
         AppFeedback.error(
-            context, loadZh ? '加载计划失败: $e' : 'Failed to load plans: $e',);
+          context,
+          loadZh ? '加载计划失败: $detail' : 'Failed to load plans: $detail',
+        );
         return;
       }
     }
@@ -545,7 +549,13 @@ class _TaskDetailView extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      AppFeedback.error(context, zh ? '移动失败: $e' : 'Move failed: $e');
+      // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
+      AppFeedback.error(
+        context,
+        zh
+            ? '移动失败: ${uiErrorMessage(context.l10n, categorizeUiError(e))}'
+            : 'Move failed: ${uiErrorMessage(context.l10n, categorizeUiError(e))}',
+      );
     }
   }
 
@@ -1322,8 +1332,12 @@ class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
       }
     } catch (e) {
       if (mounted) {
+        // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
+        final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
         AppFeedback.error(
-            context, context.l10n.taskDetailGuideGenerateFailed('$e'),);
+          context,
+          context.l10n.taskDetailGuideGenerateFailed(detail),
+        );
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);

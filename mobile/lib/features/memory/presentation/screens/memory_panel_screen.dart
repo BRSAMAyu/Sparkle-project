@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/display/lexicon/date_formatting.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/display/lexicon/goal_status_lexicon.dart';
 import 'package:sparkle/core/display/lexicon/lexicon.dart';
 import 'package:sparkle/core/display/lexicon/memory_event_lexicon.dart';
@@ -1072,7 +1073,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, context.l10n.memoryGovFailed('$e'));
+      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
+      AppFeedback.error(context, context.l10n.memoryGovFailed(detail));
     }
   }
 
@@ -1096,7 +1098,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, context.l10n.memoryGovFailed('$e'));
+      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
+      AppFeedback.error(context, context.l10n.memoryGovFailed(detail));
     }
   }
 
@@ -1214,7 +1217,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, context.l10n.memoryPanelRevokeFailed('$e'));
+      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
+      AppFeedback.error(context, context.l10n.memoryPanelRevokeFailed(detail));
     }
   }
 
@@ -1231,7 +1235,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, context.l10n.memoryPanelMarkFailed('$e'));
+      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
+      AppFeedback.error(context, context.l10n.memoryPanelMarkFailed(detail));
     }
   }
 
@@ -1248,7 +1253,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, context.l10n.memoryPanelDismissFailed('$e'));
+      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
+      AppFeedback.error(context, context.l10n.memoryPanelDismissFailed(detail));
     }
   }
 
@@ -1288,7 +1294,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, context.l10n.memoryPanelConflictFailed('$e'));
+      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
+      AppFeedback.error(context, context.l10n.memoryPanelConflictFailed(detail));
     }
   }
 

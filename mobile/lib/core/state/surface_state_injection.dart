@@ -47,6 +47,11 @@ const List<String> stagedSeamIds = [
   'home.dashboard',
   'galaxy.nodeDetail.history',
   'shared.loadingState',
+  // U-06 续（wt673）：cognitive 三面（B-01 CORE feature 首次入册）——
+  // 手写 loading 字面量统一为 StagedSurfaceLoader 分阶接缝。
+  'cognitive.capsules',
+  'cognitive.capsuleJobs',
+  'cognitive.capsuleDetail',
 ];
 
 /// 兼容别名：核心面全集 = 闸门面 + 分阶接缝面。

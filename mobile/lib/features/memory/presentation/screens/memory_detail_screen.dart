@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
@@ -837,8 +838,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
       if (!mounted) {
         return;
       }
+      // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
+      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
       AppFeedback.error(
-          context, context.l10n.memoryCorrectionFailedWithDetail('$e'),);
+          context, context.l10n.memoryCorrectionFailedWithDetail(detail),);
     }
   }
 }

@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/display/lexicon/goal_status_lexicon.dart'
     show goalPriorityLabel, goalStatusLabel;
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -624,9 +625,10 @@ class _TodayStepCard extends ConsumerWidget {
                         );
                       } catch (e) {
                         if (!context.mounted) return;
+                        // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
                         AppFeedback.error(
                           context,
-                          '${l10n.goalDetailStart}: $e',
+                          uiErrorMessage(context.l10n, categorizeUiError(e)),
                         );
                       }
                     },
@@ -667,9 +669,10 @@ class _TodayStepCard extends ConsumerWidget {
                           }
                         } catch (e) {
                           if (!context.mounted) return;
+                          // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
                           AppFeedback.error(
                             context,
-                            '${l10n.goalDetailComplete}: $e',
+                            uiErrorMessage(context.l10n, categorizeUiError(e)),
                           );
                         }
                       }

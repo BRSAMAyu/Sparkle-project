@@ -7,14 +7,14 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/state/staged_loading.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
@@ -99,15 +99,13 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           }
           return _buildContent(c);
         },
-        loading: () => LoadingIndicator.circular(
-          showText: true,
-          loadingText: I18nService.instance.isChinese
-              ? '正在整理这枚胶囊...'
-              : 'Preparing this capsule...',
-        ),
+        // U-06 续：统一分阶等待（<500ms 骨架，>500ms arb 阶段文案升格），
+        // 替换手写双语 loading 字面量（I18nService 直读绕过 arb 单源）。
+        loading: () => const StagedSurfaceLoader(),
         error: (err, _) => CustomErrorWidget.page(
           context: context,
-          message: l10n.capsuleLoadFailed('$err'),
+          // 错误文案单源：类别人话（error_lexicon），不透传原始异常。
+          message: uiErrorMessage(l10n, categorizeUiError(err)),
           title: context.l10n.cogCapsuleOpenFailed,
           onRetry: () => ref
               .read(capsuleDetailProvider(widget.capsuleId).notifier)
@@ -798,7 +796,9 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, context.l10n.capsuleSubmitFailed('$e'));
+        // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
+        final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
+        AppFeedback.error(context, context.l10n.capsuleSubmitFailed(detail));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);

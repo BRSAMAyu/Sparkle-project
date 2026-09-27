@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/components/organisms/expandable_section.dart
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -1384,7 +1385,10 @@ class _CheckinTile extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, '${context.l10n.accountabilityLikeFailed}: $e',);
+          // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
+          context,
+          uiErrorMessage(context.l10n, categorizeUiError(e)),
+        );
       }
     }
   }
@@ -1429,7 +1433,10 @@ class _CheckinTile extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, '${context.l10n.accountabilitySendFailed}: $e',);
+          // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
+          context,
+          uiErrorMessage(context.l10n, categorizeUiError(e)),
+        );
       }
     }
   }
@@ -1606,7 +1613,10 @@ class _AccountabilityCheckinSheetState
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
-            context, '${context.l10n.accountabilityCheckinFailed}: $e',);
+          // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
+          context,
+          uiErrorMessage(context.l10n, categorizeUiError(e)),
+        );
       }
     } finally {
       if (mounted) {

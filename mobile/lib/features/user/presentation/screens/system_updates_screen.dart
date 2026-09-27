@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -40,9 +41,13 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
       child: updatesAsync.when(
         data: (items) => ContentConstraint(child: _buildList(context, items)),
         loading: () => const SparkleListSkeleton(),
-        error: (err, stack) => Center(
-          child: Text(context.l10n.systemUpdatesLoadFailed('$err')),
-        ),
+        error: (err, stack) {
+          // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
+          final detail = uiErrorMessage(context.l10n, categorizeUiError(err));
+          return Center(
+            child: Text(context.l10n.systemUpdatesLoadFailed(detail)),
+          );
+        },
       ),
     );
   }

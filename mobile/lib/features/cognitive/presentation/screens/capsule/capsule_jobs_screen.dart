@@ -6,9 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/state/staged_loading.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -88,14 +89,14 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
                     },
                   ),
                 ),
-          loading: () => LoadingIndicator.circular(
-            showText: true,
-            loadingText: '正在同步生成任务...',
-          ),
+          // U-06 续：统一分阶等待——原字面量为无 locale 判定的纯中文串
+          // （英文用户也看到中文），统一组件按 arb 出双语阶段文案。
+          loading: () => const StagedSurfaceLoader(),
           error: (err, stack) => CustomErrorWidget.page(
             context: context,
             title: context.l10n.cogJobsLoadFailed,
-            message: l10n.capsuleLoadFailed('$err'),
+            // 错误文案单源：类别人话（error_lexicon），不透传原始异常。
+            message: uiErrorMessage(l10n, categorizeUiError(err)),
             onRetry: () =>
                 ref.read(generationJobsProvider.notifier).fetchJobs(),
           ),
