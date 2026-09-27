@@ -275,6 +275,26 @@ def _restore_dynamic_tool_registry_singleton():
     _tool_registry_wrapper._dynamic_registry = None
 
 
+@pytest.fixture(autouse=True)
+def _restore_spine_orchestrator_singleton():
+    """V3-FIX-393（2026-09-25 CI shard3 顺序污染第二轮）：spine 编排器是进程级
+    模块单例（app.signals.spine_orchestrator._spine_orchestrator，get_spine_
+    orchestrator 首触构造后永驻、reset_spine_orchestrator 全库零调用）。前序文件
+    （实证污染者 tests/integration/test_phase5_orchestrator_north_star_acceptance，
+    shard3 :67；经 session_state_mixin/celery 流程首触构造）残留的单例会让后续
+    test_dashboard_service::test_get_spine_status_returns_none_on_exception 的
+    SpineOrchestrator 类补丁落空——工厂直接返回既有实例、不再走被 patch 的构造
+    →期望 None 实得 sensing 载荷（CI shard3 同指纹；p67 前缀金丝雀实证
+    _spine_orchestrator=SpineOrchestrator 跨文件残留）。沿
+    _restore_llm_global_health_state 判例：每用例前快照、用例后原位恢复（本进程
+    首触前恒 None → 还原即回到「未构造」态，工厂下次按需重建）。"""
+    from app.signals import spine_orchestrator as _spine_mod
+
+    singleton_snapshot = getattr(_spine_mod, "_spine_orchestrator", None)
+    yield
+    _spine_mod._spine_orchestrator = singleton_snapshot
+
+
 @pytest_asyncio.fixture(name="db_session")
 async def db_session_fixture():
     engine = create_async_engine(

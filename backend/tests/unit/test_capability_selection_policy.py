@@ -157,7 +157,42 @@ def test_selector_respects_live_model_availability_and_records_cost_fallback() -
     assert selection["fallback_plan"][-1]["fallback_capability_id"] == selection["summary"]["selected_model_capability_id"]
 
 
-def test_selector_records_in_band_model_fallback_when_fast_model_is_blocked() -> None:
+def test_selector_records_in_band_model_fallback_when_fast_model_is_blocked(monkeypatch) -> None:
+    # CI 无 .env：进程级 llm_router 池 api_key 全空 → 全模型 not_configured（V3-FIX-333
+    # 宣称态），in-band standard 期望恒不成立（ preferred tier 落 plus，CI shard1
+    # 第八/九两次同指纹）。本测试钉的是策略层 in-band 回退逻辑，不是环境密钥供给
+    # （部署面）——故自备确定性 keyed 池（fast 全员 + standard 一档，与 blocked
+    # 清单一一对应），对齐 test_capability_claims_realism 同款 monkeypatch 先例；
+    # monkeypatch 用例后原位还原，零跨用例泄漏。
+    from app.core.agent_profiles import ModelTier
+    from app.core.llm_router import ModelConfig, ModelProvider, llm_router
+
+    def _pooled(key: str, tier: ModelTier, cost: float, latency: float) -> ModelConfig:
+        return ModelConfig(
+            provider=ModelProvider.DASHSCOPE,
+            model_name=key,
+            base_url="https://dashscope.example.com/compatible-mode/v1",
+            api_key="wt701-test-key",
+            temperature=0.3,
+            tier=tier,
+            cost_per_1k_tokens=cost,
+            avg_latency_ms=latency,
+        )
+
+    monkeypatch.setattr(
+        llm_router,
+        "_available_models",
+        {
+            "xiaomi_chat": _pooled("xiaomi_chat", ModelTier.FAST, 0.0002, 300.0),
+            "dashscope_fast": _pooled("dashscope_fast", ModelTier.FAST, 0.0002, 300.0),
+            "deepseek_fast": _pooled("deepseek_fast", ModelTier.FAST, 0.0002, 350.0),
+            "glm_4_7_flash_no_thinking": _pooled("glm_4_7_flash_no_thinking", ModelTier.FAST, 0.0002, 400.0),
+            "dashscope_standard_thinking": _pooled(
+                "dashscope_standard_thinking", ModelTier.STANDARD, 0.0003, 800.0
+            ),
+        },
+    )
+
     policy = CapabilitySelectionPolicy()
     requirements = {
         "grounding_required": "optional",
