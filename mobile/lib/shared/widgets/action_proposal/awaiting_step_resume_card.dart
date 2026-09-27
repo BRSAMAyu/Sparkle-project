@@ -38,8 +38,11 @@ class AwaitingStepResumeCard extends StatefulWidget {
   final String runId;
   final AgentRunAwaitingStep step;
 
-  /// 确认/编辑该步（触发服务端幂等 resume）。回调收到稳定幂等键，调用方应
-  /// 将其透传给 `POST /runs/{id}/steps/{stepId}/complete` 的 idempotency_key。
+  /// 确认/编辑该步（触发服务端幂等 resume）。回调收到稳定幂等键，调用方
+  /// 将其透传给自己的权威确认端点的 idempotency_key：当前唯一挂载面（J-06
+  /// hybrid journey sheet）走 `/journey/hybrid/{runId}/outcome/confirm`
+  /// （推导式与 [runStepIdempotencyKey] 同构同键）；generic
+  /// `POST /runs/{id}/steps/{stepId}/complete` 面尚无挂载（V3-FIX-379①）。
   final Future<void> Function(String idempotencyKey) onConfirm;
 
   /// 取消整个 run（awaiting 态可选次操作；user_cancelled 语义）。

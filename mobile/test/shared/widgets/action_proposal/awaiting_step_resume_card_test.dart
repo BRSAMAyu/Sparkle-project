@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+import 'package:sparkle/core/services/agent_run_command_service.dart';
 import 'package:sparkle/core/services/agent_run_read_service.dart';
 import 'package:sparkle/shared/widgets/action_proposal/awaiting_step_resume_card.dart';
 
@@ -199,6 +200,16 @@ void main() {
       runStepIdempotencyKey('run-9', 's2', 'confirm'),
       'x07:run-9:s2:confirm',
     );
+    // 跨模块键恒等（V3-FIX-379① 撤承诺裁决的承重不变量）：组件本地推导与
+    // 命令服务推导必须逐字节相同，否则两挂载面幂等键分叉、first-wins 重放
+    // 收敛被静默破坏——任一侧推导式漂移本断言即红。
+    for (final action in const <String>['confirm', 'cancel']) {
+      expect(
+        runStepActionIdempotencyKey('run-9', 's2', action),
+        runStepIdempotencyKey('run-9', 's2', action),
+        reason: 'x07:<run>:<step>:<action> 两处推导恒等（服务端 first-wins 语义不受挂载面影响）',
+      );
+    }
   });
 
   testWidgets('无障碍：ownership pill 有语义标签', (tester) async {

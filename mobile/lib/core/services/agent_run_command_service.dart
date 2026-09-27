@@ -20,8 +20,18 @@ class AgentRunCommandService {
 
   /// 用户完成 awaiting step（确认/编辑）→ 完成戳 + resume 同事务.
   ///
-  /// 返回服务端 run 投影（``step_replay=true`` 表示幂等重放：该步骤此前已
-  /// 完成，本次未再次 resume——UI 据此提示「已经确认过了」而非报错）。
+  /// 返回服务端 run 投影（``step_replay=not result.applied``，runs.py）：
+  /// ``step_replay=true`` 表示幂等重放——该步骤此前已完成，本次未再次 resume。
+  ///
+  /// **消费现状（V3-FIX-379① 撤承诺裁决）**：本命令面当前零调用点——移动端
+  /// 唯一 awaiting-step 面（J-06 hybrid journey sheet）交付确认走
+  /// `/journey/hybrid/{runId}/outcome/confirm`（任务完成 + outcome 捕获与
+  /// 完成戳同在该端点，generic step-complete 不承载），其幂等重放由服务端
+  /// `_confirmed_replay` 直接回 200 + 终态 SUCCEEDED 投影，sheet 渲染完成面、
+  /// 无错误面——「已经确认过了」需求已被现行端点覆盖。本方法保留为 X-07
+  /// 命令能力层（379③ 恢复锚点族；零消费≠死代码）；未来挂载面必须消费
+  /// `step_replay`——true 时呈现「已经确认过了」而非报错，该要求随挂载卡
+  /// 承接，本文档不再许诺不存在的 UI 行为。
   Future<Map<String, dynamic>> completeStep(
     String runId,
     String stepId, {
