@@ -2,12 +2,27 @@
 Rate Limiting Middleware
 Using slowapi to manage rate limits for API endpoints
 """
+import ipaddress
 import os
 
 from fastapi import FastAPI, Request
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+
+# V3-FIX-480：引擎侧可信代理清单缺省值——回环 + 链路本地 + RFC1918 私网 +
+# IPv6 ULA。本仓部署（docker compose，引擎端口仅内网可达）中网关对端落在
+# 该集合内；需要更严隔离的部署用 ``TRUSTED_PROXY_CIDRS`` 收窄到网关精确地址。
+_DEFAULT_TRUSTED_PROXY_CIDRS = (
+    "127.0.0.0/8",  # IPv4 回环
+    "::1/128",  # IPv6 回环
+    "10.0.0.0/8",  # RFC1918 私网
+    "172.16.0.0/12",  # RFC1918 私网（Docker 默认地址池）
+    "192.168.0.0/16",  # RFC1918 私网
+    "169.254.0.0/16",  # IPv4 链路本地
+    "fe80::/10",  # IPv6 链路本地
+    "fc00::/7",  # IPv6 ULA
+)
 
 
 def _trusted_proxy_count() -> int:
@@ -24,6 +39,42 @@ def _trusted_proxy_count() -> int:
         return max(0, int(raw.strip()))
     except (ValueError, AttributeError):
         return 0
+
+
+def _trusted_proxy_networks() -> list[ipaddress.IPv4Network | ipaddress.IPv6Network]:
+    """
+    引擎侧可信代理清单（环境变量 ``TRUSTED_PROXY_CIDRS``，逗号分隔 CIDR，
+    缺省 :data:`_DEFAULT_TRUSTED_PROXY_CIDRS`——回环+链路本地+私网，覆盖本仓
+    docker/内网部署拓扑中网关对端所在网段）。
+
+    无法解析的段跳过；显式置空串或全部无法解析 → 空表=任何对端都不可信
+    （fail-closed）。语义同 nginx ``real_ip``/uvicorn ``--forwarded-allow-ips``/
+    gin ``SetTrustedProxies`` 的引擎侧对位物。
+    """
+    raw = os.getenv("TRUSTED_PROXY_CIDRS", ",".join(_DEFAULT_TRUSTED_PROXY_CIDRS))
+    networks: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
+    for entry in raw.split(","):
+        candidate = entry.strip()
+        if not candidate:
+            continue
+        try:
+            networks.append(ipaddress.ip_network(candidate, strict=False))
+        except ValueError:
+            continue
+    return networks
+
+
+def _peer_is_trusted_proxy(peer: str | None) -> bool:
+    """TCP 对端是否属于可信代理清单；IPv4-mapped 对端归一后比对。"""
+    if not peer:
+        return False
+    try:
+        addr = ipaddress.ip_address(peer)
+    except ValueError:
+        return False
+    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+        addr = addr.ipv4_mapped
+    return any(addr in network for network in _trusted_proxy_networks())
 
 
 def _forwarded_for_parts(request: Request) -> list[str] | None:
@@ -58,17 +109,37 @@ def get_client_ip(request: Request) -> str | None:
 
 def forwarded_chain_trusted(request: Request) -> bool:
     """
-    X-Forwarded-Host/Proto 等转发头是否可信（V3-FIX-428 引擎侧判据）。
+    X-Forwarded-Host/Proto 等转发头是否可信（V3-FIX-428 引擎侧判据；判据
+    语义按 V3-FIX-480 修正）。
 
-    与 EI-09 同源：XFF 右起第 ``TRUSTED_PROXY_COUNT`` 段 == TCP 对端地址——
-    可信网关追加的段在最右、与引擎视角对端一致，请求确证经过可信代理链。
-    直连引擎（无 XFF 或链条短于 N 或最右段与对端不一致）时一律不可信：这些
-    头对直连方而言恒为客户端可选值。采信转发头的消费方（如
-    ``vocabulary._external_base_url`` 拼客户端可达绝对 URL）必须先过本判断，
-    不可信时降级 ``request.base_url`` 等自证值。
+    判据（与 nginx ``real_ip``/uvicorn ``--forwarded-allow-ips``/gin
+    ``SetTrustedProxies`` 同型的引擎侧对位物）：
+
+    1. **TCP 对端 ∈ 引擎侧可信代理清单**（``TRUSTED_PROXY_CIDRS``，缺省
+       回环+链路本地+私网，见 :func:`_trusted_proxy_networks`）——对端不可信
+       时 XFF/XFH/XFP 全是客户端可选值，一律不可信；
+    2. ``TRUSTED_PROXY_COUNT`` > 0 且 XFF 链长 ≥ N——确证链上有 N 层会追加
+       的代理。
+
+    历史判据（XFF 右起第 N 段 == TCP 对端）与本仓网关契约**结构互斥**：
+    Go 网关（``setup_proxy_forwarded_test.go`` 钉测）在 XFF 尾部追加的是
+    **本跳 client IP** 而非网关自身地址，真实流量末段==对端恒 False → 可信
+    分支死路（428 的 XFH 分支在缺省 env 恒降级内网 ``sparkle_api:8000``）；
+    而直连引擎的攻击者把自身对端地址写进 XFF 最右段反而能过闸（fail-open）。
+    修正后：
+
+    - 经网关真实流量（对端=网关 ∈ 缺省私网集）可信分支可达——XFH 为客户端
+      原始 Host（Go 钉测契约），``vocabulary._external_base_url`` 拼出客户端
+      可达绝对 URL；
+    - 引擎直连面（对端 ∉ 可信清单）伪造任何链（含最右段==自身对端）均不可信
+      （fail-closed）；
+    - ``TRUSTED_PROXY_COUNT=0`` 语义不变（完全不信任转发头）。
+
+    采信转发头的消费方（如 ``vocabulary._external_base_url`` 拼客户端可达绝
+    对 URL）必须先过本判断，不可信时降级 ``request.base_url`` 等自证值。
     """
     peer = request.client.host if request.client else None
-    if not peer:
+    if not _peer_is_trusted_proxy(peer):
         return False
     n = _trusted_proxy_count()
     if n <= 0:
@@ -76,7 +147,7 @@ def forwarded_chain_trusted(request: Request) -> bool:
     parts = _forwarded_for_parts(request)
     if parts is None or len(parts) < n:
         return False
-    return parts[-n] == peer
+    return True
 
 
 def get_real_ip(request: Request) -> str:
