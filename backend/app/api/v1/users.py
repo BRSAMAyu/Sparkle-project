@@ -203,6 +203,10 @@ async def update_me(
         current_user.email_verified = False
 
     if obj_in.avatar_url is not None:
+        # V3-FIX-347 如实化裁决（wt655）：头像免审直通——原「头像需审核」
+        # 姿态（/audit/avatars 审核台）结构性零进料（无任何写入方置
+        # PENDING，实践恒 404），审核台已撤。比赛期无内容审核工作流；
+        # 未来接入真实审核须三件齐上（进料置 PENDING+工作流+admin UI）。
         current_user.avatar_url = obj_in.avatar_url
         current_user.pending_avatar_url = None
         current_user.avatar_status = ModelAvatarStatus.APPROVED

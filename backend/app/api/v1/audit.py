@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,8 +13,6 @@ from app.middleware.admin_audit import archive_due_admin_audit_logs, audit_admin
 from app.models.audit_log import AdminAuditLog
 from app.models.user import User
 from app.schemas.exam_sprint import PackQualityReport
-from app.schemas.user import UserProfile
-from app.services.audit_service import AuditService
 from app.services.exam_sprint_review_service import ExamSprintReviewService
 from app.services.kill_switch_readiness_service import KillSwitchReadinessService
 
@@ -68,44 +66,13 @@ def _serialize_admin_audit_log(row: AdminAuditLog) -> AdminAuditActionResponse:
         details=row.details,
     )
 
-# route-tier: authed
-@router.get("/avatars", response_model=list[UserProfile])
-@audit_admin_action(category="avatar_moderation", risk="medium", action="list_pending_avatars")
-async def get_pending_avatars(
-    db: AsyncSession = Depends(get_db),
-    _admin: User = Depends(get_current_active_superuser),
-):
-    """获取待审核头像列表"""
-    return await AuditService.get_pending_avatars(db)
-
-# route-tier: authed
-@router.post("/avatars/{user_id}/approve", response_model=UserProfile)
-@audit_admin_action(category="avatar_moderation", risk="medium", action="approve_avatar")
-async def approve_avatar(
-    user_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    _admin: User = Depends(get_current_active_superuser),
-):
-    """通过头像审核"""
-    user = await AuditService.approve_avatar(db, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="没有找到待审核的用户")
-    return user
-
-# route-tier: authed
-@router.post("/avatars/{user_id}/reject", response_model=UserProfile)
-@audit_admin_action(category="avatar_moderation", risk="medium", action="reject_avatar")
-async def reject_avatar(
-    user_id: UUID,
-    reason: str = "头像不符合社区规范",
-    db: AsyncSession = Depends(get_db),
-    _admin: User = Depends(get_current_active_superuser),
-):
-    """驳回头像审核"""
-    user = await AuditService.reject_avatar(db, user_id, reason)
-    if not user:
-        raise HTTPException(status_code=404, detail="没有找到待审核的用户")
-    return user
+# V3-FIX-347 如实化裁决（wt655）：原 /avatars(+/{user_id}/approve|reject)
+# 头像审核三端点已撤——审核队列结构性零进料（全仓无 AvatarStatus.PENDING
+# 写入方，用户头像更新直设 APPROVED），get_pending_avatars 恒 []、
+# approve/reject 实践恒 404，属空转治理假面。头像现行为免审直通
+# （users.py update_profile 如实注释）。重建须三件齐上：上传进料置
+# PENDING + 审核工作流 + admin UI，并更新
+# tests/api/test_v3_fix347_avatar_moderation_face_removed.py 守卫。
 
 # route-tier: authed
 @router.get("/kill-switch-readiness")

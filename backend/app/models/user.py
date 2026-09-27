@@ -66,7 +66,9 @@ class User(BaseModel):
     nickname: Mapped[str] = mapped_column(String(100), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
-    # 头像审核系统
+    # 头像审核列（V3-FIX-347 如实化：审核台已撤，头像免审直通——
+    # avatar_status 恒 APPROVED、pending_avatar_url 恒 None；列保留为
+    # RC 期 schema 稳定，不迁移。重建审核须进料+工作流+admin UI 三件齐上）
     avatar_status: Mapped[AvatarStatus] = mapped_column(Enum(AvatarStatus), default=AvatarStatus.APPROVED, nullable=False)
     pending_avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
