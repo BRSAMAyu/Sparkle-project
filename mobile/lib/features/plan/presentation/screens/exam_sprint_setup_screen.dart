@@ -204,7 +204,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                   child: Wrap(
                     spacing: DS.spacing8,
                     runSpacing: DS.spacing8,
-                    children: targetOptions(context.l10n)
+                    children: _targetOptions(context.l10n)
                         .map(
                           (option) => ChoiceChip(
                             label: Text(option.label),
@@ -775,7 +775,7 @@ class _TargetModeOption {
   final String label;
 }
 
-List<_TargetModeOption> targetOptions(AppLocalizations l10n) =>
+List<_TargetModeOption> _targetOptions(AppLocalizations l10n) =>
     <_TargetModeOption>[
       _TargetModeOption(value: 'pass', label: l10n.planSprintTargetPass),
       _TargetModeOption(value: 'hold', label: l10n.planSprintTargetHold),

@@ -7,8 +7,8 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Aggregated reflection data from the summary API.
-class ReflectionSummaryData {
-  const ReflectionSummaryData({
+class _ReflectionSummaryData {
+  const _ReflectionSummaryData({
     required this.totalReflections,
     required this.days,
     required this.avgMood,
@@ -16,7 +16,7 @@ class ReflectionSummaryData {
     required this.timeline,
   });
 
-  factory ReflectionSummaryData.fromJson(Map<String, dynamic> json) => ReflectionSummaryData(
+  factory _ReflectionSummaryData.fromJson(Map<String, dynamic> json) => _ReflectionSummaryData(
       totalReflections: json['total_reflections'] as int? ?? 0,
       days: json['days'] as int? ?? 7,
       avgMood: (json['avg_mood'] as num?)?.toDouble(),
@@ -69,12 +69,12 @@ class _TimelineEntry {
 
 /// Provider for reflection summary data.
 final reflectionSummaryProvider =
-    FutureProvider.family<ReflectionSummaryData, int>((ref, days) async {
+    FutureProvider.family<_ReflectionSummaryData, int>((ref, days) async {
   final api = ref.read(apiClientProvider);
   final response = await api.dio.get<Map<String, dynamic>>(
     '${ApiEndpoints.reflectionSummary}?days=$days',
   );
-  return ReflectionSummaryData.fromJson(response.data as Map<String, dynamic>);
+  return _ReflectionSummaryData.fromJson(response.data as Map<String, dynamic>);
 });
 
 /// A screen that shows a timeline of recent task reflections with stats.
@@ -91,7 +91,7 @@ class ReflectionSummaryScreen extends ConsumerWidget {
         title: Text(l10n.reflectionDaily),
       ),
       body: summary.when(
-        data: (ReflectionSummaryData data) => _buildContent(context, data),
+        data: (_ReflectionSummaryData data) => _buildContent(context, data),
         loading: () => const Center(child: LoadingIndicator()),
         error: (e, _) => Center(
           child: Text(l10n.reflectionLoadFailed),
@@ -101,7 +101,7 @@ class ReflectionSummaryScreen extends ConsumerWidget {
   }
 
   Widget _buildContent(
-      BuildContext context, ReflectionSummaryData data,) {
+      BuildContext context, _ReflectionSummaryData data,) {
     final l10n = context.l10n;
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -129,7 +129,7 @@ class ReflectionSummaryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsCard(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) => Card(
+  Widget _buildStatsCard(BuildContext context, _ReflectionSummaryData data, AppLocalizations l10n) => Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -154,7 +154,7 @@ class ReflectionSummaryScreen extends ConsumerWidget {
       ),
     );
 
-  Widget _buildThemesCard(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) => Card(
+  Widget _buildThemesCard(BuildContext context, _ReflectionSummaryData data, AppLocalizations l10n) => Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -183,7 +183,7 @@ class ReflectionSummaryScreen extends ConsumerWidget {
       ),
     );
 
-  Widget _buildTimelineHeader(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) => Padding(
+  Widget _buildTimelineHeader(BuildContext context, _ReflectionSummaryData data, AppLocalizations l10n) => Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         l10n.reflectionTimeline,
