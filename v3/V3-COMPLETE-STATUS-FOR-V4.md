@@ -2,7 +2,7 @@
 
 > **文档契约**：V4 设计者只看这一份文档做判断。因此本文档承载：V3 真实意图、全部实施细节、完成度证据、已知问题与诚实边界。持续更新（协调会话每轮维护），版本号+日期在文首。**本文档只写有三源证据（git 主干 SHA / 独立审查 receipt / 运行级实测）支撑的事实；推测与待验证项显式标注。**
 >
-> **当前版本**：v0.1（2026-09-28 03:00 首版——骨架+当日核验快照；各线深挖章节随轮次填充，标注「⏳ 深挖中」者为尚未逐行验证的面）
+> **当前版本**：v0.2（2026-09-28 03:10——M/X 线深挖并入；B/C 章在航）
 > **维护者**：Sparkle v3 舰队协调会话（主会话）｜**权威数据源**：v3/.sparkle_v3_fleet_state.json notes 流、v3/07_tasks/tasks.json（99→100/107 已核正）、v3/06_agent_fleet/DYNAMIC_ISSUES.md（FIX 台账 339 行）
 
 ---
@@ -70,8 +70,10 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 - **A 线 Aurora（8/8）**：AURORADecision 契约/干预目录 V1/摩擦诊断/联合决策/有界策略补丁/Why-this 收据/回归策略/四臂消融（0.65 vs 0.30）。⏳ 细节
 - **C 线 Context（8/8）**：四分上下文/硬过滤→语义检索/RAG 正确性/冲突解决注入/Budget-JIT-Compaction/缓存版本正确性/可观测+效用评估。⏳ 细节
 - **J 线 Journey（7/8）**：First 3 Minutes 有机会图留档；J-03 Cockpit/J-04 首个行动/J-05 卡住恢复/J-07 回归/J-08 完成反思已交付；J-02 在航。⏳ 细节
-- **M 线 Memory（10/10）**、**X 线 Action（10/10）**、**U 线 UI（10/10）**、**P 线 Proactive（6/6）**、**S 线 Community（5/5）**、**G 线 Galaxy（5/5）**：⏳ 逐线深挖
+- **M 线 Memory（10/10，已深挖，详章 v3-output/WT770-DOC-MX/M-line.md）**：Memory Epoch/Provenance 是**真实数据流**（代码亲验）——M-01 契约模块派生五型/七态/scope（唯一新列 epistemic_class/superseded_by_id/epoch）；M-07 统一失效管线四动作（状态+审计+epoch bump+memory.invalidated 事件）**同事务原子**，读侧 epoch 门 fail-closed，「删偏好永久复活」主通道关闭（红→绿实证）；M-08 `/memory/provenance/*` 七路由+why-this 按 receipt 查；M-10 chat 回执深链+五面客户端级联失效。**M-09 是缺陷发现器**：真模型探针（qwen3.8-flash 真实 API 25 次硬预算）4/5 稳定通过、P01-D1 0/5 实锤 FIX-36（渲染器不渲染偏好值）；82-case 门禁曾 RED 20 失败实锤 FIX-35——双 P1 均修，门禁现 82/82。关键取舍：语义层（存储门/自检）默认关，生产决策面=规则层；生产降档率 66.67% 由 M-05 主导。M 线核心 273 用例实跑绿。
+- **X 线 Action（10/10，已深挖，详章 v3-output/WT770-DOC-MX/X-line.md）**：X-01 契约（43942d23）→X-10 E2E（3b5a99bc，含 X-05B/P2 增量）。**Human/Agent/Hybrid 真模型证据面分层**：85 场景盲评与 X-10 77 场景（77/77、allocation 100%、high-risk auto=0、false success=0）均为规则层+服务层（`real_llm_calls=0` 显式断言）；**真模型证据**在 E-04 五面探针（收敛轮 15/15 含注入对抗）、J-04（LLM 建议 agent 被分配策略拦回=学习守卫生效）、J-06（真实 ToolExecutor 检索零 mock）、JOURNEY day1-6 真驱动；三端实机转 HUMAN_INBOX。**V4 教材级考古**：X-06 合入当日 chat 管道 100% 断（models `__init__` 漏注册，热修 f2e9f22e）——大改后冒烟必须当日；幂等洗白三轮修复链（FIX-40→417→447）；FIX-330 裁定 AgentRun/AgentToolCall/outcome_ledger 为生产三账本。X 线核心 403 用例实跑绿。
 - **E 线 AI（7/8）**：E-03 首反馈按「服务可知后 <500ms」字面口径双证达成（FIX-439 裁决 b），端到端前段延迟移交 E-08 SLO 族；wt755 L0 修复（intake ack 前移）待门后集成，L1/L2/L3 留登记。真模型 bench：L2 p95=5.75s/L3 p95=7.32s（修前）。
+- **U 线 UI（10/10）**、**P 线 Proactive（6/6）**、**S 线 Community（5/5，S-01 本档 §3）**、**G 线 Galaxy（5/5）**：⏳ 逐线深挖（下一批）
 - **O/Q 线运维与终验**：见 §3 表。
 
 ## 5. 质量与可靠性态势（FIX 台账模式学）
@@ -131,4 +133,4 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 ## 更新日志
 
 - v0.1（2026-09-28 03:00）：首版。骨架+当日三源核验快照+FIX 族谱初版+诚实边界。各线深挖章节标注 ⏳ 待填充。
-- 下一版计划：v0.2 逐线深挖（B/C/M/X 优先——backbone 线）+ D 线销账复核 + CI 21 次裁决补录。
+- v0.2（2026-09-28 03:10）：**M/X 线深挖并入**（wt770，代码亲验级）：Memory Epoch/Provenance 真实数据流、M-09 缺陷发现器叙事、X 线真模型证据分层、V4 教材级考古三条；新登记 FIX-502（M/X 卡级 receipt 断链——评审结论在 commit message 经 wt759 核验，结论不受影响）/FIX-503（FIX-36 真模型复验承诺未兑现，库内 stability report 仍修前快照）。详章 v3-output/WT770-DOC-MX/。B/C 章在航。
