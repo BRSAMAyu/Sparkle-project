@@ -14,6 +14,21 @@ from app.core.llm_secure_io import (
 from app.tools.base import ToolResult
 from app.tools.registry import tool_registry
 
+#: V3-FIX-417 · 幂等闸门拒绝不进自动重试/自修正（X-09 同族最小面）。
+#: - IdempotencyConflict：同键前次调用仍在途，同键重放恒拒；换新键重试 =
+#:   第二次真执行，恰是冲突闸要防的 duplicate side effect；
+#: - IdempotencyArgsMismatch：同键已绑定不同参数，自动换键绕开参数一致性锚；
+#: - IdempotencyKeyRequired：side-effect 缺键的 fail-closed，自动换键把它洗成放行。
+#: executor（X-06/X-09）语义：重试换新幂等键是**显式决策**（"that's an explicit
+#: decision, not automatic behavior"），不由自动环代行。实录见
+#: v3-output/WT713-HUNT1/repro_idem_launder.py 与
+#: tests/unit/test_v3_fix417_idem_gate_no_launder.py。
+IDEMPOTENCY_GATE_ERROR_TYPES: tuple[str, ...] = (
+    "IdempotencyConflict",
+    "IdempotencyArgsMismatch",
+    "IdempotencyKeyRequired",
+)
+
 
 class AgentErrorHandler:
     """
@@ -63,6 +78,18 @@ class AgentErrorHandler:
         if user_id is None or not str(user_id).strip():
             tool_result.suggestion = (
                 f"{tool_result.suggestion or ''}\n自动修正已跳过：本次请求缺少用户身份，无法安全重试工具调用。"
+            ).strip()
+            return tool_result
+
+        # V3-FIX-417 · 幂等闸门拒绝不进自修正环：修正轮以 LLM 新生成 tool_call_id
+        # 重调 executor（key = idempotency_key or tool_call_id）——等于自动换新幂
+        # 等键，把 Conflict/ArgsMismatch/KeyRequired 三类闸门拒绝「洗白」成第二次
+        # 真执行（wt713 运行级实录 execute_count=2）。重试换键是显式决策，不由自动
+        # 环代行：诚实跳过并原样上报（chat.py 四喂入面全经本漏斗，含 batch 面）。
+        if tool_result.error_type in IDEMPOTENCY_GATE_ERROR_TYPES:
+            tool_result.suggestion = (
+                f"{tool_result.suggestion or ''}\n自动修正已跳过：幂等闸门拒绝（{tool_result.error_type}）"
+                "不能用换键重试自动绕过；请等待在途调用结束后显式重试。"
             ).strip()
             return tool_result
 
@@ -241,8 +268,12 @@ class AgentErrorHandler:
         # 1. 权限错误
         # 2. 资源不存在且无法通过修正参数解决
         # 3. 参数类型错误但无法推断正确类型
-
+        # 4. V3-FIX-417：幂等闸门拒绝（IdempotencyConflict/IdempotencyArgsMismatch/
+        #    IdempotencyKeyRequired）——同键重放恒拒，换键重试=显式决策，不由自动环代行
         if not tool_result.error_message:
+            return False
+
+        if tool_result.error_type in IDEMPOTENCY_GATE_ERROR_TYPES:
             return False
 
         error_msg = tool_result.error_message.lower()
