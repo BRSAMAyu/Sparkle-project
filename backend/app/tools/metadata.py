@@ -302,3 +302,37 @@ def canonical_args_hash(arguments: dict[str, Any] | None) -> str:
     except (TypeError, ValueError):
         canonical = repr(sorted((arguments or {}).items(), key=lambda kv: str(kv[0])))
     return sha256(canonical.encode("utf-8")).hexdigest()
+
+
+#: V3-FIX-336 · 意图稳定键长度预算：idempotency_key 列 String(255)，
+#: "intent:"(7) + 锚(≤80) + ":" + 工具名(≤100) + ":" + args_hash(64) ≤ 253。
+_INTENT_KEY_ANCHOR_MAX = 80
+_INTENT_KEY_TOOL_NAME_MAX = 100
+
+
+def derive_tool_intent_idempotency_key(
+    *,
+    tool_name: str,
+    arguments: dict[str, Any] | None,
+    anchor: Any | None,
+) -> str | None:
+    """V3-FIX-336 · 从稳定意图身份派生 per-tool-call 幂等键。
+
+    键 = ``intent:{轮次锚点}:{工具名}:{canonical args hash}``——同一逻辑工具
+    调用跨尝试（模型重发 call id / uuid 回落 / 桥接轨进程内重入）键稳定，
+    executor 同键重放恰一次（X-06 语义），写副作用不随尝试翻倍。锚点取
+    run_id 或 request_id（「轮次」锚）：跨请求的显式再执行（mobile 重试刻意
+    换新 request_id）仍得新键——那是用户显式决策，不是尝试噪声（wt641 裁决
+    语义保持）。锚点缺失时返回 None：调用方回落既有键源（tool_call_id），
+    绝不退化成跨 run 全局意图键——那会吞掉合法重复执行。
+
+    参数经 :func:`canonical_args_hash` 规范化（键排序稳定序列化），字典键序
+    不影响键值；仅当锚点/工具名/参数确实不同时键才不同。
+    """
+    anchor_part = str(anchor or "").strip()
+    if not anchor_part:
+        return None
+    return (
+        f"intent:{anchor_part[:_INTENT_KEY_ANCHOR_MAX]}:"
+        f"{str(tool_name)[:_INTENT_KEY_TOOL_NAME_MAX]}:{canonical_args_hash(arguments)}"
+    )

@@ -87,6 +87,7 @@ from app.services.llm_service import (
     get_llm_service_for_specific_model,
     llm_service,
 )
+from app.tools.metadata import derive_tool_intent_idempotency_key
 
 # ==========================================
 # Nodes
@@ -2768,10 +2769,21 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             except (json.JSONDecodeError, TypeError):
                 args = {}
 
+        # V3-FIX-336 · 意图稳定幂等键：锚点取 run_id（服务端 run）或 request_id
+        # （请求轮次）——同一逻辑调用跨尝试（模型重发 call id / uuid 回落 /
+        # 恢复重入）键稳定，executor 同键重放恰一次；跨请求显式再执行仍得新键。
+        # 无锚点时派生为 None，executor 回落 tool_call_id（既有语义）。
+        _intent_anchor = state.context_data.get("run_id") or state.context_data.get("request_id")
+
         exec_result = await _execute_single_tool(
             tool_name=tc.tool_name,
             tool_args=args,
             tool_call_id=tc.tool_call_id or str(uuid.uuid4()),
+            idempotency_key=derive_tool_intent_idempotency_key(
+                tool_name=tc.tool_name,
+                arguments=args if isinstance(args, dict) else None,
+                anchor=_intent_anchor,
+            ),
             stream_callback=stream_callback,
             user_id=user_id,
             db_session=db_session,
@@ -3821,6 +3833,7 @@ async def _execute_single_tool(
     compensation_call: dict[str, Any] | None = None,
     tool_index: int = 0,
     total_tools: int = 1,
+    idempotency_key: str | None = None,
 ) -> ToolResult:
     """Execute a single tool call and stream results.
 
@@ -3832,6 +3845,12 @@ async def _execute_single_tool(
     X-09（FIX-40 P3-6）契约：恒返回真实 ToolResult（失败/异常路径为降级包装），
     供调用方按 error_type==BudgetExceeded 切断工具循环——签名此前仍是
     -> None，与实现不符。
+
+    V3-FIX-336/389：``tool_call_id`` 与 ``idempotency_key`` 必须透传 executor
+    （X-06 幂等闸门键源）——此前 tool_call_id 只用于 UI 流帧，executor 调用
+    未携带任何键，写工具恒 IdempotencyKeyRequired 后被降级包装吞掉；现
+    idempotency_key 由调用方给意图稳定键（无锚点为 None 时 executor 回落
+    tool_call_id），tool_call_id 继续承担追踪身份。
     """
     redis_client = state.context_data.get("redis_client")
 
@@ -3856,6 +3875,8 @@ async def _execute_single_tool(
             user_id=user_id,
             db_session=db_session,
             compensation_call=compensation_call,
+            tool_call_id=tool_call_id,
+            idempotency_key=idempotency_key,
             runtime_context={
                 "session_id": state.context_data.get("session_id"),
                 "plan_id": state.context_data.get("plan_id"),

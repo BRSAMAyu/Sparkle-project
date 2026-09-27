@@ -54,6 +54,7 @@ from app.services.execution_service import ExecutionService
 from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 from app.services.llm_service import llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.tools.metadata import derive_tool_intent_idempotency_key
 
 if TYPE_CHECKING:
     # wt297: 仅类型用（mixin 自身即为组合后的 ChatOrchestrator 之一环）；
@@ -253,7 +254,16 @@ class ExecutionEngineMixin:
             arguments=arguments,
             user_id=user_id,
             db_session=active_db,
+            # V3-FIX-336 · 意图稳定幂等键：tool_call_id 保留 fresh uuid 作追踪身份，
+            # 幂等键从 request_id（请求轮次锚）+ 工具名 + canonical args 派生——
+            # 同 request 进程内重试/重入键稳定（executor 同键重放恰一次），跨请求
+            # 显式重发（mobile 刻意换新 request_id）仍得新键（wt641 裁决语义）。
             tool_call_id=f"bridge_{bridge_tool_name}_{uuid.uuid4().hex[:12]}",
+            idempotency_key=derive_tool_intent_idempotency_key(
+                tool_name=bridge_tool_name,
+                arguments=arguments,
+                anchor=request_id,
+            ),
             runtime_context={
                 "session_id": session_id,
                 "redis_client": getattr(self, "redis", None),
