@@ -4,12 +4,11 @@
   "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
   "slots": 6,
   "active": {
-    "wt758": "proxy P4 三连包（482/483/484）修复在航",
-    "wt759": "V3 销账核验卡（107 卡三源对齐+修正提案）在航",
-    "wt760": "V3 S-01 社群 realtime/read-model 真相复测在航（READY_FOR_REVIEW 协议）",
-    "wt755-held": "wt755 E-08 SLO 交付@938e845c 分支保留——门后再集成（热路径纪律）",
-    "wt761": "FIX-491/492/493 真bug 三连修在航",
-    "wt762": "FIX-489/490 孤儿屏 wire-or-purge 在航"
+    "wt761": "FIX-491/492/493 真bug 三连修 在航",
+    "wt762": "FIX-489/490 孤儿屏 wire-or-purge 在航",
+    "wt763": "S-01 独立审查（review receipt）在航",
+    "wt764": "V3 J-02 Onboarding（HEAVY 位）在航",
+    "wt765": "V3 O-06 Kill Switch 统一面（MEDIUM）在航"
   },
   "done": [
     "A-01",
@@ -571,7 +570,17 @@
     "wt564",
     "wt567",
     "wt566",
-    "wt568"
+    "wt568",
+    "U-05",
+    "U-06",
+    "U-07",
+    "U-10",
+    "M-10",
+    "A-07",
+    "J-03",
+    "G-03",
+    "Q-06",
+    "G-04"
   ],
   "blocked": [],
   "notes": [
@@ -825,6 +834,7 @@
     "[2026-09-28 01:5x 主会话轮#249] wt753 集成（c06c37ac 干净 pick：mobile 猎缺——FIX-489 P3 WS6 透明画像屏全链不可达（有 handler 无入口反转版+遥测指向幻影路由）/FIX-490 P4 learning-mode 死路由；大面积清白：GOV-015 余波零残留/l10n 双向零缺失/路由 139×452 对账零缺口/analyze 零告警；flutter test 三跑 -165/-1/0 定性并发 flaky 非回归）。补位=**V3 首卡 wt759 销账核验**（107 卡逐卡 git 证据扫描→修正提案→真空白队列重排；不动规格文件，修正主会话执行）。三问：①满编 6/6（wt754/755/757/758/759+主会话）②无空位③下一张 V3 卡=wt759 报告落地后按修正队列派 J-02/U-02。",
     "[2026-09-28 02:1x 主会话轮#250] wt755 交付但**门后集成**（938e845c 分支 agent/node-b/wt755/slo 保留，worktree 已删腾盘 3.0Gi）：E-08 SLO L0 首帧前移——归因修正（wt372 T 栏前提不符：门调用仅 9ms 非阻塞者，真凶=StreamChat 前奏+process_stream 六串行守卫 await），intake ack 块前移至校验/幂等前（run_started 降级非致命），红 0.605s→绿，~1400 用例绿+mypy NO-DIFF；新登 FIX-491（_compose_fast_interaction_copy 无预算辅助 LLM 调用）；L1/L2/L3 留登记。补位 wt760=**V3 S-01 社群真相复测**（HEAVY 首张 V3 产品卡：两 guest 测试账号真实走 WS 五面+read-model 对账+seed/mock 清单；铁律=不触 ns001/不重启栈/轻负载；READY_FOR_REVIEW 协议）。三问：①满编 6/6（wt754/757/758/759/760+主会话）②无空位③下一张 V3 卡=wt759 销账报告落地→修 tasks.json→派 J-02/U-02。",
     "[2026-09-28 02:4x 主会话轮#251] 双集成：wt754（8e8f98e3 pick：mypy 批九 113→94 净 19 零新增——注解/签名 12+改名 2+安全收窄 5，cast/ignore 零；**停手登记两真 bug：FIX-491 P2 auto_degrade event_bus.publish 单参误用 TypeError 被吞=SLO 审计事件从未发出+FIX-492 P3 plan_review 缺参 None 崩**；合并态 mypy 94 亲证+批面 45 绿）+ wt757（f6c71151：FIX-487 ProcessedEventsCleaner——启动首扫+24h ticker，保留窗 7d 论证=PEL 重投窗上界为宕机时长；461/469/481 用例点名零回退；合并态 outbox+cmd/server 绿；新登 493 docstring 失实）。**撞号预警：wt755 也预占了 491（LLM 调用无预算）——门后集成时其 491 重编号 497**。队列卡全 HEAVY：HEAVY≤1 规矩下 wt760(S-01) 占位期间不能派第二张 V3 产品卡——补位改真 bug 清障：wt761=491/492/493 三连+wt762=489/490 孤儿屏（490 清除/489 证据裁决 wire-or-purge）。三问：①满编 6/6（wt758/759/760/761/762+主会话）②无空位③下一张 V3 卡=wt760 返航后接力 HEAVY 位（J-02 Onboarding）；wt759 报告落地修 tasks.json。",
-    "[2026-09-28 02:5x 轮#251 补正] 我的「35 真空白全部依赖就绪」结论有误——前沿分析误读 tasks.json 的空字段 deps（真键=depends_on），next_tasks.py 本身逻辑无此 bug。真实门控：J/M/A 线多张卡依赖 U-03/U-04/M-07/M-08/M-09 等「fleet 声称 done 但 tasks.json TODO」卡——**销账核验（wt759）不只是记账，它直接解锁下游派发**，V3 冲线的关键路径。Q 终验族压轴判断不变。"
+    "[2026-09-28 02:5x 轮#251 补正] 我的「35 真空白全部依赖就绪」结论有误——前沿分析误读 tasks.json 的空字段 deps（真键=depends_on），next_tasks.py 本身逻辑无此 bug。真实门控：J/M/A 线多张卡依赖 U-03/U-04/M-07/M-08/M-09 等「fleet 声称 done 但 tasks.json TODO」卡——**销账核验（wt759）不只是记账，它直接解锁下游派发**，V3 冲线的关键路径。Q 终验族压轴判断不变。",
+    "[2026-09-28 03:4x 主会话轮#252 大轮] ①层19 定谳修复：20 次 CI 双 shard 红=wt743 PEL 测试 cancel-vs-ack 赛跑（-race 下 cancel 抢在 XAck 前；461 设计语义本就「取消态留 PEL 待重放」→测试缺陷非产品缺陷）——f51a70f8 -race 本地复现→改轮询 PEL 归零再关停→-race -count=3 绿。②wt759 销账落地：**99/107 已交付（92.5%）**，tasks.json 批量核正 84 卡 TODO→done（c494974a 前），真空白仅 8 张（S-01 在航/J-02/E-08 门后/O-01 凭据/O-05/O-06/Q-07/Q-08）；零假账（90 张声称全有主干 SHA）；漂移机械成因=done dict 记 worker SHA 非主干 SHA（纠指规则正对症）。③wt760 集成（64072ce7：S-01 READY_FOR_REVIEW——M-3 502 消解/五面绿/两账号全环/ns001 零触；新登 495 community post CQRS 零生产者闲置接线）。④推第二十一次 36337280603（f51a70f8..c494974a 含全部积压+账本核正），守望在岗，push 锁定。⑤三槽补位：wt763=S-01 独立审查（receipt 是销账前置）+wt764=J-02（HEAVY 位空出）+wt765=O-06。三问：①满编 6/6（wt761/762/763/764/765+主会话）②无空位③下一张=第二十一次裁决+S-01 receipt→销账。"
   ]
 }
