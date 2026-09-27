@@ -4,7 +4,7 @@ Calendar API Endpoints
 """
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -16,9 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.event_bus import CalendarEventCreated, CalendarEventDeleted, CalendarEventUpdated, event_bus
 from app.core.exceptions import NotFoundError
+from app.core.time_utils import local_date, local_midnight_wall, utc_naive_to_wall_clock, valid_timezone_name
 from app.db.session import get_db
 from app.models.calendar_event import CalendarEvent
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.schemas.calendar_event import (
     BatchOperationResult,
     CalendarEventBatchRequest,
@@ -35,6 +36,17 @@ from app.schemas.smart_schedule import (
 from app.services.smart_schedule_service import SmartScheduleService
 
 router = APIRouter()
+
+
+async def _user_timezone(db: AsyncSession, user_id: UUID) -> str:
+    """用户 IANA 时区名——push_preference.timezone 标量直查，缺省 Asia/Shanghai。
+
+    state_aggregator._user_timezone / focus_service._local_today 先例
+    （V3-FIX-37 族）：标量直查规避身份映射命中未加载关系的 async lazy-load；
+    缺省/非法回落主市场 Asia/Shanghai（time_utils 口径）。
+    """
+    tz_name = await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+    return valid_timezone_name(tz_name)
 
 
 @router.post("/suggest-time", response_model=SmartScheduleResponse)
@@ -71,12 +83,17 @@ async def list_events(
     if not include_deleted:
         query = query.where(CalendarEvent.deleted_at.is_(None))
 
-    # 日期范围过滤
+    # 日期范围过滤（V3-FIX-318）：start_date/end_date 语义 = 用户本地日；
+    # CalendarEvent.start/end_time 是客户端本地墙上钟列（V3-FIX-37 定界），
+    # 窗口须用同一墙钟的本地日界 naive 直比——修前构造成 aware UTC 日界
+    # （生产 asyncpg/timestamptz 面上每日 16:00-24:00Z 窗口事件错日 +
+    #  aware-vs-naive 未定义行为面）。墙上钟窗对任意时区都是「该日
+    # 00:00-24:00 墙上钟」，tz 隐含在入参语义里，无 UTC 换算面。
     if start_date:
-        start_dt = datetime.combine(start_date, datetime.min.time()).replace(tzinfo=UTC)
+        start_dt = datetime.combine(start_date, datetime.min.time())
         query = query.where(CalendarEvent.end_time >= start_dt)
     if end_date:
-        end_dt = datetime.combine(end_date, datetime.max.time()).replace(tzinfo=UTC)
+        end_dt = datetime.combine(end_date, datetime.max.time())
         query = query.where(CalendarEvent.start_time <= end_dt)
 
     # 排序
@@ -158,8 +175,17 @@ async def get_event_summary(
     获取日历事件统计摘要
     """
     now = datetime.now(UTC)
-    today_start = datetime.combine(now.date(), datetime.min.time()).replace(tzinfo=UTC)
-    today_end = datetime.combine(now.date(), datetime.max.time()).replace(tzinfo=UTC)
+    tz_name = await _user_timezone(db, current_user.id)
+    # V3-FIX-318：「今日」按用户本地日界的墙上零点切（CalendarEvent.start_time
+    # 是本地墙上钟列，V3-FIX-37 定界；eb14c205 calendar「今日」同向）——修前
+    # 按 UTC 日切，上海 00:00-08:00（=前日 16:00-24:00Z）的事件计入「昨日」、
+    # 本地今日清晨缺席「今日」计数。「未来 7 天」端点经 utc_naive_to_wall_clock
+    # 换成用户墙上钟入 SQL 同钟比（027bb028 同款，双射；修前 UTC 瞬间直比
+    # 下界松 8h、上界紧 8h）。
+    now_naive = now.replace(tzinfo=None)
+    local_today = local_date(now_naive, tz_name)
+    today_start = local_midnight_wall(local_today)
+    today_end = datetime.combine(local_today, datetime.max.time())
 
     # 总事件数
     total_query = select(func.count()).select_from(CalendarEvent).where(
@@ -180,12 +206,14 @@ async def get_event_summary(
     today = today_result.scalar_one()
 
     # 即将到来的事件数 (未来7天)
-    upcoming_end = now.replace(hour=23, minute=59, second=59) + __import__("datetime").timedelta(days=7)
+    upcoming_end = now.replace(hour=23, minute=59, second=59) + timedelta(days=7)
+    upcoming_start_wall = utc_naive_to_wall_clock(now, tz_name)
+    upcoming_end_wall = utc_naive_to_wall_clock(upcoming_end, tz_name)
     upcoming_query = select(func.count()).select_from(CalendarEvent).where(
         CalendarEvent.user_id == current_user.id,
         CalendarEvent.deleted_at.is_(None),
-        CalendarEvent.start_time >= now,
-        CalendarEvent.start_time <= upcoming_end,
+        CalendarEvent.start_time >= upcoming_start_wall,
+        CalendarEvent.start_time <= upcoming_end_wall,
     )
     upcoming_result = await db.execute(upcoming_query)
     upcoming = upcoming_result.scalar_one()
