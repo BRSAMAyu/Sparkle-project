@@ -1,7 +1,7 @@
 # 已知代码债务台账（Known Code Debt Ledger）
 
 > **文档定位**：2026-09-08 全仓只读审计产出的**当前有效**债务清单，供后续清理战役排期。与 [technical_debt_register_2026-03-22](./technical_debt_register_2026-03-22.md)（三月登记册）互补：该册为历史基线，本台账为现行状态。
-> **维护规则**：处理掉一项就划掉/移除并注明日期；新发现的显著债务登记进来。排序 = 建议处理优先级。
+> **维护规则**：处理掉一项就划掉/移除并注明日期；新发现的显著债务登记进来。排序 = 建议处理优先级。**销账须双向同步**（2026-09-27 立，V3-FIX-181）：本台账销账时须与 v3/06_agent_fleet/DYNAMIC_ISSUES.md 对应 V3-FIX 行互指，防读陈旧台账误判重演（wt479 核验中组员 2 项误判即源于此）。
 
 ---
 
@@ -27,8 +27,8 @@
 
 | # | 位置 | 现状 | 建议处置 |
 |---|---|---|---|
-| 1 | `mobile/lib/core/statistics/presentation/providers/agent_statistics_provider.dart:98-165`、`capsule_statistics_provider.dart`、`focus_statistics_provider.dart:119-141` | 三个统计仓库的 `fetchFromApi` 返回硬编码 mock（固定 successRate 0.95、engagement 4.2 等）；后端已有 `backend/app/api/v1/` 统计路由可接 | 接真实 API 或下线该模块。**已销账（D-04/5ed3d20d 双审，wt479 核验 2026-09-26）**：三统计仓库已接真实端点，本行描述为销账前状态——保留原文防审计断链 |
-| 2 | `mobile/lib/core/statistics/data/repositories/hybrid_statistics_repository.dart` | **mock 数据被写进 Isar 暖缓存并作为"过期兜底"长期供给 UI**（假数据比会话存活更久）；`watchStatistics` 自述占位实现（L271） | 与 #1 一并修：mock 不许进缓存。**已销账（同上）**：mock Isar 暖缓存已一次性 purge；残余=watchStatistics 占位+诚实空态（低风险） |
+| 1 | `mobile/lib/core/statistics/presentation/providers/agent_statistics_provider.dart:98-165`、`capsule_statistics_provider.dart`、`focus_statistics_provider.dart:119-141` | 三个统计仓库的 `fetchFromApi` 返回硬编码 mock（固定 successRate 0.95、engagement 4.2 等）；后端已有 `backend/app/api/v1/` 统计路由可接 | 接真实 API 或下线该模块。**已销账（D-04/5ed3d20d 双审，wt479 核验 2026-09-26）**：三统计仓库已接真实端点，本行描述为销账前状态——保留原文防审计断链；交叉指针 ↔ v3/06_agent_fleet/DYNAMIC_ISSUES.md V3-FIX-03（销账双向同步，V3-FIX-181 补立） |
+| 2 | `mobile/lib/core/statistics/data/repositories/hybrid_statistics_repository.dart` | **mock 数据被写进 Isar 暖缓存并作为"过期兜底"长期供给 UI**（假数据比会话存活更久）；`watchStatistics` 自述占位实现（L271） | 与 #1 一并修：mock 不许进缓存。**已销账（同上）**：mock Isar 暖缓存已一次性 purge；残余=watchStatistics 占位+诚实空态（低风险）；交叉指针同 #1 ↔ V3-FIX-03（V3-FIX-181 补立） |
 | 3 | `mobile/lib/features/leaderboard/`（约 1,143 行：screen/provider/repo） | **已裁决销账（D-COMM-1，2026-09）**：产品决策 = 全站综合榜**保持 D17 隐藏不路由**（v3-output/D-COMMUNITY/DESIGN.md §2.2/§3.2——大池/异质水平/静态综合分命中「打击中尾生」全部反面模式）；唯一路由产品面改为**自我 7 日锚视图**（后端 `GET /api/v1/leaderboards/self-anchor` 已落地：sprint 账本完成度 + study_records 掌握度增量按日序列，复用既有面零新聚合；网关经 leaderboards wildcard 代理可达）。守卫 `COMM-LB`（`scripts/guards/check_rule_comm_lb_leaderboard_unrouted.py`）固化：routes.dart 不挂 LeaderboardScreen + 网关 leaderboards 组 wildcard-only | 移动端尾巴**已销账（LEADERBOARD-DEBT，D-COMM-4 收官，2026-09）**：D-COMM-4 小队详情榜落地后经能力对比裁决——widget 层无可复用增量（小队榜已覆盖并列名次/无账本态/<3 人降级/完成度口径全部诚实面，死链的 XP/连胜口径反命中反刷分红线；podium/我的排名横幅属被裁决禁入的「大池比较」视觉）→ 三件套 screen/provider/repo 共 1,143 行整链删除，连带 `ApiEndpoints.leaderboards*` 6 个死常量（保留 `leaderboardsSelfAnchor`）、l10n `leaderboard*` 11 个死键（保留 `leaderboardSelfAnchor*` 12 键）、session_refresh_service 两处 provider 登记；COMM-LB 守卫绿（routes.dart 自我锚接线行按守卫自带 escape hatch 注 ignore） |
 
 ## 🟡 P2 — 迁移中的集群（删除前必须核对状态）
