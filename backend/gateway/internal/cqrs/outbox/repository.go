@@ -294,14 +294,46 @@ func NewProcessedEventsRepository(pool *pgxpool.Pool) *ProcessedEventsRepository
 	}
 }
 
+// maxEventKeyLength mirrors the processed_events.event_id column width
+// (varchar(100), gateway schema.sql); keys are length-checked here to fail
+// fast in Go instead of surfacing a DB value-too-long error.
+const maxEventKeyLength = 100
+
+// normalizeEventKey validates and normalizes a processed_events idempotency key.
+//
+// V3-FIX-469: the gate previously required eventID to parse as a UUID, but the
+// only production caller (BaseWorker.isProcessed/markProcessed) passes Redis
+// stream message IDs in "ms-seq" form (e.g. "1758-0"), so every call failed
+// before reaching SQL and processed_events stayed permanently empty — the
+// durable, cross-restart absorption gate never absorbed anything. The column
+// is varchar(100) and the SQLC queries take a plain string, so any key up to
+// the column width is accepted:
+//   - keys that parse as UUIDs are canonicalized (lowercase hyphenated) exactly
+//     as the old gate stored them, so pre-existing UUID-form rows keep being
+//     hit regardless of input spelling;
+//   - every other non-empty key (stream IDs, engine-side evt_ IDs) is passed
+//     through verbatim.
+func normalizeEventKey(eventID string) (string, error) {
+	if eventID == "" {
+		return "", fmt.Errorf("event ID must not be empty")
+	}
+	if id, err := uuid.Parse(eventID); err == nil {
+		return id.String(), nil
+	}
+	if len(eventID) > maxEventKeyLength {
+		return "", fmt.Errorf("event ID exceeds column width %d: %d chars", maxEventKeyLength, len(eventID))
+	}
+	return eventID, nil
+}
+
 // IsProcessed checks if an event has already been processed by a consumer group.
 func (r *ProcessedEventsRepository) IsProcessed(ctx context.Context, eventID, consumerGroup string) (bool, error) {
-	eid, err := uuid.Parse(eventID)
+	eid, err := normalizeEventKey(eventID)
 	if err != nil {
-		return false, fmt.Errorf("parse event ID: %w", err)
+		return false, fmt.Errorf("normalize event ID: %w", err)
 	}
 	params := db.IsEventProcessedParams{
-		EventID:       eid.String(),
+		EventID:       eid,
 		ConsumerGroup: consumerGroup,
 	}
 	exists, err := r.queries.IsEventProcessed(ctx, params)
@@ -314,12 +346,12 @@ func (r *ProcessedEventsRepository) IsProcessed(ctx context.Context, eventID, co
 
 // MarkProcessed marks an event as processed by a consumer group.
 func (r *ProcessedEventsRepository) MarkProcessed(ctx context.Context, eventID, consumerGroup string) error {
-	eid, err := uuid.Parse(eventID)
+	eid, err := normalizeEventKey(eventID)
 	if err != nil {
-		return fmt.Errorf("parse event ID: %w", err)
+		return fmt.Errorf("normalize event ID: %w", err)
 	}
 	params := db.MarkEventProcessedParams{
-		EventID:       eid.String(),
+		EventID:       eid,
 		ConsumerGroup: consumerGroup,
 	}
 	if err := r.queries.MarkEventProcessed(ctx, params); err != nil {
