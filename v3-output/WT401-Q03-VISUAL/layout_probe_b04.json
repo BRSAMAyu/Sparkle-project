@@ -1,0 +1,245 @@
+[
+  {
+    "screen": "b04/onboarding__persona_start__new_user__android__1080x2400@3.0__d7a961da.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 34,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "b04/home__main__demo_data__android__1080x2400@3.0__d7a961da.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 72,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "b04/chat__history_citations__demo_data__android__1080x2400@3.0__d7a961da.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 126,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "b04/goal__library_main__demo_data__android__1080x2400@3.0__d7a961da.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 58,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "b04/task__library_main__demo_data__android__1080x2400@3.0__d7a961da.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 71,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "b04/memory__panel_main__demo_data__android__1080x2400@3.0__d7a961da.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 23,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 4
+  },
+  {
+    "screen": "b04/galaxy__tree_expanded__demo_data__android__1080x2400@3.0__d7a961da.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 107,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "b04/profile__main__demo_data__android__1080x2400@3.0__d7a961da.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 190,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 15
+  },
+  {
+    "screen": "b04/settings__main__demo_data__android__1080x2400@3.0__d7a961da.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 399,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 24
+  },
+  {
+    "screen": "b04/onboarding__persona_start__new_user__macos__800x600@2.0__d7a961da.png",
+    "state": "800x600@2.0",
+    "pump_exception": null,
+    "logical_size": "800.0x600.0",
+    "text_widget_count": 34,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 267
+  },
+  {
+    "screen": "b04/home__main__demo_data__macos__800x600@2.0__d7a961da.png",
+    "state": "800x600@2.0",
+    "pump_exception": null,
+    "logical_size": "800.0x600.0",
+    "text_widget_count": 68,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 393
+  },
+  {
+    "screen": "b04/chat__history_citations__demo_data__macos__800x600@2.0__d7a961da.png",
+    "state": "800x600@2.0",
+    "pump_exception": null,
+    "logical_size": "800.0x600.0",
+    "text_widget_count": 138,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 747
+  },
+  {
+    "screen": "b04/goal__library_main__demo_data__macos__800x600@2.0__d7a961da.png",
+    "state": "800x600@2.0",
+    "pump_exception": null,
+    "logical_size": "800.0x600.0",
+    "text_widget_count": 42,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 156
+  },
+  {
+    "screen": "b04/task__library_main__demo_data__macos__800x600@2.0__d7a961da.png",
+    "state": "800x600@2.0",
+    "pump_exception": null,
+    "logical_size": "800.0x600.0",
+    "text_widget_count": 71,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 257
+  },
+  {
+    "screen": "b04/memory__panel_main__demo_data__macos__800x600@2.0__d7a961da.png",
+    "state": "800x600@2.0",
+    "pump_exception": null,
+    "logical_size": "800.0x600.0",
+    "text_widget_count": 23,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 137
+  },
+  {
+    "screen": "b04/galaxy__tree_expanded__demo_data__macos__800x600@2.0__d7a961da.png",
+    "state": "800x600@2.0",
+    "pump_exception": null,
+    "logical_size": "800.0x600.0",
+    "text_widget_count": 97,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 462
+  },
+  {
+    "screen": "b04/profile__main__demo_data__macos__800x600@2.0__d7a961da.png",
+    "state": "800x600@2.0",
+    "pump_exception": null,
+    "logical_size": "800.0x600.0",
+    "text_widget_count": 186,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 816
+  },
+  {
+    "screen": "b04/settings__main__demo_data__macos__800x600@2.0__d7a961da.png",
+    "state": "800x600@2.0",
+    "pump_exception": null,
+    "logical_size": "800.0x600.0",
+    "text_widget_count": 399,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1277
+  },
+  {
+    "screen": "b04/onboarding__persona_start__new_user__macos__1280x800@2.0__d7a961da.png",
+    "state": "1280x800@2.0",
+    "pump_exception": null,
+    "logical_size": "1280.0x800.0",
+    "text_widget_count": 34,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 267
+  },
+  {
+    "screen": "b04/home__main__demo_data__macos__1280x800@2.0__d7a961da.png",
+    "state": "1280x800@2.0",
+    "pump_exception": null,
+    "logical_size": "1280.0x800.0",
+    "text_widget_count": 86,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 502
+  },
+  {
+    "screen": "b04/chat__history_citations__demo_data__macos__1280x800@2.0__d7a961da.png",
+    "state": "1280x800@2.0",
+    "pump_exception": null,
+    "logical_size": "1280.0x800.0",
+    "text_widget_count": 169,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 931
+  },
+  {
+    "screen": "b04/goal__library_main__demo_data__macos__1280x800@2.0__d7a961da.png",
+    "state": "1280x800@2.0",
+    "pump_exception": null,
+    "logical_size": "1280.0x800.0",
+    "text_widget_count": 58,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 197
+  },
+  {
+    "screen": "b04/task__library_main__demo_data__macos__1280x800@2.0__d7a961da.png",
+    "state": "1280x800@2.0",
+    "pump_exception": null,
+    "logical_size": "1280.0x800.0",
+    "text_widget_count": 81,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 289
+  },
+  {
+    "screen": "b04/memory__panel_main__demo_data__macos__1280x800@2.0__d7a961da.png",
+    "state": "1280x800@2.0",
+    "pump_exception": null,
+    "logical_size": "1280.0x800.0",
+    "text_widget_count": 23,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 137
+  },
+  {
+    "screen": "b04/galaxy__tree_expanded__demo_data__macos__1280x800@2.0__d7a961da.png",
+    "state": "1280x800@2.0",
+    "pump_exception": null,
+    "logical_size": "1280.0x800.0",
+    "text_widget_count": 115,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 571
+  },
+  {
+    "screen": "b04/profile__main__demo_data__macos__1280x800@2.0__d7a961da.png",
+    "state": "1280x800@2.0",
+    "pump_exception": null,
+    "logical_size": "1280.0x800.0",
+    "text_widget_count": 204,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 925
+  },
+  {
+    "screen": "b04/settings__main__demo_data__macos__1280x800@2.0__d7a961da.png",
+    "state": "1280x800@2.0",
+    "pump_exception": null,
+    "logical_size": "1280.0x800.0",
+    "text_widget_count": 399,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1277
+  }
+]

@@ -55,20 +55,27 @@ CANONICAL_STATES: tuple[CanonicalState, ...] = (
         state_id="history_citations",
         persona="demo_data",
         definition=(
-            "打开演示账号既有历史会话（R1-R5 对话史），含 AI 回复气泡与"
-            "引用/证据块（R9 类引用卡片）；观察消息层次与引用块对比度"
+            "打开演示账号既有历史会话（demo_conv_1），含 AI 回复气泡与"
+            "引用/证据块；观察消息层次与引用块对比度。裁决（wt667 亲证）："
+            "demo 历史（demo_data_service msg_1..11）不带 citations 字段，"
+            "引用块由 canonical fixture 注入一条 assistant 消息"
+            "（rawMetadata['citations']），走真实 ChatBubble/"
+            "AssistantCitationStrip 渲染管线；真机批次换真引用数据"
         ),
-        entry="chat Tab → 会话历史列表 → 打开演示会话，滚至含引用块的回复",
+        entry="chat Tab → /chat（demo 模式自动载入 demo_conv_1）",
     ),
     CanonicalState(
         surface="goal",
         state_id="library_main",
         persona="demo_data",
         definition=(
-            "目标库/目标详情主视图：演示目标（含关联任务星）在库，非空态；"
-            "观察目标卡信息密度与进度表达"
+            "目标库主视图：演示目标（含关联任务星）在库，非空态；"
+            "观察目标卡信息密度与进度表达。裁决（wt667 亲证）："
+            "实际无 /goals 列表路由，目标库主视图 = /plans（SprintScreen，"
+            "demo 数据在库）；目标详情 /goals/{goalId} 走 /experience/"
+            "goal-detail 且无 demo 分支，属真机批次采集面"
         ),
-        entry="home → 目标入口（/goals）",
+        entry="home → 目标入口（/plans，SprintScreen）",
     ),
     CanonicalState(
         surface="task",

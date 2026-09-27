@@ -21,6 +21,8 @@ import 'package:audioplayers_platform_interface/audioplayers_platform_interface.
         AudioplayersPlatformInterface,
         GlobalAudioEvent,
         GlobalAudioplayersPlatformInterface;
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show MatrixUtils, RenderParagraph;
 import 'package:flutter/services.dart'
@@ -271,6 +273,10 @@ class Q03Harness {
     await tester.pump(const Duration(seconds: 300));
     container.dispose();
     FlutterError.onError = originalOnError;
+    // B-04 平台语义覆盖的复位必须在测试体内完成（addTearDown 晚于
+    // binding 的 foundation 不变量断言，Q03/W-B04 复用方都在 body 末
+    // 调 dispose）。
+    debugDefaultTargetPlatformOverride = null;
   }
 }
 
@@ -341,14 +347,26 @@ Q03ProbeResult probeLayout(WidgetTester tester) {
 }
 
 /// 泵真实路由 app（配方与 router_smoke_test 一致，standard 档主题）。
+///
+/// B-04 视觉基线复用本配方（wt667）：可选覆盖 viewport/DPR 与目标平台语义
+/// （debugDefaultTargetPlatformOverride，U-09 契约测试同源）；缺省行为与
+/// Q-03 原口径完全一致。
 Future<Q03Harness> pumpQ03App(
   WidgetTester tester, {
   AuthState? authState,
   bool onboardingCompleted = true,
   List<Override> extraOverrides = const <Override>[],
+  Size? physicalSize,
+  double? devicePixelRatio,
+  TargetPlatform? targetPlatform,
 }) async {
-  tester.view.devicePixelRatio = q03DevicePixelRatio;
-  tester.view.physicalSize = q03PhysicalSize;
+  tester.view.devicePixelRatio = devicePixelRatio ?? q03DevicePixelRatio;
+  tester.view.physicalSize = physicalSize ?? q03PhysicalSize;
+  // 仅测试体内生效；复位在 Q03Harness.dispose（测试体末调用）——
+  // addTearDown 晚于 binding 的 foundation 不变量断言，不能在这复位。
+  if (targetPlatform != null) {
+    debugDefaultTargetPlatformOverride = targetPlatform;
+  }
   addTearDown(() {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
@@ -445,6 +463,15 @@ Future<void> q03LoadRealFont() async {
       'Noto Sans CJK SC',
       'Arial Unicode MS',
       'Segoe UI',
+    ],
+    // B-04（wt667）：macOS 目标语义下，粗体/大号 Latin 文本走 .SF 家族
+    // 变体解析，flutter_tester 无此字体时渲染成实心黑块（android 目标
+    // 不受影响）。注册系统真身 SFNS.ttf 修复；字体缺失时静默跳过。
+    '/System/Library/Fonts/SFNS.ttf': const <String>[
+      '.SF Pro Text',
+      '.SF UI Text',
+      'Helvetica',
+      'Helvetica Neue',
     ],
     '$flutterRoot/bin/cache/artifacts/material_fonts/'
             'MaterialIcons-Regular.otf':
