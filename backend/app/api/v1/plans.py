@@ -25,6 +25,7 @@ from app.core.cache import cache_service
 from app.core.event_bus import event_bus
 from app.core.exceptions import QuotaExceededError
 from app.core.request_coalescing import notify_read_view_invalidated
+from app.core.sprint_day_math import sprint_spine_days
 from app.core.time_utils import DEFAULT_USER_TIMEZONE, local_date, utcnow, valid_timezone_name
 from app.db.session import get_db
 from app.models.card_protocol import ArtifactType
@@ -499,7 +500,13 @@ def _initial_days_for_today(plan: Plan, tasks: list[Task]) -> int:
         if parsed > 0:
             return parsed
     if plan.target_date and plan.created_at:
-        return max((plan.target_date - plan.created_at.date()).days, 1)
+        # V3-FIX-326：脊柱长度统一走 sprint_day_math（created_at 的 UTC
+        # 日历日直取——存储 naive-UTC，语义唯一权威见
+        # app/core/sprint_day_math.py）；脊柱非正（target 未晚于创建 UTC
+        # 日）回落任务日模板推算。
+        spine_days = sprint_spine_days(plan.target_date, plan.created_at)
+        if spine_days is not None:
+            return spine_days
     return max((_task_day_from_model(task) for task in tasks), default=1)
 
 

@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.sprint_day_math import sprint_spine_days
 from app.core.time_utils import DEFAULT_USER_TIMEZONE, local_date, utcnow, valid_timezone_name
 from app.models.achievement import UserStreakStats
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
@@ -368,9 +369,10 @@ class ExamSprintDashboardService:
         if max_task_day > 0:
             return max_task_day
 
-        if plan.target_date and plan.created_at:
-            return max((plan.target_date - plan.created_at.date()).days, 1)
-        return 1
+        # V3-FIX-326：脊柱长度统一走 sprint_day_math（created_at 的 UTC
+        # 日历日直取——存储 naive-UTC，314「墙上钟存储」论证翻案、读法
+        # 保留；语义唯一权威见 app/core/sprint_day_math.py）。
+        return sprint_spine_days(plan.target_date, plan.created_at) or 1
 
     def _current_day_index(self, *, initial_days_left: int, days_left: int, tasks: list[Task]) -> int:
         max_task_day = max((self._task_day_index(task) for task in tasks), default=initial_days_left)

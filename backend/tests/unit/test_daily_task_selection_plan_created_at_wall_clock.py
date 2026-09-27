@@ -1,5 +1,15 @@
 """V3-FIX-314 红绿测：``_plan_current_day`` 的 plan.created_at 按墙上钟语义取日。
 
+**V3-FIX-326 裁决更正（wt618，2026-09-27）**：本文件断言全部保留有效
+（current=6/day:6 入面等），但其原始论证「plan.created_at 是本地墙上钟
+存储」已被翻案——存储是 naive-UTC（wt615 五环锚链 + wt618 live PG 独立
+复核），``.date()`` 直取的是 **UTC 日历日**；today 形参是用户本地日，
+上海 08:00–24:00 窗两者重合故读数一致。day 数学的唯一权威语义见
+``app/core/sprint_day_math.py``（V3-FIX-326 三调用点统一落点），
+day7 门回归钉见 ``test_sprint_day_math_adjudication.py``。
+
+以下为 314 当时定界原文（论证部分如上更正）：
+
 定界（JOURNEY day6 门 09-27 08:00 实测捕获，主会话取证）：today 面
 零候选——``_plan_current_day``（daily_task_selection_service.py:107-121）
 把**本地墙上钟存储**的 ``plan.created_at``（JOURNEY 计划 7917e864

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any, cast
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aurora.runtime_v1.state import AuroraEnergyStore
 from app.core.cache import cache_service
+from app.core.sprint_day_math import sprint_current_day
 from app.core.time_utils import (
     DEFAULT_USER_TIMEZONE,
     local_date,
@@ -108,29 +109,16 @@ def _as_local_date(value: date | datetime | None, tz_name: str) -> date | None:
 def _plan_current_day(plan: Plan, today: date, tz_name: str = "UTC") -> int | None:
     """1-based day a sprint plan has progressed to, or None when unknown.
 
-    plan.target_date 是日界语义（透传）；plan.created_at 是**本地墙上钟**
-    存储列（mobile/服务写入无时区后缀的本地 ISO，wt582 已实证同库约定；
-    JOURNEY 计划 7917e864 created 21:15:30 与 day0 会话 run_id 同钟），
-    按墙上钟语义直接取 ``.date()`` 与 today 同钟相减（V3-FIX-314）。
-    修前经 ``_as_local_date``（V3-FIX-221 UTC 假设统一入口）+8 换算，
-    created 21:15 被推成次日 → total_days 少一天 → current_day 恒偏小 →
-    当日 day:N 任务被 today 面排除（JOURNEY day6 门 /tasks/today 返回
-    []）。同族约定：exam_sprint_dashboard_service._derive_initial_days_left
-    与 api/v1/plans._initial_days_for_today 均为
-    ``(target_date - created_at.date()).days``（无 tz 换算），本函数注释
-    自称「the same convention」却在 221 统一入口时被误带成 UTC 换算。
-    tz_name 形参保留仅为调用方签名兼容（_is_today_relevant 位置传参）——
-    墙上钟语义下 day 数学与读侧时区无关。
+    V3-FIX-326 裁决：day 数学 = 「创建锚定的 UTC 日期脊柱」——
+    plan.created_at 是 naive-UTC 存储列（wt615 五环锚链；314 注释
+    「本地墙上钟存储」论证翻案、读法保留），.date() 直取 UTC 日历日；
+    plan.target_date 是日界值透传。语义唯一权威与完整证据链见
+    app/core/sprint_day_math.py（本函数为薄委托）。today 形参沿调用方
+    用户本地日（221/233 契约；上海 08:00–24:00 与 UTC 日重合 = 门跑窗，
+    夜间窗边界语义见模块 docstring 第 3 条）。tz_name 形参仅为调用方
+    签名兼容保留（_is_today_relevant 位置传参），day 数学本身与时区无关。
     """
-    target_date = getattr(plan, "target_date", None)
-    created = _as_date(getattr(plan, "created_at", None))
-    if target_date is None or created is None:
-        return None
-    total_days = (target_date - created).days
-    if total_days <= 0:
-        return None
-    days_remaining = max((target_date - today).days, 0)
-    return cast("int | None", (max(total_days - days_remaining + 1, 1)))
+    return sprint_current_day(getattr(plan, "target_date", None), getattr(plan, "created_at", None), today)
 
 
 class DailyTaskSelectionService:
