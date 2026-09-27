@@ -372,7 +372,133 @@ async def test_task_delete_invalidates_read_model(consistency_env):
 
 
 # ---------------------------------------------------------------------------
-# 7. 重放/幂等：consistency 清理自身可重放（零剪除零放大）
+# 7. 跨用户隔离（卡面验收 1「不跨用户泄露」）：A 的删除不得动 B 的派生面
+# ---------------------------------------------------------------------------
+
+
+async def test_error_delete_prune_is_user_scoped_other_users_provenance_intact(db_session):
+    """A 删错题只剪 A 的溯源行；同节点 B 的溯源（B 自己的错题）必须原样保留.
+
+    契约锁：prune_provenance 按 ``UserNodeStatus.user_id`` 定界——跨用户
+    溯源行零触碰（隐私删除面结构性隔离）。
+    """
+    db = db_session
+    user_a = await _make_user(db_session)
+    user_b = await _make_user(db_session)
+    node = KnowledgeNode(name="G-04 跨用户溯源节点", importance_level=3, is_seed=True)
+    db.add(node)
+    await db.commit()
+    await db.refresh(node)
+    status_a = UserNodeStatus(user_id=user_a.id, node_id=node.id, mastery_score=20.0, is_unlocked=True)
+    status_b = UserNodeStatus(user_id=user_b.id, node_id=node.id, mastery_score=20.0, is_unlocked=True)
+    db.add_all([status_a, status_b])
+    await db.commit()
+
+    error_a = await _make_error(db, user_a.id, node.id)
+    error_b = await _make_error(db, user_b.id, node.id)
+    for status, error in ((status_a, error_a), (status_b, error_b)):
+        append_graph_event_source(
+            status,
+            event_type="error.created",
+            source_type="error_book",
+            reference_id=error.id,
+            label="knowledge_gap",
+            payload={"error_type": "knowledge_gap"},
+        )
+    await db.commit()
+
+    assert await ErrorBookService(db).delete_error(error_a.id, user_a.id) is True
+
+    await db.refresh(status_a)
+    await db.refresh(status_b)
+    refs_a = {
+        str(item.get("reference_id"))
+        for item in ((status_a.learning_path_snapshot or {}).get("graph_event_sources") or [])
+        if isinstance(item, dict)
+    }
+    refs_b = {
+        str(item.get("reference_id"))
+        for item in ((status_b.learning_path_snapshot or {}).get("graph_event_sources") or [])
+        if isinstance(item, dict)
+    }
+    assert str(error_a.id) not in refs_a, "A 自己的已删错题溯源必须剪除"
+    assert str(error_b.id) in refs_b, "B 的存活错题溯源必须原样保留（A 的删除零跨用户触碰）"
+
+
+async def test_error_delete_keeps_weak_tag_while_another_user_still_has_live_error(db_session):
+    """A 删掉自己在共享节点上的最后一条错题，但 B 仍有存活错题 → 弱点标记必须保留.
+
+    红测：``signal:weak_at`` 挂在全局 ``KnowledgeNode`` 上（全部用户共读同一
+    判据，schemas/galaxy WEAK 推导），而 recompute 若只按删除者的存活错题面
+    裁决，B 的存活证据还在时标记就被 A 的删除摘掉——共享派生信号失去证据
+    基础（跨用户状态被单用户删除破坏）。全局标记的证据判据必须是该节点的
+    全量存活错题面（与模块声明的权威真源一致）。
+    """
+    db = db_session
+    user_a = await _make_user(db_session)
+    user_b = await _make_user(db_session)
+    node = KnowledgeNode(name="G-04 跨用户弱点节点", importance_level=3, is_seed=True)
+    db.add(node)
+    await db.commit()
+    await db.refresh(node)
+    db.add_all(
+        [
+            UserNodeStatus(user_id=user_a.id, node_id=node.id, mastery_score=20.0, is_unlocked=True),
+            UserNodeStatus(user_id=user_b.id, node_id=node.id, mastery_score=20.0, is_unlocked=True),
+        ]
+    )
+    await db.commit()
+
+    error_a = await _make_error(db, user_a.id, node.id)
+    await _make_error(db, user_b.id, node.id)
+    node.keywords = ["signal:weak_at", "math"]
+    await db.commit()
+
+    assert await ErrorBookService(db).delete_error(error_a.id, user_a.id) is True
+
+    await db.refresh(node)
+    assert "signal:weak_at" in (
+        node.keywords or []
+    ), "B 仍有存活错题时，A 的删除不得摘除全局弱点标记（跨用户派生状态正确性）"
+    assert "math" in (node.keywords or []), "无关关键词不得被误伤"
+
+
+async def test_error_delete_isolated_read_model_other_user_view_unchanged(db_session):
+    """A 删错题后 B 的星图读面必须仍是 B 自己的真值（计数/视图缓存零串扰）."""
+    db = db_session
+    user_a = await _make_user(db_session)
+    user_b = await _make_user(db_session)
+    node = KnowledgeNode(name="G-04 跨用户读面节点", importance_level=3, is_seed=True)
+    db.add(node)
+    await db.commit()
+    await db.refresh(node)
+    db.add_all(
+        [
+            UserNodeStatus(user_id=user_a.id, node_id=node.id, mastery_score=20.0, is_unlocked=True),
+            UserNodeStatus(user_id=user_b.id, node_id=node.id, mastery_score=20.0, is_unlocked=True),
+        ]
+    )
+    await db.commit()
+
+    error_a = await _make_error(db, user_a.id, node.id)
+    await _make_error(db, user_b.id, node.id)
+
+    service = GalaxyService(db)
+    view_b_before = _view(await service.get_galaxy_graph(user_b.id), node.id)
+    assert (
+        view_b_before.user_status is not None and view_b_before.user_status.recent_error_count == 1
+    ), "前置：B 读面必须看到 B 自己的 1 条近错"
+
+    assert await ErrorBookService(db).delete_error(error_a.id, user_a.id) is True
+
+    assert _local_view_keys(user_a.id) == [], "A 的视图缓存必须被失效"
+    assert _local_view_keys(user_b.id), "失效只按 user 定界：A 的删除不得清 B 的视图缓存（跨用户零串扰）"
+    view_b_after = _view(await service.get_galaxy_graph(user_b.id), node.id)
+    assert view_b_after.user_status.recent_error_count == 1, "A 的删除不得改变 B 读面的近错计数（读面跨用户零泄露）"
+
+
+# ---------------------------------------------------------------------------
+# 8. 重放/幂等：consistency 清理自身可重放（零剪除零放大）
 # ---------------------------------------------------------------------------
 
 

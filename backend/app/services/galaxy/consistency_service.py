@@ -8,7 +8,8 @@
 - ``error_book``（document/材料证据面）：错题软删（``is_deleted`` tombstone）
   后——①剪除 ``UserNodeStatus.learning_path_snapshot.graph_event_sources``
   中引用该错题的溯源行（node detail 残影）；②重算 ``signal:weak_at`` 弱点
-  标记——该用户在这些节点上已无存活错题证据时摘除（学习状态 WEAK 残影）；
+  标记——节点上已无任何用户的存活错题证据时摘除（学习状态 WEAK 残影；
+  标记是全局节点属性，证据判据按节点全量存活面裁决，不按删除者定界）；
   ③失效星图读面视图缓存（``view:get_galaxy_graph`` ttl=600 + shield 10s，
   NBP-4 同款失效面）——否则 recent_error_count/review_signal 旧值最长 10 分钟。
 - ``task``：任务硬删（``TaskService.delete``）后失效读面——目标关联
@@ -160,12 +161,17 @@ class GalaxyConsistencyService:
         return pruned
 
     async def recompute_weak_signals(self, *, user_id: UUID, node_ids: list[UUID]) -> int:
-        """重算弱点标记：该用户在节点上已无存活错题证据 → 摘除 ``signal:weak_at``.
+        """重算弱点标记：节点上已无**任何用户**的存活错题证据 → 摘除 ``signal:weak_at``.
 
         权威判据是 ErrorRecord 存活面（``is_deleted`` tombstone，与读面
         ``_get_recent_error_counts_by_node`` 同一真源）；``KnowledgeNode``
         上的标记只是派生信号。摘除走既有 ``tag_node_signal(active=False)``
         （keywords 集合语义，幂等），不碰任何 mastery 状态。
+
+        跨用户定界（V3-FIX-431）：标记挂在**全局** ``KnowledgeNode.keywords``
+        上（所有用户共读同一判据，WEAK 推导的三析取之一），其证据判据必须是
+        该节点的全量存活错题面——单用户删除不得在他人存活证据仍在时摘除共享
+        信号（删除者的 user_id 仅用于观测/日志，不作证据过滤）。
         """
         if not node_ids:
             return 0
@@ -174,11 +180,10 @@ class GalaxyConsistencyService:
 
         still_weak: list[UUID] = []
         try:
+            # 全量存活面（不按 user 过滤）：被裁决的标记是全局节点属性，
+            # 任何用户的存活错题都构成该节点弱点信号的证据基础。
             result = await self.db.execute(
-                select(ErrorRecord.linked_knowledge_node_ids).where(
-                    ErrorRecord.user_id == user_id,
-                    ErrorRecord.is_deleted.is_(False),
-                )
+                select(ErrorRecord.linked_knowledge_node_ids).where(ErrorRecord.is_deleted.is_(False))
             )
             live_by_node: set[UUID] = set()
             for (linked_ids,) in result.all():
