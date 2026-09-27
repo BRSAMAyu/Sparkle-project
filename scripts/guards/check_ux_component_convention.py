@@ -21,11 +21,16 @@ Per-file counts are pinned against a frozen baseline
 - counts may only go down (ratchet). After a consolidation batch lowers
   counts, run with `--update-baseline` and commit the JSON diff.
 
-Scanned roots (V3 reachable surfaces only — see v3-output/U-01/INVENTORY.md §1;
-10th root per A-SPEC V1.1 N1; 11th-13th roots per A-SPEC2 N10/N11 / top10 #5+#9):
-  onboarding/home/chat/goal/task/memory/galaxy/plan presentation dirs,
+Scanned roots (V3 reachable surfaces only — surface inventory & HEAD refresh:
+v3-output/WT671-U01/INVENTORY_REFRESH.md; 10th root per A-SPEC V1.1 N1;
+11th-13th roots per A-SPEC2 N10/N11 / top10 #5+#9):
+  home/chat/goal/task/memory/galaxy/plan presentation dirs,
   profile + persona-onboarding + unified-settings user screens,
   settings presentation dir,
+  (former 9th root features/onboarding/presentation removed: the interactive
+  onboarding surface was retired wholesale by V3-FIX-342 @e610853e; the stale
+  root made test_scan_roots_exist red and was silently skipped by scan_roots().
+  Aligned at wt671, V3-FIX-357.)
   community/photon/error_book presentation dirs (GUARDS card wt227 @a025e82a —
   these three domains were previously unscanned "free-inspection channels";
   current raw-component debt is frozen in the baseline, only-down).
@@ -51,7 +56,8 @@ MOBILE_LIB = REPO_ROOT / "mobile" / "lib"
 BASELINE_PATH = Path(__file__).resolve().parent / "ux_component_convention_baseline.json"
 
 SCAN_ROOTS: list[str] = [
-    "features/onboarding/presentation",
+    # features/onboarding/presentation 已随 V3-FIX-342 @e610853e 整链下线移除
+    # （V3-FIX-357，wt671 对齐）；基线零 onboarding 条目，ratchet 面零变化。
     "features/home/presentation",
     "features/chat/presentation",
     "features/goal/presentation",
