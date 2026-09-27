@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 
@@ -197,7 +198,7 @@ class _SharePosterCanvas extends StatelessWidget {
                 _PosterTopBar(
                   accent: posterTheme.accent,
                   textColor: posterTheme.textPrimary,
-                  label: _contentLabel,
+                  label: _contentLabel(context),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -296,14 +297,14 @@ class _SharePosterCanvas extends StatelessWidget {
     );
   }
 
-  String get _contentLabel => switch (payload.contentType) {
-        ShareableContentType.achievement => '成就海报',
-        ShareableContentType.taskCompletion => '任务战报',
-        ShareableContentType.planProgress => '计划进度',
-        ShareableContentType.capsule => '思考胶囊',
-        ShareableContentType.knowledgeNode => '知识星点',
-        ShareableContentType.learningReport => '学习报告',
-        ShareableContentType.cognitivePrism => '认知棱镜',
+  String _contentLabel(BuildContext context) => switch (payload.contentType) {
+        ShareableContentType.achievement => context.l10n.posterContentLabelAchievement,
+        ShareableContentType.taskCompletion => context.l10n.posterContentLabelTaskCompletion,
+        ShareableContentType.planProgress => context.l10n.posterContentLabelPlanProgress,
+        ShareableContentType.capsule => context.l10n.posterContentLabelCapsule,
+        ShareableContentType.knowledgeNode => context.l10n.posterContentLabelKnowledgeNode,
+        ShareableContentType.learningReport => context.l10n.posterContentLabelLearningReport,
+        ShareableContentType.cognitivePrism => context.l10n.posterContentLabelCognitivePrism,
       };
 
   String? get _summaryText {

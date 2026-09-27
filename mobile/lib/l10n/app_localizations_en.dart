@@ -27013,6 +27013,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Perfect for sharing your growth highlights';
 
   @override
+  String get posterContentLabelAchievement => 'Achievement Poster';
+
+  @override
+  String get posterContentLabelTaskCompletion => 'Task Battle Report';
+
+  @override
+  String get posterContentLabelPlanProgress => 'Plan Progress';
+
+  @override
+  String get posterContentLabelCapsule => 'Thought Capsule';
+
+  @override
+  String get posterContentLabelKnowledgeNode => 'Knowledge Point';
+
+  @override
+  String get posterContentLabelLearningReport => 'Learning Report';
+
+  @override
+  String get posterContentLabelCognitivePrism => 'Cognitive Prism';
+
+  @override
   String gmMembersTitle(String groupName) {
     return '$groupName - Members';
   }

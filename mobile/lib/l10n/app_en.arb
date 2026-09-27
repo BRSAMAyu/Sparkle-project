@@ -11610,6 +11610,13 @@
     }
   },
   "posterTemplateDefaultDesc": "Perfect for sharing your growth highlights",
+  "posterContentLabelAchievement": "Achievement Poster",
+  "posterContentLabelTaskCompletion": "Task Battle Report",
+  "posterContentLabelPlanProgress": "Plan Progress",
+  "posterContentLabelCapsule": "Thought Capsule",
+  "posterContentLabelKnowledgeNode": "Knowledge Point",
+  "posterContentLabelLearningReport": "Learning Report",
+  "posterContentLabelCognitivePrism": "Cognitive Prism",
   "gmMembersTitle": "{groupName} - Members",
   "@gmMembersTitle": {
     "placeholders": {

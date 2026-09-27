@@ -47234,6 +47234,48 @@ abstract class AppLocalizations {
   /// **'适合分享你的成长亮点'**
   String get posterTemplateDefaultDesc;
 
+  /// No description provided for @posterContentLabelAchievement.
+  ///
+  /// In zh, this message translates to:
+  /// **'成就海报'**
+  String get posterContentLabelAchievement;
+
+  /// No description provided for @posterContentLabelTaskCompletion.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务战报'**
+  String get posterContentLabelTaskCompletion;
+
+  /// No description provided for @posterContentLabelPlanProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划进度'**
+  String get posterContentLabelPlanProgress;
+
+  /// No description provided for @posterContentLabelCapsule.
+  ///
+  /// In zh, this message translates to:
+  /// **'思考胶囊'**
+  String get posterContentLabelCapsule;
+
+  /// No description provided for @posterContentLabelKnowledgeNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识点'**
+  String get posterContentLabelKnowledgeNode;
+
+  /// No description provided for @posterContentLabelLearningReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习报告'**
+  String get posterContentLabelLearningReport;
+
+  /// No description provided for @posterContentLabelCognitivePrism.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知棱镜'**
+  String get posterContentLabelCognitivePrism;
+
   /// No description provided for @gmMembersTitle.
   ///
   /// In zh, this message translates to:

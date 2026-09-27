@@ -11641,6 +11641,13 @@
     }
   },
   "posterTemplateDefaultDesc": "适合分享你的成长亮点",
+  "posterContentLabelAchievement": "成就海报",
+  "posterContentLabelTaskCompletion": "任务战报",
+  "posterContentLabelPlanProgress": "计划进度",
+  "posterContentLabelCapsule": "思考胶囊",
+  "posterContentLabelKnowledgeNode": "知识点",
+  "posterContentLabelLearningReport": "学习报告",
+  "posterContentLabelCognitivePrism": "认知棱镜",
   "gmMembersTitle": "{groupName} - 成员",
   "@gmMembersTitle": {
     "placeholders": {

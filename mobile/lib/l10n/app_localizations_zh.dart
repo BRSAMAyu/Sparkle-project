@@ -25883,6 +25883,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get posterTemplateDefaultDesc => '适合分享你的成长亮点';
 
   @override
+  String get posterContentLabelAchievement => '成就海报';
+
+  @override
+  String get posterContentLabelTaskCompletion => '任务战报';
+
+  @override
+  String get posterContentLabelPlanProgress => '计划进度';
+
+  @override
+  String get posterContentLabelCapsule => '思考胶囊';
+
+  @override
+  String get posterContentLabelKnowledgeNode => '知识点';
+
+  @override
+  String get posterContentLabelLearningReport => '学习报告';
+
+  @override
+  String get posterContentLabelCognitivePrism => '认知棱镜';
+
+  @override
   String gmMembersTitle(String groupName) {
     return '$groupName - 成员';
   }
