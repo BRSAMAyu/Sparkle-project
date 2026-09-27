@@ -1,0 +1,823 @@
+diff --git a/mobile/lib/core/state/surface_state_injection.dart b/mobile/lib/core/state/surface_state_injection.dart
+index 413f5434..0fe541aa 100644
+--- a/mobile/lib/core/state/surface_state_injection.dart
++++ b/mobile/lib/core/state/surface_state_injection.dart
+@@ -47,6 +47,11 @@ const List<String> stagedSeamIds = [
+   'home.dashboard',
+   'galaxy.nodeDetail.history',
+   'shared.loadingState',
++  // U-06 续（wt673）：cognitive 三面（B-01 CORE feature 首次入册）——
++  // 手写 loading 字面量统一为 StagedSurfaceLoader 分阶接缝。
++  'cognitive.capsules',
++  'cognitive.capsuleJobs',
++  'cognitive.capsuleDetail',
+ ];
+ 
+ /// 兼容别名：核心面全集 = 闸门面 + 分阶接缝面。
+diff --git a/mobile/lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart b/mobile/lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart
+index 1ff537f8..3ec6af06 100644
+--- a/mobile/lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart
++++ b/mobile/lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart
+@@ -7,14 +7,14 @@ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+ import 'package:sparkle/core/design/widgets/empty_state.dart';
+ import 'package:sparkle/core/design/widgets/error_widget.dart';
+-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+ import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+-import 'package:sparkle/core/services/i18n_service.dart';
+ import 'package:sparkle/core/services/sensory_feedback_service.dart';
+ import 'package:sparkle/core/services/share_poster_service.dart';
+ import 'package:sparkle/core/services/universal_share_service.dart';
++import 'package:sparkle/core/state/staged_loading.dart';
+ import 'package:sparkle/core/utils/formatters.dart';
+ import 'package:sparkle/core/widgets/sparkle_markdown.dart';
+ import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
+@@ -99,15 +99,13 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
+           }
+           return _buildContent(c);
+         },
+-        loading: () => LoadingIndicator.circular(
+-          showText: true,
+-          loadingText: I18nService.instance.isChinese
+-              ? '正在整理这枚胶囊...'
+-              : 'Preparing this capsule...',
+-        ),
++        // U-06 续：统一分阶等待（<500ms 骨架，>500ms arb 阶段文案升格），
++        // 替换手写双语 loading 字面量（I18nService 直读绕过 arb 单源）。
++        loading: () => const StagedSurfaceLoader(),
+         error: (err, _) => CustomErrorWidget.page(
+           context: context,
+-          message: l10n.capsuleLoadFailed('$err'),
++          // 错误文案单源：类别人话（error_lexicon），不透传原始异常。
++          message: uiErrorMessage(l10n, categorizeUiError(err)),
+           title: context.l10n.cogCapsuleOpenFailed,
+           onRetry: () => ref
+               .read(capsuleDetailProvider(widget.capsuleId).notifier)
+@@ -798,7 +796,9 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
+       if (mounted) Navigator.pop(context);
+     } catch (e) {
+       if (mounted) {
+-        AppFeedback.error(context, context.l10n.capsuleSubmitFailed('$e'));
++        // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
++        final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
++        AppFeedback.error(context, context.l10n.capsuleSubmitFailed(detail));
+       }
+     } finally {
+       if (mounted) setState(() => _submitting = false);
+diff --git a/mobile/lib/features/cognitive/presentation/screens/capsule/capsule_jobs_screen.dart b/mobile/lib/features/cognitive/presentation/screens/capsule/capsule_jobs_screen.dart
+index 7ee883fe..cb746e27 100644
+--- a/mobile/lib/features/cognitive/presentation/screens/capsule/capsule_jobs_screen.dart
++++ b/mobile/lib/features/cognitive/presentation/screens/capsule/capsule_jobs_screen.dart
+@@ -6,9 +6,10 @@ import 'package:go_router/go_router.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/empty_state.dart';
+ import 'package:sparkle/core/design/widgets/error_widget.dart';
+-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/core/services/sensory_feedback_service.dart';
++import 'package:sparkle/core/state/staged_loading.dart';
+ import 'package:sparkle/core/utils/formatters.dart';
+ import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
+ import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
+@@ -88,14 +89,14 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
+                     },
+                   ),
+                 ),
+-          loading: () => LoadingIndicator.circular(
+-            showText: true,
+-            loadingText: '正在同步生成任务...',
+-          ),
++          // U-06 续：统一分阶等待——原字面量为无 locale 判定的纯中文串
++          // （英文用户也看到中文），统一组件按 arb 出双语阶段文案。
++          loading: () => const StagedSurfaceLoader(),
+           error: (err, stack) => CustomErrorWidget.page(
+             context: context,
+             title: context.l10n.cogJobsLoadFailed,
+-            message: l10n.capsuleLoadFailed('$err'),
++            // 错误文案单源：类别人话（error_lexicon），不透传原始异常。
++            message: uiErrorMessage(l10n, categorizeUiError(err)),
+             onRetry: () =>
+                 ref.read(generationJobsProvider.notifier).fetchJobs(),
+           ),
+diff --git a/mobile/lib/features/cognitive/presentation/screens/curiosity_capsule_screen.dart b/mobile/lib/features/cognitive/presentation/screens/curiosity_capsule_screen.dart
+index 6e39a583..c668de47 100755
+--- a/mobile/lib/features/cognitive/presentation/screens/curiosity_capsule_screen.dart
++++ b/mobile/lib/features/cognitive/presentation/screens/curiosity_capsule_screen.dart
+@@ -4,9 +4,10 @@ import 'package:go_router/go_router.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/empty_state.dart';
+ import 'package:sparkle/core/design/widgets/error_widget.dart';
+-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/core/services/i18n_service.dart';
++import 'package:sparkle/core/state/staged_loading.dart';
+ import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
+ import 'package:sparkle/features/cognitive/presentation/providers/capsule_archive_provider.dart';
+ import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
+@@ -110,16 +111,14 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
+             ),
+           );
+         },
+-        loading: () => LoadingIndicator.circular(
+-          showText: true,
+-          loadingText: I18nService.instance.isChinese
+-              ? '正在整理今日胶囊...'
+-              : 'Preparing today\'s capsule...',
+-        ),
++        // U-06 续：统一分阶等待——替换手写双语 loading 字面量
++        // （I18nService 直读绕过 arb 单源），组件按 arb 出阶段文案。
++        loading: () => const StagedSurfaceLoader(),
+         error: (err, stack) => CustomErrorWidget.page(
+           context: context,
+           title: context.l10n.cogCapsuleListFailed,
+-          message: l10n.capsuleLoadFailed('$err'),
++          // 错误文案单源：类别人话（error_lexicon），不透传原始异常。
++          message: uiErrorMessage(l10n, categorizeUiError(err)),
+           onRetry: () =>
+               ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
+         ),
+diff --git a/mobile/lib/features/community/presentation/screens/accountability_detail_screen.dart b/mobile/lib/features/community/presentation/screens/accountability_detail_screen.dart
+index 4d687a8f..23651bf7 100644
+--- a/mobile/lib/features/community/presentation/screens/accountability_detail_screen.dart
++++ b/mobile/lib/features/community/presentation/screens/accountability_detail_screen.dart
+@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/components/organisms/expandable_section.dart
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/core/services/sensory_feedback_service.dart';
+ import 'package:sparkle/features/auth/auth.dart';
+@@ -1384,7 +1385,10 @@ class _CheckinTile extends ConsumerWidget {
+     } catch (e) {
+       if (context.mounted) {
+         AppFeedback.error(
+-            context, '${context.l10n.accountabilityLikeFailed}: $e',);
++          // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
++          context,
++          uiErrorMessage(context.l10n, categorizeUiError(e)),
++        );
+       }
+     }
+   }
+@@ -1429,7 +1433,10 @@ class _CheckinTile extends ConsumerWidget {
+     } catch (e) {
+       if (context.mounted) {
+         AppFeedback.error(
+-            context, '${context.l10n.accountabilitySendFailed}: $e',);
++          // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
++          context,
++          uiErrorMessage(context.l10n, categorizeUiError(e)),
++        );
+       }
+     }
+   }
+@@ -1606,7 +1613,10 @@ class _AccountabilityCheckinSheetState
+     } catch (e) {
+       if (mounted) {
+         AppFeedback.error(
+-            context, '${context.l10n.accountabilityCheckinFailed}: $e',);
++          // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
++          context,
++          uiErrorMessage(context.l10n, categorizeUiError(e)),
++        );
+       }
+     } finally {
+       if (mounted) {
+diff --git a/mobile/lib/features/community/presentation/screens/group_tasks_screen.dart b/mobile/lib/features/community/presentation/screens/group_tasks_screen.dart
+index cd61f43f..23d08821 100755
+--- a/mobile/lib/features/community/presentation/screens/group_tasks_screen.dart
++++ b/mobile/lib/features/community/presentation/screens/group_tasks_screen.dart
+@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/widgets/empty_state.dart';
+ import 'package:sparkle/core/design/widgets/error_widget.dart';
+ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/core/services/sensory_feedback_service.dart';
+ import 'package:sparkle/features/community/data/models/community_model.dart';
+@@ -102,7 +103,10 @@ class GroupTasksScreen extends ConsumerWidget {
+                               if (context.mounted) {
+                                 AppFeedback.error(
+                                   context,
+-                                  '${context.l10n.communityOperationFailed}: $e',
++                                  uiErrorMessage(
++                                    context.l10n,
++                                    categorizeUiError(e),
++                                  ),
+                                 );
+                               }
+                             }
+diff --git a/mobile/lib/features/community/presentation/screens/user_search_screen.dart b/mobile/lib/features/community/presentation/screens/user_search_screen.dart
+index 4ab62c71..2312ddfe 100644
+--- a/mobile/lib/features/community/presentation/screens/user_search_screen.dart
++++ b/mobile/lib/features/community/presentation/screens/user_search_screen.dart
+@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/empty_state.dart';
+ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/core/services/sensory_feedback_service.dart';
+ import 'package:sparkle/features/community/data/repositories/community_repository.dart';
+@@ -71,14 +72,19 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
+                         .read(communityRepositoryProvider)
+                         .sendFriendRequest(user.id);
+                     if (mounted) {
++                      // 成功文案对齐既有 arb 词条（原为手写英文字面量）。
+                       AppFeedback.success(
+                         context,
+-                        'Friend request sent to ${user.displayName}',
++                        context.l10n.friendRequestSent,
+                       );
+                     }
+                   } catch (e) {
+                     if (mounted) {
+-                      AppFeedback.error(context, 'Failed to send request: $e');
++                      // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
++                      AppFeedback.error(
++                        context,
++                        uiErrorMessage(context.l10n, categorizeUiError(e)),
++                      );
+                     }
+                   }
+                 },
+diff --git a/mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart b/mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart
+index 7af9a76b..bc1ccd83 100644
+--- a/mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart
++++ b/mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart
+@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+ import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/display/lexicon/goal_status_lexicon.dart'
+     show goalPriorityLabel, goalStatusLabel;
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+@@ -624,9 +625,10 @@ class _TodayStepCard extends ConsumerWidget {
+                         );
+                       } catch (e) {
+                         if (!context.mounted) return;
++                        // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
+                         AppFeedback.error(
+                           context,
+-                          '${l10n.goalDetailStart}: $e',
++                          uiErrorMessage(context.l10n, categorizeUiError(e)),
+                         );
+                       }
+                     },
+@@ -667,9 +669,10 @@ class _TodayStepCard extends ConsumerWidget {
+                           }
+                         } catch (e) {
+                           if (!context.mounted) return;
++                          // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
+                           AppFeedback.error(
+                             context,
+-                            '${l10n.goalDetailComplete}: $e',
++                            uiErrorMessage(context.l10n, categorizeUiError(e)),
+                           );
+                         }
+                       }
+diff --git a/mobile/lib/features/memory/presentation/screens/memory_detail_screen.dart b/mobile/lib/features/memory/presentation/screens/memory_detail_screen.dart
+index 399de3f5..7b18620d 100644
+--- a/mobile/lib/features/memory/presentation/screens/memory_detail_screen.dart
++++ b/mobile/lib/features/memory/presentation/screens/memory_detail_screen.dart
+@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
+ import 'package:sparkle/core/constants/app_constants.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/core/models/memory_models.dart';
+ import 'package:sparkle/core/services/memory_api_service.dart';
+@@ -837,8 +838,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
+       if (!mounted) {
+         return;
+       }
++      // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
++      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
+       AppFeedback.error(
+-          context, context.l10n.memoryCorrectionFailedWithDetail('$e'),);
++          context, context.l10n.memoryCorrectionFailedWithDetail(detail),);
+     }
+   }
+ }
+diff --git a/mobile/lib/features/memory/presentation/screens/memory_panel_screen.dart b/mobile/lib/features/memory/presentation/screens/memory_panel_screen.dart
+index f25fa175..903d3d36 100644
+--- a/mobile/lib/features/memory/presentation/screens/memory_panel_screen.dart
++++ b/mobile/lib/features/memory/presentation/screens/memory_panel_screen.dart
+@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/empty_state.dart';
+ import 'package:sparkle/core/design/widgets/error_widget.dart';
+ import 'package:sparkle/core/display/lexicon/date_formatting.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/display/lexicon/goal_status_lexicon.dart';
+ import 'package:sparkle/core/display/lexicon/lexicon.dart';
+ import 'package:sparkle/core/display/lexicon/memory_event_lexicon.dart';
+@@ -1072,7 +1073,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
+       if (!mounted) {
+         return;
+       }
+-      AppFeedback.error(context, context.l10n.memoryGovFailed('$e'));
++      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
++      AppFeedback.error(context, context.l10n.memoryGovFailed(detail));
+     }
+   }
+ 
+@@ -1096,7 +1098,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
+       if (!mounted) {
+         return;
+       }
+-      AppFeedback.error(context, context.l10n.memoryGovFailed('$e'));
++      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
++      AppFeedback.error(context, context.l10n.memoryGovFailed(detail));
+     }
+   }
+ 
+@@ -1214,7 +1217,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
+       if (!mounted) {
+         return;
+       }
+-      AppFeedback.error(context, context.l10n.memoryPanelRevokeFailed('$e'));
++      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
++      AppFeedback.error(context, context.l10n.memoryPanelRevokeFailed(detail));
+     }
+   }
+ 
+@@ -1231,7 +1235,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
+       if (!mounted) {
+         return;
+       }
+-      AppFeedback.error(context, context.l10n.memoryPanelMarkFailed('$e'));
++      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
++      AppFeedback.error(context, context.l10n.memoryPanelMarkFailed(detail));
+     }
+   }
+ 
+@@ -1248,7 +1253,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
+       if (!mounted) {
+         return;
+       }
+-      AppFeedback.error(context, context.l10n.memoryPanelDismissFailed('$e'));
++      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
++      AppFeedback.error(context, context.l10n.memoryPanelDismissFailed(detail));
+     }
+   }
+ 
+@@ -1288,7 +1294,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
+       if (!mounted) {
+         return;
+       }
+-      AppFeedback.error(context, context.l10n.memoryPanelConflictFailed('$e'));
++      final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
++      AppFeedback.error(context, context.l10n.memoryPanelConflictFailed(detail));
+     }
+   }
+ 
+diff --git a/mobile/lib/features/memory/presentation/widgets/understanding_overview_view.dart b/mobile/lib/features/memory/presentation/widgets/understanding_overview_view.dart
+index b65ef023..381fbcf9 100644
+--- a/mobile/lib/features/memory/presentation/widgets/understanding_overview_view.dart
++++ b/mobile/lib/features/memory/presentation/widgets/understanding_overview_view.dart
+@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/empty_state.dart';
+ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/features/memory/data/memory_provenance_models.dart';
+ import 'package:sparkle/features/memory/data/memory_provenance_repository.dart';
+@@ -360,7 +361,8 @@ class UnderstandingItemCard extends ConsumerWidget {
+         AppFeedback.error(
+           context,
+           context.l10n.understandingToastFailedDetail(
+-            provenanceErrorDetail(e) ?? '$e',
++            provenanceErrorDetail(e) ??
++                uiErrorMessage(context.l10n, categorizeUiError(e)),
+           ),
+         );
+       }
+@@ -389,7 +391,8 @@ class UnderstandingItemCard extends ConsumerWidget {
+         AppFeedback.error(
+           context,
+           context.l10n.understandingToastFailedDetail(
+-            provenanceErrorDetail(e) ?? '$e',
++            provenanceErrorDetail(e) ??
++                uiErrorMessage(context.l10n, categorizeUiError(e)),
+           ),
+         );
+       }
+@@ -409,7 +412,8 @@ class UnderstandingItemCard extends ConsumerWidget {
+         AppFeedback.error(
+           context,
+           context.l10n.understandingToastFailedDetail(
+-            provenanceErrorDetail(e) ?? '$e',
++            provenanceErrorDetail(e) ??
++                uiErrorMessage(context.l10n, categorizeUiError(e)),
+           ),
+         );
+       }
+@@ -433,7 +437,8 @@ class UnderstandingItemCard extends ConsumerWidget {
+         AppFeedback.error(
+           context,
+           context.l10n.understandingToastFailedDetail(
+-            provenanceErrorDetail(e) ?? '$e',
++            provenanceErrorDetail(e) ??
++                uiErrorMessage(context.l10n, categorizeUiError(e)),
+           ),
+         );
+       }
+@@ -458,7 +463,8 @@ class UnderstandingItemCard extends ConsumerWidget {
+         AppFeedback.error(
+           context,
+           context.l10n.understandingToastFailedDetail(
+-            provenanceErrorDetail(e) ?? '$e',
++            provenanceErrorDetail(e) ??
++                uiErrorMessage(context.l10n, categorizeUiError(e)),
+           ),
+         );
+       }
+@@ -486,7 +492,8 @@ class UnderstandingItemCard extends ConsumerWidget {
+         AppFeedback.error(
+           context,
+           context.l10n.understandingToastFailedDetail(
+-            provenanceErrorDetail(e) ?? '$e',
++            provenanceErrorDetail(e) ??
++                uiErrorMessage(context.l10n, categorizeUiError(e)),
+           ),
+         );
+       }
+diff --git a/mobile/lib/features/memory/presentation/widgets/why_this_receipt_sheet.dart b/mobile/lib/features/memory/presentation/widgets/why_this_receipt_sheet.dart
+index cc05b854..9b872f37 100644
+--- a/mobile/lib/features/memory/presentation/widgets/why_this_receipt_sheet.dart
++++ b/mobile/lib/features/memory/presentation/widgets/why_this_receipt_sheet.dart
+@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/features/memory/data/memory_provenance_models.dart';
+ import 'package:sparkle/features/memory/data/memory_provenance_repository.dart';
+@@ -336,7 +337,8 @@ class _WhyThisSheetState extends ConsumerState<_WhyThisSheet> {
+         AppFeedback.error(
+           context,
+           context.l10n.understandingToastFailedDetail(
+-            provenanceErrorDetail(e) ?? '$e',
++            provenanceErrorDetail(e) ??
++                uiErrorMessage(context.l10n, categorizeUiError(e)),
+           ),
+         );
+       }
+diff --git a/mobile/lib/features/task/presentation/screens/task_detail_screen.dart b/mobile/lib/features/task/presentation/screens/task_detail_screen.dart
+index 9c50940a..2e658629 100755
+--- a/mobile/lib/features/task/presentation/screens/task_detail_screen.dart
++++ b/mobile/lib/features/task/presentation/screens/task_detail_screen.dart
+@@ -487,8 +487,12 @@ class _TaskDetailView extends ConsumerWidget {
+         if (!context.mounted) return;
+         final loadZh =
+             Localizations.localeOf(context).languageCode == 'zh';
++        // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
++        final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
+         AppFeedback.error(
+-            context, loadZh ? '加载计划失败: $e' : 'Failed to load plans: $e',);
++          context,
++          loadZh ? '加载计划失败: $detail' : 'Failed to load plans: $detail',
++        );
+         return;
+       }
+     }
+@@ -545,7 +549,13 @@ class _TaskDetailView extends ConsumerWidget {
+       );
+     } catch (e) {
+       if (!context.mounted) return;
+-      AppFeedback.error(context, zh ? '移动失败: $e' : 'Move failed: $e');
++      // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
++      AppFeedback.error(
++        context,
++        zh
++            ? '移动失败: ${uiErrorMessage(context.l10n, categorizeUiError(e))}'
++            : 'Move failed: ${uiErrorMessage(context.l10n, categorizeUiError(e))}',
++      );
+     }
+   }
+ 
+@@ -1322,8 +1332,12 @@ class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
+       }
+     } catch (e) {
+       if (mounted) {
++        // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
++        final detail = uiErrorMessage(context.l10n, categorizeUiError(e));
+         AppFeedback.error(
+-            context, context.l10n.taskDetailGuideGenerateFailed('$e'),);
++          context,
++          context.l10n.taskDetailGuideGenerateFailed(detail),
++        );
+       }
+     } finally {
+       if (mounted) setState(() => _isGenerating = false);
+diff --git a/mobile/lib/features/task/presentation/screens/task_execution_screen.dart b/mobile/lib/features/task/presentation/screens/task_execution_screen.dart
+index dda1e624..5bc6c5dd 100755
+--- a/mobile/lib/features/task/presentation/screens/task_execution_screen.dart
++++ b/mobile/lib/features/task/presentation/screens/task_execution_screen.dart
+@@ -523,9 +523,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
+         sheetTask = result.task;
+       } catch (error) {
+         if (!mounted) return;
++        // 异常细节走 error_lexicon 类别人话，不透传原始异常（U-06 续）。
++        final detail = uiErrorMessage(context.l10n, categorizeUiError(error));
+         AppFeedback.error(
+           context,
+-          context.l10n.taskExecutionAuroraDiagnosticUnavailable('$error'),
++          context.l10n.taskExecutionAuroraDiagnosticUnavailable(detail),
+         );
+       }
+     }
+diff --git a/mobile/lib/features/user/presentation/screens/system_updates_screen.dart b/mobile/lib/features/user/presentation/screens/system_updates_screen.dart
+index 85418023..3d66623f 100644
+--- a/mobile/lib/features/user/presentation/screens/system_updates_screen.dart
++++ b/mobile/lib/features/user/presentation/screens/system_updates_screen.dart
+@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
++import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/core/services/sensory_feedback_service.dart';
+ import 'package:sparkle/core/utils/formatters.dart';
+@@ -40,9 +41,13 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
+       child: updatesAsync.when(
+         data: (items) => ContentConstraint(child: _buildList(context, items)),
+         loading: () => const SparkleListSkeleton(),
+-        error: (err, stack) => Center(
+-          child: Text(context.l10n.systemUpdatesLoadFailed('$err')),
+-        ),
++        error: (err, stack) {
++          // 错误人话单源 error_lexicon，不透传原始异常（U-06 续）。
++          final detail = uiErrorMessage(context.l10n, categorizeUiError(err));
++          return Center(
++            child: Text(context.l10n.systemUpdatesLoadFailed(detail)),
++          );
++        },
+       ),
+     );
+   }
+diff --git a/scripts/guards/n9_raw_exception_leak_baseline.json b/scripts/guards/n9_raw_exception_leak_baseline.json
+index f5cb6a3c..fe05c64f 100644
+--- a/scripts/guards/n9_raw_exception_leak_baseline.json
++++ b/scripts/guards/n9_raw_exception_leak_baseline.json
+@@ -3,7 +3,6 @@
+     "mobile/lib/l10n/app_en.arb": {
+       "accountabilityLoadFailed": 1,
+       "auroraFeedbackFailed": 1,
+-      "auto_loadfailedrror": 1,
+       "blockedOperationFailed": 1,
+       "capsuleLoadFailed": 1,
+       "capsuleSubmitFailed": 1,
+@@ -17,7 +16,6 @@
+       "chatHistoryLoadMoreFailed": 1,
+       "chatShareResourceAdoptError": 1,
+       "communityAdoptFailed": 1,
+-      "communityAdoptFailedWithError": 1,
+       "communityCreateGroupFailed": 1,
+       "communityCreateTaskFailed": 1,
+       "communityLoadFailed": 1,
+@@ -27,12 +25,9 @@
+       "communitySaveFailed": 1,
+       "ebLoadErrorFailed": 1,
+       "editProfileUpdateFailed": 1,
+-      "editProfileUploadFailed": 1,
+       "favoritesLoadFailed": 1,
+       "favoritesOperationFailed": 1,
+       "fileUploadFailed": 1,
+-      "flashCapsuleLoadError": 1,
+-      "flashCapsuleSaveFailed": 1,
+       "focusLoadFailed": 1,
+       "focusReflectionSaveFailed": 1,
+       "focusSaveFailed": 1,
+@@ -55,7 +50,6 @@
+       "learningPreferenceSaveFailed": 1,
+       "loadingFailed": 1,
+       "loadingFailedWithError": 1,
+-      "loginFailedWithError": 1,
+       "lpLoadFailed": 1,
+       "memoryCorrectionFailedWithDetail": 1,
+       "memoryGovFailed": 1,
+@@ -64,16 +58,12 @@
+       "memoryPanelLoadFailed": 1,
+       "memoryPanelMarkFailed": 1,
+       "memoryPanelRevokeFailed": 1,
+-      "memorySettingsLoadError": 1,
+-      "memorySettingsSaveError": 1,
+       "modelChatPlanIssue": 1,
+       "modelChatSkipFailed": 1,
+       "modelChatTempFailed": 1,
+       "notificationAnalyticsLoadFailed": 1,
+       "notificationPermissionDeniedTitle": 1,
+       "notificationUpdateFailed": 1,
+-      "passwordResetFailed": 1,
+-      "personaAdjustFailed": 1,
+       "personaAdjustmentFailed": 1,
+       "personaCorrectionSubmitFailed": 1,
+       "personaGoalUpdateFailed": 1,
+@@ -82,7 +72,6 @@
+       "personaRestoreFailed": 1,
+       "personaRollbackFailed": 1,
+       "planConfirmFailed": 1,
+-      "planCreateFailed": 1,
+       "planDetailActivatePhaseFailed": 1,
+       "planDetailAddTaskFailed": 1,
+       "planDetailCompletePhaseFailed": 1,
+@@ -98,7 +87,6 @@
+       "profileExportFailed": 1,
+       "remediableGenerateFailed": 1,
+       "reviewPlanHubLoadFailed": 1,
+-      "reviewSubmitFailed": 1,
+       "saveFailed": 1,
+       "schedulePreferencesSaveFailed": 1,
+       "seedLibraryDeleteFailed": 1,
+@@ -109,15 +97,9 @@
+       "seedLibraryDetailRatingFailed": 1,
+       "seedLibraryDetailSetPrimaryFailed": 1,
+       "sendFailedWithError": 1,
+-      "shareCardPrepareFailed": 1,
+       "shareFailed": 1,
+       "shareResourceFailed": 1,
+       "simulationReportGenerationFailed": 1,
+-      "skillActionFailed": 1,
+-      "skillDraftFailed": 1,
+-      "skillLoadFailed": 1,
+-      "skillSaveFailed": 1,
+-      "smartPushSaveFailed": 1,
+       "squadActionFailed": 1,
+       "squadBoardLoadFailed": 1,
+       "squadCreateFailed": 1,
+@@ -128,7 +110,6 @@
+       "squadShareFailed": 1,
+       "squadSharedErrorsLoadFailed": 1,
+       "statisticsExportFailed": 1,
+-      "statisticsLoadingFailed": 1,
+       "studyMaterialsArchiveFailed": 1,
+       "studyMaterialsDeleteFailure": 1,
+       "studyMaterialsRestoreFailed": 1,
+@@ -141,15 +122,10 @@
+       "taskDetailSubtaskLoadFailed": 1,
+       "taskExecutionAuroraDiagnosticUnavailable": 1,
+       "taskGuidanceFailed": 1,
+-      "taskLoadFailed": 1,
+       "taskReminderRefreshFailed": 1,
+       "taskReminderTimeFailed": 1,
+       "taskReminderUpdateFailed": 1,
+       "thoughtCapsuleCaptureFailed": 1,
+-      "userCannotSkipNow": 1,
+-      "userModelingFailed": 1,
+-      "userPlanGenerationError": 1,
+-      "utilLoadingFailed": 1,
+       "visualElementShareFailed": 1,
+       "vocabularyLookupOfflineDownloadFailed": 1,
+       "vocabularyLookupOfflineRemoveFailed": 1,
+@@ -159,7 +135,6 @@
+     "mobile/lib/l10n/app_zh.arb": {
+       "accountabilityLoadFailed": 1,
+       "auroraFeedbackFailed": 1,
+-      "auto_loadfailedrror": 1,
+       "blockedOperationFailed": 1,
+       "capsuleLoadFailed": 1,
+       "capsuleSubmitFailed": 1,
+@@ -173,7 +148,6 @@
+       "chatHistoryLoadMoreFailed": 1,
+       "chatShareResourceAdoptError": 1,
+       "communityAdoptFailed": 1,
+-      "communityAdoptFailedWithError": 1,
+       "communityCreateGroupFailed": 1,
+       "communityCreateTaskFailed": 1,
+       "communityLoadFailed": 1,
+@@ -183,12 +157,9 @@
+       "communitySaveFailed": 1,
+       "ebLoadErrorFailed": 1,
+       "editProfileUpdateFailed": 1,
+-      "editProfileUploadFailed": 1,
+       "favoritesLoadFailed": 1,
+       "favoritesOperationFailed": 1,
+       "fileUploadFailed": 1,
+-      "flashCapsuleLoadError": 1,
+-      "flashCapsuleSaveFailed": 1,
+       "focusLoadFailed": 1,
+       "focusReflectionSaveFailed": 1,
+       "focusSaveFailed": 1,
+@@ -211,7 +182,6 @@
+       "learningPreferenceSaveFailed": 1,
+       "loadingFailed": 1,
+       "loadingFailedWithError": 1,
+-      "loginFailedWithError": 1,
+       "lpLoadFailed": 1,
+       "memoryCorrectionFailedWithDetail": 1,
+       "memoryGovFailed": 1,
+@@ -220,16 +190,12 @@
+       "memoryPanelLoadFailed": 1,
+       "memoryPanelMarkFailed": 1,
+       "memoryPanelRevokeFailed": 1,
+-      "memorySettingsLoadError": 1,
+-      "memorySettingsSaveError": 1,
+       "modelChatPlanIssue": 1,
+       "modelChatSkipFailed": 1,
+       "modelChatTempFailed": 1,
+       "notificationAnalyticsLoadFailed": 1,
+       "notificationPermissionDeniedTitle": 1,
+       "notificationUpdateFailed": 1,
+-      "passwordResetFailed": 1,
+-      "personaAdjustFailed": 1,
+       "personaAdjustmentFailed": 1,
+       "personaCorrectionSubmitFailed": 1,
+       "personaGoalUpdateFailed": 1,
+@@ -238,7 +204,6 @@
+       "personaRestoreFailed": 1,
+       "personaRollbackFailed": 1,
+       "planConfirmFailed": 1,
+-      "planCreateFailed": 1,
+       "planDetailActivatePhaseFailed": 1,
+       "planDetailAddTaskFailed": 1,
+       "planDetailCompletePhaseFailed": 1,
+@@ -254,7 +219,6 @@
+       "profileExportFailed": 1,
+       "remediableGenerateFailed": 1,
+       "reviewPlanHubLoadFailed": 1,
+-      "reviewSubmitFailed": 1,
+       "saveFailed": 1,
+       "schedulePreferencesSaveFailed": 1,
+       "seedLibraryDeleteFailed": 1,
+@@ -265,15 +229,9 @@
+       "seedLibraryDetailRatingFailed": 1,
+       "seedLibraryDetailSetPrimaryFailed": 1,
+       "sendFailedWithError": 1,
+-      "shareCardPrepareFailed": 1,
+       "shareFailed": 1,
+       "shareResourceFailed": 1,
+       "simulationReportGenerationFailed": 1,
+-      "skillActionFailed": 1,
+-      "skillDraftFailed": 1,
+-      "skillLoadFailed": 1,
+-      "skillSaveFailed": 1,
+-      "smartPushSaveFailed": 1,
+       "squadActionFailed": 1,
+       "squadBoardLoadFailed": 1,
+       "squadCreateFailed": 1,
+@@ -284,7 +242,6 @@
+       "squadShareFailed": 1,
+       "squadSharedErrorsLoadFailed": 1,
+       "statisticsExportFailed": 1,
+-      "statisticsLoadingFailed": 1,
+       "studyMaterialsArchiveFailed": 1,
+       "studyMaterialsDeleteFailure": 1,
+       "studyMaterialsRestoreFailed": 1,
+@@ -297,15 +254,10 @@
+       "taskDetailSubtaskLoadFailed": 1,
+       "taskExecutionAuroraDiagnosticUnavailable": 1,
+       "taskGuidanceFailed": 1,
+-      "taskLoadFailed": 1,
+       "taskReminderRefreshFailed": 1,
+       "taskReminderTimeFailed": 1,
+       "taskReminderUpdateFailed": 1,
+       "thoughtCapsuleCaptureFailed": 1,
+-      "userCannotSkipNow": 1,
+-      "userModelingFailed": 1,
+-      "userPlanGenerationError": 1,
+-      "utilLoadingFailed": 1,
+       "visualElementShareFailed": 1,
+       "vocabularyLookupOfflineDownloadFailed": 1,
+       "vocabularyLookupOfflineRemoveFailed": 1,
+@@ -316,15 +268,12 @@
+   "assignmentFace": {
+     "mobile/lib/core/offline/sync_queue.dart": 1,
+     "mobile/lib/core/services/universal_share_service.dart": 2,
+-    "mobile/lib/features/auth/presentation/providers/auth_provider.dart": 15,
+     "mobile/lib/features/calendar/presentation/providers/calendar_provider.dart": 2,
+     "mobile/lib/features/calendar/presentation/providers/unified_calendar_provider.dart": 1,
+     "mobile/lib/features/cognitive/presentation/providers/cognitive_provider.dart": 3,
+     "mobile/lib/features/error_book/data/providers/error_book_provider.dart": 5,
+     "mobile/lib/features/home/presentation/screens/task_monitor_screen.dart": 1,
+     "mobile/lib/features/knowledge/presentation/providers/vocabulary_provider.dart": 1,
+-    "mobile/lib/features/notification_center/presentation/providers/notification_analytics_provider.dart": 1,
+-    "mobile/lib/features/notification_center/presentation/providers/notification_center_provider.dart": 14,
+     "mobile/lib/features/plan/presentation/providers/plan_confirmation_provider.dart": 1,
+     "mobile/lib/features/plan/presentation/providers/plan_provider.dart": 1
+   },
+@@ -525,14 +474,6 @@
+       "bareCatchVar": 1,
+       "catchVarToString": 0
+     },
+-    "mobile/lib/features/notification_center/presentation/screens/notification_analytics_screen.dart": {
+-      "bareCatchVar": 1,
+-      "catchVarToString": 0
+-    },
+-    "mobile/lib/features/notification_center/presentation/screens/notification_center_screen.dart": {
+-      "bareCatchVar": 1,
+-      "catchVarToString": 0
+-    },
+     "mobile/lib/features/plan/presentation/screens/plan_create_screen.dart": {
+       "bareCatchVar": 0,
+       "catchVarToString": 1
