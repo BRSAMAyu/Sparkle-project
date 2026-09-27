@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
@@ -14,6 +14,41 @@ from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
 from app.models.task import Task, TaskType
 from app.schemas.exam_sprint import ExamSprintIntakeRequest
 from app.services.exam_sprint_intake_service import ExamSprintIntakeService, GeneratedPlanBundle
+
+# ---------------------------------------------------------------------------
+# wt611 时钟加固（V3-FIX-321 批一，wt590 族C / wt559 判例）：intake 生成链有
+# 三个产品钟——① exam_sprint_intake_service._today（UTC 日，days_left 口径）、
+# ② planning_strategy_compiler._utcnow（上海本地日，V3-FIX-221）、
+# ③ sprint_packs.last_24h_mode._utcnow（UTC 日，strategy 天数/phases 口径，
+# 经 planning_workflow._resolved_days_left → calculate_days_left）。
+# 冻结钟取 2026-09-25 01:00 naive UTC（上海本地同日上午 09:00，三钟同日）——
+# 播种与期望推导全部按冻结常数派生，断言与期望值语义零改动（原风险窗：播种
+# date.today() 随宿主 TZ 翻日，与三个产品钟在 UTC 宿主 16:00-24:00Z 各错一
+# 位，模板天数 7↔6↔5 漂移）。
+# ---------------------------------------------------------------------------
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 1, 0)  # naive UTC → 上海本地 09-25 09:00（同日上午）
+FROZEN_TODAY = date(2026, 9, 25)  # 三钟共同的「今日」
+
+
+@pytest.fixture(autouse=True)
+def _freeze_intake_chain_clocks(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.exam_sprint_intake_service.ExamSprintIntakeService._today",
+        staticmethod(lambda: FROZEN_TODAY),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "app.orchestration.planning_strategy_compiler._utcnow",
+        lambda: FROZEN_UTC_NOW,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "app.sprint_packs.last_24h_mode._utcnow",
+        # 该模块 _utcnow 原形为 aware（datetime.now(UTC)），is_last_24h_window
+        # 与 aware exam_start 直比——冻结值须带 tzinfo。
+        lambda: FROZEN_UTC_NOW.replace(tzinfo=UTC),
+        raising=False,
+    )
 
 
 class FakeRedis:
@@ -37,7 +72,7 @@ async def test_exam_sprint_intake_saves_session_and_returns_launch_payload(db_se
     request = ExamSprintIntakeRequest.model_validate(
         {
             "subject": "计算机网络",
-            "exam_date": (date.today() + timedelta(days=7)).isoformat(),
+            "exam_date": (FROZEN_TODAY + timedelta(days=7)).isoformat(),
             "target_mode": "hold",
             "scope_context": {
                 "text": "老师重点是传输层和网络层",
@@ -98,7 +133,7 @@ async def test_exam_sprint_intake_saves_session_and_returns_launch_payload(db_se
 async def test_exam_sprint_intake_reuses_existing_plan_for_same_goal(db_session) -> None:
     """BP-7 幂等：同 user + 同 goal（subject+exam_date）复跑 intake 必须返回既有 plan，而非 403/双计划。"""
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     plan = Plan(
         user_id=user_id,
         name="7天离散数学冲刺",
@@ -183,7 +218,7 @@ def test_exam_sprint_pack_selection_uses_builtin_pack_for_14_day_window(db_sessi
         request=ExamSprintIntakeRequest.model_validate(
             {
                 "subject": "操作系统",
-                "exam_date": (date.today() + timedelta(days=14)).isoformat(),
+                "exam_date": (FROZEN_TODAY + timedelta(days=14)).isoformat(),
                 "target_mode": "high_score",
                 "scope_context": {"text": "进程、内存、文件系统"},
                 "baseline": {
@@ -197,7 +232,7 @@ def test_exam_sprint_pack_selection_uses_builtin_pack_for_14_day_window(db_sessi
             request=ExamSprintIntakeRequest.model_validate(
                 {
                     "subject": "操作系统",
-                    "exam_date": (date.today() + timedelta(days=14)).isoformat(),
+                    "exam_date": (FROZEN_TODAY + timedelta(days=14)).isoformat(),
                     "target_mode": "high_score",
                     "scope_context": {"text": "进程、内存、文件系统"},
                     "baseline": {
@@ -286,7 +321,7 @@ def _intake_request_for(exam_date, subject="离散数学") -> ExamSprintIntakeRe
 async def test_intake_reuses_goal_created_plan_when_subject_is_null(db_session) -> None:
     """NBP-3 主红：goal 建的 plan（subject=NULL）必须被 intake 复用，而非静默双计划。"""
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     goal, plan, day_one = await _seed_goal_linked_sprint_plan(db_session, user_id, exam_date=exam_date)
 
     service = ExamSprintIntakeService(db=db_session, redis_client=FakeRedis())
@@ -343,7 +378,7 @@ async def test_intake_reuses_goal_created_plan_with_canonical_academic_type(db_s
     落库（_CANONICAL_TO_TEMPLATE），夹具若只插 "exam" 会复现「单测绿运行红」——
     canonical 族键必须同样命中复用，否则用户走真实链路即双计划。"""
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     goal, plan, day_one = await _seed_goal_linked_sprint_plan(
         db_session, user_id, exam_date=exam_date, goal_type="academic"
     )
@@ -376,7 +411,7 @@ async def test_intake_reuses_goal_created_plan_with_canonical_academic_type(db_s
 async def test_intake_does_not_reuse_goal_plan_for_different_exam_date(db_session) -> None:
     """不同 exam_date = 不同目标：goal 关联兜底不得越界复用（保持 BP-7 语义）。"""
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     await _seed_goal_linked_sprint_plan(db_session, user_id, exam_date=exam_date)
 
     service = ExamSprintIntakeService(db=db_session, redis_client=FakeRedis())
@@ -412,7 +447,7 @@ async def test_intake_does_not_reuse_goal_plan_for_different_exam_date(db_sessio
 async def test_intake_does_not_reuse_non_exam_goal_plan(db_session) -> None:
     """非 exam 型 goal 的同日计划不构成同一考试目标：不得复用。"""
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     await _seed_goal_linked_sprint_plan(db_session, user_id, exam_date=exam_date, goal_type="project")
 
     service = ExamSprintIntakeService(db=db_session, redis_client=FakeRedis())
@@ -453,12 +488,15 @@ async def test_intake_does_not_reuse_non_exam_goal_plan(db_session) -> None:
 # A，保复用防双计划 + 补模板保旅程）：复用后计划无 day:N 形状任务则补生成
 # 模板挂到该计划——幂等（已有则跳过）、不删用户已有任务、不新建计划。
 # ---------------------------------------------------------------------------
-from datetime import UTC, datetime  # noqa: E402
 
 
 def _expected_days_left(exam_date: date) -> int:
-    """与 ExamSprintIntakeService._today()（UTC）同一口径，吃掉时区边界抖动。"""
-    return max(1, (exam_date - datetime.now(UTC).date()).days)
+    """与冻结的 ExamSprintIntakeService._today()（FROZEN_TODAY）同一口径。
+
+    wt611 时钟加固：服务钟已冻结，期望推导同步吃冻结常数（原为
+    datetime.now(UTC).date() 宿主钟重算），语义不变（exam − today 的既约天数）。
+    """
+    return max(1, (exam_date - FROZEN_TODAY).days)
 
 
 async def _plan_day_indices(db_session, plan_id) -> tuple[dict[int, list[Task]], list[Task]]:
@@ -497,7 +535,7 @@ def _reuse_service(db_session, user_id, conversation: str) -> ExamSprintIntakeSe
 async def test_intake_reuse_supplements_seven_day_template_for_goal_plan(db_session) -> None:
     """主红：goal 建计划 → intake 复用 → 计划必须获得 Day1..DayN 模板脊柱。"""
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     goal, plan, milestone = await _seed_goal_linked_sprint_plan(db_session, user_id, exam_date=exam_date)
 
     service = _reuse_service(db_session, user_id, "intake-template-supplement")
@@ -552,7 +590,7 @@ async def test_intake_reuse_supplements_seven_day_template_for_goal_plan(db_sess
 async def test_intake_reuse_supplement_is_idempotent_on_repeat(db_session) -> None:
     """幂等：重复 intake 不得重复生成模板（第二次经 BP-7 主键复用 + 形状闸跳过）。"""
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     goal, plan, milestone = await _seed_goal_linked_sprint_plan(db_session, user_id, exam_date=exam_date)
 
     first_service = _reuse_service(db_session, user_id, "intake-template-idem-1")
@@ -581,7 +619,7 @@ async def test_intake_reuse_supplement_is_idempotent_on_repeat(db_session) -> No
 async def test_intake_does_not_force_template_on_non_exam_goal_plan(db_session) -> None:
     """非 exam 族 goal 的计划不复用也不强加模板（补模板只跟随 exam-sprint 复用）。"""
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     goal, plan, milestone = await _seed_goal_linked_sprint_plan(
         db_session, user_id, exam_date=exam_date, goal_type="project"
     )
@@ -625,7 +663,7 @@ async def test_intake_supplement_skips_non_goal_plan_even_without_day_tags(db_se
     方）才是补挂对象。
     """
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     plan = Plan(
         user_id=user_id,
         name="7天离散数学冲刺",

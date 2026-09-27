@@ -20,6 +20,25 @@ from app.services.error_replan_bridge import ErrorReplanBridge
 from app.services.notification_center_service import NotificationCenterService
 from app.services.task_service import TaskService
 
+# ---------------------------------------------------------------------------
+# wt611 时钟加固（V3-FIX-321 批一，双冻结钟族）：消费面钟（error_replan_bridge
+# 的 utcnow——7 天错误窗 / due_date >= today 闸 / 24h 冷静期 / 修复任务日数学）
+# 与播种面（datetime.utcnow 派生的 target/due/created_at 及期望重算）一并冻结
+# 至 2026-09-25 20:00 naive UTC——消 UTC 宿主 16:00-24:00Z 风险窗与午夜竞态；
+# 断言与期望值语义零改动（expected 仍=「明天/后天」，只是相对冻结今日）。
+# ---------------------------------------------------------------------------
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 20, 0)  # naive UTC（上海本地 09-26 04:00）
+FROZEN_TODAY = FROZEN_UTC_NOW.date()  # 服务 _utcnow().date()（UTC 日）口径
+
+
+@pytest.fixture(autouse=True)
+def _freeze_bridge_clock(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.error_replan_bridge._utcnow",
+        lambda: FROZEN_UTC_NOW,
+        raising=False,
+    )
+
 
 class _FakeRedis:
     def __init__(self) -> None:
@@ -58,7 +77,7 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
         type=PlanType.SPRINT,
         description="两周后考试",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=10),
+        target_date=FROZEN_TODAY + timedelta(days=10),
         daily_available_minutes=90,
         total_estimated_hours=18,
         subject="热力学",
@@ -99,7 +118,7 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
         energy_cost=3,
         status=TaskStatus.PENDING,
         priority=4,
-        due_date=datetime.utcnow().date() + timedelta(days=2),
+        due_date=FROZEN_TODAY + timedelta(days=2),
         knowledge_node_id=node.id,
     )
     db_session.add(task)
@@ -123,7 +142,7 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
             mastery_level=0.2,
             latest_analysis={"error_type": "concept_confusion"},
             linked_knowledge_node_ids=[str(node.id)],
-            created_at=datetime.utcnow() - timedelta(days=idx),
+            created_at=FROZEN_UTC_NOW - timedelta(days=idx),
         )
         for idx in range(3)
     ]
@@ -202,7 +221,7 @@ async def test_error_replan_bridge_inserts_next_day_first_repair_task_and_comple
         type=PlanType.SPRINT,
         description="修复高频错因",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=7),
+        target_date=FROZEN_TODAY + timedelta(days=7),
         daily_available_minutes=90,
         total_estimated_hours=10,
         subject="计算机网络",
@@ -244,7 +263,7 @@ async def test_error_replan_bridge_inserts_next_day_first_repair_task_and_comple
         status=TaskStatus.PENDING,
         priority=1,
         order_index=1000,
-        due_date=datetime.utcnow().date(),
+        due_date=FROZEN_TODAY,
         knowledge_node_id=node.id,
     )
     db_session.add(day_one_task)
@@ -266,7 +285,7 @@ async def test_error_replan_bridge_inserts_next_day_first_repair_task_and_comple
             mastery_level=0.2,
             latest_analysis={"error_type": "concept_confusion"},
             linked_knowledge_node_ids=[str(node.id)],
-            created_at=datetime.utcnow() - timedelta(days=idx),
+            created_at=FROZEN_UTC_NOW - timedelta(days=idx),
         )
         for idx in range(3)
     ]
@@ -389,7 +408,7 @@ async def test_error_replan_bridge_supports_expanded_rule_trigger_types(db_sessi
         type=PlanType.SPRINT,
         description="方法巩固",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=10),
+        target_date=FROZEN_TODAY + timedelta(days=10),
         daily_available_minutes=90,
         total_estimated_hours=12,
         subject="math",
@@ -429,7 +448,7 @@ async def test_error_replan_bridge_supports_expanded_rule_trigger_types(db_sessi
         energy_cost=2,
         status=TaskStatus.PENDING,
         priority=4,
-        due_date=datetime.utcnow().date() + timedelta(days=1),
+        due_date=FROZEN_TODAY + timedelta(days=1),
         knowledge_node_id=node.id,
     )
     db_session.add(task)
@@ -453,7 +472,7 @@ async def test_error_replan_bridge_supports_expanded_rule_trigger_types(db_sessi
             mastery_level=0.2,
             latest_analysis={"error_type": "concept_confusion"},
             linked_knowledge_node_ids=[str(node.id)],
-            created_at=datetime.utcnow() - timedelta(days=idx),
+            created_at=FROZEN_UTC_NOW - timedelta(days=idx),
         )
         for idx in range(3)
     ]
@@ -493,7 +512,7 @@ async def test_error_replan_bridge_respects_plan_type_cooldown(db_session):
         type=PlanType.SPRINT,
         description="冷静期测试",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=10),
+        target_date=FROZEN_TODAY + timedelta(days=10),
         daily_available_minutes=90,
         total_estimated_hours=8,
         subject="physics",
@@ -532,7 +551,7 @@ async def test_error_replan_bridge_respects_plan_type_cooldown(db_session):
         energy_cost=2,
         status=TaskStatus.PENDING,
         priority=4,
-        due_date=datetime.utcnow().date() + timedelta(days=1),
+        due_date=FROZEN_TODAY + timedelta(days=1),
         knowledge_node_id=node.id,
     )
     db_session.add(task)
@@ -554,7 +573,7 @@ async def test_error_replan_bridge_respects_plan_type_cooldown(db_session):
             mastery_level=0.2,
             latest_analysis={"error_type": "concept_confusion"},
             linked_knowledge_node_ids=[str(node.id)],
-            created_at=datetime.utcnow() - timedelta(hours=idx),
+            created_at=FROZEN_UTC_NOW - timedelta(hours=idx),
         )
         for idx in range(3)
     ]
@@ -568,6 +587,9 @@ async def test_error_replan_bridge_respects_plan_type_cooldown(db_session):
             diagnosis_payload={"plan_ids": [str(plan.id)], "error_type": "concept_confusion"},
             delivery_strategy=DeliveryStrategy.SUPPORTIVE,
             delivery_channel=DeliveryChannel.CHAT,
+            # wt611 时钟加固：冷静期窗（24h cutoff 对 frozen _utcnow）与播种
+            # 同钟——原依赖 ORM 默认真实墙钟，冻结后不再成立。
+            created_at=FROZEN_UTC_NOW - timedelta(hours=1),
         )
     )
     await db_session.commit()
@@ -604,7 +626,7 @@ async def test_error_replan_bridge_proposes_specialized_repair_for_repeated_tcp_
         type=PlanType.SPRINT,
         description="TCP 重点补强",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=7),
+        target_date=FROZEN_TODAY + timedelta(days=7),
         daily_available_minutes=90,
         total_estimated_hours=12,
         subject="计算机网络",
@@ -645,7 +667,7 @@ async def test_error_replan_bridge_proposes_specialized_repair_for_repeated_tcp_
         energy_cost=2,
         status=TaskStatus.PENDING,
         priority=3,
-        due_date=datetime.utcnow().date() + timedelta(days=1),
+        due_date=FROZEN_TODAY + timedelta(days=1),
         knowledge_node_id=node.id,
     )
     db_session.add(task)
@@ -672,7 +694,7 @@ async def test_error_replan_bridge_proposes_specialized_repair_for_repeated_tcp_
                 "study_suggestions": "重画三次握手状态图",
             },
             linked_knowledge_node_ids=[str(node.id)],
-            created_at=datetime.utcnow() - timedelta(minutes=index),
+            created_at=FROZEN_UTC_NOW - timedelta(minutes=index),
         )
         for index, text in enumerate(
             [
@@ -741,7 +763,7 @@ async def test_error_replan_bridge_falls_back_to_generic_keyword_cluster_without
         type=PlanType.SPRINT,
         description="单位换算专项",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=7),
+        target_date=FROZEN_TODAY + timedelta(days=7),
         daily_available_minutes=60,
         total_estimated_hours=8,
         subject="physics",
@@ -782,7 +804,7 @@ async def test_error_replan_bridge_falls_back_to_generic_keyword_cluster_without
         energy_cost=1,
         status=TaskStatus.PENDING,
         priority=2,
-        due_date=datetime.utcnow().date() + timedelta(days=1),
+        due_date=FROZEN_TODAY + timedelta(days=1),
         knowledge_node_id=node.id,
     )
     db_session.add(task)
@@ -809,7 +831,7 @@ async def test_error_replan_bridge_falls_back_to_generic_keyword_cluster_without
                 "study_suggestions": "把单位换算链条写清楚",
             },
             linked_knowledge_node_ids=[str(node.id)],
-            created_at=datetime.utcnow() - timedelta(minutes=index),
+            created_at=FROZEN_UTC_NOW - timedelta(minutes=index),
         )
         for index, text in enumerate(
             [
@@ -866,7 +888,7 @@ async def test_accepting_specialized_repair_intervention_materializes_task_card(
         type=PlanType.SPRINT,
         description="专项修复接受测试",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=7),
+        target_date=FROZEN_TODAY + timedelta(days=7),
         daily_available_minutes=90,
         total_estimated_hours=10,
         subject="计算机网络",
@@ -907,7 +929,7 @@ async def test_accepting_specialized_repair_intervention_materializes_task_card(
         energy_cost=2,
         status=TaskStatus.PENDING,
         priority=2,
-        due_date=datetime.utcnow().date() + timedelta(days=2),
+        due_date=FROZEN_TODAY + timedelta(days=2),
         knowledge_node_id=node.id,
         source_planning_session_id="plan-session-1",
         phase_index=2,
@@ -936,7 +958,7 @@ async def test_accepting_specialized_repair_intervention_materializes_task_card(
                 "study_suggestions": "重画状态图",
             },
             linked_knowledge_node_ids=[str(node.id)],
-            created_at=datetime.utcnow() - timedelta(minutes=index),
+            created_at=FROZEN_UTC_NOW - timedelta(minutes=index),
         )
         for index, text in enumerate(
             [
@@ -980,11 +1002,11 @@ async def test_accepting_specialized_repair_intervention_materializes_task_card(
     specialized = [task for task in tasks if task.title.startswith("[专项修复]")]
     assert len(specialized) == 1
     assert specialized[0].type == TaskType.ERROR_FIX
-    assert specialized[0].due_date == datetime.utcnow().date() + timedelta(days=1)
+    assert specialized[0].due_date == FROZEN_TODAY + timedelta(days=1)
     assert specialized[0].priority > original_task.priority
     assert specialized[0].guide_json["repair_cluster_id"] == "mistake.three_way_state"
     assert specialized[0].guide_json["related_nodes"] == ["cn.tcp_three_way"]
-    assert original_task.due_date == datetime.utcnow().date() + timedelta(days=2)
+    assert original_task.due_date == FROZEN_TODAY + timedelta(days=2)
 
     record = await db_session.get(InterventionRecord, UUID(str(record_id)))
     assert record is not None

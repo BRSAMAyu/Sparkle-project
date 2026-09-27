@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -11,6 +11,24 @@ from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
 from app.services.error_replan_bridge import ErrorReplanBridge
+
+# ---------------------------------------------------------------------------
+# wt611 时钟加固（V3-FIX-321 批一，双冻结钟族）：消费面钟（error_replan_bridge
+# 的 utcnow 窗口/日数学）与播种面（datetime.utcnow 派生的 target/due/created_at）
+# 一并冻结至 2026-09-25 20:00 naive UTC——消 UTC 宿主 16:00-24:00Z 风险窗与
+# 午夜竞态；断言与期望值语义零改动。
+# ---------------------------------------------------------------------------
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 20, 0)  # naive UTC（上海本地 09-26 04:00）
+FROZEN_TODAY = date(2026, 9, 25)  # 服务 _utcnow().date()（UTC 日）口径
+
+
+@pytest.fixture(autouse=True)
+def _freeze_bridge_clock(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.error_replan_bridge._utcnow",
+        lambda: FROZEN_UTC_NOW,
+        raising=False,
+    )
 
 
 @pytest.mark.parametrize(
@@ -153,7 +171,7 @@ async def _seed_replan_context(
         type=PlanType.SPRINT,
         description="错题回路测试",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=10),
+        target_date=FROZEN_TODAY + timedelta(days=10),
         daily_available_minutes=90,
         total_estimated_hours=10,
         subject="physics",
@@ -194,7 +212,7 @@ async def _seed_replan_context(
         energy_cost=3,
         status=TaskStatus.PENDING,
         priority=4,
-        due_date=datetime.utcnow().date() + timedelta(days=2),
+        due_date=FROZEN_TODAY + timedelta(days=2),
         knowledge_node_id=node.id,
     )
     db_session.add(task)
@@ -218,7 +236,7 @@ async def _seed_replan_context(
             mastery_level=0.2,
             latest_analysis=analysis,
             linked_knowledge_node_ids=[str(node.id)],
-            created_at=datetime.utcnow() - timedelta(minutes=idx),
+            created_at=FROZEN_UTC_NOW - timedelta(minutes=idx),
         )
         for idx, analysis in enumerate(analyses)
     ]

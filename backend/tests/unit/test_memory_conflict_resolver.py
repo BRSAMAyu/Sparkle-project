@@ -1,12 +1,20 @@
-from datetime import timezone, date, datetime, timedelta
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.services.memory_conflict_resolver import MemoryConflictResolver
 
+# wt611 时钟加固（V3-FIX-321 批一）：MemoryConflictResolver 本身不读宿主钟
+# （仅 updated_at/occurred_at 的相对比较与 datetime.min 兜底），goal 播种的
+# target_date 原为 date.today() 宿主钟——改冻结常数，pairwise 同值语义不变；
+# _utcnow 相对偏移种子（now − days/hours）改为冻结常数基准，同表达式自洽。
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 20, 0)  # naive UTC（上海本地 09-26 04:00）
+FROZEN_TODAY = FROZEN_UTC_NOW.date()
+
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    """测试钟冻结常数（原 datetime.now(timezone.utc)）。"""
+    return FROZEN_UTC_NOW
 
 
 def test_preference_conflict_resolution():
@@ -55,7 +63,7 @@ def test_goal_conflict_resolution():
         user_id=user_id,
         title="Learn Rust",
         status="active",
-        target_date=date.today(),
+        target_date=FROZEN_TODAY,
         evidence_score=0.7,
         evidence_refs=[{"type": "event", "id": "evt_1"}],
         updated_at=now - timedelta(days=1),
@@ -65,7 +73,7 @@ def test_goal_conflict_resolution():
         user_id=user_id,
         title="learn rust",
         status="active",
-        target_date=date.today(),
+        target_date=FROZEN_TODAY,
         evidence_score=0.5,
         evidence_refs=[{"type": "event", "id": "evt_2"}],
         updated_at=now,

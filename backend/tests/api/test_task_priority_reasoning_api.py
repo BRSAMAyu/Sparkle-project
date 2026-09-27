@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -12,7 +12,26 @@ from app.api.deps import get_current_user, get_db
 from app.api.v1.tasks import router as tasks_router
 from app.core.cache import cache_service
 from app.models.task import Task, TaskStatus, TaskType
-from app.models.user import User
+from app.models.user import PushPreference, User
+
+# ---------------------------------------------------------------------------
+# wt611 时钟加固（V3-FIX-321 批一，wt559 判例同款）：priority-reasoning 的
+# 「今日」= local_date(task_priority_service.utcnow, PushPreference.timezone)
+# （V3-FIX-233，缺省 Asia/Shanghai）。冻结服务钟 2026-09-25 20:00 naive UTC
+# （上海本地 09-26 04:00，日界已跨）+ 显式钉 Asia/Shanghai → 今日恒 09-26；
+# due_date 播种由 date.today() 改 USER_LOCAL_TODAY，「due today」语义不变。
+# ---------------------------------------------------------------------------
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 20, 0)
+USER_LOCAL_TODAY = date(2026, 9, 26)  # FROZEN_UTC_NOW + 8h 落在上海 09-26 日界
+
+
+@pytest.fixture(autouse=True)
+def _freeze_priority_clock(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.task_priority_service.utcnow",
+        lambda: FROZEN_UTC_NOW,
+        raising=False,
+    )
 
 
 @pytest.fixture
@@ -61,6 +80,9 @@ async def _create_user_and_task(db_session):
     )
     db_session.add(user)
     await db_session.flush()
+    # wt611 时钟加固：显式钉用户时区（产品缺省即 Asia/Shanghai，此处显式化
+    # 以阻断任何缺省漂移）。
+    db_session.add(PushPreference(user_id=user.id, timezone="Asia/Shanghai"))
     task = Task(
         user_id=user.id,
         title="Explainable recommendation task",
@@ -71,7 +93,7 @@ async def _create_user_and_task(db_session):
         energy_cost=2,
         status=TaskStatus.PENDING,
         priority=3,
-        due_date=date.today(),
+        due_date=USER_LOCAL_TODAY,
     )
     db_session.add(task)
     await db_session.commit()

@@ -7,11 +7,32 @@ tracking is accurate, and daily costs reset properly.
 """
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from datetime import date
-from unittest.mock import AsyncMock
 
 import pytest
+
+# ---------------------------------------------------------------------------
+# wt611 时钟加固（V3-FIX-321 批一）：本文件镜像类（CostAccumulator）内
+# date.today() 播种与汇总同表达式自洽，仅存的宿主钟依赖是跨 UTC 午夜的
+# 微秒级竞态窗——以冻结 date 子类钉住模块钟（镜像代码零改动），断言语义不变。
+# ---------------------------------------------------------------------------
+
+FROZEN_TODAY = date(2026, 9, 25)
+
+
+class _FrozenDate(date):
+    """date.today() 钉到 FROZEN_TODAY 的测试替身（显式传参路径不受影响）。"""
+
+    @classmethod
+    def today(cls) -> _FrozenDate:
+        return cls(2026, 9, 25)
+
+
+@pytest.fixture(autouse=True)
+def _freeze_module_clock(monkeypatch):
+    monkeypatch.setattr(sys.modules[__name__], "date", _FrozenDate)
 
 
 # ---------------------------------------------------------------------------

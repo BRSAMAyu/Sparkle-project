@@ -14,6 +14,25 @@ from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
 from app.services.error_replan_bridge import ErrorReplanBridge
 
+# ---------------------------------------------------------------------------
+# wt611 时钟加固（V3-FIX-321 批一，双冻结钟族）：消费面钟（error_replan_bridge
+# 的 utcnow——新用户 7 天窗 / due_date >= today 闸 / 错误窗口）与播种面
+# （datetime.utcnow 派生的 user.created_at / target / due / created_at）一并
+# 冻结至 2026-09-25 20:00 naive UTC；断言语义零改动（新旧用户判定仍=「注册
+# 距今 <7 天」）。
+# ---------------------------------------------------------------------------
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 20, 0)  # naive UTC（上海本地 09-26 04:00）
+FROZEN_TODAY = FROZEN_UTC_NOW.date()  # 服务 _utcnow().date()（UTC 日）口径
+
+
+@pytest.fixture(autouse=True)
+def _freeze_bridge_clock(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.error_replan_bridge._utcnow",
+        lambda: FROZEN_UTC_NOW,
+        raising=False,
+    )
+
 
 async def _seed_bridge_fixture(db_session, *, created_at: datetime) -> tuple[User, Plan, KnowledgeNode, ErrorRecord]:
     user = User(
@@ -31,7 +50,7 @@ async def _seed_bridge_fixture(db_session, *, created_at: datetime) -> tuple[Use
         type=PlanType.SPRINT,
         description="bridge",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=7),
+        target_date=FROZEN_TODAY + timedelta(days=7),
         daily_available_minutes=60,
         total_estimated_hours=6,
         subject="physics",
@@ -71,7 +90,7 @@ async def _seed_bridge_fixture(db_session, *, created_at: datetime) -> tuple[Use
         energy_cost=2,
         status=TaskStatus.PENDING,
         priority=3,
-        due_date=datetime.utcnow().date() + timedelta(days=1),
+        due_date=FROZEN_TODAY + timedelta(days=1),
         knowledge_node_id=node.id,
     )
     db_session.add(task)
@@ -93,7 +112,7 @@ async def _seed_bridge_fixture(db_session, *, created_at: datetime) -> tuple[Use
         mastery_level=0.2,
         latest_analysis={"error_type": "concept_confusion"},
         linked_knowledge_node_ids=[str(node.id)],
-        created_at=datetime.utcnow(),
+        created_at=FROZEN_UTC_NOW,
     )
     db_session.add(error)
     await db_session.commit()
@@ -104,7 +123,7 @@ async def _seed_bridge_fixture(db_session, *, created_at: datetime) -> tuple[Use
 async def test_error_replan_bridge_live_mode_triggers_for_new_user_after_single_error(db_session) -> None:
     user, plan, node, error = await _seed_bridge_fixture(
         db_session,
-        created_at=datetime.utcnow() - timedelta(days=2),
+        created_at=FROZEN_UTC_NOW - timedelta(days=2),
     )
     bridge = ErrorReplanBridge(db_session)
 
@@ -140,7 +159,7 @@ async def test_error_replan_bridge_live_mode_triggers_for_new_user_after_single_
 async def test_error_replan_bridge_live_mode_keeps_mature_user_threshold(db_session) -> None:
     user, _plan, node, error = await _seed_bridge_fixture(
         db_session,
-        created_at=datetime.utcnow() - timedelta(days=30),
+        created_at=FROZEN_UTC_NOW - timedelta(days=30),
     )
     bridge = ErrorReplanBridge(db_session)
 
@@ -168,7 +187,7 @@ async def test_error_replan_bridge_live_mode_keeps_mature_user_threshold(db_sess
 async def test_error_replan_bridge_counts_plan_health_error_category(db_session) -> None:
     user, _plan, node, error = await _seed_bridge_fixture(
         db_session,
-        created_at=datetime.utcnow() - timedelta(days=2),
+        created_at=FROZEN_UTC_NOW - timedelta(days=2),
     )
     bridge = ErrorReplanBridge(db_session)
     before = ERROR_REPLAN_BRIDGE_ERROR_TOTAL.labels(category="PlanHealthError", mode="live")._value.get()

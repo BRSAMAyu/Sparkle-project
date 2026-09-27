@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -21,9 +21,30 @@ from app.services.exam_sprint_review_service import ExamSprintReviewService
 from app.services.galaxy_service import GalaxyService
 from app.services.task_service import TaskService
 
+# 冻结钟（wt559 判例同款）：2026-09-25 20:00 naive UTC → 上海本地 09-26 04:00，
+# 与 UTC 宿主日可区分；播种/期望全部按冻结常数派生，断言语义零改动。
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 20, 0)
+FROZEN_TODAY = date(2026, 9, 25)
+
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    """wt611 时钟加固（V3-FIX-321 批一）：测试钟冻结常数。
+
+    原为 datetime.now(UTC) 宿主钟——播种（相对偏移种子）与服务钟分离在
+    UTC 宿主 16:00-24:00Z 风险窗错位一日。现与被冻结的服务钟
+    app.services.exam_sprint_review_service._utcnow 同取 FROZEN_UTC_NOW，
+    相对偏移种子（now − minutes/days）语义不变。
+    """
+    return FROZEN_UTC_NOW
+
+
+@pytest.fixture(autouse=True)
+def _freeze_review_service_clock(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.exam_sprint_review_service._utcnow",
+        lambda: FROZEN_UTC_NOW,
+        raising=False,
+    )
 
 
 @pytest.mark.asyncio
@@ -32,7 +53,7 @@ async def test_submit_post_exam_review_archives_plan_and_writes_growth_profile(d
     monkeypatch.setattr("app.core.websocket.get_ws_manager", lambda: ws_manager)
     user_id = test_user.id
 
-    exam_date = date.today() - timedelta(days=2)
+    exam_date = FROZEN_TODAY - timedelta(days=2)
     started_at = datetime.combine(exam_date - timedelta(days=6), time(hour=9))
 
     node_a = KnowledgeNode(
@@ -345,7 +366,7 @@ async def test_get_portfolio_merges_archived_active_and_planned_sprints(db_sessi
 @pytest.mark.asyncio
 async def test_completed_sprint_auto_archives_without_post_exam_review(db_session, test_user):
     user_id = test_user.id
-    started_at = datetime.combine(date.today() - timedelta(days=2), time(hour=9))
+    started_at = datetime.combine(FROZEN_TODAY - timedelta(days=2), time(hour=9))
     target_date = started_at.date() + timedelta(days=2)
     plan = Plan(
         user_id=user_id,
@@ -421,7 +442,7 @@ async def test_completed_sprint_auto_archives_without_post_exam_review(db_sessio
 @pytest.mark.asyncio
 async def test_submit_post_exam_review_penalizes_tcp_state_and_archives_weak_nodes(db_session, test_user, monkeypatch):
     user_id = test_user.id
-    exam_date = date.today() - timedelta(days=2)
+    exam_date = FROZEN_TODAY - timedelta(days=2)
     started_at = datetime.combine(exam_date - timedelta(days=6), time(hour=9))
 
     tcp_state = KnowledgeNode(
@@ -511,7 +532,7 @@ async def test_submit_post_exam_review_penalizes_tcp_state_and_archives_weak_nod
 @pytest.mark.asyncio
 async def test_check_sprint_completion_returns_summary_when_all_seven_days_done(db_session, test_user):
     user_id = test_user.id
-    started_at = datetime.combine(date.today() - timedelta(days=6), time(hour=9))
+    started_at = datetime.combine(FROZEN_TODAY - timedelta(days=6), time(hour=9))
     target_date = started_at.date() + timedelta(days=6)
 
     node_a = KnowledgeNode(
@@ -632,7 +653,7 @@ async def test_check_sprint_completion_stays_false_until_all_day_tasks_done(db_s
         type=PlanType.SPRINT,
         plan_stage=PlanStage.SPRINT,
         subject="计算机网络",
-        target_date=date.today(),
+        target_date=FROZEN_TODAY,
         progress=0.85,
         is_active=True,
     )
@@ -664,7 +685,7 @@ async def test_check_sprint_completion_stays_false_until_all_day_tasks_done(db_s
 @pytest.mark.asyncio
 async def test_scan_due_review_invitations_creates_notification_and_marks_plan(db_session, test_user):
     user_id = test_user.id
-    exam_date = date.today() - timedelta(days=2)
+    exam_date = FROZEN_TODAY - timedelta(days=2)
     plan = Plan(
         user_id=user_id,
         name="期末冲刺",
@@ -809,27 +830,27 @@ async def test_analyze_pack_node_effectiveness_skips_insufficient_evidence(db_se
 def test_days_used_counts_elapsed_days_not_plan_length(db_session):
     """P2-Q1: a plan created today with the exam in 14 days must report
     days_used=1 on day one (previously 15 = full plan length)."""
-    start = datetime.combine(date.today(), time(hour=8))
+    start = datetime.combine(FROZEN_TODAY, time(hour=8))
     plan = Plan(
         user_id=uuid4(),
         name="15天计算机网络冲刺",
-        target_date=date.today() + timedelta(days=14),
+        target_date=FROZEN_TODAY + timedelta(days=14),
         created_at=start,
     )
     service = ExamSprintReviewService(db_session)
 
-    assert service._compute_days_used(plan=plan, today=date.today()) == 1
-    assert service._compute_days_used(plan=plan, today=date.today() + timedelta(days=4)) == 5
+    assert service._compute_days_used(plan=plan, today=FROZEN_TODAY) == 1
+    assert service._compute_days_used(plan=plan, today=FROZEN_TODAY + timedelta(days=4)) == 5
     # never exceeds the plan length even after the exam date
-    assert service._compute_days_used(plan=plan, today=date.today() + timedelta(days=40)) == 15
+    assert service._compute_days_used(plan=plan, today=FROZEN_TODAY + timedelta(days=40)) == 15
 
 
 def test_days_used_without_target_date_counts_elapsed_days(db_session):
-    start = datetime.combine(date.today() - timedelta(days=3), time(hour=8))
+    start = datetime.combine(FROZEN_TODAY - timedelta(days=3), time(hour=8))
     plan = Plan(user_id=uuid4(), name="无截止计划", target_date=None, created_at=start)
     service = ExamSprintReviewService(db_session)
 
-    assert service._compute_days_used(plan=plan, today=date.today()) == 4
+    assert service._compute_days_used(plan=plan, today=FROZEN_TODAY) == 4
 
 
 # ---------------------------------------------------------------------------
@@ -848,7 +869,7 @@ async def _seed_ns001_shape(db_session, *, user_id):
         name="离散数学期末 7 天冲刺：及格冲 70+",
         type=PlanType.SPRINT,
         plan_stage=PlanStage.SPRINT,
-        target_date=date.today() + timedelta(days=7),
+        target_date=FROZEN_TODAY + timedelta(days=7),
         is_active=True,
         created_at=now - timedelta(minutes=1),
         updated_at=now - timedelta(minutes=1),
@@ -858,7 +879,7 @@ async def _seed_ns001_shape(db_session, *, user_id):
         name="7天离散数学冲刺",
         type=PlanType.SPRINT,
         plan_stage=PlanStage.SPRINT,
-        target_date=date.today() + timedelta(days=7),
+        target_date=FROZEN_TODAY + timedelta(days=7),
         is_active=True,
         created_at=now - timedelta(minutes=5),
         updated_at=now - timedelta(minutes=5),

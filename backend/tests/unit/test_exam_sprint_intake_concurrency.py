@@ -33,6 +33,39 @@ from app.models.task import Task
 from app.schemas.exam_sprint import ExamSprintIntakeRequest
 from app.services.exam_sprint_intake_service import ExamSprintIntakeService
 
+# ---------------------------------------------------------------------------
+# wt611 时钟加固（V3-FIX-321 批一，wt590 族C 判例）：intake 生成链三个产品钟
+# （① intake _today=UTC 日 / ② planning_strategy_compiler=上海本地日 /
+# ③ sprint_packs.last_24h_mode=UTC 日，经 _resolved_days_left 定 strategy 天
+# 数）一并冻结至 2026-09-25 01:00 naive UTC（上海本地同日上午，三钟同日）。
+# 并发竞态窗叠加宿主钟的播种面（exam_date=date.today()+7）改为冻结常数派生；
+# 断言语义零改动。不同时冻结全链的话，真实宿主钟越过冻结 exam_date 后
+# deadline_days 归零、Day-1 任务消失（time-bomb）。
+# ---------------------------------------------------------------------------
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 1, 0)  # naive UTC → 上海本地 09-25 09:00
+FROZEN_TODAY = date(2026, 9, 25)  # 三钟共同的「今日」
+
+
+@pytest.fixture(autouse=True)
+def _freeze_intake_chain_clocks(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.exam_sprint_intake_service.ExamSprintIntakeService._today",
+        staticmethod(lambda: FROZEN_TODAY),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "app.orchestration.planning_strategy_compiler._utcnow",
+        lambda: FROZEN_UTC_NOW,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "app.sprint_packs.last_24h_mode._utcnow",
+        # 该模块 _utcnow 原形为 aware（datetime.now(UTC)），is_last_24h_window
+        # 与 aware exam_start 直比——冻结值须带 tzinfo。
+        lambda: FROZEN_UTC_NOW.replace(tzinfo=UTC),
+        raising=False,
+    )
+
 
 class FakeRedis:
     def __init__(self) -> None:
@@ -146,8 +179,8 @@ async def test_plans_sprint_goal_partial_index_blocks_duplicates(plans_only_sess
     plans_only_session.add(second)
     await plans_only_session.commit()
 
-    # 旧者软删后，同目标新活跃行同样可创建
-    second.deleted_at = datetime.now(UTC)
+    # 旧者软删后，同目标新活跃行同样可创建（时间戳只作非空标记，取冻结常数）
+    second.deleted_at = FROZEN_UTC_NOW.replace(tzinfo=UTC)
     await plans_only_session.commit()
     third = _sprint_plan(user_id, subject="计算机网络", target_date=goal_date)
     plans_only_session.add(third)
@@ -188,7 +221,7 @@ async def test_intake_falls_back_to_reuse_when_concurrent_plan_wins(tmp_path):
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     request = _intake_request(exam_date)
 
     # 并发赢家：在败者"复用查询已通过、创建未提交"的窗口内（生成器中段钩子）
@@ -256,7 +289,7 @@ async def test_concurrent_intake_same_goal_creates_exactly_one_plan(tmp_path):
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     user_id = uuid4()
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     request = _intake_request(exam_date)
 
     # 齐步栅栏：N 路全部通过复用查询（全查空）后，才放行任何一路进入创建——

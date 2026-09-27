@@ -13,6 +13,12 @@ from app.consumers.welcome_onboarding_consumer import WelcomeOnboardingConsumer
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
 from app.models.user import User
 
+# wt611 时钟加固（V3-FIX-321 批一）：plan 播种 target_date 原为
+# datetime.utcnow().date() 宿主钟——journey 消费者（welcome/profile/galaxy/
+# achievement）对该列只做存在性计数、无日数学消费，改冻结常数消播种面
+# 宿主钟依赖；断言语义零改动。
+FROZEN_TODAY = datetime(2026, 9, 25).date()  # naive UTC（上海本地 09-25）
+
 
 class _SessionFactory:
     def __init__(self, session: Any) -> None:
@@ -141,7 +147,7 @@ async def test_galaxy_plan_consumer_happy_path_bootstraps_when_user_has_no_nodes
         type=PlanType.SPRINT,
         description="first",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date(),
+        target_date=FROZEN_TODAY,
         daily_available_minutes=60,
         total_estimated_hours=4,
         subject="physics",
@@ -217,7 +223,7 @@ async def test_achievement_plan_consumer_happy_path_updates_progress(db_session,
         type=PlanType.GROWTH,
         description="first",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date(),
+        target_date=FROZEN_TODAY,
         daily_available_minutes=60,
         total_estimated_hours=6,
         subject="math",

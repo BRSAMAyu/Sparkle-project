@@ -1,8 +1,28 @@
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 
-from app.core.time_utils import utcnow
+import pytest
+
+# ---------------------------------------------------------------------------
+# wt611 时钟加固（V3-FIX-321 批一，双冻结钟族）：compiler 内部「今日」取
+# local_date(_utcnow(), DEFAULT_USER_TIMEZONE)（用户本地日，缺省上海），而
+# deadline 播种原为 utcnow().date()+N（UTC 宿主日）——UTC 宿主 16:00-24:00Z
+# 风险窗两者错位一日，capacity 判定随之漂移。冻结 compiler._utcnow 后按
+# 冻结常数的上海本地日派生 deadline，期望语义（3 天 impossible）不变。
+# ---------------------------------------------------------------------------
 from app.orchestration.plan_quality_contract import PLAN_MODE_FULL, PLAN_MODE_NEXT_STEP_ONLY, PLAN_MODE_PROVISIONAL
 from app.orchestration.planning_strategy_compiler import PlanningStrategyCompiler
+
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 20, 0)  # naive UTC → 上海本地 09-26 04:00
+FROZEN_USER_LOCAL_TODAY = date(2026, 9, 26)  # compiler「今日」口径（上海本地日）
+
+
+@pytest.fixture(autouse=True)
+def _freeze_compiler_clock(monkeypatch):
+    monkeypatch.setattr(
+        "app.orchestration.planning_strategy_compiler._utcnow",
+        lambda: FROZEN_UTC_NOW,
+        raising=False,
+    )
 
 
 def test_planning_strategy_compiler_is_deterministic_for_same_input() -> None:
@@ -102,7 +122,7 @@ def test_planning_strategy_compiler_uses_predicted_overload_risk() -> None:
 
 def test_planning_strategy_compiler_flags_impossible_deadline_capacity() -> None:
     compiler = PlanningStrategyCompiler()
-    target_date = (utcnow().date() + timedelta(days=3)).isoformat()
+    target_date = (FROZEN_USER_LOCAL_TODAY + timedelta(days=3)).isoformat()
 
     strategy = compiler.compile(
         situation_brief={

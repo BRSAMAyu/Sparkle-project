@@ -100,7 +100,9 @@ async def _create_task(session, *, user_id, status: TaskStatus = TaskStatus.PEND
         energy_cost=2,
         status=status,
         priority=1,
-        due_date=date.today(),
+        # wt611 时钟加固（V3-FIX-321 批一）：due_date 播种改冻结常数——本文件
+        # 断言只覆盖 FSM/状态码/投影委托，不消费日数学，宿主钟依赖纯冗余。
+        due_date=date(2026, 9, 25),
     )
     session.add(task)
     await session.commit()

@@ -143,7 +143,9 @@ async def _create_task(session, *, user_id) -> Task:
         energy_cost=2,
         status=TaskStatus.IN_PROGRESS,
         priority=1,
-        due_date=date.today(),
+        # wt611 时钟加固（V3-FIX-321 批一）：due_date 播种改冻结常数——本文件
+        # 断言只覆盖 outbox 事件/SQL 编译/状态码，不消费日数学。
+        due_date=date(2026, 9, 25),
     )
     session.add(task)
     await session.commit()

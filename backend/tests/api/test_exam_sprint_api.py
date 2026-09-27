@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -9,6 +9,25 @@ from fastapi.testclient import TestClient
 from app.api.deps import get_current_user, get_db
 from app.api.v1.exam_sprint import router as exam_sprint_router
 from app.models.user import User
+
+# ---------------------------------------------------------------------------
+# wt611 时钟加固（V3-FIX-321 批一，wt559 判例同款）：exam_date 播种原为
+# date.today()±N 宿主钟（随宿主 TZ 翻日）——改冻结常数派生；intake 端点的
+# 真实校验钟（ExamSprintIntakeService._today，UTC 日）同冻结，past-date 422
+# 语义不变（exam < today 即拒）。成功路径的 intake/review 服务均为 mock，
+# 不涉 compiler 双钟面。
+# ---------------------------------------------------------------------------
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 20, 0)  # naive UTC（上海本地 09-26 04:00）
+FROZEN_TODAY = date(2026, 9, 25)  # 服务 _today()（UTC 日）口径
+
+
+@pytest.fixture(autouse=True)
+def _freeze_intake_clock(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.exam_sprint_intake_service.ExamSprintIntakeService._today",
+        staticmethod(lambda: FROZEN_TODAY),
+        raising=False,
+    )
 
 
 @pytest.fixture
@@ -44,7 +63,7 @@ async def test_exam_sprint_intake_endpoint_returns_structured_payload(exam_sprin
     await db_session.commit()
     state["current_user"] = user
 
-    exam_date = date.today() + timedelta(days=7)
+    exam_date = FROZEN_TODAY + timedelta(days=7)
     payload = {
         "subject": "计算机网络",
         "exam_date": exam_date.isoformat(),
@@ -136,7 +155,7 @@ def test_exam_sprint_intake_endpoint_rejects_past_exam_date(exam_sprint_client):
 
     payload = {
         "subject": "高数",
-        "exam_date": (date.today() - timedelta(days=3)).isoformat(),
+        "exam_date": (FROZEN_TODAY - timedelta(days=3)).isoformat(),
         "target_mode": "pass",
         "scope_context": {"text": ""},
         "baseline": {"current_level": 20, "weak_chapters": []},
@@ -177,7 +196,7 @@ async def test_post_exam_review_endpoint_returns_structured_payload(exam_sprint_
             "plan_id": plan_id,
             "plan_name": "7天计算机网络冲刺",
             "subject": "计算机网络",
-            "exam_date": (date.today() - timedelta(days=1)).isoformat(),
+            "exam_date": (FROZEN_TODAY - timedelta(days=1)).isoformat(),
             "started_at": "2026-04-18T09:00:00",
             "days_used": 7,
             "headline": "你用了 7 天，完成了 18 项任务，TCP 拥塞控制从 38 分提升到 72 分。",
@@ -264,7 +283,7 @@ async def test_sprint_summary_endpoint_returns_payload(exam_sprint_client, db_se
         "plan_id": plan_id,
         "plan_name": "7天计算机网络冲刺",
         "subject": "计算机网络",
-        "exam_date": (date.today() - timedelta(days=1)).isoformat(),
+        "exam_date": (FROZEN_TODAY - timedelta(days=1)).isoformat(),
         "started_at": "2026-04-18T09:00:00",
         "days_used": 7,
         "headline": "你用了 7 天，完成了 18 项任务，TCP 拥塞控制从 38 分提升到 72 分。",
