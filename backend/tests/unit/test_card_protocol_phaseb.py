@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from uuid import UUID
 
 import pytest
 from sqlalchemy import select
 
 from app.models.card_protocol import (
-    CardType,
     InterventionRecord,
     OccurrenceStatus,
     TaskOccurrence,
@@ -19,6 +17,12 @@ from app.services.card_protocol.legacy_adapter import PlanAdapter, TaskAdapter
 from app.services.card_protocol.phase_service import PhaseService
 from app.services.card_protocol.temporal_engine import RecurrenceRule, TemporalEngine
 from app.services.task_occurrence_service import TaskOccurrenceService
+
+# V3-FIX-321 批三：宿主钟播种常数化（冻结日 2026-09-25）。phase 窗口与 occurrence
+# scheduled_for 播种常数化；generate_occurrences 纯窗口展开无实时钟比对，同表达式
+# date.today() 断言集按同冻结日推导（期望值语义不变：phase 窗口三天各一条），消
+# 播种-断言间午夜翻日竞态。weekly/monthly 用例本为固定日期，不动。
+FROZEN_TODAY = date(2026, 9, 25)
 
 
 class FakeEventBus:
@@ -122,8 +126,8 @@ async def test_activate_phase_generates_occurrences(db_session, test_user):
         name="Phase One",
         phase_index=1,
         user_id=test_user.id,
-        estimated_start=date.today(),
-        estimated_end=date.today() + timedelta(days=2),
+        estimated_start=FROZEN_TODAY,
+        estimated_end=FROZEN_TODAY + timedelta(days=2),
     )
     task = await _make_task(db_session, user_id=test_user.id, plan_id=plan.id, title="Daily practice")
     task_card = await TaskAdapter(db_session, fake_bus).task_to_card(task)
@@ -142,9 +146,9 @@ async def test_activate_phase_generates_occurrences(db_session, test_user):
     occurrences = list(result.scalars().all())
     assert len(occurrences) == 3
     assert {occ.scheduled_for for occ in occurrences} == {
-        date.today(),
-        date.today() + timedelta(days=1),
-        date.today() + timedelta(days=2),
+        FROZEN_TODAY,
+        FROZEN_TODAY + timedelta(days=1),
+        FROZEN_TODAY + timedelta(days=2),
     }
 
 
@@ -209,7 +213,7 @@ async def test_defer_beyond_max_triggers_intervention(db_session, test_user):
         series_card_id=task_card.id,
         plan_card_id=plan_card.id,
         phase_card_id=phase.id,
-        scheduled_for=date.today(),
+        scheduled_for=FROZEN_TODAY,
         status=OccurrenceStatus.PLANNED,
     )
 
@@ -267,14 +271,14 @@ async def test_complete_phase_requires_feedback_and_weighted_progress(db_session
         series_card_id=task_card_one.id,
         plan_card_id=plan_card.id,
         phase_card_id=phase_one.id,
-        scheduled_for=date.today(),
+        scheduled_for=FROZEN_TODAY,
         status=OccurrenceStatus.COMPLETED,
     )
     await TaskOccurrenceService(db_session, fake_bus).create_occurrence(
         series_card_id=task_card_two.id,
         plan_card_id=plan_card.id,
         phase_card_id=phase_two.id,
-        scheduled_for=date.today(),
+        scheduled_for=FROZEN_TODAY,
         status=OccurrenceStatus.PLANNED,
     )
 

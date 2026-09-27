@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
-from uuid import UUID, uuid4
+from datetime import datetime, timedelta
+from uuid import UUID
 
 import pytest
 
 from app.models.card_protocol import (
     ArtifactType,
-    CardType,
     DeliveryChannel,
     DeliveryStrategy,
     InterventionOutcomeStatus,
@@ -26,6 +25,12 @@ from app.services.main_chain_artifact_consumer import MainChainArtifactConsumer
 from app.services.plan_state_service import PlanStateService
 from app.services.planning_artifact_service import PlanningArtifactService
 from app.services.task_occurrence_service import TaskOccurrenceService
+
+# V3-FIX-321 批三：宿主钟播种常数化（FROZEN_NOW=2026-09-25 12:00 naive UTC，上海同日
+# 20:00）。due_date/scheduled_for/completed_at/feedback 时间戳播种常数化；artifact
+# 消费面仅序列化与 status 计数，无日数学，断言期望零改动。
+FROZEN_NOW = datetime(2026, 9, 25, 12, 0, 0)
+FROZEN_TODAY = FROZEN_NOW.date()
 
 
 class FakeEventBus:
@@ -93,7 +98,7 @@ async def test_active_phase_pack_materializes_current_execution_slice(db_session
         status=TaskStatus.PENDING,
         priority=2,
         order_index=20,
-        due_date=date.today() + timedelta(days=2),
+        due_date=FROZEN_TODAY + timedelta(days=2),
     )
     db_session.add_all([task_one, task_two])
     await db_session.commit()
@@ -109,14 +114,14 @@ async def test_active_phase_pack_materializes_current_execution_slice(db_session
         series_card_id=task_card_one.id,
         plan_card_id=plan_card.id,
         phase_card_id=phase_card_id,
-        scheduled_for=date.today(),
+        scheduled_for=FROZEN_TODAY,
         status=OccurrenceStatus.READY,
     )
     await occurrence_service.create_occurrence(
         series_card_id=task_card_two.id,
         plan_card_id=plan_card.id,
         phase_card_id=phase_card_id,
-        scheduled_for=date.today() + timedelta(days=1),
+        scheduled_for=FROZEN_TODAY + timedelta(days=1),
         status=OccurrenceStatus.PLANNED,
     )
 
@@ -178,7 +183,7 @@ async def test_reflection_report_summarizes_learning_and_risk_state(db_session, 
         priority=1,
         order_index=10,
         actual_minutes=35,
-        completed_at=datetime.utcnow(),
+        completed_at=FROZEN_NOW,
     )
     db_session.add(task)
     await db_session.commit()
@@ -193,7 +198,7 @@ async def test_reflection_report_summarizes_learning_and_risk_state(db_session, 
         reflection_payload={
             "selected_option": "概念没理解",
             "free_text": "可逆和不可逆总是容易混",
-            "submitted_at": datetime.utcnow().isoformat(),
+            "submitted_at": FROZEN_NOW.isoformat(),
         },
     )
     db_session.add(feedback)
@@ -206,13 +211,13 @@ async def test_reflection_report_summarizes_learning_and_risk_state(db_session, 
             "feedback_log": [
                 {
                     "id": "fb-pos",
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": FROZEN_NOW.isoformat(),
                     "type": "task_feedback",
                     "content": "补完概念之后节奏更顺了。",
                 },
                 {
                     "id": "fb-neg",
-                    "timestamp": (datetime.utcnow() - timedelta(hours=2)).isoformat(),
+                    "timestamp": (FROZEN_NOW - timedelta(hours=2)).isoformat(),
                     "type": "task_feedback",
                     "content": "昨天还是有点卡住。",
                 },

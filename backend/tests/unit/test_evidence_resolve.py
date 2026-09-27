@@ -18,6 +18,10 @@ from app.schemas.intervention import EvidenceRef
 from app.services import error_book_mastery_sync_service  # noqa: F401 — patch 目标需显式可导入
 from app.services.error_book_service import ErrorBookService
 
+# V3-FIX-321 批三：宿主钟播种常数化（冻结日 2026-09-25；resolve_evidence 消费面仅按 id
+# 取行序列化 due_date/review_date，无日数学，断言期望零改动）
+FROZEN_TODAY = date(2026, 9, 25)
+
 
 @pytest.mark.asyncio
 async def test_evidence_resolve_task_and_summary(db_session):
@@ -38,11 +42,11 @@ async def test_evidence_resolve_task_and_summary(db_session):
         energy_cost=2,
         status=TaskStatus.PENDING,
         priority=1,
-        due_date=date.today(),
+        due_date=FROZEN_TODAY,
     )
     review = NightlyReview(
         user_id=user_id,
-        review_date=date.today(),
+        review_date=FROZEN_TODAY,
         summary_text="Completed the important tasks today.",
     )
 

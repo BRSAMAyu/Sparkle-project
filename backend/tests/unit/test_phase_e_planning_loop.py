@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from uuid import UUID
 
 import pytest
 from sqlalchemy import select
@@ -17,14 +16,20 @@ from app.models.card_protocol import (
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
 from app.models.task import Task, TaskStatus, TaskType
 from app.services.card_protocol.feedback_gate_engine import FeedbackGateEngine
+from app.services.card_protocol.legacy_adapter import PlanAdapter, TaskAdapter
+from app.services.card_protocol.outcome_verifier import InterventionOutcomeVerifier
 from app.services.card_protocol.phase_design_service import PhaseDesignService
 from app.services.card_protocol.phase_service import PhaseService
 from app.services.card_protocol.planning_memory_service import PlanningMemoryService
 from app.services.card_protocol.temporal_engine import RecurrenceRule, TemporalEngine
-from app.services.card_protocol.outcome_verifier import InterventionOutcomeVerifier
-from app.services.card_protocol.legacy_adapter import PlanAdapter, TaskAdapter
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.task_occurrence_service import TaskOccurrenceService
+
+# V3-FIX-321 批三：宿主钟播种常数化（冻结日 2026-09-25）。phase 窗口/occurrence
+# scheduled_for 播种与消费面（generate_occurrences 纯窗口展开、defer 相对偏移、
+# drift 按 status 计数 + created_at 相对窗）零实时钟比对，消同表达式 date.today()
+# 播种-断言的午夜翻日竞态；断言期望零改动。
+FROZEN_TODAY = date(2026, 9, 25)
 
 
 class FakeEventBus:
@@ -84,8 +89,8 @@ async def test_phase_design_creates_tasks_and_occurrences(db_session, test_user)
         name="Execution",
         phase_index=1,
         user_id=test_user.id,
-        estimated_start=date.today(),
-        estimated_end=date.today() + timedelta(days=14),
+        estimated_start=FROZEN_TODAY,
+        estimated_end=FROZEN_TODAY + timedelta(days=14),
     )
     await phase_service.activate_phase(phase_card_id=phase.id, user_id=test_user.id)
 
@@ -115,16 +120,16 @@ async def test_feedback_gate_completes_phase_and_designs_next_phase(db_session, 
         name="Phase One",
         phase_index=1,
         user_id=test_user.id,
-        estimated_start=date.today(),
-        estimated_end=date.today() + timedelta(days=7),
+        estimated_start=FROZEN_TODAY,
+        estimated_end=FROZEN_TODAY + timedelta(days=7),
     )
     await phase_service.create_phase(
         plan_card_id=plan_card.id,
         name="Phase Two",
         phase_index=2,
         user_id=test_user.id,
-        estimated_start=date.today() + timedelta(days=8),
-        estimated_end=date.today() + timedelta(days=20),
+        estimated_start=FROZEN_TODAY + timedelta(days=8),
+        estimated_end=FROZEN_TODAY + timedelta(days=20),
     )
     task = await _make_task(db_session, user_id=test_user.id, plan_id=plan.id, title="Current phase task")
     task_card = await TaskAdapter(db_session, fake_bus).task_to_card(task)
@@ -183,11 +188,11 @@ async def test_planning_memory_detects_drift_and_outcome_verifier_raises_misalig
         series_card_id=task_card.id,
         plan_card_id=plan_card.id,
         phase_card_id=phase.id,
-        scheduled_for=date.today(),
+        scheduled_for=FROZEN_TODAY,
         status=OccurrenceStatus.PLANNED,
     )
-    await occ_service.defer(occurrence.id, new_date=date.today() + timedelta(days=1))
-    await occ_service.defer(occurrence.id, new_date=date.today() + timedelta(days=2))
+    await occ_service.defer(occurrence.id, new_date=FROZEN_TODAY + timedelta(days=1))
+    await occ_service.defer(occurrence.id, new_date=FROZEN_TODAY + timedelta(days=2))
     await db_session.commit()
 
     drift = await PlanningMemoryService(db_session, fake_bus).compute_drift_score(

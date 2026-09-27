@@ -1,4 +1,3 @@
-import asyncio
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -13,27 +12,31 @@ from app.api.deps import get_current_user_id, get_db
 from app.api.v1.simulation import router as simulation_router
 from app.api.v1.theater import router as theater_router
 from app.core.cache import cache_service
-from app.core.exceptions import AuthorizationError, NotFoundError
+from app.core.exceptions import AuthorizationError
 from app.main import sparkle_exception_handler
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.theater_candidate_bundle import TheaterCandidateBundle
 from app.models.theater_prediction import TheaterPrediction
 from app.services.simulation.seed_extractor import SeedExtractor, SimulationSeed
-from app.services.simulation.simulation_engine import SimulationEngine
+from app.services.simulation.simulation_engine import ModeratorDecision, SimulationEngine
 from app.services.theater.prediction_theater_service import (
     PredictionAccuracyTracker,
     PredictionTheaterService,
+    TheaterNodeAccessError,
     TheaterPathOption,
     TheaterPathStep,
-    TheaterNodeAccessError,
     TheaterTimeoutError,
     _normalized_topic_terms,
-    _utcnow,
 )
-from app.services.simulation.simulation_engine import ModeratorDecision
-
 
 TEST_USER_ID = str(uuid4())
+
+# V3-FIX-321 批三：最小 payload 种子常数化（generated_at=2026-09-25 12:00 UTC，
+# due_on=生成日 +7 天=2026-10-02，相对窗口语义不变）。消宿主 date.today() 播种
+# （产品评测面按 UTC 日比对 due_on，宿主上海 00:00-08:00 窗内曾差一日）；断言
+# 不消费这两个字段的具体日期值。
+FROZEN_GENERATED_AT = "2026-09-25T12:00:00"
+FROZEN_DUE_ON = "2026-10-02"
 
 
 def _build_test_app():
@@ -2004,8 +2007,6 @@ async def _generate_minimal_prediction_payload(
     prediction_id: str,
 ) -> dict[str, Any]:
     """Helper to build a minimal prediction payload for testing."""
-    from datetime import date, timedelta
-
     return {
         "prediction_id": prediction_id,
         "user_id": str(user_id),
@@ -2015,7 +2016,7 @@ async def _generate_minimal_prediction_payload(
         "target_name": "测试目标",
         "candidate_bundle_id": None,
         "horizon_days": 14,
-        "generated_at": _utcnow().isoformat(),
+        "generated_at": FROZEN_GENERATED_AT,
         "paths": [
             {
                 "id": "route-1",
@@ -2033,7 +2034,7 @@ async def _generate_minimal_prediction_payload(
         "target_resolution_mode": "freeform_only",
         "accuracy_tracking": {
             "status": "pending_feedback",
-            "due_on": (date.today() + timedelta(days=7)).isoformat(),
+            "due_on": FROZEN_DUE_ON,
             "summary_hint": "test",
         },
         "routing_notes": {"patterns": [], "recommended_entry": "稳扎稳打"},

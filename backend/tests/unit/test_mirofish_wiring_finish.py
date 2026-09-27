@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
 import json
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -15,15 +15,19 @@ from app.models.plan import Plan, PlanType
 from app.orchestration.context_builder import ContextBuilderMixin
 from app.orchestration.execution_engine import ExecutionEngineMixin
 from app.orchestration.orchestrator import ChatOrchestrator
+from app.services.report.learning_report_agent import LearningReportAgent
+from app.services.simulation.seed_extractor import SeedExtractor, SimulationSeed
+from app.services.simulation.simulation_engine import ModeratorDecision, SimulationEngine
+from app.services.theater.prediction_theater_service import PredictionTheaterService, TheaterNodeAccessError
 from app.tools.base import ToolResult
 from app.tools.report_tool import GenerateLearningReportParams, GenerateLearningReportTool
-from app.services.report.learning_report_agent import LearningReportAgent
-from app.services.simulation.simulation_engine import ModeratorDecision, SimulationEngine
-from app.services.theater.prediction_theater_service import TheaterNodeAccessError
-from app.services.simulation.seed_extractor import SeedExtractor, SimulationSeed
-from app.services.theater.prediction_theater_service import PredictionTheaterService
 from app.tools.simulation_tool import QuickSimulationParams, QuickSimulationTool
 from app.tools.theater_tool import LaunchPredictionParams, LaunchPredictionTool
+
+# V3-FIX-321 批三：残留宿主钟播种收口（冻结日 2026-09-25）。fake_plan.target_date
+# 喂给被 mock 的 PlanService.create 返回值，断言面（plan_id/计数/消息文案/enqueue
+# 元数据 id）零日期消费；两个 trend 分桶用例此前已带 _FixedDateTime 冻结钟。
+FROZEN_TODAY = date(2026, 9, 25)
 
 
 class _DummyContextBuilder(ContextBuilderMixin):
@@ -781,7 +785,7 @@ async def test_adopt_prediction_enqueues_update_and_writes_back_to_chat(db_sessi
         type=PlanType.SPRINT,
         description="按推演路径推进",
         subject="特征值",
-        target_date=date.today(),
+        target_date=FROZEN_TODAY,
         daily_available_minutes=40,
         total_estimated_hours=6.0,
     )

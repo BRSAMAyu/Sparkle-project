@@ -1,9 +1,5 @@
-from datetime import timezone, date, datetime, timedelta
+from datetime import datetime, timedelta
 from uuid import uuid4
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
-
 
 import pytest
 
@@ -13,6 +9,13 @@ from app.core.context_pack import ContextPackBuilder
 from app.models.user import User
 from app.services.memory_service import MemoryService
 
+# V3-FIX-321 批三：双冻结钟族（FROZEN_NOW=2026-09-25 12:00 naive UTC，上海同日 20:00，
+# UTC 日=上海日）。种子（goal target_date / episodic occurred_at）与消费面
+# ContextPackBuilder 的 _utcnow（recency/built_at/consumed_at）同锚冻结；偏好 supersede
+# 链按行序自洽，保持真实钟避免链头排序并列。断言期望零改动。
+FROZEN_NOW = datetime(2026, 9, 25, 12, 0, 0)
+FROZEN_TODAY = FROZEN_NOW.date()
+
 
 @pytest.mark.asyncio
 async def test_context_pack_conflicts_metadata(db_session, monkeypatch):
@@ -20,6 +23,7 @@ async def test_context_pack_conflicts_metadata(db_session, monkeypatch):
     monkeypatch.setattr(settings, "ENABLE_CONTEXT_RANKING", True, raising=False)
     monkeypatch.setattr(settings, "CONTEXT_RANKING_SOFT_CAP_EPISODIC", 10, raising=False)
     monkeypatch.setattr(settings, "CONTEXT_RANKING_SOFT_CAP_GOALS", 10, raising=False)
+    monkeypatch.setattr("app.core.context_pack._utcnow", lambda: FROZEN_NOW)
 
     user_id = uuid4()
     user = User(
@@ -49,18 +53,18 @@ async def test_context_pack_conflicts_metadata(db_session, monkeypatch):
         user_id=user_id,
         title="Learn Rust",
         status="active",
-        target_date=date.today(),
+        target_date=FROZEN_TODAY,
         evidence_refs=[{"type": "event", "id": "evt_goal_1"}, {"type": "concept", "id": "c_2"}],
     )
     await memory_service.create_goal(
         user_id=user_id,
         title="learn rust",
         status="active",
-        target_date=date.today(),
+        target_date=FROZEN_TODAY,
         evidence_refs=[{"type": "event", "id": "evt_goal_2"}],
     )
 
-    now = _utcnow()
+    now = FROZEN_NOW
     await memory_service.create_episodic_memory(
         user_id=user_id,
         summary="Completed the sprint planning session",
