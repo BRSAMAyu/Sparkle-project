@@ -8,13 +8,14 @@ import enum
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
 # Use JSONB for PostgreSQL, fallback to JSON for SQLite
+JSONBCompat: JSONB | JSON
 try:
     from sqlalchemy import JSON
     JSONBCompat = JSONB().with_variant(JSON(), "sqlite")

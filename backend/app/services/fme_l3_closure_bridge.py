@@ -18,7 +18,7 @@ it can be composed into the existing service without modifying its source.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -70,8 +70,14 @@ async def apply_l3_closure_to_spine(
         logger.opt(exception=True).warning("L3 closure bridge: SpineOrchestrator init failed")
         return None
 
-    patch_dicts = [p.__dict__ if hasattr(p, "__dict__") else dict(p) for p in closure.state_patches]
-    change_dicts = [c.__dict__ if hasattr(c, "__dict__") else dict(c) for c in closure.policy_changes]
+    patch_dicts = [
+        p.__dict__ if hasattr(p, "__dict__") else dict(cast("dict[str, Any]", p))
+        for p in closure.state_patches
+    ]
+    change_dicts = [
+        c.__dict__ if hasattr(c, "__dict__") else dict(cast("dict[str, Any]", c))
+        for c in closure.policy_changes
+    ]
 
     try:
         result = await spine.close_aurora_session(

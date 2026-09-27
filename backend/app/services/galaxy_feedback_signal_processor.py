@@ -3,6 +3,7 @@ Galaxy feedback signal processor - infer profile signals from expansion feedback
 """
 from __future__ import annotations
 
+from collections.abc import Hashable
 from uuid import UUID
 
 from loguru import logger
@@ -103,7 +104,7 @@ class GalaxyFeedbackSignalProcessor:
         previous: str | None = None,
     ) -> str:
         now = None
-        scores = {"deep": 0.0, "moderate": 0.0, "shallow": 0.0}
+        scores: dict[Hashable, float] = {"deep": 0.0, "moderate": 0.0, "shallow": 0.0}
         for item in feedbacks:
             weight = recency_weight(getattr(item, "created_at", None), now=now, half_life_days=7.0, min_weight=0.25)
             if item.rating is None:

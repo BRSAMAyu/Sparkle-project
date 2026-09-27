@@ -46,8 +46,12 @@ class PaginatedResponse(BaseModel, Generic[T]):
     meta: PaginationMeta = Field(description="Pagination info")
 
 class BaseSchema(BaseModel):
-    """Base Schema with common fields"""
-    id: UUID = Field(description="Record ID")
+    """Base Schema with common fields
+
+    id 同时容纳 UUID 主键与字符串业务主键（如 shop 物品 skin_galaxy_001、
+    成就 streak_7）——子类可按各自主键形态收窄覆写。
+    """
+    id: UUID | str = Field(description="Record ID")
     created_at: datetime = Field(description="Created time")
     updated_at: datetime = Field(description="Updated time")
 

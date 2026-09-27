@@ -101,7 +101,7 @@ class RerankService:
         # 构建供应商尝试顺序：主供应商优先，备用供应商其次
         providers_to_try = self._get_provider_order()
 
-        last_error = None
+        last_error: Exception | None = None
         for provider in providers_to_try:
             try:
                 await circuit_breaker_service.check(f"rerank:{provider}")

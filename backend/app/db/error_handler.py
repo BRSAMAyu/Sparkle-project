@@ -175,7 +175,9 @@ def async_db_error_handler(func: Callable[P, Awaitable[T]]) -> Callable[P, Corou
     return wrapper
 
 
-async def retry_on_deadlock(func: Callable[P, Awaitable[T]], *args: P.args, max_retries: int = 3, **kwargs: P.kwargs) -> T:
+# PEP 612：*args: P.args 与 **kwargs: P.kwargs 之间不允许再插额外参数，
+# 故 max_retries 面改用 Callable[...] 宽签名（T 仍由 func 返回类型推断）。
+async def retry_on_deadlock(func: Callable[..., Awaitable[T]], *args: Any, max_retries: int = 3, **kwargs: Any) -> T:
     """
     死锁重试机制
 
@@ -200,7 +202,7 @@ async def retry_on_deadlock(func: Callable[P, Awaitable[T]], *args: P.args, max_
     """
     import asyncio
 
-    last_error = None
+    last_error: DeadlockError | None = None
     for attempt in range(max_retries):
         try:
             return await func(*args, **kwargs)
@@ -214,4 +216,6 @@ async def retry_on_deadlock(func: Callable[P, Awaitable[T]], *args: P.args, max_
             else:
                 logger.error(f"Deadlock persists after {max_retries} retries")
 
+    if last_error is None:
+        raise DeadlockError("retry_on_deadlock did not execute (max_retries <= 0)")
     raise last_error

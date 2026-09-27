@@ -641,10 +641,10 @@ class SituationBriefBuilder:
         if outcome_learning:
             used_sources.append("outcome_learning")
 
-        timestamps = [
+        candidate_timestamps = [
             _parse_dt(progress_snapshot.get("generated_at")),
         ]
-        timestamps = [item for item in timestamps if item is not None]
+        timestamps = [item for item in candidate_timestamps if item is not None]
         freshness_score = 0.35
         if timestamps:
             freshest = max(timestamps)

@@ -456,6 +456,8 @@ def validate_patch_request(
                     violations.append(f"V3.payload_value_out_of_vocabulary: direction {direction!r}")
             else:
                 schema = _payload_schema_of(surface)
+                # 已登记面的 schema 必在场；缺失属目录失步，fail-loud（原样也会 TypeError）。
+                assert schema is not None, f"no payload schema registered for surface {surface!r}"
                 if not isinstance(value, str) or value not in schema:
                     violations.append(
                         f"V3.payload_value_out_of_vocabulary: {expected_key} {value!r} not in {sorted(schema)}"

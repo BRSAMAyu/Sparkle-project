@@ -26,11 +26,14 @@ _DEFAULT_CUSTOM_RULES = {
     "install": "reject",
     "send": "confirm",
 }
+_DEFAULT_MODE = "balanced"
+_DEFAULT_NOTIFICATION_LEVEL = "essential"
+
 _DEFAULT_PREFERENCES = {
-    "mode": "balanced",
+    "mode": _DEFAULT_MODE,
     "custom_rules": _DEFAULT_CUSTOM_RULES,
     "node_affinity": {},
-    "notification_level": "essential",
+    "notification_level": _DEFAULT_NOTIFICATION_LEVEL,
     "auto_extend_timeout": True,
     "trust_auto_upgrade": True,
     "execution_budget": {
@@ -214,9 +217,9 @@ class ExecutionPreferenceService:
 
     def _normalize_payload(self, payload: dict[str, Any] | None) -> dict[str, Any]:
         payload = payload or {}
-        mode = str(payload.get("mode") or _DEFAULT_PREFERENCES["mode"]).strip().lower()
+        mode = str(payload.get("mode") or _DEFAULT_MODE).strip().lower()
         if mode not in _ALLOWED_MODES:
-            mode = _DEFAULT_PREFERENCES["mode"]
+            mode = _DEFAULT_MODE
 
         custom_rules = dict(_DEFAULT_CUSTOM_RULES)
         raw_rules = payload.get("custom_rules")
@@ -227,10 +230,10 @@ class ExecutionPreferenceService:
                     custom_rules[key] = rule
 
         notification_level = str(
-            payload.get("notification_level") or _DEFAULT_PREFERENCES["notification_level"]
+            payload.get("notification_level") or _DEFAULT_NOTIFICATION_LEVEL
         ).strip().lower()
         if notification_level not in _ALLOWED_NOTIFICATION_LEVELS:
-            notification_level = _DEFAULT_PREFERENCES["notification_level"]
+            notification_level = _DEFAULT_NOTIFICATION_LEVEL
 
         node_affinity: dict[str, str] = {}
         raw_affinity = payload.get("node_affinity")

@@ -70,6 +70,8 @@ def entitlement_effective(
     if expiry is None:
         return ENTITLEMENT_PRO
     now_naive = ensure_naive_utc(now) if now is not None else utcnow()
+    # ensure_naive_utc 仅在入参 None 时返回 None，此处 now 已收窄非空。
+    assert now_naive is not None
     return ENTITLEMENT_PRO if expiry > now_naive else ENTITLEMENT_FREE
 
 

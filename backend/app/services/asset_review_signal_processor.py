@@ -3,6 +3,7 @@ Asset review signal processor - infer retention signals from learning assets.
 """
 from __future__ import annotations
 
+from collections.abc import Hashable
 from uuid import UUID
 
 from loguru import logger
@@ -46,7 +47,7 @@ class AssetReviewSignalProcessor:
         weighted_reviews = 0.0
         weighted_success = 0.0
         ignored_weight = 0.0
-        style_scores = {"passive": 0.0, "consistent": 0.0, "cramming": 0.0}
+        style_scores: dict[Hashable, float] = {"passive": 0.0, "consistent": 0.0, "cramming": 0.0}
         for asset in assets:
             observed_at = (
                 asset.last_seen_at

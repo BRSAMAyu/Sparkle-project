@@ -148,7 +148,11 @@ async def list_errors(
     items, total = await service.list_errors(UUID(user_id), params)
 
     return ErrorRecordListResponse(
-        items=items, total=total, page=page, page_size=page_size, has_next=(page * page_size) < total
+        items=[ErrorRecordResponse.model_validate(item) for item in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        has_next=(page * page_size) < total,
     )
 
 
@@ -176,7 +180,11 @@ async def get_today_review_list(
     items, total = await service.list_errors(UUID(user_id), params)
 
     return ErrorRecordListResponse(
-        items=items, total=total, page=page, page_size=page_size, has_next=(page * page_size) < total
+        items=[ErrorRecordResponse.model_validate(item) for item in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        has_next=(page * page_size) < total,
     )
 
 

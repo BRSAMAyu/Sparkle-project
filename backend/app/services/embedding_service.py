@@ -255,7 +255,7 @@ class EmbeddingService:
         # （fail-closed），由调用方走既定降级路径。
         active_version = self.current_embedding_version()
         skipped_heterogeneous: list[str] = []
-        last_error = None
+        last_error: Exception | None = None
         for provider in providers_to_try:
             provider_version = self.provider_version(provider)
             if provider_version != active_version:

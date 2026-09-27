@@ -5,12 +5,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, Index, String, Text
+from sqlalchemy import JSON, DateTime, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, Base, SafeReprMixin
 
+JSONBCompat: JSONB | JSON
 try:
     from sqlalchemy import JSON
 

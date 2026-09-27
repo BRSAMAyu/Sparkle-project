@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Literal, SupportsFloat, SupportsInt, cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -86,15 +86,19 @@ class SRLPhaseHint:
             return None
 
         try:
+            # cast 仅收静态类型：payload 值是未信任 object，非数值型仍由
+            # float()/int() 抛出并落回兜底（行为不变）。
             raw_confidence = payload.get("confidence")
-            confidence = round(float(raw_confidence) if raw_confidence is not None else 0.0, 4)
+            confidence = round(
+                float(cast(SupportsFloat, raw_confidence)) if raw_confidence is not None else 0.0, 4
+            )
         except Exception:
             confidence = 0.0
 
         freshness_seconds = payload.get("freshness_seconds")
         if freshness_seconds is not None:
             try:
-                freshness_seconds = int(freshness_seconds)
+                freshness_seconds = int(cast(SupportsInt, freshness_seconds))
             except Exception:
                 freshness_seconds = None
 

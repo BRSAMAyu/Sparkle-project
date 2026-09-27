@@ -40,7 +40,7 @@ async def get_current_user_id(
             raise AuthenticationError("登录已失效，请重新登录")
 
         request.state.token_payload = payload
-        user_id: str = payload.get("sub")
+        user_id: str | None = payload.get("sub")
         if user_id is None:
             raise AuthenticationError("登录信息已过期，请重新登录~")
         return user_id

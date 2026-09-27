@@ -164,7 +164,7 @@ class DBIdempotencyStore(IdempotencyStore):
     """
     def __init__(self):
         # 简单的内存锁，防止单实例并发 (多实例需用 Redis/DB 锁)
-        self._local_locks: dict[str, bool] = {}
+        self._local_locks: dict[str, datetime] = {}
 
     async def get(self, key: str) -> dict[str, Any] | None:
         async with AsyncSessionLocal() as db:

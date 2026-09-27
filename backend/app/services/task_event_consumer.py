@@ -272,7 +272,7 @@ class TaskEventConsumer:
                                     Task.deleted_at.is_(None),
                                 )
                             )
-                            goal.progress = (completed / total) if total and total > 0 else 0.0
+                            goal.progress = (completed / total) if (completed is not None and total and total > 0) else 0.0
                             db.add(goal)
                             await db.commit()
                             logger.debug("Updated Goal {} progress to {:.2f}", goal.id, goal.progress)
@@ -339,7 +339,7 @@ class TaskEventConsumer:
                                     Task.deleted_at.is_(None),
                                 )
                             )
-                            goal.progress = (completed / total) if total and total > 0 else 0.0
+                            goal.progress = (completed / total) if (completed is not None and total and total > 0) else 0.0
                             db.add(goal)
                             await db.commit()
                             logger.debug(

@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from app.sprint_packs.sprint_pack_schema import SprintPackV1
 
+logger: Any
 try:
     from loguru import logger
 except ModuleNotFoundError:

@@ -37,6 +37,8 @@ from app.aurora.runtime_v1.state import (
     InformationalTension,
     LatentThread,
     ScheduledWake,
+    TensionStatus,
+    WakeStatus,
     merge_activity_profile_payload,
 )
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
@@ -3050,6 +3052,9 @@ class AuroraRuntimeV1Service:
             status = str(item.get("status") or "open")
             if status in {"resolved", "dropped"}:
                 continue
+            # cast 仅收静态类型：Literal 成员性仍由 pydantic 构造期校验兜底，
+            # 非法值照旧抛 ValidationError（与历史行为一致）。
+            coerced_status = cast(TensionStatus, status)
             key = _strip(item.get("tension_id")) or f"{conversation_id}:tension:{domain}:{index}"
             if key in seen:
                 continue
@@ -3065,7 +3070,7 @@ class AuroraRuntimeV1Service:
                     domain=domain,
                     description=description,
                     priority=max(0.0, min(1.0, priority)),
-                    status=status,
+                    status=coerced_status,
                     evidence=[str(value) for value in item.get("evidence") or [] if str(value).strip()],
                     importance_reasoning=_strip(item.get("importance_reasoning")) or None,
                     created_at=_as_utc_naive(item.get("created_at")) or now,
@@ -3123,6 +3128,8 @@ class AuroraRuntimeV1Service:
         if not isinstance(wake_schedule, Mapping) or not wake_schedule.get("scheduled_at"):
             return []
         reason = _strip(wake_schedule.get("reason")) or _strip(wake_schedule.get("planned_action")) or "scheduled wake"
+        # cast 仅收静态类型：Literal 成员性由 pydantic 构造期校验兜底（行为不变）。
+        wake_coerced_status = cast(WakeStatus, str(wake_schedule.get("status") or "pending"))
         try:
             return [
                 ScheduledWake(
@@ -3132,7 +3139,7 @@ class AuroraRuntimeV1Service:
                     scheduled_at=_as_utc_naive(wake_schedule.get("scheduled_at")) or _utcnow(),
                     reason=reason,
                     planned_action=_strip(wake_schedule.get("planned_action")) or "emit_message",
-                    status=str(wake_schedule.get("status") or "pending"),
+                    status=wake_coerced_status,
                 )
             ]
         except Exception:

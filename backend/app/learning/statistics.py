@@ -104,7 +104,7 @@ class ABTestStatistics:
             "is_significant": is_significant,
             "effect_size": {
                 "cohens_d": float(cohens_d),
-                "interpretation": ABTestStatistics._interpret_cohens_d(cohens_d),
+                "interpretation": ABTestStatistics._interpret_cohens_d(float(cohens_d)),
             },
             "control_mean": float(control_mean),
             "treatment_mean": float(treatment_mean),
@@ -115,7 +115,7 @@ class ABTestStatistics:
             "treatment_n": n2,
             "confidence_interval": ci_diff,
             "recommendation": ABTestStatistics._make_recommendation(
-                is_significant, cohens_d, p_value
+                is_significant, float(cohens_d), float(p_value)
             ),
         }
 

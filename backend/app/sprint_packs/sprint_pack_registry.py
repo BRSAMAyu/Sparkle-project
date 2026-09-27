@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+logger: Any
 try:
     from loguru import logger
 except ModuleNotFoundError:

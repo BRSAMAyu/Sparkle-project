@@ -164,9 +164,10 @@ class BackgroundTaskManager:
 
         queued_task = asyncio.create_task(_await_result(), name=f"queued_{task_id}")
         runtime.tasks[f"queued_{task_id}"] = queued_task
-        queued_task.add_done_callback(
-            lambda _t, key=f"queued_{task_id}": runtime.tasks.pop(key, None)
-        )
+        def _pop_queued_task(_task: asyncio.Future[Any], key: str = f"queued_{task_id}") -> None:
+            runtime.tasks.pop(key, None)
+
+        queued_task.add_done_callback(_pop_queued_task)
         self._logger.debug(
             f"🚀 Task queued: {task_name} (ID: {task_id}, "
             f"User: {user_id}, Priority: {priority})"
@@ -378,7 +379,7 @@ class BackgroundTaskManager:
         completed_tasks = [s for s in self._stats.values() if s.status == "completed"]
         [s for s in self._stats.values() if s.status == "failed"]
 
-        avg_duration = 0
+        avg_duration = 0.0
         if completed_tasks:
             avg_duration = sum(
                 s.duration_ms for s in completed_tasks if s.duration_ms

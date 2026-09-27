@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -55,7 +56,7 @@ class RecallFeatures:
 # Hand-tuned rules based on spaced repetition and nudge theory research.
 # Priority: deadline_proximity > fatigue_state > goal_value > decay_factor
 
-_DT_RULES: list[tuple[str, callable, float]] = [
+_DT_RULES: list[tuple[str, Callable[[RecallFeatures], bool], float]] = [
     # (rule_name, condition_fn, base_score)
     ("crisis_override", lambda f: f.deadline_proximity > 0.85 and f.fatigue_state < 0.7, 0.95),
     ("exam_urgent", lambda f: f.deadline_proximity > 0.7 and f.fatigue_state < 0.5, 0.88),
