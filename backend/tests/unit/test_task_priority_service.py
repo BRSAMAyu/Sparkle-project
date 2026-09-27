@@ -14,6 +14,16 @@ from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
 from app.services.task_priority_service import TaskPriorityService
 
+# wt604 时钟普查（族C 播种面收口）：TaskPriorityService 的「今日」取用户本地日
+# （local_date(utcnow(), tz)，tz 缺省 Asia/Shanghai）。测试此前按宿主机
+# date.today()/datetime.utcnow() 播种——UTC 宿主钟 16:00-24:00Z 时宿主机日与
+# 上海本地日错位一天，due-today / 复习到期语义落入日界差窗口。沿 wt559 双冻结
+# 钟族判例（tests/unit/test_dailyflow_p2_today_filter.py）：冻结服务钟到上海
+# 本地**同日**的上午时刻（10:00 UTC = 上海 18:00，日界未跨，播种日=服务今日），
+# 播种值一律按冻结日常数推导，与宿主机时钟/时区无关。
+FROZEN_NOW = datetime(2026, 9, 25, 10, 0)  # naive UTC；上海本地 = 2026-09-25 18:00
+FROZEN_TODAY = date(2026, 9, 25)
+
 
 @pytest.fixture(autouse=True)
 def _clear_priority_cache():
@@ -24,6 +34,12 @@ def _clear_priority_cache():
 
 @pytest.fixture
 def low_energy_aurora(monkeypatch):
+    # 冻结 task_priority_service 的 utcnow（「今日」口径唯一时刻来源）。
+    monkeypatch.setattr(
+        "app.services.task_priority_service.utcnow",
+        lambda: FROZEN_NOW,
+        raising=False,
+    )
     class _FakeAuroraStore:
         def __init__(self, redis):
             pass
@@ -59,7 +75,7 @@ async def _create_plan(db_session, user: User) -> Plan:
         name="Linear Algebra Sprint",
         type=PlanType.SPRINT,
         plan_stage=PlanStage.SPRINT,
-        target_date=date.today() + timedelta(days=3),
+        target_date=FROZEN_TODAY + timedelta(days=3),
         progress=0.6,
         priority=PlanPriority.HIGH,
         is_primary=True,
@@ -91,7 +107,7 @@ async def _create_node(db_session, user: User) -> KnowledgeNode:
         node_id=node.id,
         mastery_score=42,
         is_unlocked=True,
-        next_review_at=datetime.utcnow() - timedelta(hours=2),
+        next_review_at=FROZEN_NOW - timedelta(hours=2),
     )
     db_session.add(status)
     await db_session.flush()
@@ -124,7 +140,7 @@ async def _create_task(
         energy_cost=energy_cost,
         status=TaskStatus.PENDING,
         priority=priority,
-        due_date=due_date_value or date.today(),
+        due_date=due_date_value or FROZEN_TODAY,
     )
     db_session.add(task)
     await db_session.commit()
@@ -209,7 +225,7 @@ async def test_alternative_options_include_lower_ranked_tasks(db_session, low_en
         user,
         priority=1,
         title="Lower ranked task",
-        due_date_value=date.today() + timedelta(days=5),
+        due_date_value=FROZEN_TODAY + timedelta(days=5),
     )
 
     reasoning = await TaskPriorityService(db_session).generate_priority_reasoning(
@@ -233,6 +249,6 @@ async def test_cached_reasoning_is_invalidated_when_task_updated_at_changes(db_s
     assert cached is not None
     assert cached["task_id"] == reasoning.task_id
 
-    task.updated_at = datetime.utcnow() + timedelta(minutes=5)
+    task.updated_at = FROZEN_NOW + timedelta(minutes=5)
     stale = await service.get_cached_reasoning(user_id=user.id, task=task)
     assert stale is None
