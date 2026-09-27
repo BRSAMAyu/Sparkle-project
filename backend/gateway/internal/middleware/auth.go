@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -636,7 +637,7 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 					// Already logged above, don't log again
 					return "", false, fmt.Errorf("token validation unavailable")
 				}
-				if err != redis.Nil {
+				if !errors.Is(err, redis.Nil) {
 					if cfg.RedisFailClosed {
 						zap.L().Warn("Redis user revocation check failed with Fail-Closed mode, rejecting token",
 							zap.String("user_hash", logsafe.UserIDHash(userID)),
@@ -668,7 +669,7 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 						zap.Error(err))
 					return "", false, fmt.Errorf("token validation unavailable")
 				}
-				if err != redis.Nil {
+				if !errors.Is(err, redis.Nil) {
 					if cfg.RedisFailClosed {
 						zap.L().Warn("Redis session revocation check failed with Fail-Closed mode, rejecting token",
 							zap.String("user_hash", logsafe.UserIDHash(userID)),

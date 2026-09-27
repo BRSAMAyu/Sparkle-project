@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"log"
@@ -206,7 +207,7 @@ func (s *UserContextService) getStoredExplicitPreferences(ctx context.Context, u
 		WHERE user_id = $1
 	`, userID).Scan(&explicitBytes)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
@@ -495,7 +496,7 @@ func (s *UserContextService) getPreferencesVersion(ctx context.Context, userID u
 		WHERE user_id = $1
 	`, userID).Scan(&version, &updatedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return "", nil
 		}
 		return "", err

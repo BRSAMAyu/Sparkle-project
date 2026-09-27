@@ -28,7 +28,9 @@ import (
 func main() {
 	// Initialize Zap Logger
 	logger.Init("sparkle-gateway")
-	defer logger.Log.Sync()
+	// Sync errors (e.g. "invalid argument" on stdout at exit) are unavoidable
+	// noise during teardown; there is no meaningful recovery at this point.
+	defer func() { _ = logger.Log.Sync() }()
 
 	cfg := config.Load()
 

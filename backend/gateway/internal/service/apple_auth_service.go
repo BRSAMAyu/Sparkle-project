@@ -72,7 +72,7 @@ func (s *AppleAccountService) FindOrCreateUser(ctx context.Context, claims *Appl
 		if err != nil {
 			created, createErr := s.createAppleUser(ctx, claims)
 			if createErr != nil {
-				return AppleAuthenticatedUser{}, fmt.Errorf("%w: %v", ErrAppleUserCreateFailed, createErr)
+				return AppleAuthenticatedUser{}, fmt.Errorf("%w: %w", ErrAppleUserCreateFailed, createErr)
 			}
 			user = created
 		}
@@ -84,7 +84,7 @@ func (s *AppleAccountService) FindOrCreateUser(ctx context.Context, claims *Appl
 			AppleID: pgtype.Text{String: claims.Subject, Valid: true},
 		})
 		if linkErr != nil {
-			return AppleAuthenticatedUser{}, fmt.Errorf("%w: %v", ErrAppleUserLinkFailed, linkErr)
+			return AppleAuthenticatedUser{}, fmt.Errorf("%w: %w", ErrAppleUserLinkFailed, linkErr)
 		}
 		user = linked
 	}

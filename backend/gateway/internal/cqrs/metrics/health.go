@@ -3,6 +3,7 @@ package metrics
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"sync"
@@ -244,7 +245,7 @@ func (h *HealthChecker) checkEventStreams(ctx context.Context) ComponentHealth {
 	for _, stream := range streams {
 		info, err := h.redis.XInfoStream(ctx, stream).Result()
 		if err != nil {
-			if err == redis.Nil {
+			if errors.Is(err, redis.Nil) {
 				health.Details[stream] = "not_created"
 				continue
 			}
@@ -271,7 +272,7 @@ func (h *HealthChecker) checkDLQ(ctx context.Context) ComponentHealth {
 
 	// Check DLQ length
 	length, err := h.redis.XLen(ctx, dlqKey).Result()
-	if err != nil && err != redis.Nil {
+	if err != nil && !errors.Is(err, redis.Nil) {
 		health.Status = HealthStatusDegraded
 		health.Message = "Failed to check DLQ: " + err.Error()
 		return health

@@ -4,6 +4,7 @@ package event
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -208,7 +209,7 @@ func (c *RedisEventConsumer) processMessages(
 	}).Result()
 
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return nil // No new messages
 		}
 		return fmt.Errorf("xreadgroup: %w", err)
@@ -308,7 +309,9 @@ func parseRedisMessage(msg redis.XMessage) (*DomainEvent, error) {
 	// Parse version (optional, default to 1)
 	if version, ok := msg.Values["version"].(string); ok {
 		var v int
-		fmt.Sscanf(version, "%d", &v)
+		// Best-effort parse: an unparseable version keeps v at 0 (pre-existing
+		// behavior); the field is advisory metadata and never gates delivery.
+		_, _ = fmt.Sscanf(version, "%d", &v)
 		event.Version = v
 	} else {
 		event.Version = 1

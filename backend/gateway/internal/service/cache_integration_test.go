@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"os"
 	"sync"
 	"testing"
@@ -283,7 +284,7 @@ func TestCacheHitMissPattern(t *testing.T) {
 	// Miss: key doesn't exist
 	misses := 0
 	_, err := tr.client.Get(ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		misses++
 	}
 	assert.Equal(t, 1, misses)

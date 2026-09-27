@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -792,7 +793,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		resp, err := stream.Recv()
 		streamSpan.End()
 
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			// Stream ended normally
 			break
 		}

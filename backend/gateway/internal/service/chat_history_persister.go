@@ -166,11 +166,19 @@ func (p *ChatHistoryPersister) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			log.Printf("[ChatHistoryPersister] Context cancelled, flushing remaining messages")
-			p.flushWithRetry(ctx)
+			// Best-effort final flush; flushWithRetry already logs failures and
+			// re-queues the batch, and Run must still report ctx.Err().
+			if flushErr := p.flushWithRetry(ctx); flushErr != nil {
+				log.Printf("[ChatHistoryPersister] Final flush on cancel failed: %v", flushErr)
+			}
 			return ctx.Err()
 		case <-p.stopCh:
 			log.Printf("[ChatHistoryPersister] Stop signal received, flushing remaining messages")
-			p.flushWithRetry(ctx)
+			// Best-effort final flush; failures are logged and the batch is
+			// re-queued for the next process.
+			if flushErr := p.flushWithRetry(ctx); flushErr != nil {
+				log.Printf("[ChatHistoryPersister] Final flush on stop failed: %v", flushErr)
+			}
 			return nil
 		case <-p.ticker.C:
 			// Periodic flush
@@ -226,7 +234,7 @@ func (p *ChatHistoryPersister) consumeBatch(ctx context.Context) error {
 
 	// Use LPop to get one message at a time (more reliable than batch pop)
 	result, err := p.rdb.LPop(ctx, queueKey).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		// Queue is empty, wait a bit
 		time.Sleep(50 * time.Millisecond)
 		return nil
@@ -321,7 +329,9 @@ func (p *ChatHistoryPersister) writeBatchToDB(ctx context.Context, batch []ChatH
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	// Rollback is a no-op after the success-path Commit (pgx returns
+	// ErrTxClosed); its error carries no actionable information here.
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	for _, msg := range batch {
 		// Stable row id: reuse the producer's UUID so requeued duplicates hit

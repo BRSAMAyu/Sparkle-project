@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -301,7 +302,7 @@ func (w *GalaxySyncWorker) handleNodeExpanded(ctx context.Context, evt cqrsEvent
 	viewKey := "galaxy:user:" + userIDStr + ":node:" + nodeIDStr
 	viewJSON, err := w.redis.Get(ctx, viewKey).Bytes()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			// P3-02: Fall back to DB to fetch user node status and create view
 			nodeID, parseErr := uuid.Parse(nodeIDStr)
 			if parseErr != nil {
@@ -384,7 +385,7 @@ func (w *GalaxySyncWorker) handleMasteryUpdated(ctx context.Context, evt cqrsEve
 	viewKey := "galaxy:user:" + userIDStr + ":node:" + nodeIDStr
 	viewJSON, err := w.redis.Get(ctx, viewKey).Bytes()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			w.logger.Warn("User node view not found for mastery update", zap.String("node_id", nodeIDStr))
 			return nil
 		}

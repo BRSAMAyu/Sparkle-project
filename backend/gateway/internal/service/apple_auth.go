@@ -20,7 +20,7 @@ func NewAppleAuthService(cfg *config.Config) (*AppleAuthService, error) {
 	// It handles caching and background refreshing
 	kf, err := keyfunc.NewDefault([]string{"https://appleid.apple.com/auth/keys"})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create keyfunc: %v", err)
+		return nil, fmt.Errorf("failed to create keyfunc: %w", err)
 	}
 
 	return &AppleAuthService{
@@ -39,7 +39,7 @@ type AppleClaims struct {
 func (s *AppleAuthService) VerifyToken(tokenStr string) (*AppleClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &AppleClaims{}, s.keyfunc.Keyfunc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse/verify apple token: %v", err)
+		return nil, fmt.Errorf("failed to parse/verify apple token: %w", err)
 	}
 
 	claims, ok := token.Claims.(*AppleClaims)

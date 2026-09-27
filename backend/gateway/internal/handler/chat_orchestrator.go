@@ -457,7 +457,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					h.handleActionFeedback(streamCtx, writer, msgMap, userID, authToken)
 					return false
 				case "intervention_feedback":
-					h.handleInterventionFeedback(writer, msgMap, userID, authToken)
+					h.handleInterventionFeedback(streamCtx, writer, msgMap, authToken)
 					return false
 				case "response_feedback":
 					h.handleResponseFeedback(writer, msgMap, userID, streamCtx)
@@ -692,7 +692,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid intervention_feedback payload", false)
 					return false
 				}
-				h.handleInterventionFeedbackWithResponder(responder, msgMap, userID, authToken)
+				h.handleInterventionFeedbackWithResponder(msgCtx, responder, msgMap, authToken)
 				return false
 			case "response_feedback":
 				msgMap, err := decodePayloadMap(envelope.Payload["response_feedback"])

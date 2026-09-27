@@ -18,6 +18,7 @@ package projection
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -190,7 +191,7 @@ func (h *CommunityProjectionHandler) handlePostLiked(ctx context.Context, evt cq
 	viewKey := "post:view:" + postIDStr
 	viewJSON, err := h.redis.Get(ctx, viewKey).Bytes()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return nil
 		}
 		return fmt.Errorf("get post view: %w", err)
@@ -231,7 +232,7 @@ func (h *CommunityProjectionHandler) handlePostUnliked(ctx context.Context, evt 
 	viewKey := "post:view:" + postIDStr
 	viewJSON, err := h.redis.Get(ctx, viewKey).Bytes()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return nil
 		}
 		return fmt.Errorf("get post view: %w", err)
@@ -741,12 +742,12 @@ func (h *GalaxyProjectionHandler) handleNodeExpanded(ctx context.Context, evt cq
 
 	key := "galaxy:user:" + userIDStr + ":node:" + nodeIDStr
 	data, err := h.redis.Get(ctx, key).Bytes()
-	if err != nil && err != redis.Nil {
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return fmt.Errorf("get user node: %w", err)
 	}
 
 	var state map[string]interface{}
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		state = make(map[string]interface{})
 	} else {
 		if err := json.Unmarshal(data, &state); err != nil {
@@ -796,12 +797,12 @@ func (h *GalaxyProjectionHandler) handleMasteryUpdated(ctx context.Context, evt 
 	// Update user node state
 	userNodeKey := "galaxy:user:" + userIDStr + ":node:" + nodeIDStr
 	data, err := h.redis.Get(ctx, userNodeKey).Bytes()
-	if err != nil && err != redis.Nil {
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return fmt.Errorf("get user node: %w", err)
 	}
 
 	var state map[string]interface{}
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		state = make(map[string]interface{})
 	} else {
 		if err := json.Unmarshal(data, &state); err != nil {

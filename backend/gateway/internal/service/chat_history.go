@@ -434,7 +434,7 @@ func (s *ChatHistoryService) GetConversationSettings(ctx context.Context, userID
 	metaKey := fmt.Sprintf("chat:session_meta:%s", sessionID)
 	values, err := s.rdb.HMGet(ctx, metaKey, "use_document_context", "document_filter", "settings_updated_at").Result()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return nil, false, nil
 		}
 		return nil, false, err
@@ -497,7 +497,7 @@ func (s *ChatHistoryService) UpdateConversationSettings(ctx context.Context, use
 func (s *ChatHistoryService) ensureSessionAccess(ctx context.Context, userID, sessionID string) error {
 	metaKey := fmt.Sprintf("chat:session_meta:%s", sessionID)
 	owner, err := s.rdb.HGet(ctx, metaKey, "user_id").Result()
-	if err != nil && err != redis.Nil {
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return err
 	}
 	if owner != "" && owner != userID {
@@ -591,7 +591,7 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 func (s *ChatHistoryService) getMessagesFromRedis(ctx context.Context, userID, sessionID string) ([]ChatHistoryMessage, error) {
 	metaKey := fmt.Sprintf("chat:session_meta:%s", sessionID)
 	owner, err := s.rdb.HGet(ctx, metaKey, "user_id").Result()
-	if err != nil && err != redis.Nil {
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, err
 	}
 	// If meta exists and owner doesn't match, reject immediately (even if messages list is empty)
@@ -602,7 +602,7 @@ func (s *ChatHistoryService) getMessagesFromRedis(ctx context.Context, userID, s
 	cacheKey := "chat:history:" + sessionID
 	raw, err := s.rdb.LRange(ctx, cacheKey, 0, -1).Result()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return []ChatHistoryMessage{}, nil
 		}
 		return nil, err
@@ -1100,7 +1100,7 @@ func (s *ChatHistoryService) getRecentSessionsFromRedis(ctx context.Context, use
 	sessionsKey := fmt.Sprintf("chat:sessions:user:%s", userID)
 	ids, err := s.rdb.ZRevRange(ctx, sessionsKey, 0, int64(limit-1)).Result()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return []ChatSessionSummary{}, nil
 		}
 		return nil, err

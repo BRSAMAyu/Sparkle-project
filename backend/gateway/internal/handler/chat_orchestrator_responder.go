@@ -287,7 +287,7 @@ func newProtobufResponder(writer *wsSafeWriter, msg *pbws.WebSocketMessage, ctx 
 }
 
 func (r *protobufResponder) SendAck() {
-	r.sendProto("ack", nil)
+	r.sendProtoLogged("ack", nil)
 }
 
 // marshalJSON logs marshal errors instead of silently ignoring them.
@@ -311,7 +311,7 @@ func (r *protobufResponder) SendError(code, message string, retryable bool) {
 	if r.msg != nil && r.msg.GetRequestId() != "" {
 		errBody["message_id"] = r.msg.GetRequestId()
 	}
-	r.sendProto("message_nack", marshalJSON(errBody))
+	r.sendProtoLogged("message_nack", marshalJSON(errBody))
 }
 
 func (r *protobufResponder) SendActionStatus(actionID, status string, data map[string]interface{}) {
@@ -323,11 +323,11 @@ func (r *protobufResponder) SendActionStatus(actionID, status string, data map[s
 	for k, v := range data {
 		statusMsg[k] = v
 	}
-	r.sendProto("action_status", marshalJSON(statusMsg))
+	r.sendProtoLogged("action_status", marshalJSON(statusMsg))
 }
 
 func (r *protobufResponder) SendToolResult(payload map[string]interface{}) {
-	r.sendProto("tool_result", marshalJSON(payload))
+	r.sendProtoLogged("tool_result", marshalJSON(payload))
 }
 
 func (r *protobufResponder) SendInterventionAck(requestID, status, message string) {
@@ -339,7 +339,7 @@ func (r *protobufResponder) SendInterventionAck(requestID, status, message strin
 	if message != "" {
 		ack["message"] = message
 	}
-	r.sendProto("intervention_feedback_ack", marshalJSON(ack))
+	r.sendProtoLogged("intervention_feedback_ack", marshalJSON(ack))
 }
 
 func (r *protobufResponder) SendResponseFeedbackAck(responseID, status, message string) {
@@ -351,7 +351,7 @@ func (r *protobufResponder) SendResponseFeedbackAck(responseID, status, message 
 	if message != "" {
 		ack["message"] = message
 	}
-	r.sendProto("response_feedback_ack", marshalJSON(ack))
+	r.sendProtoLogged("response_feedback_ack", marshalJSON(ack))
 }
 
 func (r *protobufResponder) SendUpdateNodeMasteryAck(nodeID, version string, success bool) {
@@ -361,7 +361,7 @@ func (r *protobufResponder) SendUpdateNodeMasteryAck(nodeID, version string, suc
 		"success":   success,
 		"timestamp": time.Now().Unix(),
 	}
-	r.sendProto("ack_update_node_mastery", marshalJSON(body))
+	r.sendProtoLogged("ack_update_node_mastery", marshalJSON(body))
 }
 
 func (r *protobufResponder) SendUpdateNodeError(nodeID, version, message string) {
@@ -370,7 +370,7 @@ func (r *protobufResponder) SendUpdateNodeError(nodeID, version, message string)
 		"version": version,
 		"error":   message,
 	}
-	r.sendProto("error_update_node_mastery", marshalJSON(body))
+	r.sendProtoLogged("error_update_node_mastery", marshalJSON(body))
 }
 
 func (r *protobufResponder) SendChatResponse(resp *agentv1.ChatResponse) error {
@@ -405,4 +405,13 @@ func (r *protobufResponder) sendProto(msgType string, payload []byte) error {
 		return err
 	}
 	return r.writer.WriteMessage(websocket.BinaryMessage, data)
+}
+
+// sendProtoLogged sends a protobuf message and logs send failures instead of
+// dropping them on the floor. It is for fire-and-forget ack/status replies
+// where there is no caller to propagate the error to.
+func (r *protobufResponder) sendProtoLogged(msgType string, payload []byte) {
+	if err := r.sendProto(msgType, payload); err != nil {
+		log.Printf("protobufResponder: send %s failed: %v", msgType, err)
+	}
 }

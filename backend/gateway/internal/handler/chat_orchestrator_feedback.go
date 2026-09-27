@@ -626,7 +626,7 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryWithResponder(ctx context.Cont
 	}
 }
 
-func (h *ChatOrchestrator) handleInterventionFeedbackWithResponder(responder interventionResponder, msgMap map[string]interface{}, userID, authToken string) {
+func (h *ChatOrchestrator) handleInterventionFeedbackWithResponder(ctx context.Context, responder interventionResponder, msgMap map[string]interface{}, authToken string) {
 	requestID, ok := msgMap["request_id"].(string)
 	if !ok || requestID == "" {
 		log.Printf("Invalid intervention_feedback: missing request_id")
@@ -664,13 +664,7 @@ func (h *ChatOrchestrator) handleInterventionFeedbackWithResponder(responder int
 	}
 
 	endpoint := fmt.Sprintf("%s/api/v1/interventions/requests/%s/feedback", h.backendURL, requestID)
-	// noctx known-legacy (wt635 batch 2): ctx is deliberately NOT threaded
-	// here yet. Rewriting this signature line re-flags the pre-existing
-	// unparam finding (userID unused) as a NEW issue under new-from-rev and
-	// turns CI red; unparam adjudication belongs to lint batch 3, which will
-	// rewrite this signature and can adopt NewRequestWithContext in the same
-	// stroke.
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		log.Printf("Failed to build intervention feedback request: %v", err)
 		responder.SendInterventionAck(requestID, "failed", "request error")
@@ -808,8 +802,9 @@ func (h *ChatOrchestrator) handleActionFeedback(ctx context.Context, writer *wsS
 	h.handleActionFeedbackWithResponder(ctx, legacyActionStatusSender{writer: writer}, msgMap, userID, authToken)
 }
 
-func (h *ChatOrchestrator) handleInterventionFeedback(writer *wsSafeWriter, msgMap map[string]interface{}, userID, authToken string) {
-	h.handleInterventionFeedbackWithResponder(legacyInterventionResponder{writer: writer}, msgMap, userID, authToken)
+// handleInterventionFeedback processes intervention feedback from user (legacy wrapper)
+func (h *ChatOrchestrator) handleInterventionFeedback(ctx context.Context, writer *wsSafeWriter, msgMap map[string]interface{}, authToken string) {
+	h.handleInterventionFeedbackWithResponder(ctx, legacyInterventionResponder{writer: writer}, msgMap, authToken)
 }
 
 func (h *ChatOrchestrator) handleResponseFeedback(writer *wsSafeWriter, msgMap map[string]interface{}, userID string, ctx context.Context) {

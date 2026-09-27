@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -401,7 +402,7 @@ func (w *TaskSyncWorker) handleTaskUpdated(ctx context.Context, evt cqrsEvent.Do
 func (w *TaskSyncWorker) updateTaskStatus(ctx context.Context, taskIDStr, status string) error {
 	viewJSON, err := w.redis.Get(ctx, "task:view:"+taskIDStr).Bytes()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			w.logger.Warn("Task view not found", zap.String("task_id", taskIDStr))
 			return nil
 		}

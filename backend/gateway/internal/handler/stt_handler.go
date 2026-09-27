@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -241,7 +242,7 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 			default:
 				messageType, data, err := clientConn.ReadMessage()
 				if err != nil {
-					if io.EOF == err || websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+					if errors.Is(err, io.EOF) || websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
 						errChan <- nil
 					} else {
 						errChan <- err
@@ -277,7 +278,7 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 			default:
 				messageType, data, err := pythonConn.ReadMessage()
 				if err != nil {
-					if io.EOF == err || websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+					if errors.Is(err, io.EOF) || websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
 						errChan <- nil
 					} else {
 						errChan <- err

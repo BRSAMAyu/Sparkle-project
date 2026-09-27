@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -45,10 +46,10 @@ func (s *SemanticCacheService) canonicalizeScope(scope string) string {
 func (s *SemanticCacheService) SearchExact(ctx context.Context, scope, query string) (string, error) {
 	key := fmt.Sprintf("cache:text:%s:%s", s.canonicalizeScope(scope), s.Canonicalize(query))
 	val, err := s.rdb.Get(ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		legacyKey := "cache:text:" + s.Canonicalize(query)
 		legacyVal, legacyErr := s.rdb.Get(ctx, legacyKey).Result()
-		if legacyErr == redis.Nil {
+		if errors.Is(legacyErr, redis.Nil) {
 			return "", nil
 		}
 		if legacyErr != nil {

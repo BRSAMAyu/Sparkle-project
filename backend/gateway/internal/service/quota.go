@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -82,7 +83,7 @@ func (s *QuotaService) RecordUsageSegment(ctx context.Context, uid, requestID st
 func (s *QuotaService) GetDailyUsage(ctx context.Context, uid string) (int64, error) {
 	dayKey := time.Now().Format("2006-01-02")
 	val, err := s.rdb.Get(ctx, fmt.Sprintf("llm_tokens:%s:%s", uid, dayKey)).Int64()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return 0, nil
 	}
 	return val, err

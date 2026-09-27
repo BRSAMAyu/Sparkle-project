@@ -93,10 +93,10 @@ func TestChatOrchestratorFeedbackValidationPaths(t *testing.T) {
 	h.handleExecutionSummaryActionWithResponder(ctx, sender, "record-1", "confirm", "execution_summary", "")
 	require.Equal(t, "failed", sender.actionStatuses[1].status)
 
-	h.handleInterventionFeedbackWithResponder(sender, map[string]interface{}{}, userID, "")
+	h.handleInterventionFeedbackWithResponder(ctx, sender, map[string]interface{}{}, "")
 	require.Equal(t, "failed", sender.interventions[0].status)
 
-	h.handleInterventionFeedbackWithResponder(sender, map[string]interface{}{"request_id": "req-1"}, userID, "")
+	h.handleInterventionFeedbackWithResponder(ctx, sender, map[string]interface{}{"request_id": "req-1"}, "")
 	require.Equal(t, "failed", sender.interventions[1].status)
 
 	h.handleResponseFeedbackWithResponder(ctx, sender, map[string]interface{}{}, userID)
@@ -198,11 +198,11 @@ func TestChatOrchestratorFeedbackHTTPCallbacks(t *testing.T) {
 	h.handleExecutionSummaryActionWithResponder(ctx, sender, "record-2", "dismiss", "execution_summary", "token-1")
 	require.Equal(t, "dismissed", sender.actionStatuses[1].status)
 
-	h.handleInterventionFeedbackWithResponder(sender, map[string]interface{}{
+	h.handleInterventionFeedbackWithResponder(ctx, sender, map[string]interface{}{
 		"request_id":    "request-1",
 		"feedback_type": "accepted",
 		"extra_data":    map[string]interface{}{"source": "test"},
-	}, "user-1", "token-1")
+	}, "token-1")
 	require.Equal(t, "ok", sender.interventions[0].status)
 
 	h.handleFocusCompleted(ctx, map[string]interface{}{

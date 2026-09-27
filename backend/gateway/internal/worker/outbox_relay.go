@@ -142,7 +142,9 @@ func (r *OutboxRelay) processEvents(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	// Rollback is a no-op after the success-path Commit (database/sql returns
+	// ErrTxDone); its error carries no actionable information here.
+	defer func() { _ = tx.Rollback() }()
 
 	rows, err := tx.QueryContext(ctx, query)
 	if err != nil {

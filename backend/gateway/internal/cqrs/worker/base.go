@@ -9,6 +9,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -189,7 +190,7 @@ func (w *BaseWorker) processMessages(ctx context.Context, handler event.EventHan
 	}).Result()
 
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return nil // No new messages
 		}
 		// Self-heal on Redis stream/group recreation race or reset.
@@ -452,7 +453,9 @@ func parseRedisMessage(msg redis.XMessage) (*event.DomainEvent, error) {
 	// Parse version (optional, default to 1)
 	if version, ok := msg.Values["version"].(string); ok {
 		var v int
-		fmt.Sscanf(version, "%d", &v)
+		// Best-effort parse: an unparseable version keeps v at 0 (pre-existing
+		// behavior); the field is advisory metadata and never gates delivery.
+		_, _ = fmt.Sscanf(version, "%d", &v)
 		evt.Version = v
 	} else {
 		evt.Version = 1

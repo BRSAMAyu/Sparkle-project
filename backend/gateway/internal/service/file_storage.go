@@ -105,12 +105,15 @@ func (s *FileStorageService) PresignPost(
 	}
 
 	policy := minio.NewPostPolicy()
-	policy.SetBucket(s.bucket)
-	policy.SetKey(objectKey)
-	policy.SetExpires(time.Now().Add(s.presignExpiry))
-	policy.SetContentLengthRange(minSize, maxSize)
+	// minio post-policy setters only fail on structurally invalid values; every
+	// input here is bounded/validated above and PresignedPostPolicy re-validates
+	// the whole policy, so setter errors are impossible in practice.
+	_ = policy.SetBucket(s.bucket)
+	_ = policy.SetKey(objectKey)
+	_ = policy.SetExpires(time.Now().Add(s.presignExpiry))
+	_ = policy.SetContentLengthRange(minSize, maxSize)
 	if contentType != "" {
-		policy.SetContentType(contentType)
+		_ = policy.SetContentType(contentType)
 	}
 
 	url, formData, err := s.client.PresignedPostPolicy(ctx, policy)
