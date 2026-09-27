@@ -157,7 +157,7 @@ class FusionEngine:
                 group_index = max(1, int(metadata.get("same_source_group_index") or 1))
             except (TypeError, ValueError):
                 group_index = 1
-            confidence *= self.SAME_SOURCE_CONFIDENCE_DECAY ** group_index
+            confidence *= self.SAME_SOURCE_CONFIDENCE_DECAY**group_index
             min_variance = max(min_variance, self.SAME_SOURCE_MIN_OBSERVATION_VARIANCE)
             reasons.append("same_source_correlation_variance_floor")
 
@@ -209,7 +209,9 @@ class FusionEngine:
         if task_id:
             return f"task:{task_id}:source:{evidence.source_type.value}:extractor:{extractor}"
         text = " ".join(str(evidence.evidence_text or "").split())[:80]
-        timestamp_bucket = evidence.timestamp.replace(microsecond=0).isoformat() if evidence.timestamp else "unknown_time"
+        timestamp_bucket = (
+            evidence.timestamp.replace(microsecond=0).isoformat() if evidence.timestamp else "unknown_time"
+        )
         return f"text:{text}:time:{timestamp_bucket}:source:{evidence.source_type.value}:extractor:{extractor}"
 
     @staticmethod
@@ -384,7 +386,8 @@ class FusionEngine:
                 or router_snapshot_payload.get("stabilized_mode")
                 or actual_router_mode
             ),
-            "mode_stability_reason": mode_stability.get("reason") or router_snapshot_payload.get("mode_stability_reason"),
+            "mode_stability_reason": mode_stability.get("reason")
+            or router_snapshot_payload.get("mode_stability_reason"),
             "commitment_remaining": mode_stability.get("commitment_remaining"),
             "l1_intent": router_snapshot_payload.get("l1_intent"),
             "intent_filter_applied": bool(router_snapshot_payload.get("intent_filter_applied", False)),
@@ -661,7 +664,9 @@ class FusionEngine:
             )
             trace["outcome"] = outcome
             trace["outcome_status"] = "observed"
-            trace["outcome_strength"] = "weak_heuristic" if is_weak_heuristic else trace.get("outcome_strength", "strong")
+            trace["outcome_strength"] = (
+                "weak_heuristic" if is_weak_heuristic else trace.get("outcome_strength", "strong")
+            )
             trace["reward"] = reward_payload
             trace["training_eligible"] = not is_weak_heuristic
             trace["outcome_binding"] = {
