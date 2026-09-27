@@ -15,6 +15,7 @@ This test requires:
 import os
 import pytest
 import asyncio
+import grpc
 from typing import AsyncGenerator, List
 from datetime import datetime
 from unittest.mock import Mock, AsyncMock, patch
@@ -454,20 +455,37 @@ class TestStreamChatErrors:
             async for response in grpc_stub.StreamChat(request):
                 responses.append(response)
 
-                # Check for error in metadata
-                if response.metadata.get("error"):
+                # V3-FIX-306：拒绝面 = 结构化 error oneof 字段 / ERROR
+                # finish_reason / metadata 错误标记。服务端（agent_grpc_service
+                # StreamChat SEC-2/SEC-3 路径）把拒绝放进 error 字段并
+                # set_code，历史只查 metadata["error"] 形同漏检。
+                if (
+                    response.HasField("error")
+                    or response.finish_reason == agent_service_pb2.ERROR
+                    or response.metadata.get("error")
+                ):
                     error_received = True
                     break
 
                 if response.metadata.get("done", False):
                     break
 
+        except grpc.RpcError:
+            # gRPC 状态码拒绝（UNAUTHENTICATED/INVALID_ARGUMENT 等）=
+            # 合法拒绝面；服务端契约是外层 catch-all 落结构化错误 + 状态码，
+            # 客户端即以 RpcError 呈现。
+            error_received = True
         except Exception as e:
-            # gRPC error
-            assert True
+            # 非 gRPC 异常（测试桩/基础设施崩坏）不是合法拒绝面
+            pytest.fail(f"unexpected non-gRPC exception for invalid user: {e!r}")
 
-        # Should either receive error metadata or raise exception
-        # assert error_received or len(responses) == 0
+        # V3-FIX-306：invalid user 必须被拒绝（错误面）而非被当正常请求服务。
+        # 修前收尾断言被注释、except 分支 assert True——正常服务/异常/空流
+        # 任何路径都通过（永真，wt591 桩驱动双态皆过实证）。
+        assert error_received or len(responses) == 0, (
+            "invalid user was served without any rejection surface: "
+            f"{len(responses)} responses, none carrying error/ERROR finish/RpcError"
+        )
 
     @pytest.mark.asyncio
     async def test_stream_chat_with_empty_message(
