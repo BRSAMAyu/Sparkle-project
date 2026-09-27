@@ -923,7 +923,13 @@ class PlanReviewService:
             # 字符串转 float 参与既有比较，垃圾值/缺键 → None（与 492 缺参
             # 守卫语义衔接）。
             daily_hours = self._positive_float(params.get("daily_hours"))
-            total_days = params.get("total_days", params.get("duration_days"))
+            # V3-FIX-499：total_days 走 _positive_float 类型收口（对齐 :721
+            # _collect_feasibility_comments 对同键族的既有先例，与 497 同型）——
+            # params 值型不保证（dict[str, Any]），修前字符串型 "5" 真值过下方
+            # None 守卫后 `str <= int` 直接 TypeError 500（下方 float*str 字符
+            # 串复合同炸）。数值字符串转 float 参与既有比较/乘法，垃圾值/缺键
+            # → None（与既有 falsy 守卫语义衔接）。
+            total_days = self._positive_float(params.get("total_days", params.get("duration_days")))
             difficulty = params.get("difficulty", "").lower()
             params.get("type", "").lower()
             title = params.get("title", "").lower()

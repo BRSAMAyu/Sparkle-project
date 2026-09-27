@@ -523,15 +523,17 @@ class CorrectionFeedbackProcessor:
                 **correction_payload.to_dict(),
                 "context_source": context_source,
             }
+            # V3-FIX-510：record_user_correction 真实签名是 keyword-only
+            # user_id/signal_id/reason/source（self_model.py:230），修前
+            # correction_text=/user_context_payload= 两 kwarg 不存在 → TypeError
+            # 被下方 except 吞掉，self_model 修正计数恒不更新。原 user_context_
+            # payload 内容是 correction_context（含完整 to_dict）的真子集，零信息
+            # 损失并入 reason（callee 关键词扫描+evidence_detail 落存）；source
+            # 直传（payload.source: str）。signal_id 置缺省维持无去重语义。
             await self_model.record_user_correction(
                 user_id=user_id,
-                correction_text=json.dumps(correction_context, ensure_ascii=False),
-                user_context_payload={
-                    "source": correction_payload.source,
-                    "surface": correction_payload.surface,
-                    "conversation_id": correction_payload.conversation_id,
-                    "message_id": correction_payload.message_id,
-                },
+                reason=json.dumps(correction_context, ensure_ascii=False),
+                source=correction_payload.source,
             )
             result.self_model_updated = True
         except Exception:

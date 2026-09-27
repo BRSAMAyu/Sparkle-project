@@ -321,11 +321,14 @@ class SummarizationWorker:
 
         # 写入 Redis 日志队列（可选）
         try:
+            # V3-FIX-510：redis rpush 无 ex= 关键字（ex 属 set 族）——修前调用即
+            # TypeError 被下方 except 吞掉，日志队列恒空。推入后单独 expire 补
+            # 24 小时 TTL（滚动续期，与原「24小时过期」意图一致）。
             await ensure_awaitable(self.redis.rpush(
                 "logs:summarization",
                 json.dumps(log_entry),
-                ex=86400  # 24小时过期
             ))
+            await ensure_awaitable(self.redis.expire("logs:summarization", 86400))  # 24小时过期
         except (TypeError, redis.RedisError):
             pass  # 日志失败不影响主流程
 

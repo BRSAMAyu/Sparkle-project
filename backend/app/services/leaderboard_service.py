@@ -19,7 +19,6 @@ from uuid import UUID
 
 from sqlalchemy import and_, case, desc, distinct, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.achievement import UserAchievement, UserStreakStats
 from app.models.community import Friendship, FriendshipStatus, Group, GroupMember
@@ -480,11 +479,14 @@ class LeaderboardService:
         member_ids = [m.user_id for m in members]
 
         # 基于火焰贡献值排序
+        # V3-FIX-509：整体摘除 .options(selectinload(GroupMember))——GroupMember
+        # 是映射类而非 ORM 关系属性（User 模型零 GroupMember 关系可引），SA 2.0
+        # 在 loader 选项构造时即抛 ArgumentError（本仓 2.0.48 运行级探针实录），
+        # 群组榜经路由 except Exception → 500 兜底成为必炸面；且该 loader 即便
+        # 合法也是死码——贡献值来自下方 members 独立查询，loader 产物零消费者。
         query = select(User).where(
             User.id.in_(member_ids),
             User.is_active
-        ).options(
-            selectinload(GroupMember)  # 需要加载成员信息获取 flame_contribution
         )
 
         result = await self.db.execute(query)

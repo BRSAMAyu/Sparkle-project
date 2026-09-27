@@ -221,6 +221,9 @@ async def adjust_photons(
             )
 
         # Record transaction history
+        # V3-FIX-510：record_transaction 形参名是 extra_data（photon_service.py:715），
+        # 修前 metadata= TypeError——grant/deduct 已生效后于 :248 except 落 500，
+        # 余额变了交易历史却记不上。
         await photon_service.record_transaction(
             user_id=str(request.user_id),
             transaction_type=request.transaction_type.value,
@@ -229,7 +232,7 @@ async def adjust_photons(
             balance_after=result["new_balance"],
             source=request.reason,
             related_item_id=request.related_item_id,
-            metadata=request.extra_data
+            extra_data=request.extra_data
         )
 
         return {

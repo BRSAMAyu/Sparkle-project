@@ -115,7 +115,10 @@ class FileProcessingOrchestrator:
             try:
                 from app.core.redis_client import get_redis
                 from app.signals.spine_orchestrator import get_spine_orchestrator
-                spine = get_spine_orchestrator(redis=get_redis())
+                # V3-FIX-510：真实形参是 redis_client（spine_orchestrator.py:5140，
+                # celery_tasks.py:2921 同款），修前 redis= TypeError 被下方 except
+                # 吞掉——Spine 文件信号从未发出（V-14 修 content 取值时同函数漏网）。
+                spine = get_spine_orchestrator(redis_client=get_redis())
                 # VectorChunk 是 dataclass（字段名 content，且无 .get）——原字典取值必
                 # AttributeError，被 try 吞掉后 Spine 文件信号从未发出。
                 summary = chunks[0].content[:500] if chunks else ""
