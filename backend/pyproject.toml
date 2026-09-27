@@ -217,3 +217,9 @@ markers = [
   "postgres: requires real PostgreSQL with pgvector (run in CI or with docker-compose)",
   "phase_a_durability: permanent Phase A durability benchmark pack",
 ]
+
+[tool.coverage.run]
+# 生成代码（proto 产物）不计入覆盖测量——run 36323792291 实证：分片数据引用
+# app/gen/*_pb2.py 而 merge 工作区路径态下 xml 生成报 No source；gen 产物非人写代码，
+# omit 后分子母口径一致且数字更真。
+omit = ["app/gen/*", "*/app/gen/*"]
