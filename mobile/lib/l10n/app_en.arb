@@ -130,7 +130,6 @@
   "enableNotifications": "Enable Notifications",
   "smartReminders": "Smart Fragment Time Reminders",
   "pushMicroTasks": "Push micro-tasks during green time slots",
-  "transparentMode": "Transparent Mode",
   "enableTransparentMode": "Profile Transparency",
   "showStatusOverview": "Controls how much of your profile and insights is disclosed",
   "transparencyLevel": "Transparency Level",

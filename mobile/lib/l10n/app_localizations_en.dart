@@ -421,9 +421,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pushMicroTasks => 'Push micro-tasks during green time slots';
 
   @override
-  String get transparentMode => 'Transparent Mode';
-
-  @override
   String get enableTransparentMode => 'Profile Transparency';
 
   @override

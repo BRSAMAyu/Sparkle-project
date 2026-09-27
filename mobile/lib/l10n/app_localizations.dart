@@ -878,12 +878,6 @@ abstract class AppLocalizations {
   /// **'在绿色时间段主动推送微任务'**
   String get pushMicroTasks;
 
-  /// No description provided for @transparentMode.
-  ///
-  /// In zh, this message translates to:
-  /// **'透明模式'**
-  String get transparentMode;
-
   /// No description provided for @enableTransparentMode.
   ///
   /// In zh, this message translates to:

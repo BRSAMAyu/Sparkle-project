@@ -130,7 +130,6 @@
   "enableNotifications": "启用通知",
   "smartReminders": "智能碎片时间提醒",
   "pushMicroTasks": "在绿色时间段主动推送微任务",
-  "transparentMode": "透明模式",
   "enableTransparentMode": "画像透明度",
   "showStatusOverview": "控制你的画像与洞察披露的详细程度",
   "transparencyLevel": "透明度级别",

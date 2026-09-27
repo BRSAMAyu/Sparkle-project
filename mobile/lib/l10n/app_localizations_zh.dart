@@ -399,9 +399,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pushMicroTasks => '在绿色时间段主动推送微任务';
 
   @override
-  String get transparentMode => '透明模式';
-
-  @override
   String get enableTransparentMode => '画像透明度';
 
   @override
