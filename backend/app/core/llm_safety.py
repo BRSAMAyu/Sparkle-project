@@ -44,6 +44,19 @@ SECRET_VALUE_PLACEHOLDER_EXEMPT = (
 )
 
 
+# wt597 F4：凭据键值检测子集（V3-FIX-309 起为模块级单一事实源）：键名与值均容忍
+# 引号包裹（JSON 形态 "password": "..."、单引号、无空格），值经
+# SECRET_VALUE_PLACEHOLDER_EXEMPT 豁免占位符/Schema 结构值。
+# 其他 validator 复用时 import 本常量，不得另立凭据键值词库副本。
+CREDENTIAL_KEYVALUE_PATTERNS = [
+    rf"[\"']?api[_-]?\s*key[\"']?\s*(?:[:：]|是)\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{5,}}",
+    rf"[\"']?secret[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{5,}}",
+    rf"[\"']?token[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{5,}}",
+    rf"[\"']?password[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{8,}}",
+    rf"[\"']?密码[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{6,}}",
+]
+
+
 @dataclass
 class SafetyCheckResult:
     """安全检查结果"""
@@ -132,24 +145,17 @@ class LLMSafetyService:
     # 敏感信息泄露模式
     # wt597 F4：键名与值均容忍引号包裹（JSON 形态 "password": "..."、单引号、无空格），
     # 值经 SECRET_VALUE_PLACEHOLDER_EXEMPT 豁免占位符/Schema 结构值。
+    # V3-FIX-309：凭据键值子集上提为模块级 CREDENTIAL_KEYVALUE_PATTERNS
+    # （单一事实源），本列表 = 凭据键值 + 金融/PII，顺序与修前一致。
     SENSITIVE_PATTERNS = [
-        # 密钥类
-        rf"[\"']?api[_-]?\s*key[\"']?\s*(?:[:：]|是)\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{5,}}",
-        rf"[\"']?secret[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{5,}}",
-        rf"[\"']?token[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{5,}}",
-        rf"[\"']?password[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{8,}}",
-        rf"[\"']?密码[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{6,}}",
-
+        *CREDENTIAL_KEYVALUE_PATTERNS,
         # 金融类
         r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b",  # 信用卡
         r"\b\d{3}[- ]?\d{2}[- ]?\d{4}\b",  # 美国 SSN
-
         # 邮箱类 (可能泄露用户数据)
         r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-
         # IP 地址类
         r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
-
         # 电话号码类 (中国)
         r"1[3-9]\d{9}",
     ]

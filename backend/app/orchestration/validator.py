@@ -43,8 +43,10 @@ class RequestValidator:
     PATTERN_USER_ID = re.compile(r"^[a-zA-Z0-9_-]{1,100}$")
     PATTERN_REQUEST_ID = re.compile(r"^[a-zA-Z0-9_-]{1,100}$")
 
-    # 敏感词过滤（简单示例）
-    SENSITIVE_PATTERNS = [
+    # XSS/注入结构特征（历史名 SENSITIVE_PATTERNS 系误称——内容是注入特征而非
+    # 敏感信息词库；V3-FIX-309 正名归位，避免与 app.core.llm_safety 的权威
+    # SENSITIVE_PATTERNS 凭据词库同名相撞，全库凭据词库单一事实源唯一）
+    XSS_PATTERNS = [
         re.compile(r"<script.*?>", re.IGNORECASE),
         re.compile(r"javascript:", re.IGNORECASE),
         re.compile(r"onclick=", re.IGNORECASE),
@@ -397,8 +399,8 @@ class RequestValidator:
         Returns:
             bool: 是否包含恶意内容
         """
-        # 检查敏感模式
-        for pattern in self.SENSITIVE_PATTERNS:
+        # 检查注入结构特征（V3-FIX-309 正名：原 SENSITIVE_PATTERNS）
+        for pattern in self.XSS_PATTERNS:
             if pattern.search(text):
                 logger.warning(f"Detected potentially malicious content: {pattern.pattern}")
                 return True
@@ -450,6 +452,15 @@ class RequestValidator:
         """
         if not text:
             return ""
+
+        # V3-FIX-309：落实脱敏契约——修前本方法只做长度截断，凭据键值原样进
+        # 日志面。现复用 llm_secure_io.redact_secrets（其词库内建自
+        # llm_safety 的 SECRET_VALUE_PLACEHOLDER_EXEMPT 单一事实源：JSON
+        # 键值形态 + 占位符豁免），先脱敏后截断。函数级 import 保持本模块
+        # 导入图不新增重量级依赖（与文件内 import json 同例）。
+        from app.core.llm_secure_io import redact_secrets
+
+        text = redact_secrets(text)
 
         # 限制日志长度
         if len(text) > 200:

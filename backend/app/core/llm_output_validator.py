@@ -18,7 +18,33 @@ import logging
 import re
 from dataclasses import dataclass
 
+from app.core.llm_safety import LLMSafetyService
+
 logger = logging.getLogger(__name__)
+
+
+def _label_for_source_pattern(pattern: str) -> str:
+    """V3-FIX-309：为复用自 llm_safety 权威词库的模式匹配本类违规文案。
+
+    仅做描述映射，不含任何正则——词库本体只存在于 llm_safety。
+    """
+    if "api" in pattern:
+        return "API Key 泄露"
+    if "secret" in pattern:
+        return "Secret 泄露"
+    if "token" in pattern:
+        return "Token 泄露"
+    if "password" in pattern or "密码" in pattern:
+        return "密码泄露"
+    if "\\d{3}[- ]?\\d{2}" in pattern:
+        return "美国 SSN"
+    if "\\d{4}" in pattern:
+        return "信用卡号"
+    if "@" in pattern:
+        return "邮箱地址"
+    if "\\d{1,3}\\." in pattern:
+        return "IP 地址"
+    return "中国手机号"
 
 
 @dataclass
@@ -44,26 +70,25 @@ class LLMOutputValidator:
     """
 
     # 敏感信息泄露模式
+    # V3-FIX-309：凭据键值检测复用 app.core.llm_safety 的权威
+    # SENSITIVE_PATTERNS（单一事实源，import 而非复制）——凭据键值 JSON 形态
+    # （"password": "..."）与 SECRET_VALUE_PLACEHOLDER_EXEMPT 占位符豁免随源
+    # 同步。修前本类维护了一份漂移副本：对 JSON 形态凭据零命中（wt597 修
+    # llm_safety/llm_secure_io 时的遗留发现，台账 V3-FIX-309）。
+    # 本类仅保留输出侧自有补充面（下方 EXTRA），不再另立凭据键值词库。
     SENSITIVE_PATTERNS = [
-        # 密钥类 (高风险)
-        (r"api\s*[_-]?key\s*[:：]\s*[A-Za-z0-9_\-]{20,}", "API Key 泄露"),
-        (r"secret\s*[:：]\s*[A-Za-z0-9_\-]{20,}", "Secret 泄露"),
-        (r"token\s*[:：]\s*[A-Za-z0-9_\-]{20,}", "Token 泄露"),
-        (r"(?:password|密码)\s*(?:是\s*)?[:：]\s*\S{8,}", "密码泄露"),
+        (pattern, _label_for_source_pattern(pattern)) for pattern in LLMSafetyService.SENSITIVE_PATTERNS
+    ] + [
+        # —— 输出侧自有补充面（非凭据键值词库）——
+        # 中文口语形（"密码是: xxx"）：由源词库密码模式派生（注入口语『是』），
+        # 占位符豁免随源生效，避免文档占位词被误杀
+        (
+            next(p for p in LLMSafetyService.SENSITIVE_PATTERNS if "密码" in p).replace("[:：]", "(?:是\\s*)?[:：]", 1),
+            "密码泄露",
+        ),
         (r"(?:private[_-]?key|私钥)\s*[:：]\s*-----BEGIN", "私钥泄露"),
-
-        # 金融类 (高风险)
-        (r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b", "信用卡号"),
-        (r"\b\d{3}[- ]?\d{2}[- ]?\d{4}\b", "美国 SSN"),
         (r"\b\d{16}\b", "16位数字 (可能是卡号)"),
-
-        # 个人身份信息 (中风险)
-        (r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "邮箱地址"),
-        (r"\b(?:\d{1,3}\.){3}\d{1,3}\b", "IP 地址"),
-        (r"1[3-9]\d{9}", "中国手机号"),
         (r"\b\d{18}\b", "身份证号"),
-
-        # 系统信息 (低风险)
         (r"/etc/(passwd|shadow)", "系统密码文件路径"),
         (r"C:\\\\Windows\\\\", "Windows 系统路径"),
         (r"/root/", "Linux root 目录"),
