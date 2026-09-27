@@ -36,7 +36,13 @@ from app.schemas.task import TaskCreate, coerce_task_type
 from app.services.card_edge_service import CardEdgeService
 from app.services.card_protocol.card_operations_service import CardOperationsService
 from app.services.card_protocol.phase_service import PhaseService
-from app.services.card_protocol.temporal_engine import RecurrenceRule, TemporalEngine, TimeWindow
+from app.services.card_protocol.temporal_engine import (
+    RecurrenceRule,
+    TemporalEngine,
+    TimeWindow,
+    coerce_recurrence_end_condition,
+    coerce_recurrence_pattern,
+)
 from app.services.card_service import CardService
 from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
@@ -871,7 +877,7 @@ class CardSnapshotService:
         if not isinstance(recurrence, dict):
             return
         rule = RecurrenceRule(
-            pattern=str(recurrence.get("pattern") or "once"),
+            pattern=coerce_recurrence_pattern(recurrence.get("pattern")),
             days_of_week=list(recurrence.get("days_of_week") or []) or None,
             day_of_month=recurrence.get("day_of_month"),
             time_window=(
@@ -884,7 +890,7 @@ class CardSnapshotService:
             ),
             flexible=bool(recurrence.get("flexible", True)),
             max_deferrals=int(recurrence.get("max_deferrals") or 3),
-            end_condition=str(recurrence.get("end_condition") or "phase_end"),
+            end_condition=coerce_recurrence_end_condition(recurrence.get("end_condition")),
             end_value=recurrence.get("end_value"),
             interval_days=recurrence.get("interval_days"),
         )

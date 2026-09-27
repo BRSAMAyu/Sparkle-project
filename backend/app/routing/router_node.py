@@ -43,6 +43,7 @@ class RouterNode:
             semantic_router=self.semantic_router
         )
 
+        self.learner: BayesianLearner
         if redis_client and user_id:
             from app.learning.persistent_bayesian_learner import PersistentBayesianLearner
             self.learner = PersistentBayesianLearner(redis_client, user_id)
@@ -100,6 +101,7 @@ class RouterNode:
         if candidates:
             shadow_enabled = self._is_tool_preference_shadow_enabled()
             fallback_choice = candidates[0]
+            next_route: str | None = fallback_choice
 
             if shadow_enabled and self.shadow_recorder and user_id:
                 learner_choice = await self.exploration_router.select_route(

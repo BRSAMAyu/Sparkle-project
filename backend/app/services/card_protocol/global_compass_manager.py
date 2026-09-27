@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 import uuid
 from copy import deepcopy
+from typing import Any
 
 from loguru import logger
 from sqlalchemy import select
@@ -22,7 +23,7 @@ from app.models.card_protocol import ArtifactStatus, ArtifactType, Card, CardCre
 from app.services.planning_artifact_service import PlanningArtifactService
 
 # Default compass payload when no user profile data is available
-_DEFAULT_COMPASS = {
+_DEFAULT_COMPASS: dict[str, Any] = {
     "north_star": "",
     "success_criteria": [],
     "values": [],

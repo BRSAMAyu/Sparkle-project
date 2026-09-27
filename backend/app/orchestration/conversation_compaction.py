@@ -38,8 +38,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from types import ModuleType
 from typing import Any
 
+tiktoken: ModuleType | None
 try:  # pragma: no cover - optional runtime dependency（与 context_pack 同策略）
     import tiktoken
 except ImportError:  # pragma: no cover

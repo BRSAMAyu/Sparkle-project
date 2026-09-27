@@ -4,16 +4,19 @@ import asyncio
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Sequence, cast
+from typing import TYPE_CHECKING, Any, Sequence, cast
 from uuid import UUID
 
 from loguru import logger
 from redis.commands.search.query import Query
-from sqlalchemy import and_, case, false, func, or_, select
+from sqlalchemy import Case, and_, case, false, func, or_, select
 from sqlalchemy import cast as sa_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.types import UserDefinedType
+
+if TYPE_CHECKING:
+    from app.services.semantic_cache_service import SemanticCacheService
 
 from app.config import settings
 from app.core.cache import cache_service
@@ -59,6 +62,7 @@ class _JSONPATH(UserDefinedType):
     cache_ok = True  # 无状态类型: 允许 SQLAlchemy 编译缓存（消除 SAWarning）
 
 
+semantic_cache_service: SemanticCacheService | None
 try:
     from app.services.semantic_cache_service import semantic_cache_service
 except ImportError:
@@ -655,18 +659,23 @@ class KnowledgeRetrievalService:
             )
             for token in escaped
         ]
-        lex_score = sum(
-            case(
-                (
-                    or_(
-                        DocumentChunk.content.ilike(f"%{token}%"),
-                        DocumentChunk.section_title.ilike(f"%{token}%"),
+        # sum() 从 int 0 起算，SQL 编译期经 ColumnElement.__add__ 逐项折叠为单一
+        # CASE 求和表达式——类型层面把 int 起点排除（运行时无 0 分支）。
+        lex_score = cast(
+            Case[Any],
+            sum(
+                case(
+                    (
+                        or_(
+                            DocumentChunk.content.ilike(f"%{token}%"),
+                            DocumentChunk.section_title.ilike(f"%{token}%"),
+                        ),
+                        1,
                     ),
-                    1,
-                ),
-                else_=0,
-            )
-            for token in escaped
+                    else_=0,
+                )
+                for token in escaped
+            ),
         )
 
         stmt = (

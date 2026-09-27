@@ -216,11 +216,15 @@ class _GrowthExperienceDashboardBuilder:
         actual_minutes = [int(task.actual_minutes or task.estimated_minutes or 0) for task in tasks]
         avg_completion_time = round(sum(actual_minutes) / max(len(actual_minutes), 1), 1) if actual_minutes else 0.0
         due_tasks = [task for task in tasks if task.due_date is not None and task.completed_at is not None]
-        on_time_count = sum(
-            1
-            for task in due_tasks
-            if (completed_at := task.completed_at) is not None and completed_at.date() <= task.due_date
-        )
+        # due_tasks 的 None 过滤无法跨推导式传递收窄，此处对 completed_at/due_date
+        # 逐条就地复检（列表内元素本就非 None，运行时语义不变）。
+        on_time_count = 0
+        for task in due_tasks:
+            completed_at = task.completed_at
+            if completed_at is None or task.due_date is None:
+                continue
+            if completed_at.date() <= task.due_date:
+                on_time_count += 1
         on_time_rate = round(on_time_count / len(due_tasks), 2) if due_tasks else 1.0 if tasks_completed else 0.0
         return {
             "tasks_completed": tasks_completed,

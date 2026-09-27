@@ -5,7 +5,7 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, time, timedelta
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from sqlalchemy import select
@@ -32,15 +32,38 @@ class TimeWindow:
     end: str
 
 
+RecurrencePattern = Literal["once", "daily", "weekly", "monthly", "custom"]
+RecurrenceEndCondition = Literal["date", "count", "phase_end", "never"]
+
+_PATTERN_VALUES: tuple[str, ...] = ("once", "daily", "weekly", "monthly", "custom")
+_END_CONDITION_VALUES: tuple[str, ...] = ("date", "count", "phase_end", "never")
+
+
+def coerce_recurrence_pattern(value: object, default: RecurrencePattern = "once") -> RecurrencePattern:
+    """Narrow untrusted metadata strings to the RecurrenceRule pattern literal."""
+    if value in _PATTERN_VALUES:
+        return cast(RecurrencePattern, value)
+    return default
+
+
+def coerce_recurrence_end_condition(
+    value: object, default: RecurrenceEndCondition = "phase_end"
+) -> RecurrenceEndCondition:
+    """Narrow untrusted metadata strings to the RecurrenceRule end_condition literal."""
+    if value in _END_CONDITION_VALUES:
+        return cast(RecurrenceEndCondition, value)
+    return default
+
+
 @dataclass
 class RecurrenceRule:
-    pattern: Literal["once", "daily", "weekly", "monthly", "custom"] = "once"
+    pattern: RecurrencePattern = "once"
     days_of_week: list[int] | None = None
     day_of_month: int | None = None
     time_window: TimeWindow | None = None
     flexible: bool = True
     max_deferrals: int = 3
-    end_condition: Literal["date", "count", "phase_end", "never"] = "phase_end"
+    end_condition: RecurrenceEndCondition = "phase_end"
     end_value: str | int | None = None
     interval_days: int | None = None
 
@@ -255,13 +278,13 @@ class TemporalEngine:
                 end=str(time_window_payload["end"]),
             )
         return RecurrenceRule(
-            pattern=str(recurrence.get("pattern") or "once"),
+            pattern=coerce_recurrence_pattern(recurrence.get("pattern")),
             days_of_week=list(recurrence.get("days_of_week") or []) or None,
             day_of_month=recurrence.get("day_of_month"),
             time_window=time_window,
             flexible=bool(recurrence.get("flexible", True)),
             max_deferrals=int(recurrence.get("max_deferrals") or 3),
-            end_condition=str(recurrence.get("end_condition") or "phase_end"),
+            end_condition=coerce_recurrence_end_condition(recurrence.get("end_condition")),
             end_value=recurrence.get("end_value"),
             interval_days=recurrence.get("interval_days"),
         )

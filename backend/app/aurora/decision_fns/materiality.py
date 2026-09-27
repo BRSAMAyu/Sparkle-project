@@ -40,14 +40,13 @@ def _flatten_signals(value: Any) -> Iterable[str]:
         return []
     if isinstance(value, str):
         return [value]
+    flattened: list[str] = []
     if isinstance(value, dict):
-        flattened: list[str] = []
         for key, inner in value.items():
             flattened.extend(_flatten_signals(key))
             flattened.extend(_flatten_signals(inner))
         return flattened
     if isinstance(value, (list, tuple, set)):
-        flattened: list[str] = []
         for item in value:
             flattened.extend(_flatten_signals(item))
         return flattened

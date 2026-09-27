@@ -1,11 +1,13 @@
 import asyncio
 import json
 from datetime import datetime
+from types import ModuleType
 from typing import Any
 
 from loguru import logger
 
 # numpy might not be available, use standard math or implement simple stats
+np: ModuleType | None
 try:
     import numpy as np
 except ImportError:

@@ -30,6 +30,7 @@ class ToolPreferenceRouter:
         self.user_id = user_id
         self.history_service = ToolHistoryService(db_session)
 
+        self.learner: BayesianLearner
         if redis_client:
             from app.learning.persistent_bayesian_learner import PersistentBayesianLearner
             self.learner = PersistentBayesianLearner(redis_client, str(user_id))

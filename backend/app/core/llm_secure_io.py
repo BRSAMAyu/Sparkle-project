@@ -147,16 +147,15 @@ def secure_messages(
     wrap_user_messages: bool = False,
     wrap_tool_messages: bool = False,
 ) -> list[dict[str, Any]]:
+    secured: list[dict[str, Any]] = []
     if not llm_safety_enabled():
         _record_bypass("messages")
-        secured: list[dict[str, Any]] = []
         for message in messages or []:
             current = dict(message)
             content = current.get("content")
             current["content"] = _redact_string_values(content)
             secured.append(current)
         return secured
-    secured: list[dict[str, Any]] = []
     for message in messages or []:
         current = dict(message)
         role = str(current.get("role") or "user")

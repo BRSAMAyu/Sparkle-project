@@ -21,7 +21,7 @@ from app.models.card_protocol import ArtifactType, Card, CardCreatedBy, CardType
 from app.services.planning_artifact_service import PlanningArtifactService
 
 # Default adaptation rules (sensible defaults for university students)
-_DEFAULT_STRATEGY = {
+_DEFAULT_STRATEGY: dict[str, Any] = {
     "adaptation_rules": {
         "on_stall": {
             "action": "reduce_concurrency",
@@ -219,9 +219,9 @@ class StrategyMapManager:
         # Health reason mapping
         if health_reasons:
             for reason in health_reasons:
-                trigger = _HEALTH_REASON_TO_TRIGGER.get(reason.lower())
-                if trigger:
-                    return trigger
+                health_trigger = _HEALTH_REASON_TO_TRIGGER.get(reason.lower())
+                if health_trigger:
+                    return health_trigger
 
         return None
 

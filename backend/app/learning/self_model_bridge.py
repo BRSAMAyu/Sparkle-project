@@ -14,6 +14,8 @@ Strategy:
 
 from __future__ import annotations
 
+from typing import Any
+
 from loguru import logger
 
 
@@ -34,7 +36,7 @@ class SelfModelBridge:
         actual_outcome: dict,
     ) -> dict:
         """Synchronize outcome evidence into both self-models."""
-        result = {"spine": None, "aurora": None}
+        result: dict[str, Any] = {"spine": None, "aurora": None}
 
         # ── Spine SelfModel: record claim ──
         try:

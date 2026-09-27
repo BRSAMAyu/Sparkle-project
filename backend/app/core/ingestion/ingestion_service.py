@@ -4,7 +4,7 @@ import base64
 import io
 import os
 import re
-from typing import Any
+from typing import IO, Any, Callable
 
 from fastapi import HTTPException
 from loguru import logger
@@ -19,6 +19,7 @@ try:
 except ImportError:
     HAS_PDFPLUMBER = False
 
+Document: Callable[[str | IO[bytes] | None], Any] | None
 try:
     from docx import Document
     HAS_DOCX = True
@@ -26,6 +27,7 @@ except ImportError:
     Document = None
     HAS_DOCX = False
 
+Presentation: Callable[[str | IO[bytes] | None], Any] | None
 try:
     from pptx import Presentation
     HAS_PPTX = True
@@ -300,7 +302,7 @@ class IngestionService:
             return ""
 
     def _process_docx(self, path: str) -> list[ExtractedChunk]:
-        if not HAS_DOCX:
+        if not HAS_DOCX or Document is None:
             raise HTTPException(
                 status_code=501,
                 detail="DOCX processing requires python-docx, which is not installed."
@@ -338,7 +340,7 @@ class IngestionService:
         return chunks
 
     def _process_pptx(self, path: str) -> list[ExtractedChunk]:
-        if not HAS_PPTX:
+        if not HAS_PPTX or Presentation is None:
             raise HTTPException(
                 status_code=501,
                 detail="PPTX processing requires python-pptx, which is not installed."

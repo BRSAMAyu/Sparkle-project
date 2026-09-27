@@ -191,14 +191,13 @@ def _flatten_signals(value: object) -> tuple[str, ...]:
         return ()
     if isinstance(value, str):
         return (value.lower(),)
+    flattened: list[str] = []
     if isinstance(value, dict):
-        flattened: list[str] = []
         for key, inner in value.items():
             flattened.extend(_flatten_signals(key))
             flattened.extend(_flatten_signals(inner))
         return tuple(flattened)
     if isinstance(value, (list, tuple, set)):
-        flattened: list[str] = []
         for item in value:
             flattened.extend(_flatten_signals(item))
         return tuple(flattened)

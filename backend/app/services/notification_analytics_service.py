@@ -4,12 +4,14 @@ Notification Analytics Service
 Provides usage statistics and analytics for notifications.
 """
 from datetime import UTC, datetime, timedelta
+from types import ModuleType
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+aioredis: ModuleType | None
 try:
     import redis.asyncio as aioredis
 
