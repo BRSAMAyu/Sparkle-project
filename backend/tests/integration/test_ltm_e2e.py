@@ -1,12 +1,15 @@
 # FIXED: 2026-04-25 - Integration DB schema was behind task planning migrations - verified LTM repair flow after Alembic head.
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, time, timedelta
 from uuid import uuid4
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
-
-
 import pytest
+
+
+def _utcnow() -> datetime:
+    # V3-FIX-321 族C 冻结钟纪律（70676f2b 判例）：种子锚定当日 12:00 UTC——
+    # 裸 now 在日界附近运行时 target/occurred/deleted 偏移可能跨 UTC 日界；
+    # 正午锚使全部播种时点全 24h 确定且不落昨日，UTC 日期与宿主机时区无关。
+    return datetime.combine(datetime.utcnow().date(), time.min) + timedelta(hours=12)
 
 from app.config import settings
 from app.core.context_budget import ContextBudgetScheduler

@@ -6,7 +6,7 @@ value 扣发、coverage 校准 map 应用、无行用户的诚实空态。
 
 from __future__ import annotations
 
-from datetime import datetime
+import datetime as dt
 from uuid import uuid4
 
 import pytest
@@ -17,6 +17,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.api.v1.insights import router as insights_router
 from app.models.understanding_dimensions import UnderstandingCalibrationRun, UnderstandingDimensionDaily
+
+# V3-FIX-321 族C 冻结钟纪律：播种常数化（锚定 2026-09-25 12:00 UTC 正午，上海
+# 同日 20:00）。读面 get_latest_row 按 metric_date 降序取行、校准按 ran_at 取
+# 最新，均无宿主机钟参与；裸 utcnow() 播种改冻结常数后与宿主机时钟/时区全脱钩，
+# 断言与期望值零改动。
+FROZEN_NOW = dt.datetime(2026, 9, 25, 12, 0)
+FROZEN_TODAY = FROZEN_NOW.date()
 
 
 class _FakeUser:
@@ -67,7 +74,7 @@ async def _seed_row(session: AsyncSession, user_id, *, drift_correctness: bool =
     session.add(
         UnderstandingDimensionDaily(
             user_id=user_id,
-            metric_date=datetime.utcnow().date(),
+            metric_date=FROZEN_TODAY,
             dimensions=dimensions,
             anchors={"coverage": {"anchor_value": 0.9, "anchor_samples": 10}},
             window_days=7,
@@ -84,7 +91,7 @@ async def _seed_row(session: AsyncSession, user_id, *, drift_correctness: bool =
         session.add(
             UnderstandingCalibrationRun(
                 user_id=user_id,
-                ran_at=datetime.utcnow(),
+                ran_at=FROZEN_NOW,
                 window_days=14,
                 coverage_map={"a": 1.0, "b": -0.25, "applied": True, "mae_before": 0.3, "mae_after": 0.05},
                 drift_report=drift,

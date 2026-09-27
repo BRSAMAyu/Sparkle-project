@@ -2,6 +2,12 @@ from __future__ import annotations
 
 import sys
 from datetime import datetime, timedelta
+
+# V3-FIX-321 族C 冻结钟纪律：锚定 2026-09-25 12:00 UTC 正午（上海同日 20:00）。
+# 种子与消费面 error_replan_bridge._utcnow 同钟，跨 UTC 日界运行恒确定；
+# 断言与期望值零改动。
+FROZEN_NOW = datetime(2026, 9, 25, 12, 0)
+FROZEN_TODAY = FROZEN_NOW.date()
 from pathlib import Path
 from uuid import UUID
 from unittest.mock import AsyncMock, patch
@@ -40,7 +46,7 @@ async def _seed_error_bridge_fixture(db_session) -> tuple[User, Plan, KnowledgeN
         username="error_stage35",
         email="error_stage35@example.com",
         hashed_password="hashed",
-        created_at=datetime.utcnow() - timedelta(days=2),
+        created_at=FROZEN_NOW - timedelta(days=2),
     )
     db_session.add(user)
     await db_session.flush()
@@ -51,7 +57,7 @@ async def _seed_error_bridge_fixture(db_session) -> tuple[User, Plan, KnowledgeN
         type=PlanType.SPRINT,
         description="error smoke",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=7),
+        target_date=FROZEN_TODAY + timedelta(days=7),
         daily_available_minutes=60,
         total_estimated_hours=6,
         subject="physics",
@@ -91,7 +97,7 @@ async def _seed_error_bridge_fixture(db_session) -> tuple[User, Plan, KnowledgeN
         energy_cost=2,
         status=TaskStatus.PENDING,
         priority=3,
-        due_date=datetime.utcnow().date() + timedelta(days=1),
+        due_date=FROZEN_TODAY + timedelta(days=1),
         knowledge_node_id=node.id,
     )
     db_session.add(task)
@@ -142,6 +148,7 @@ async def test_stage35_error_journey_smoke(db_session, monkeypatch) -> None:
     hop_order: list[str] = []
 
     monkeypatch.setattr(cache_service, "redis", fake_redis)
+    monkeypatch.setattr("app.services.error_replan_bridge._utcnow", lambda: FROZEN_NOW)
 
     user, plan, node = await _seed_error_bridge_fixture(db_session)
     bridge = ErrorReplanBridge(db_session, redis=fake_redis)

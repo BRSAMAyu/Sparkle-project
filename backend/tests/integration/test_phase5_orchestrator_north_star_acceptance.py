@@ -7,7 +7,7 @@ import types
 import uuid
 from collections.abc import AsyncGenerator
 from copy import deepcopy
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from statistics import mean
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -765,7 +765,12 @@ async def test_phase5_thermodynamics_orchestrator_journey_derives_scores_from_ru
         type=PlanType.SPRINT,
         description="用真实材料查漏补缺",
         plan_stage=PlanStage.DAILY,
-        target_date=(__import__("datetime").datetime.utcnow().date() + timedelta(days=14)),
+        # V3-FIX-321 族C（70676f2b 判例）：播种锚定当日 12:00 UTC 正午，
+        # 宿主机时钟/时区无关，全 24h 确定；断言与期望值零改动。
+        target_date=(
+            (datetime.combine(datetime.utcnow().date(), time.min) + timedelta(hours=12)).date()
+            + timedelta(days=14)
+        ),
         daily_available_minutes=90,
         total_estimated_hours=18,
         subject="热力学",

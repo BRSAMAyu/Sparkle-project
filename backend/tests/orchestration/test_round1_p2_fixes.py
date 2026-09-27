@@ -6,6 +6,12 @@ docs/competition/2026-tmall-hackathon/系统审查/round1/01-engine-orchestratio
 
 from __future__ import annotations
 
+import datetime as _dt
+
+# V3-FIX-321 族C 冻结钟纪律：锚定 2026-09-25 12:00 UTC 正午（上海同日 20:00）。
+FROZEN_NOW = _dt.datetime(2026, 9, 25, 12, 0)
+FROZEN_TODAY = FROZEN_NOW.date()
+
 import asyncio
 import importlib
 import uuid
@@ -152,9 +158,10 @@ class _StrKeyRedis:
     def __init__(self) -> None:
         # V3-FIX-121：get_top_users 以真实墙钟做 0 <= days_ago < days 过滤，
         # 日期键须动态生成（硬编码写作日 2026-09-17 会随日历滑出 7 天窗）。
-        from datetime import date
-
-        today = date.today().isoformat()
+        # V3-FIX-321 族C：种子与消费面（token_tracker.datetime.now）冻结为同
+        # 一 FROZEN 常数（2026-09-25 正午锚），days_ago=0 恒在窗内，宿主机
+        # 时钟/时区与跨日界竞安全脱钩；断言与期望值零改动。
+        today = FROZEN_TODAY.isoformat()
         self.values: dict[str, str] = {
             f"user:daily_tokens:user-a:{today}": "120",
             f"user:daily_tokens:user-b:{today}": "30",
@@ -169,7 +176,13 @@ class _StrKeyRedis:
 
 
 @pytest.mark.asyncio
-async def test_rb05_get_top_users_handles_str_keys():
+async def test_rb05_get_top_users_handles_str_keys(monkeypatch):
+    class _FrozenDatetime(_dt.datetime):
+        @classmethod
+        def now(cls, tz=None):  # noqa: ANN001 — 判例签名（checkpoint_nudge 同款）
+            return FROZEN_NOW if tz is None else FROZEN_NOW.replace(tzinfo=tz)
+
+    monkeypatch.setattr("app.orchestration.token_tracker.datetime", _FrozenDatetime)
     tracker = TokenTracker(_StrKeyRedis())
 
     top_users = await tracker.get_top_users(days=7, limit=10)

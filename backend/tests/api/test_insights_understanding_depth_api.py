@@ -7,7 +7,7 @@ HTTP 用 httpx ASGITransport（与 db_session 同一事件循环）。
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+import datetime as dt
 from uuid import uuid4
 
 import pytest
@@ -18,6 +18,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.api.v1.insights import router as insights_router
 from app.models.understanding_depth import UnderstandingDepthDaily
+
+# V3-FIX-321 族C 冻结钟纪律：锚定当日 12:00 UTC（上海 20:00，UTC 日=用户本地日
+# 同日；正午锚使 ±小时偏移永不跨日界）。消费面 get_trend 的窗口端点走
+# understanding_depth_metric_service.datetime.utcnow()，冻结后种子/窗口同钟，
+# 宿主机时钟/时区全脱钩；断言与期望值零改动。
+FROZEN_NOW = dt.datetime(2026, 9, 25, 12, 0)
+FROZEN_TODAY = FROZEN_NOW.date()
+
+
+@pytest.fixture
+def frozen_clock(monkeypatch):
+    class _FrozenDatetime(dt.datetime):
+        @classmethod
+        def utcnow(cls) -> dt.datetime:
+            return FROZEN_NOW
+
+    monkeypatch.setattr("app.services.understanding_depth_metric_service.datetime", _FrozenDatetime)
 
 
 class _FakeUser:
@@ -39,12 +56,12 @@ def _build_app(session: AsyncSession, user_id) -> FastAPI:
 
 
 async def _seed(session: AsyncSession, user_id, days: int = 3) -> None:
-    base = datetime.utcnow().date()
+    base = FROZEN_TODAY
     for offset in range(days):
         session.add(
             UnderstandingDepthDaily(
                 user_id=user_id,
-                metric_date=base - timedelta(days=offset),
+                metric_date=base - dt.timedelta(days=offset),
                 score=round(0.1 + 0.1 * offset, 2),
                 components={"memory_injection": 0.2 * offset, "personalization": 0.5},
                 context_pack_runs=offset,
@@ -55,7 +72,7 @@ async def _seed(session: AsyncSession, user_id, days: int = 3) -> None:
 
 
 @pytest.mark.asyncio
-async def test_understanding_depth_returns_trend_with_latest(db_session):
+async def test_understanding_depth_returns_trend_with_latest(db_session, frozen_clock):
     user_id = uuid4()
     app = _build_app(db_session, user_id)
     await _seed(db_session, user_id)
@@ -76,7 +93,7 @@ async def test_understanding_depth_returns_trend_with_latest(db_session):
 
 
 @pytest.mark.asyncio
-async def test_understanding_depth_30_day_window_mapping(db_session):
+async def test_understanding_depth_30_day_window_mapping(db_session, frozen_clock):
     user_id = uuid4()
     app = _build_app(db_session, user_id)
     await _seed(db_session, user_id)
@@ -99,7 +116,7 @@ async def test_understanding_depth_rejects_out_of_range_days(db_session):
 
 
 @pytest.mark.asyncio
-async def test_understanding_depth_empty_trend_for_new_user(db_session):
+async def test_understanding_depth_empty_trend_for_new_user(db_session, frozen_clock):
     app = _build_app(db_session, uuid4())
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/insights/understanding-depth", params={"days": 30})

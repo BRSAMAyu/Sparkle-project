@@ -1,4 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
+
+
+def _seed_now() -> datetime:
+    # V3-FIX-321 族C 冻结钟纪律（70676f2b 判例）：播种锚定当日 12:00 UTC
+    # （上海同日 20:00，用户本地日=UTC 日）：全部日相对偏移（-2d..-3h、+1d..+14d）
+    # 全 24h 落预定日/桶，不跨日界；宿主机时钟/时区无关。断言零改动。
+    return datetime.combine(datetime.utcnow().date(), time.min) + timedelta(hours=12)
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -57,7 +64,7 @@ async def test_thermodynamics_demo_story_flows_from_error_pressure_to_growth_dig
         type=PlanType.SPRINT,
         description="考试前查漏补缺",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=14),
+        target_date=_seed_now().date() + timedelta(days=14),
         daily_available_minutes=100,
         total_estimated_hours=24,
         subject="热力学",
@@ -114,7 +121,7 @@ async def test_thermodynamics_demo_story_flows_from_error_pressure_to_growth_dig
         energy_cost=3,
         status=TaskStatus.PENDING,
         priority=5,
-        due_date=datetime.utcnow().date() + timedelta(days=1),
+        due_date=_seed_now().date() + timedelta(days=1),
         knowledge_node_id=node.id,
     )
     db_session.add(task)
@@ -138,7 +145,7 @@ async def test_thermodynamics_demo_story_flows_from_error_pressure_to_growth_dig
             mastery_level=0.2,
             latest_analysis={"error_type": "concept_confusion"},
             linked_knowledge_node_ids=[str(node.id)],
-            created_at=datetime.utcnow() - timedelta(days=idx),
+            created_at=_seed_now() - timedelta(days=idx),
         )
         for idx in range(3)
     ]
@@ -168,18 +175,18 @@ async def test_thermodynamics_demo_story_flows_from_error_pressure_to_growth_dig
             record_type="error_review",
             study_minutes=25,
             mastery_delta=23,
-            created_at=datetime.utcnow() - timedelta(days=1),
+            created_at=_seed_now() - timedelta(days=1),
         )
     )
     task.status = TaskStatus.COMPLETED
-    task.completed_at = datetime.utcnow() - timedelta(hours=3)
+    task.completed_at = _seed_now() - timedelta(hours=3)
     task.actual_minutes = 30
     db_session.add(
         FocusSession(
             user_id=user.id,
             task_id=task.id,
-            start_time=datetime.utcnow() - timedelta(hours=4),
-            end_time=datetime.utcnow() - timedelta(hours=3, minutes=25),
+            start_time=_seed_now() - timedelta(hours=4),
+            end_time=_seed_now() - timedelta(hours=3, minutes=25),
             duration_minutes=35,
             focus_type=FocusType.POMODORO,
             status=FocusStatus.COMPLETED,
@@ -196,7 +203,7 @@ async def test_thermodynamics_demo_story_flows_from_error_pressure_to_growth_dig
         energy_cost=2,
         status=TaskStatus.PENDING,
         priority=4,
-        due_date=datetime.utcnow().date() + timedelta(days=2),
+        due_date=_seed_now().date() + timedelta(days=2),
         knowledge_node_id=node.id,
     )
     db_session.add(next_task)

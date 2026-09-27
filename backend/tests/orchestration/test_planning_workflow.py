@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -16,6 +16,11 @@ from app.models.user_preferences import UserPreferencesCenter
 from app.orchestration.planning_workflow import PlanningSession, PlanningWorkflowManager
 from app.services.galaxy_service import GalaxyService
 from app.sprint_packs.sprint_pack_loader import load_pack
+
+# V3-FIX-321 族C 冻结钟纪律：播种常数化（2026-09-25 正午锚，上海同日 20:00）。
+# 日历参照/修复任务两处播种均不与宿主机钟发生断言交互（显式传参自洽），
+# 常数化后宿主机时钟/时区全脱钩；断言与期望值零改动。
+FROZEN_TODAY = date(2026, 9, 25)
 
 
 class FakeRedis:
@@ -115,9 +120,15 @@ def test_daily_task_specs_expands_each_phase_to_one_task_per_day() -> None:
     assert all("核心攻克" in spec["focus"] for spec in specs)
 
 
-def test_daily_task_specs_reference_calendar_time_blocks() -> None:
+def test_daily_task_specs_reference_calendar_time_blocks(monkeypatch) -> None:
     manager = PlanningWorkflowManager(redis_client=FakeRedis())
-    today = datetime.utcnow().date().isoformat()
+    # V3-FIX-321 族C：产品 target_date 走 planning_workflow._utcnow()，种子与
+    # 消费面冻结为同一 FROZEN 常数（2026-09-25 正午锚），宿主机钟全脱钩。
+    monkeypatch.setattr(
+        "app.orchestration.planning_workflow._utcnow",
+        lambda: datetime.combine(FROZEN_TODAY, time.min),  # naive UTC（time_utils 契约）
+    )
+    today = FROZEN_TODAY.isoformat()
     session = PlanningSession(
         planning_session_id=str(uuid4()),
         chat_session_id="chat-session-calendar",
@@ -734,7 +745,7 @@ async def test_insert_repair_task_prepends_next_day_and_deduplicates(db_session)
         type=PlanType.SPRINT,
         description="7 天计划",
         plan_stage=PlanStage.DAILY,
-        target_date=datetime.utcnow().date() + timedelta(days=7),
+        target_date=FROZEN_TODAY + timedelta(days=7),
         daily_available_minutes=90,
         total_estimated_hours=10,
         subject="计算机网络",

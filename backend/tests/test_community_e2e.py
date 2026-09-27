@@ -15,7 +15,7 @@ Created: 2026-01-31
 Updated: 2026-01-31 - 使用SQLite内存数据库避免asyncpg事件循环问题
 """
 import pytest
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from sqlalchemy import func, select
 
@@ -538,7 +538,7 @@ async def test_e2e_group_tasks(db_session, test_users):
         tags=["python", "基础"],
         estimated_minutes=120,
         difficulty=3,
-        due_date=date.today() + timedelta(days=7),
+        due_date=_utcnow().date() + timedelta(days=7),
     )
 
     task = await GroupTaskService.create_task(
@@ -696,7 +696,7 @@ async def test_e2e_complete_user_journey(db_session, test_users):
         tags=["python", "基础"],
         estimated_minutes=60,
         difficulty=2,
-        due_date=date.today() + timedelta(days=2),
+        due_date=_utcnow().date() + timedelta(days=2),
     )
     task = await GroupTaskService.create_task(
         db_session, group.id, user1.id, task_data
@@ -951,7 +951,7 @@ async def test_e2e_dissolve_group_cleans_related_resources(db_session, test_user
             tags=["cleanup"],
             estimated_minutes=20,
             difficulty=1,
-            due_date=date.today() + timedelta(days=1),
+            due_date=_utcnow().date() + timedelta(days=1),
         ),
     )
     claim = await GroupTaskService.claim_task(db_session, task.id, user2.id)
