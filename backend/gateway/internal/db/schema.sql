@@ -3807,7 +3807,8 @@ CREATE TABLE mastery_audit_log (
     reason character varying(100) NOT NULL,
     request_id character varying(100),
     revision integer DEFAULT 1,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    effect_kind character varying(20)
 );
 
 

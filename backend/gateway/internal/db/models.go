@@ -4008,6 +4008,7 @@ type MasteryAuditLog struct {
 	RequestID  pgtype.Text      `json:"request_id"`
 	Revision   pgtype.Int4      `json:"revision"`
 	CreatedAt  pgtype.Timestamp `json:"created_at"`
+	EffectKind pgtype.Text      `json:"effect_kind"`
 }
 
 type MemoryCorrection struct {
