@@ -12,11 +12,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/golang-lru/v2"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
@@ -46,6 +46,14 @@ func LogRunnerStopped(ctx context.Context, log *zap.Logger, name string, err err
 	}
 }
 
+// processedCacheSize bounds the in-process idempotency hot cache (V3-FIX-481).
+// V3-FIX-469 made the processed_events table the authoritative duplicate gate,
+// so this cache is a pure acceleration layer: a few hundred to a few thousand
+// hot keys absorb the only real in-process repeat traffic (PEL redelivery of
+// events whose XAck raced a crash), and eviction can never cause a
+// double-process — it only falls back to one DB IsProcessed lookup.
+const processedCacheSize = 1024
+
 // BaseWorker provides common functionality for event workers.
 type BaseWorker struct {
 	redis           *redis.Client
@@ -61,8 +69,15 @@ type BaseWorker struct {
 	options     Options
 
 	// State
-	running      atomic.Bool
-	processedIDs sync.Map // In-memory cache for recent events
+	running atomic.Bool
+	// processedCache is a bounded LRU of stream message IDs already processed
+	// by this process (V3-FIX-481: replaced an unbounded sync.Map that kept
+	// one entry per event forever). It is a pure acceleration layer — the
+	// durable, authoritative duplicate gate is the processed_events table
+	// (processedEvents, real since V3-FIX-469), so evicting an entry can only
+	// cost one extra DB IsProcessed lookup on a redelivered old event, never a
+	// double-process. Nil disables the cache (degrades to always-DB).
+	processedCache *lru.Cache[string, struct{}]
 }
 
 // Options configures worker behavior.
@@ -126,6 +141,14 @@ func NewBaseWorker(
 		options = opts[0]
 	}
 
+	// lru.New errors only for size <= 0; processedCacheSize is a positive
+	// constant, so this never trips — but degrade to a nil (always-DB) cache
+	// instead of panicking if the constant is ever mis-tuned.
+	processedCache, err := lru.New[string, struct{}](processedCacheSize)
+	if err != nil {
+		processedCache = nil
+	}
+
 	return &BaseWorker{
 		redis:           redis,
 		processedEvents: processedEvents,
@@ -136,6 +159,7 @@ func NewBaseWorker(
 		consumerName:    consumerName,
 		retryConfig:     DefaultRetryConfig(),
 		options:         options,
+		processedCache:  processedCache,
 	}
 }
 
@@ -377,9 +401,13 @@ func (w *BaseWorker) processWithRetry(
 }
 
 func (w *BaseWorker) isProcessed(ctx context.Context, messageID string) bool {
-	// Check in-memory cache first
-	if _, ok := w.processedIDs.Load(messageID); ok {
-		return true
+	// Bounded in-process hot cache first (V3-FIX-481): a hit skips the DB
+	// roundtrip; a miss — including LRU eviction — falls through to the
+	// authoritative processed_events gate below.
+	if w.processedCache != nil {
+		if _, ok := w.processedCache.Get(messageID); ok {
+			return true
+		}
 	}
 
 	// Check database
@@ -396,8 +424,10 @@ func (w *BaseWorker) isProcessed(ctx context.Context, messageID string) bool {
 }
 
 func (w *BaseWorker) markProcessed(ctx context.Context, messageID string) {
-	// Add to in-memory cache
-	w.processedIDs.Store(messageID, true)
+	// Add to the bounded in-process cache (LRU-evicted; see processedCacheSize)
+	if w.processedCache != nil {
+		w.processedCache.Add(messageID, struct{}{})
+	}
 
 	// Persist to database
 	if w.processedEvents != nil {
