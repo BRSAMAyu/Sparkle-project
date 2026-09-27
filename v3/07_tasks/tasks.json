@@ -4158,7 +4158,7 @@
       "resource_class": "HEAVY",
       "reviewers_required": 1,
       "gate": "V3-5",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
