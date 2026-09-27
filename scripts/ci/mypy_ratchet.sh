@@ -5,6 +5,9 @@
 set -euo pipefail
 COUNT="$(cd backend && { mypy app --ignore-missing-imports --no-error-summary 2>/dev/null | grep 'error:' > /tmp/mypy_errors.txt || true; }; wc -l < /tmp/mypy_errors.txt)"
 BASELINE="$(cat quality/mypy_baseline.txt)"
+# 平台代际差说明（2026-09-27）：本地 macOS 379 vs CI linux 380——y_py 等包的
+# stub 可见性随索引/平台漂移（本地私有索引 403 无法完全对齐）。基线取 CI 权威
+# 较高值，棘轮语义（只降不升）在 CI 平台成立；真烧路径=修 CI 侧暴露的签名错。
 echo "mypy errors: ${COUNT} / baseline: ${BASELINE}"
 if [ "${COUNT}" -gt "${BASELINE}" ]; then
   echo "::error::mypy errors ${COUNT} > baseline ${BASELINE} — fix new type errors or (after cleanup) lower the baseline"
