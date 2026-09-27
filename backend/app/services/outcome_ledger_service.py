@@ -85,6 +85,7 @@ from app.core.outcome_ledger import (
     parse_declared_evidence,
 )
 from app.core.run_state_machine import RunStatus
+from app.core.time_utils import DEFAULT_USER_TIMEZONE, utc_naive_to_wall_clock
 from app.models.agent_run import AgentRun
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import ExpansionFeedback, StudyRecord
@@ -131,6 +132,22 @@ def _coalesce(*columns: Any) -> Any:
     if len(columns) == 1:
         return columns[0]
     return func.coalesce(*columns)
+
+
+def _wall_clock_window(since: datetime | None, until: datetime | None) -> tuple[datetime | None, datetime | None]:
+    """UTC 窗端点 → 墙上钟窗端点（V3-FIX-322；None 端保持 None）。
+
+    FocusSession.end_time 存客户端本地墙上钟 naive（V3-FIX-37 定界），端点
+    经 ``utc_naive_to_wall_clock`` 换成墙上钟再入 SQL 同钟比（V3-FIX-300
+    同款逆向换算，双射等价「列值先 wall_clock_to_utc_naive 再比 UTC 端点」）。
+    ledger 谓词取不到 per-user 时区上下文，按主市场缺省口径
+    （``time_utils.DEFAULT_USER_TIMEZONE``，与 push_preference.timezone 缺省
+    回落一致；V3-FIX-319 wt609 同款）。
+    """
+    return (
+        utc_naive_to_wall_clock(since, DEFAULT_USER_TIMEZONE) if since is not None else None,
+        utc_naive_to_wall_clock(until, DEFAULT_USER_TIMEZONE) if until is not None else None,
+    )
 
 
 def _uuid_str(value: UUID | str | None) -> str | None:
@@ -301,11 +318,17 @@ class OutcomeLedgerService:
             win(StudyRecord, StudyRecord.created_at),
             cohort(StudyRecord.user_id),
         )
+        # V3-FIX-322：end_time 为墙上钟列（V3-FIX-37 定界）且 nullable=False
+        # （models/focus.py），旧 win 的 coalesce created_at（UTC 列）回退分支
+        # 不可达且混钟——窗端点换墙上钟后直接比墙上钟列（319 wt609
+        # _focus_pred 同款，_wall_clock_window 注）。
+        focus_since_wall, focus_until_wall = _wall_clock_window(since, until)
         focus_where = _where(
             FocusSession.user_id == user_id,
             FocusSession.status == FocusStatus.COMPLETED,
             FocusSession.not_deleted_filter(),
-            win(FocusSession, FocusSession.end_time, FocusSession.created_at),
+            FocusSession.end_time >= focus_since_wall if focus_since_wall is not None else None,
+            FocusSession.end_time < focus_until_wall if focus_until_wall is not None else None,
             cohort(FocusSession.user_id),
         )
         quiz_where = _where(
@@ -890,12 +913,17 @@ class OutcomeLedgerService:
     ) -> tuple[list[OutcomeEntry], tuple[datetime, str] | None]:
         if polarity_filter not in (None, OutcomePolarity.POSITIVE):
             return [], None  # focus 行恒为 POSITIVE
-        occurred = _coalesce(FocusSession.end_time, FocusSession.created_at)
+        # V3-FIX-322：end_time 列 nullable=False（models/focus.py），旧 coalesce
+        # 的 created_at（UTC 列）回退分支不可达且混钟——键序/排序/窗直接用墙上
+        # 钟列；窗端点经 _wall_clock_window 换墙上钟同钟比（319 同款逆向）。
+        since_wall, until_wall = _wall_clock_window(since, until)
+        occurred = FocusSession.end_time
         predicates = [
             FocusSession.user_id == user_id,
             FocusSession.status == FocusStatus.COMPLETED,
             FocusSession.not_deleted_filter(),
-            self._window(since, until, FocusSession.end_time, FocusSession.created_at),
+            FocusSession.end_time >= since_wall if since_wall is not None else None,
+            FocusSession.end_time < until_wall if until_wall is not None else None,
             self._keyset(
                 occurred,
                 _stream_key_expr(OutcomeSource.FOCUS_SESSION, FocusSession.id),

@@ -605,6 +605,100 @@ class TestFocusTimeDirection:
         assert entry.truth_class is TruthClass.SELF_REPORTED
 
 
+class TestFocusWallClockWindow:
+    """V3-FIX-322：focus 流墙上钟列（end_time）配 UTC 窗 → ±8h 错桶。
+
+    FocusSession.end_time 存客户端本地墙上钟 naive（V3-FIX-37 定界，
+    models/focus.py 纯 naive 列无服务端 utcnow 写点），修前 count_by_source
+    的 win(end_time, created_at) 与 _focus_sessions 的 coalesce+window 都拿
+    naive 值直比 UTC 窗端点。冻结钟窗 [09-13 17:00, 09-20 17:00) UTC
+    （= 上海墙上钟 [09-14 01:00, 09-21 01:00)）双向钉住：窗前事件误计入
+    （高估）、窗内事件误排除（低估），另设窗中部 UTC 控制组（任何钟表
+    口径下都应计入，钉住非平移回归面）。修法沿 V3-FIX-319（wt609）：
+    端点经 utc_naive_to_wall_clock 按主市场缺省 DEFAULT_USER_TIMEZONE
+    换墙上钟入 SQL 同钟比（V3-FIX-300 同款逆向，双射等价）。
+    """
+
+    _SINCE = datetime(2026, 9, 13, 17, 0, 0)  # naive-UTC
+    _UNTIL = datetime(2026, 9, 20, 17, 0, 0)  # naive-UTC
+
+    async def test_count_by_source_wall_event_before_window_excluded(self, db_session):
+        """高估方向：上海墙上钟 09-14 00:30（绝对 09-13T16:30Z）在窗起点（09-13T17:00Z）之前。
+
+        修前 naive 00:30 ≥ 17:00 直比 → 误计入。
+        """
+        user = await _make_user(db_session)
+        db_session.add(_focus(user.id, at=datetime(2026, 9, 14, 0, 30)))
+        await db_session.commit()
+
+        counts = await OutcomeLedgerService(db_session).count_by_source(
+            user_id=user.id, since=self._SINCE, until=self._UNTIL
+        )
+        assert counts[OutcomeSource.FOCUS_SESSION.value] == 0, (
+            "绝对时刻在窗前的 focus 会话不得计入；修前墙上钟 naive 直比误计入"
+        )
+
+    async def test_count_by_source_wall_event_inside_window_included(self, db_session):
+        """低估方向：上海墙上钟 09-20 22:00（绝对 09-20T14:00Z）在窗终点（09-20T17:00Z）之内。
+
+        修前 naive 22:00 < 终点 17:00 直比 → 误排除。
+        """
+        user = await _make_user(db_session)
+        db_session.add(_focus(user.id, at=datetime(2026, 9, 20, 22, 0)))
+        await db_session.commit()
+
+        counts = await OutcomeLedgerService(db_session).count_by_source(
+            user_id=user.id, since=self._SINCE, until=self._UNTIL
+        )
+        assert counts[OutcomeSource.FOCUS_SESSION.value] == 1, (
+            "绝对时刻在窗内的 focus 会话必须计入；修前墙上钟 naive 直比误排除"
+        )
+
+    async def test_count_by_source_mid_window_utc_control_unchanged(self, db_session):
+        """UTC 控制组：窗中部（距两端 ≥8h）事件在任何钟表口径下都应计入。"""
+        user = await _make_user(db_session)
+        db_session.add(_focus(user.id, at=datetime(2026, 9, 17, 12, 0)))
+        await db_session.commit()
+
+        counts = await OutcomeLedgerService(db_session).count_by_source(
+            user_id=user.id, since=self._SINCE, until=self._UNTIL
+        )
+        assert counts[OutcomeSource.FOCUS_SESSION.value] == 1
+
+    async def test_query_wall_event_before_window_excluded(self, db_session):
+        """query 流同病（_focus_sessions）：窗前事件（绝对 09-13T16:30Z）不得返回。"""
+        user = await _make_user(db_session)
+        db_session.add(_focus(user.id, at=datetime(2026, 9, 14, 0, 30)))
+        await db_session.commit()
+
+        page = await OutcomeLedgerService(db_session).query(
+            user_id=user.id, source=OutcomeSource.FOCUS_SESSION, since=self._SINCE, until=self._UNTIL
+        )
+        assert len(page.items) == 0, "修前墙上钟 naive 直比把窗前事件误入 focus 流"
+
+    async def test_query_wall_event_inside_window_included(self, db_session):
+        """query 流同病：窗内事件（绝对 09-20T14:00Z）必须返回。"""
+        user = await _make_user(db_session)
+        db_session.add(_focus(user.id, at=datetime(2026, 9, 20, 22, 0)))
+        await db_session.commit()
+
+        page = await OutcomeLedgerService(db_session).query(
+            user_id=user.id, source=OutcomeSource.FOCUS_SESSION, since=self._SINCE, until=self._UNTIL
+        )
+        assert len(page.items) == 1, "修前墙上钟 naive 直比把窗内事件误排除出 focus 流"
+
+    async def test_query_mid_window_utc_control_unchanged(self, db_session):
+        """UTC 控制组：窗中部事件在 query 流任何钟表口径下都应返回。"""
+        user = await _make_user(db_session)
+        db_session.add(_focus(user.id, at=datetime(2026, 9, 17, 12, 0)))
+        await db_session.commit()
+
+        page = await OutcomeLedgerService(db_session).query(
+            user_id=user.id, source=OutcomeSource.FOCUS_SESSION, since=self._SINCE, until=self._UNTIL
+        )
+        assert len(page.items) == 1
+
+
 class TestPaginationAndIdempotency:
     async def test_keyset_walks_all_outcomes_no_dup_no_miss(self, db_session):
         user = await _make_user(db_session)
@@ -922,11 +1016,16 @@ class TestFiltersAndIsolation:
         assert page.items[0].correlation == {"node_id": "", "task_id": ""}  # 降级不炸
 
     async def test_time_window(self, db_session):
+        """时间窗过滤。V3-FIX-322 起 focus 流按墙上钟同钟比：窗端点为 UTC，
+        end_time 为墙上钟列——行值按上海墙上钟口径播种（+8h 后的绝对时刻与
+        修前 UTC 直读意图相同：07:00Z 排除、10:00Z 计入）。"""
         user = await _make_user(db_session)
         db_session.add_all(
             [
-                _focus(user.id, at=_BASE - timedelta(hours=3)),
-                _focus(user.id, at=_BASE),
+                # 墙上钟 15:00 = 绝对 07:00Z < 窗起点 09:00Z → 排除
+                _focus(user.id, at=_BASE + timedelta(hours=5)),
+                # 墙上钟 18:00 = 绝对 10:00Z ∈ [09:00Z, 11:00Z) → 计入
+                _focus(user.id, at=_BASE + timedelta(hours=8)),
             ]
         )
         await db_session.commit()
