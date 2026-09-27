@@ -374,7 +374,7 @@ class SourceOverride:
     contenders: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        payload = {
+        payload: dict[str, Any] = {
             "key": self.key,
             "previous_category": self.previous_category,
             "previous_writer": self.previous_writer,

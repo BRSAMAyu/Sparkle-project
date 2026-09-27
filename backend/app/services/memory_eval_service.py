@@ -163,7 +163,7 @@ class MemoryEvalService:
             if context_pack.episodic_memories:
                 staleness_rate = stale_count / len(context_pack.episodic_memories)
 
-        metrics = {
+        metrics: dict[str, Any] = {
             "pref_hit_rate": _hit_rate(expected_pref_keys, matched_pref_keys),
             "goal_hit_rate": _hit_rate(expected_goal_titles, matched_goals),
             "episodic_hit_rate": _hit_rate(expected_episodic_contains, matched_episodic),

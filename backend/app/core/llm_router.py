@@ -268,7 +268,7 @@ class ModelHealthState:
     last_failure_at: float | None = None
     is_healthy: bool = True
     phase: str = "healthy"  # "healthy" | "probation" | "unhealthy"
-    cooldown_seconds: float | None = None  # None = 取 settings 默认
+    cooldown_seconds: float = 0.0  # 0 = 待 __post_init__ 充值为 settings 默认；构造后恒正（类内不变量）
     # V3-FIX-333：是否发生过真实流量成败回调（宣称面证据位）。只被
     # record_success/record_failure 置位，reset_to_healthy 不清除（被真实
     # 流量触达过的历史仍在）。路由语义不读它——is_healthy/phase 才是路由
@@ -295,7 +295,7 @@ class ModelHealthState:
         self.COOLDOWN_MAX_SECONDS = float(
             getattr(settings, "LLM_HEALTH_COOLDOWN_MAX_SECONDS", self.COOLDOWN_MAX_SECONDS)
         )
-        if self.cooldown_seconds is None:
+        if not self.cooldown_seconds:
             self.cooldown_seconds = self.RECOVERY_SECONDS
 
     def _transition(self, new_phase: str) -> None:

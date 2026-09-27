@@ -572,7 +572,7 @@ class PlanStateService:
         """
         import uuid
 
-        feedback_entry = {
+        feedback_entry: dict[str, Any] = {
             "id": f"fb-{uuid.uuid4().hex[:8]}",
             "timestamp": _utcnow().isoformat(),
             "type": feedback_type,

@@ -1679,7 +1679,7 @@ async def archive_plan_state(
         logger.error(f"Failed to send plan_archived notification: {e}")
         # Don't fail the request if notification fails
 
-    response = {
+    response: dict[str, Any] = {
         "plan_id": str(plan_id),
         "status": state.status if state else PlanStateStatus.ARCHIVED.value,
         "archived_at": state.archived_at.isoformat() if state and state.archived_at else None,

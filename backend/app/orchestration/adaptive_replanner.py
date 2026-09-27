@@ -2307,7 +2307,7 @@ class AdaptiveReplanner:
         task_id: UUID | None,
         applied_adjustment: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        entry = {
+        entry: dict[str, Any] = {
             "id": f"fb-{uuid.uuid4().hex[:8]}",
             "timestamp": _utcnow().isoformat(),
             "type": feedback_type,

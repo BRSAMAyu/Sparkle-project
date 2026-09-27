@@ -131,7 +131,7 @@ class GetCompanionStateTool(BaseTool):
         identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
         service = CompanionStateService(db_session, redis=_runtime_redis(db_session))
 
-        data = {
+        data: dict[str, Any] = {
             "effective_companion_state": await service.get_effective_state(
                 user_uuid,
                 plan_id=identifiers["plan_id"],

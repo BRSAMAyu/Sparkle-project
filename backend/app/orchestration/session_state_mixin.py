@@ -324,7 +324,7 @@ class SessionStateMixin:
             if isinstance(state, WorkflowState):
                 state.context_data["progress_snapshot"] = effective_progress_snapshot
 
-        dual_core_snapshot = {}
+        dual_core_snapshot: dict[str, Any] = {}
         if isinstance(state, WorkflowState):
             decision = state.context_data.get("dual_core_decision")
             signals = state.context_data.get("dual_core_signal_snapshot")

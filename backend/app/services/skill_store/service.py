@@ -94,13 +94,15 @@ class SkillStoreService:
             structural_change = structural_change or normalized != skill.pattern_template
             skill.pattern_template = normalized
         if "activation_conditions" in payload:
-            normalized = conditions_to_json(normalize_activation_conditions(payload.get("activation_conditions")))
-            structural_change = structural_change or normalized != (skill.activation_conditions or [])
-            skill.activation_conditions = normalized
+            normalized_conditions = conditions_to_json(
+                normalize_activation_conditions(payload.get("activation_conditions"))
+            )
+            structural_change = structural_change or normalized_conditions != (skill.activation_conditions or [])
+            skill.activation_conditions = normalized_conditions
         if "examples" in payload:
-            normalized = list(normalize_examples(payload.get("examples")))
-            structural_change = structural_change or normalized != (skill.examples or [])
-            skill.examples = normalized
+            normalized_examples = list(normalize_examples(payload.get("examples")))
+            structural_change = structural_change or normalized_examples != (skill.examples or [])
+            skill.examples = normalized_examples
         if "active" in payload:
             skill.active = bool(payload.get("active"))
 

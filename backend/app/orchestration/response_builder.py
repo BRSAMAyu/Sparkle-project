@@ -1232,12 +1232,12 @@ class ResponseBuilderMixin:
             focused_memory = final_state.context_data.get("focused_memory")
             semantic_meta = None
             if isinstance(focused_memory, dict):
-                summary = {
+                focused_memory_counts = {
                     "preferences": len(dict(focused_memory.get("preferences") or {})),
                     "goals": len(list(focused_memory.get("active_goals") or [])),
                     "episodic": len(list(focused_memory.get("episodic_memories") or [])),
                 }
-                response_metadata["focused_memory_summary"] = json.dumps(summary, ensure_ascii=False)
+                response_metadata["focused_memory_summary"] = json.dumps(focused_memory_counts, ensure_ascii=False)
                 context_pack_meta = (focused_memory.get("context_pack") or {}).get("metadata") or {}
                 semantic_meta = context_pack_meta.get("semantic_gating")
             if semantic_meta:

@@ -284,8 +284,8 @@ class ToolHistoryService:
         if tool_name == "flash_capsule":
             subject = str(context.get("subject") or "").strip()
             error_type = str(context.get("error_type") or "").strip()
-            details = "，".join(item for item in (subject, error_type) if item)
-            return f"保存闪念胶囊{f'（{details}）' if details else ''}"
+            capsule_details = "，".join(item for item in (subject, error_type) if item)
+            return f"保存闪念胶囊{f'（{capsule_details}）' if capsule_details else ''}"
         return str(output_summary or "完成一次工具使用").strip()
 
     @staticmethod
