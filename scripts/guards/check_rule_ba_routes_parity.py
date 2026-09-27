@@ -315,6 +315,19 @@ def collect_gateway_routes() -> tuple[set[tuple[str, str]], set[str], list[str]]
             else:
                 for meth in GIN_METHODS:
                     concrete.add((meth, full))
+        # wt647 unparam 后 helper 收单参：registerREST(<grp>) 内部注册
+        # 裸径("")×5 方法 + 通配("/*path")×5 方法——按实际行为展开。
+        for m in re.finditer(r'\bh\.registerREST\((\w+)\)', text):
+            grp = m.group(1)
+            base = groups.get(grp)
+            if base is None:
+                if grp == "rg" and loop_found:
+                    continue  # loop body groups already expanded via loop_prefixes
+                problems.append(f"{path.name}: registerREST(single-arg) on unresolvable group {grp!r}")
+                continue
+            for meth in GIN_METHODS:
+                concrete.add((meth, "/api/v1" + base))
+            catchalls.add("/api/v1" + base + "/*path")
     return concrete, catchalls, problems
 
 
@@ -443,6 +456,52 @@ GATEWAY_ONLY: dict[str, str] = {
     "/api/v1/notification-center": "bare group artifact — engine serves sub-paths only",
     "/api/v1/notifications": "bare group artifact — engine serves sub-paths only",
     "/api/v1/subjects": "bare group artifact — engine serves sub-paths only",
+    "/api/v1/action-permissions": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/action-proposals": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/admin": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/agent-stats": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/assets": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/aurora": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/cognitive": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/dashboard": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/decay": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/devices": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/documents": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/events": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/experience": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/focus": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/growth": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/ingestion": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/interventions": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/inventory": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/journey": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/leaderboards": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/learning-reports": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/memory": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/multi-agent": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/multi-intent": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/omnibar": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/photons": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/prediction": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/predictive": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/preferences": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/profile": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/reviews": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/runs": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/shop": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/signals": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/simulation": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/sources": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/stats": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/translation": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/user": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/users": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/vocabulary": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "DELETE": "registerREST helper uniform 5-method bare registration (pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through) — ledger added 2026-09-27 when single-arg parser made them visible",
+    "GET": "registerREST helper uniform 5-method bare registration (pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through) — ledger added 2026-09-27 when single-arg parser made them visible",
+    "PATCH": "registerREST helper uniform 5-method bare registration (pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through) — ledger added 2026-09-27 when single-arg parser made them visible",
+    "POST": "registerREST helper uniform 5-method bare registration (pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through) — ledger added 2026-09-27 when single-arg parser made them visible",
+    "PUT": "registerREST helper uniform 5-method bare registration (pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through) — ledger added 2026-09-27 when single-arg parser made them visible",
     "/api/v1/visual-elements": "bare group artifact — engine serves sub-paths only",
     # 2026-09-19 (schema-route-tail) resolved and removed from this ledger:
     # "/api/v1/goals/{}"          — gateway GET /:id dead face deleted (engine

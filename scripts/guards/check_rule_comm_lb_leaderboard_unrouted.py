@@ -64,10 +64,14 @@ def _scan_gateway() -> list[str]:
         failures.append(f"required file missing: {PROXY_ROUTES_PATH.relative_to(REPO_ROOT)}")
         return failures
     text = PROXY_ROUTES_PATH.read_text(encoding="utf-8")
-    if 'registerREST(leaderboards, "/*path")' not in text:
+    # wt647 unparam 后 helper 收单参：registerREST(leaderboards)（内部注册
+    # 裸径+通配 /*path 全方法）；同时兼容旧双参形态防回退误报。
+    new_form = "registerREST(leaderboards)" in text
+    old_form = 'registerREST(leaderboards, "/*path")' in text
+    if not (new_form or old_form):
         failures.append(
             f"{PROXY_ROUTES_PATH.relative_to(REPO_ROOT)}: leaderboards wildcard "
-            f'proxy (`registerREST(leaderboards, "/*path")`) missing — the '
+            f"proxy (`registerREST(leaderboards)`) missing — the "
             f"self-anchor surface became unreachable (gamification-eval P1-2 注册先例)"
         )
     for lineno, raw in enumerate(text.splitlines(), 1):

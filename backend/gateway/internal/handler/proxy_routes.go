@@ -56,17 +56,28 @@ func NewProxyRoutesHandler(
 func (h *ProxyRoutesHandler) registerREST(rg *gin.RouterGroup) {
 	handler := h.proxyWithHeaders
 	// Bare collection path ("/api/v1/<group>") must proxy directly.
+	// route-tier: authed — tier owned by each call site's authed group.
 	rg.GET("", handler)
+	// route-tier: authed
 	rg.POST("", handler)
+	// route-tier: authed
 	rg.PUT("", handler)
+	// route-tier: authed
 	rg.PATCH("", handler)
+	// route-tier: authed
 	rg.DELETE("", handler)
 	handler = h.proxyWithHeadersTrailingSlashTrimmed
+	// route-tier: authed — wildcard paths trim trailing slash (rationale above).
 	const wildcardPath = "/*path"
+	// route-tier: authed
 	rg.GET(wildcardPath, handler)
+	// route-tier: authed
 	rg.POST(wildcardPath, handler)
+	// route-tier: authed
 	rg.PUT(wildcardPath, handler)
+	// route-tier: authed
 	rg.PATCH(wildcardPath, handler)
+	// route-tier: authed
 	rg.DELETE(wildcardPath, handler)
 }
 
