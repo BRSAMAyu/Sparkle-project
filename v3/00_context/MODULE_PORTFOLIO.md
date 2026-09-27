@@ -1,6 +1,8 @@
 # 42 Feature Portfolio — Desired V3 Role
 
 > “desired role” 是 V3 产品方向；B-01 必须用当前 HEAD 填实际状态。
+>
+> **裁决注（2026-09-28，V3 主会话据 wt786 调解备忘拍板）**：portfolio 状态唯一真源 = `v3-output/B-01/MODULE_MATRIX.csv`+`portfolio.json`（DoD 五态口径，独立复核 ACCEPT）。本文件与 `MODULE_MATRIX.csv`（desired-role 模板，其 B-01_current_state 列全 TO_VERIFY 从未回填）均为 desired-role 参考层，**不参与 V3-0 gate 判定**。扩展词→五态映射与全集漂移处置见台账 V3-FIX-513/533/534 行及 v3-output/WT786-P513MEMO/memo.md。
 
 | Feature | V3 role | User job | Product rule |
 |---|---|---|---|
