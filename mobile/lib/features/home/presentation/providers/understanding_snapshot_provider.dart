@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 
 enum UnderstandingCorrectionScope {
   memoryClaim('memory_claim'),
@@ -176,6 +177,22 @@ class UnderstandingSnapshotNotifier
   Future<UnderstandingSnapshot?> build() => _fetch();
 
   Future<UnderstandingSnapshot?> _fetch() async {
+    // Demo contract: demo data never fails (B-04-L-01, V3-FIX-376). The
+    // understanding receipt previously hit the real endpoint in demo mode,
+    // rendering a bare 「加载失败 轻触重试」 row on the demo home first
+    // screen; degrade to the built-in empty snapshot instead (the card and
+    // panel already render an honest empty state for it).
+    if (DemoDataService.isDemoMode) {
+      return const UnderstandingSnapshot(
+        claims: [],
+        recentlyCorrected: [],
+        memoryDeclarations: [],
+        envelopeStyle: EnvelopeStyleSnapshot.empty(),
+        lastUpdateTime: null,
+        totalClaims: 0,
+        highConfidenceRatio: 0,
+      );
+    }
     final api = ref.read(apiClientProvider);
     final response =
         await api.get<Map<String, dynamic>>(ApiEndpoints.understandingSnapshot);
