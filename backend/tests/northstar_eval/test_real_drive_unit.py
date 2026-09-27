@@ -8,14 +8,19 @@ GP-07/GP-04 启发式判定、galaxy 对账 diff、11 检查点词表完整性�
 from __future__ import annotations
 
 import json
+import random
+import string
+
+import pytest
 
 from tests.northstar_eval.real_drive import (
-    CHECKPOINT_API_VOCAB,
     CHECKPOINT_ALWAYS_UNSUPPORTED,
+    CHECKPOINT_API_VOCAB,
     EPISODIC_PROJECTION_ESCALATE_S,
     EPISODIC_PROJECTION_SETTLE_S,
     JUDGE_LEXICON_VERSION,
     StepEvidence,
+    WSChatSession,
     _slug,
     diff_galaxy_nodes,
     episodic_projection_reads,
@@ -28,7 +33,6 @@ from tests.northstar_eval.real_drive import (
     redact,
     strip_md_emphasis,
     truncate_text,
-    WSChatSession,
 )
 
 # ---------------------------------------------------------------------------
@@ -87,10 +91,33 @@ def test_slug_safe() -> None:
     assert len(_slug("x" * 200)) <= 60
 
 
-def test_gen_password_strength() -> None:
+def test_gen_password_strength(monkeypatch: pytest.MonkeyPatch) -> None:
+    """V3-FIX-313 去随机化：真实 secrets 路径只钉概率 1 不变量；强/弱档行为用固定 seed 复现。
+
+    gen_password 是 70 字符池 × 18 位均匀取样，天然存在「无数字」弱档路径
+    （P(无数字) = (60/70)^18 ≈ 6.2%），强度由 18×70 熵保证而非逐位强制——
+    旧断言对单次真实抽样要求「含数字+含字母」属随机性 flaky（wt590 批跑实证）。
+    """
+    pool = string.ascii_letters + string.digits + "!@#$%^&*"  # 与 real_drive.gen_password 同池
+
+    # 1) 真实 secrets 路径：长度与字符域是确定性不变量，不随抽样波动
     pwd = gen_password()
     assert len(pwd) == 18
-    assert any(c.isdigit() for c in pwd) and any(c.isalpha() for c in pwd)
+    assert all(c in pool for c in pwd)
+
+    # 2) 强档固定 seed 样例：保留原「18 位 + 含字母 + 含数字」覆盖意图，输出钉死可复现
+    monkeypatch.setattr("secrets.choice", random.Random(1).choice)
+    strong = gen_password()
+    assert strong == "riGp@58WAm!dX3a5ID"  # seed=1 确定性样例
+    assert len(strong) == 18
+    assert any(c.isdigit() for c in strong) and any(c.isalpha() for c in strong)
+
+    # 3) 弱档显式断言：固定 seed 复现「无数字」输出——这是生成器既定行为，不是缺陷
+    monkeypatch.setattr("secrets.choice", random.Random(46).choice)
+    weak = gen_password()
+    assert weak == "jZfD%t&ediOgdrL^Ql"  # seed=46 确定性样例
+    assert len(weak) == 18
+    assert not any(c.isdigit() for c in weak)
 
 
 # ---------------------------------------------------------------------------
