@@ -1,7 +1,8 @@
 # WT767-C465C497 — FIX-465 评论读面帖定位 block 闸 + FIX-497 daily_hours 类型收口
 
 - Agent: wt767 ｜ 分支 `agent/node-b/wt767/c465c497`（base main@e9ec99d8）｜ 2026-09-28
-- 台账: v3/06_agent_fleet/DYNAMIC_ISSUES.md 行 365（465，wt741 登记）/ 行 382（497，wt761 登记）
+- 代码/测试提交: `baebab01`（FIX-465+497 双修+两测试文件+本 notes；台账置 FIXED 与 499 登记随下一个台账提交）
+- 台账: v3/06_agent_fleet/DYNAMIC_ISSUES.md 行 365（465，wt741 登记）/ 行 382（497，wt761 登记）→ 均置 FIXED@baebab01；新发现 499 登记行 383（OPEN）
 - 主线仓库只读；worktree `/Users/brsama/code/GitHub/Sparkle-sysrev/wt767-465497`
 - 环境: venv `/Users/brsama/code/GitHub/sparkle-cosmos/backend/.venv`（Python 3.11.15，mypy 1.20.2，pytest 9.0.3）；`backend/app/gen` 按 wt761/wt369 先例自主仓 symlink 补齐（产物不入库，未 commit）；裸 worktree 无 `.env`，pytest 以 `SECRET_KEY=x` 进程 env 直跑（TEST-DBGUARD 会话门通过，测试全落内存 sqlite）
 
