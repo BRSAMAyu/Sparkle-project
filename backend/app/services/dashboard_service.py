@@ -10,11 +10,18 @@ from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
-from app.core.time_utils import utcnow as _utcnow
+from app.core.time_utils import (
+    local_date,
+    local_midnight_as_utc_naive,
+    valid_timezone_name,
+)
+from app.core.time_utils import (
+    utcnow as _utcnow,
+)
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.services.growth_dashboard_service import GrowthDashboardService
 from app.services.insight_copy import (
     present_pattern_description,
@@ -28,6 +35,15 @@ class DashboardService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def _resolve_user_timezone_name(self, user_id: UUID) -> str:
+        """用户时区名（V3-FIX-329）：PushPreference.timezone 标量直查，缺省 Asia/Shanghai。
+
+        沿 calendar_service._resolve_user_timezone_name（V3-FIX-320/wt608）先例：
+        标量直查而非 ORM 关系，规避身份映射命中未加载关系时 async lazy-load 炸裂。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        return valid_timezone_name(tz_name)
 
     @classmethod
     def _dashboard_cache_key(cls, user_id: UUID) -> str:
@@ -169,7 +185,11 @@ class DashboardService:
         plan = result.scalar_one_or_none()
 
         if plan:
-            days_left = (plan.target_date - _utcnow().date()).days if plan.target_date else 0
+            # V3-FIX-329：days_left 切用户本地日（沿 V3-FIX-233 先例）——修前
+            # ``_utcnow().date()`` 是 UTC 日，UTC+8 晨间 deadline=本地今日时
+            # 算 1 而非 0，sprint→weather「临近截止日」规则随之提前误报。
+            today = local_date(_utcnow(), await self._resolve_user_timezone_name(user_id))
+            days_left = (plan.target_date - today).days if plan.target_date else 0
             return {
                 "id": str(plan.id),
                 "name": plan.name,
@@ -204,8 +224,17 @@ class DashboardService:
         return None
 
     async def _get_today_focus_minutes(self, user_id: UUID) -> int:
-        """Calculate today's focus time from completed tasks"""
-        today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        """Calculate today's focus time from completed tasks.
+
+        V3-FIX-329：「今日」按用户本地日切（37/197/209/211 同族先例）——
+        ``Task.completed_at`` 是 UTC 存储列，窗口起点用
+        ``local_midnight_as_utc_naive`` 把本地零点换算成 naive-UTC 瞬间；
+        修前 naive-UTC 零点直比，UTC+8 晨间今日桶混入本地昨日白天完成量、
+        UTC 负偏移时区晚间本地今日完成整段漏计。数据源语义（任务
+        actual_minutes 而非 FocusSession）保持不变，命名面另行登记。
+        """
+        timezone_name = await self._resolve_user_timezone_name(user_id)
+        today_start = local_midnight_as_utc_naive(local_date(_utcnow(), timezone_name), timezone_name)
 
         query = select(func.coalesce(func.sum(Task.actual_minutes), 0)).where(
             and_(
@@ -218,7 +247,9 @@ class DashboardService:
         return result.scalar() or 0
 
     async def _get_today_completed_tasks(self, user_id: UUID) -> int:
-        today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        """Count tasks completed today (用户本地日界，V3-FIX-329，同上）。"""
+        timezone_name = await self._resolve_user_timezone_name(user_id)
+        today_start = local_midnight_as_utc_naive(local_date(_utcnow(), timezone_name), timezone_name)
         query = select(func.count(Task.id)).where(
             and_(
                 Task.user_id == user_id,
