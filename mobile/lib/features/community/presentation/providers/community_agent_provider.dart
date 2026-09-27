@@ -15,6 +15,9 @@ const String kCommunityAgentUserId = 'sparkle_agent';
 const String kCommunityAgentDisplayName = 'Sparkle AI';
 const String kCommunityAgentAvatarSeed = 'sparkle_agent';
 const String kAgentMetadataKey = 'agent_message';
+/// 兜底模板标记（V3-FIX-363）：agent 流空输出时本地模板顶替的消息必须带
+/// 此 metadata，与实时模型输出可编程区分；内容层同时自述兜底身份。
+const String kAgentFallbackKey = 'agent_fallback';
 const String kAgentVisibilityKey = 'visibility';
 const String kAgentVisibilitySelf = 'self';
 const String kAgentVisibleToKey = 'visible_to';
@@ -233,6 +236,16 @@ String normalizeCommunityAgentOutput(String content) {
   return lines.join('\n').trim();
 }
 
+/// V3-FIX-363 披露化：兜底模板一律前置自述行（本地模板、非实时 AI 生成），
+/// 绝不以模板内容冒充实时模型输出（D-04 受控轨「自述」先例；ErrorEvent
+/// 路径本就走 error state 不顶替）。覆盖含 `_ => joined` 裸复述分支。
+String _fallbackDisclosure() {
+  final l10n = I18nService.instance.l10n;
+  return I18nService.instance.isChinese
+      ? l10n.communityFallbackDisclosureZh
+      : l10n.communityFallbackDisclosureEn;
+}
+
 String _fallbackGroupAgentOutput(
   String preset,
   List<MessageInfo> recentMessages,
@@ -246,22 +259,25 @@ String _fallbackGroupAgentOutput(
 
   final l10n = I18nService.instance.l10n;
   final zh = I18nService.instance.isChinese;
+  final disclosure = _fallbackDisclosure();
   if (lines.isEmpty) {
-    return switch (preset) {
+    final body = switch (preset) {
       'summary' => zh ? l10n.communityFallbackSummaryEmptyZh : l10n.communityFallbackSummaryEmptyEn,
       'reminder' => zh ? l10n.communityFallbackReminderEmptyZh : l10n.communityFallbackReminderEmptyEn,
       'consensus' => zh ? l10n.communityFallbackConsensusEmptyZh : l10n.communityFallbackConsensusEmptyEn,
       _ => zh ? l10n.communityFallbackDefaultEmptyZh : l10n.communityFallbackDefaultEmptyEn,
     };
+    return '$disclosure\n$body';
   }
 
   final joined = lines.join(zh ? '；' : '; ');
-  return switch (preset) {
+  final body = switch (preset) {
     'summary' => zh ? l10n.communityFallbackSummaryZh(joined) : l10n.communityFallbackSummaryEn(joined),
     'reminder' => zh ? l10n.communityFallbackReminderZh(joined) : l10n.communityFallbackReminderEn(joined),
     'consensus' => zh ? l10n.communityFallbackConsensusZh(joined) : l10n.communityFallbackConsensusEn(joined),
     _ => joined,
   };
+  return '$disclosure\n$body';
 }
 
 String _fallbackPrivateAgentOutput(
@@ -280,7 +296,8 @@ String _fallbackPrivateAgentOutput(
       .toList();
 
   final context = lines.isEmpty ? '' : (zh ? l10n.communityFallbackPrivateContextZh : l10n.communityFallbackPrivateContextEn);
-  return switch (preset) {
+  final disclosure = _fallbackDisclosure();
+  final body = switch (preset) {
     'polish_reply' => zh
         ? l10n.communityFallbackPrivatePolishZh(context, name)
         : l10n.communityFallbackPrivatePolishEn(context, name),
@@ -294,6 +311,7 @@ String _fallbackPrivateAgentOutput(
         ? (zh ? l10n.communityFallbackPrivateDefaultEmptyZh : l10n.communityFallbackPrivateDefaultEmptyEn)
         : lines.join(zh ? '；' : '; '),
   };
+  return '$disclosure\n$body';
 }
 
 class GroupAgentChatNotifier
@@ -370,8 +388,13 @@ class GroupAgentChatNotifier
         }
       }
 
-      final content = (normalizeCommunityAgentOutput(buffer).trim().isNotEmpty
-              ? normalizeCommunityAgentOutput(buffer).trim()
+      final normalized = normalizeCommunityAgentOutput(buffer).trim();
+      // V3-FIX-363：空输出路径使用本地兜底模板，必须带 kAgentFallbackKey
+      // 标记（内容层自述由 _fallbackGroupAgentOutput 前置披露行保证）；
+      // 实时模型输出不带此标记。ErrorEvent 路径不顶替（上方分支 return）。
+      final usedFallback = normalized.isEmpty;
+      final content = (normalized.isNotEmpty
+              ? normalized
               : _fallbackGroupAgentOutput(preset, recentMessages))
           .trim();
       if (content.isNotEmpty) {
@@ -382,6 +405,7 @@ class GroupAgentChatNotifier
           content: content,
           contentData: {
             kAgentMetadataKey: true,
+            if (usedFallback) kAgentFallbackKey: true,
             kAgentVisibilityKey: kAgentVisibilitySelf,
             kAgentVisibleToKey: userContext.userId,
             kAgentSessionIdKey: sessionId,

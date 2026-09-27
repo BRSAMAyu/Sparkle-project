@@ -499,4 +499,108 @@ void main() {
       expect(notifier.state.error, isNull);
     });
   });
+
+  // ============ V3-FIX-363：兜底模板披露化，绝不冒充实时模型输出 ============
+
+  group('agent fallback disclosure (V3-FIX-363)', () {
+    ChatRepository chatRepoEmptyStream() => _FakeChatRepository(
+          () => Stream<ChatStreamEvent>.fromIterable([
+            DoneEvent(finishReason: 'STOP'),
+          ]),
+        );
+
+    test('group empty stream posts local template with fallback marker and '
+        'self-disclosure', () async {
+      final communityRepo = _FakeCommunityRepository();
+      final notifier = await _createGroupNotifier(
+        chatRepository: chatRepoEmptyStream(),
+        communityRepository: communityRepo,
+      );
+      addTearDown(notifier.dispose);
+
+      await notifier.sendAgentMessage(
+        prompt: '总结一下',
+        preset: 'summary',
+        recentMessages: [
+          _groupMessage('m1', '本周先把线代复习完', _user('u1', 'Alice')),
+        ],
+      );
+
+      expect(communityRepo.sendGroupCalls, 1);
+      final sent = notifier.state.messages.single;
+      expect(
+        sent.contentData?['agent_fallback'],
+        isTrue,
+        reason: '兜底帖必须带本地模板标记，与实时模型输出可编程区分',
+      );
+      expect(
+        sent.content,
+        contains('离线兜底模板'),
+        reason: '兜底帖内容必须自述为本地模板（非实时 AI 生成），披露后才可以 agent 身份入群',
+      );
+    });
+
+    test('group live model output is never marked or worded as fallback',
+        () async {
+      final communityRepo = _FakeCommunityRepository();
+      final notifier = await _createGroupNotifier(
+        chatRepository: _chatRepoWithDraft('实时模型总结'),
+        communityRepository: communityRepo,
+      );
+      addTearDown(notifier.dispose);
+
+      await notifier.sendAgentMessage(prompt: '总结一下', preset: 'summary');
+
+      expect(communityRepo.sendGroupCalls, 1);
+      final sent = notifier.state.messages.single;
+      expect(sent.contentData?['agent_fallback'], isNull);
+      expect(sent.content, '实时模型总结');
+      expect(sent.content, isNot(contains('离线兜底模板')));
+    });
+
+    test('group ErrorEvent path never substitutes a fallback post', () async {
+      final communityRepo = _FakeCommunityRepository();
+      final notifier = await _createGroupNotifier(
+        chatRepository: _FakeChatRepository(
+          () => Stream<ChatStreamEvent>.fromIterable([
+            ErrorEvent(code: 'SERVER_ERROR', message: 'boom', retryable: true),
+          ]),
+        ),
+        communityRepository: communityRepo,
+      );
+      addTearDown(notifier.dispose);
+
+      await notifier.sendAgentMessage(prompt: '总结一下');
+
+      expect(
+        communityRepo.sendGroupCalls,
+        0,
+        reason: 'ErrorEvent 路径走 error state，绝不顶替发帖',
+      );
+      expect(notifier.state.messages, isEmpty);
+      expect(notifier.state.error, isNotNull);
+    });
+
+    test('private fallback draft self-discloses local template', () async {
+      final communityRepo = _FakeCommunityRepository();
+      final notifier = (await _createPrivateNotifier(
+        chatRepository: chatRepoEmptyStream(),
+        communityRepository: communityRepo,
+      ))
+          .notifier;
+      addTearDown(notifier.dispose);
+
+      final draft = await notifier.composeDraft(
+        prompt: '帮我润色回复',
+        preset: 'polish_reply',
+      );
+
+      expect(draft, isNotNull);
+      expect(
+        draft,
+        contains('离线兜底模板'),
+        reason: '私聊兜底草稿同样必须自述为本地模板（用户确认面可见）',
+      );
+    });
+  });
 }

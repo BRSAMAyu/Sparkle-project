@@ -56490,6 +56490,18 @@ abstract class AppLocalizations {
   /// **'Based on what we just discussed, '**
   String get communityFallbackPrivateContextEn;
 
+  /// No description provided for @communityFallbackDisclosureZh.
+  ///
+  /// In zh, this message translates to:
+  /// **'（离线兜底模板，非实时 AI 生成）'**
+  String get communityFallbackDisclosureZh;
+
+  /// No description provided for @communityFallbackDisclosureEn.
+  ///
+  /// In zh, this message translates to:
+  /// **'(Offline fallback template — not live AI output)'**
+  String get communityFallbackDisclosureEn;
+
   /// No description provided for @communityAgentYou.
   ///
   /// In zh, this message translates to:

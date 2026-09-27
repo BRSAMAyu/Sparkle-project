@@ -31058,6 +31058,13 @@ class AppLocalizationsZh extends AppLocalizations {
       'Based on what we just discussed, ';
 
   @override
+  String get communityFallbackDisclosureZh => '（离线兜底模板，非实时 AI 生成）';
+
+  @override
+  String get communityFallbackDisclosureEn =>
+      '(Offline fallback template — not live AI output)';
+
+  @override
   String get communityAgentYou => '你';
 
   @override

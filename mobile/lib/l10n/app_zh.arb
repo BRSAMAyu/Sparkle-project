@@ -14563,6 +14563,8 @@
   "communityFallbackPrivateDefaultEmptyEn": "Let me help rephrase that more naturally.",
   "communityFallbackPrivateContextZh": "我结合我们刚才聊的内容看，",
   "communityFallbackPrivateContextEn": "Based on what we just discussed, ",
+  "communityFallbackDisclosureZh": "（离线兜底模板，非实时 AI 生成）",
+  "communityFallbackDisclosureEn": "(Offline fallback template — not live AI output)",
   "communityAgentYou": "你",
   "communityReceivedEncouragement": "他收到了你的鼓励",
   "communityMatchReasonPlanningHabits": "TA 的规划习惯更强，适合在关键节点提醒你",
