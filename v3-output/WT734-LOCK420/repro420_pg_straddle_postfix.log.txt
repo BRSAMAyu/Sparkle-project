@@ -1,0 +1,9 @@
+[scenario1 no-freeze-card] ring1-fixed B FOR UPDATE SELECT blocked under A uncommitted window: done=False
+[scenario1 no-freeze-card] ring1-fixed B resumed after A commit: last=2026-09-25 S=6 → delta=1
+[scenario1 no-freeze-card] FINAL: S=7(correct 7) last=2026-09-26(correct 2026-09-26) charges=0(before 0) day0=ACTIVE(correct ACTIVE)
+[scenario1 no-freeze-card] GREEN: converged with serialized outcome
+[scenario2 with-freeze-card] ring1-fixed B FOR UPDATE SELECT blocked under A uncommitted window: done=False
+[scenario2 with-freeze-card] ring1-fixed B resumed after A commit: last=2026-09-25 S=6 → delta=1
+[scenario2 with-freeze-card] FINAL: S=7(correct 7) last=2026-09-26(correct 2026-09-26) charges=1(before 1) day0=ACTIVE(correct ACTIVE)
+[scenario2 with-freeze-card] GREEN: converged with serialized outcome
+[scenario3 serialized-control] FINAL: S=7 day0=ACTIVE → GREEN (correct)
