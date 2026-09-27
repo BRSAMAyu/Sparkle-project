@@ -7,9 +7,13 @@ import math
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, NotRequired, TypedDict
+from uuid import NAMESPACE_URL, uuid5
 
 from loguru import logger
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
@@ -854,37 +858,78 @@ async def _ensure_user_streak_stats(
     freeze_charges: int = 0,
     max_freeze_charges: int = 3,
 ) -> UserStreakStats:
-    stats = (
-        await session.execute(
-            select(UserStreakStats).where(UserStreakStats.user_id == user_id)
-        )
-    ).scalar_one_or_none()
-    if stats:
-        stats.current_streak = current_streak
-        stats.max_streak = max_streak
-        stats.longest_streak = max_streak
-        stats.total_checkin_days = total_checkin_days
-        stats.last_activity_date = last_activity_date
-        stats.longest_streak_start = longest_streak_start
-        stats.longest_streak_end = longest_streak_end
-        stats.freeze_charges = freeze_charges
-        stats.max_freeze_charges = max_freeze_charges
-        return stats
+    # V3-FIX-467/479: 本函数对 UserStreakStats 修前为无锁 SELECT+absent 行裸
+    # INSERT（id=BaseModel 随机 uuid4 缺省）——同用户并发到达双事务同见 None 各
+    # 自 INSERT，PK=(user_id,id) 复合主键随机 id 互不冲突双落重复行，此后
+    # scalar_one_or_none 同型读（本函数自身+451/457 修后 achievement_engine/
+    # inventory_service）恒 MultipleResultsFound 持久损坏。真 PG 16.15（docker
+    # sparkle_db 一次性库 wt766_race）三层实证，复现件
+    # v3-output/WT766-SEED/（raw 形态+服务级真代码并发 rows=2 + 单行读
+    # MultipleResultsFound）。触发面（479 收敛）：操作对象是跨所有访客共享的
+    # 演示 friend 行（_ensure_demo_user 按 username 复用同一批行），且每次访客
+    # 登录都重播种子（auth.py reseeded 路径）——跨**不同**访客的两笔并发 /guest
+    # 即构成竞态，无需同用户双端同时重放；重复行一旦落地，种子 SAVEPOINT 回滚、
+    # seed_status 恒 failed（auth.py 非致命语义，登录 200 不变）。
+    # 修法（451/457 三件套同构，P4 最小面）：读加 with_for_update（420 先例，
+    # sqlite 方言 no-op）；首建 INSERT 的 id 改确定性 uuid5 派生，复合主键
+    # (user_id,id) 随之成为每用户去重键+engine↔inventory↔seed 三入口跨路径
+    # 仲裁面；目标无关 ON CONFLICT DO NOTHING（user_id 无独立唯一约束，指名会
+    # 42P10；同 451/457 方言分派）后重走 FOR UPDATE 收敛读——后到方阻塞在先到
+    # 方未提交元组上，先到方提交后其 INSERT 被静默跳过并锁读同一行；先到方自插
+    # 自读语义不变。
+    # 覆盖写语义保留（协调方裁决）：既有行走全字段覆写（升级重放=同种子集收敛，
+    # last-write-wins）——行锁使后到覆盖写阻塞至先到提交后基于新值执行，安全
+    # 收敛；重播值来自同一确定性种子集，双端重放终态一致。
+    # 不选 UNIQUE(user_id) 迁移：迁移+schema 快照导出+存量去重超 P4 卡面
+    # （与 451/457 同判）。
+    query = select(UserStreakStats).where(UserStreakStats.user_id == user_id).with_for_update()
+    result = await session.execute(query)
+    stats = result.scalar_one_or_none()
 
-    stats = UserStreakStats(
-        user_id=user_id,
-        current_streak=current_streak,
-        max_streak=max_streak,
-        longest_streak=max_streak,
-        total_checkin_days=total_checkin_days,
-        last_activity_date=last_activity_date,
-        longest_streak_start=longest_streak_start,
-        longest_streak_end=longest_streak_end,
-        freeze_charges=freeze_charges,
-        max_freeze_charges=max_freeze_charges,
-    )
-    session.add(stats)
-    await session.flush()
+    if stats is None:
+        # 耦合警示：此 uuid5 源字符串必须与 achievement_engine
+        # _get_or_create_streak_stats（V3-FIX-451）及 inventory_service
+        # _apply_consumable_effect STREAK_FREEZE 分支（V3-FIX-457）的派生串
+        # `achievement-streak-stats:{user_id}` 逐字符同源——复合主键 (user_id,id)
+        # 依赖三侧 id 相等才能仲裁跨路径并发首建；改字符串即重开双行竞态，
+        # 三处必须同步变更。
+        stats_id = uuid5(NAMESPACE_URL, f"achievement-streak-stats:{user_id}")
+        bind = session.sync_session.get_bind()
+        dialect_name = bind.dialect.name if bind is not None else ""
+
+        if dialect_name == "postgresql":
+            stmt = pg_insert(UserStreakStats).values(user_id=user_id, id=stats_id).on_conflict_do_nothing()
+            await session.execute(stmt)
+        elif dialect_name == "sqlite":
+            stmt_sqlite = sqlite_insert(UserStreakStats).values(user_id=user_id, id=stats_id).on_conflict_do_nothing()
+            await session.execute(stmt_sqlite)
+        else:
+            try:
+                async with session.begin_nested():
+                    session.add(UserStreakStats(user_id=user_id, id=stats_id))
+                    await session.flush()
+            except IntegrityError:
+                pass
+        result = await session.execute(query)
+        stats = result.scalar_one_or_none()
+        if stats is None:
+            # 防御回退（理论不可达：upsert 已落行或行已存在；仅当窗口内行被
+            # 外力删除时到达）——挂起实例随调用方事务落库，仍带确定性 id 以保
+            # pkey 去重能力。
+            stats = UserStreakStats(user_id=user_id, id=stats_id)
+            session.add(stats)
+
+    # 覆盖写（语义保留）：首建与既有行统一走全字段种子覆写，行锁下
+    # last-write-wins 安全收敛。
+    stats.current_streak = current_streak
+    stats.max_streak = max_streak
+    stats.longest_streak = max_streak
+    stats.total_checkin_days = total_checkin_days
+    stats.last_activity_date = last_activity_date
+    stats.longest_streak_start = longest_streak_start
+    stats.longest_streak_end = longest_streak_end
+    stats.freeze_charges = freeze_charges
+    stats.max_freeze_charges = max_freeze_charges
     return stats
 
 

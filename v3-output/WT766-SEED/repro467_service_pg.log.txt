@@ -1,0 +1,18 @@
+SECRET_KEY is only 22 characters. Recommended minimum: 32 characters for production.
+2026-09-28 01:57:34.233 | INFO     | app.core.llm_router:_load_model_configs:931 - XIAOMI_MIMO_API_KEY not configured: xiaomi mimo entries kept out of registry (无 key 不注册); explicit selection falls back to default lane
+2026-09-28 01:57:34.233 | INFO     | app.core.llm_router:_load_model_configs:1088 - LLMRouter initialized with 27 model configs
+2026-09-28 01:57:34.891 | INFO     | app.services.circuit_breaker:__init__:39 - Circuit Breaker initialized: threshold=5, recovery=30s, window=60s
+2026-09-28 01:57:35.180 | INFO     | app.services.llm.concurrency:_get_zhipu_concurrent_limit:92 - ZHIPU concurrent limit: 5 (user_level=0)
+2026-09-28 01:57:35.180 | INFO     | app.services.llm.concurrency:_initialize_runtime:165 - LLMConcurrencyManager initialized with 7 providers
+2026-09-28 01:57:35.181 | ERROR    | app.services.llm.providers:__init__:45 - LLM Provider Initialization Error: api_key is empty for base_url=https://dashscope.aliyuncs.com/compatible-mode/v1
+2026-09-28 01:57:35.201 | WARNING  | app.services.llm_service:_init_with_router:431 - LLM API key not configured, activating demo mode. Set LLM_API_KEY in environment for production.
+2026-09-28 01:57:35.201 | INFO     | app.services.llm_service:_init_with_router:433 - [LLMRouter] generation → qwen3.8-flash (Agent策略路由: generation -> dashscope_standard_thinking [$0.0003/1k, tier=standard])
+2026-09-28 01:57:35.201 | INFO     | app.services.llm_service:_init_with_router:438 - [LLMRouter] GLM extra_body: {'enable_thinking': False}
+[svc] A id=e531ef69-8a1b-58b6-8f56-68f88cee872c B id=e531ef69-8a1b-58b6-8f56-68f88cee872c same=True
+[svc] firstbuild rows=1 (期望 1 = GREEN 单行收敛)
+[svc] id == uuid5('achievement-streak-stats:<uid>') 与 451/457 同源 OK
+[svc] replay rows=1 streak=9/9 (期望 1 行=9 = GREEN)
+[svc] engine cross-read rows=1 (期望 1 = GREEN)
+
+RESULT_JSON={"firstbuild_rows": 1, "replay_rows": 1, "engine_cross_rows": 1}
+SERVICE VERDICT: GREEN (fixed real code path on real PG)

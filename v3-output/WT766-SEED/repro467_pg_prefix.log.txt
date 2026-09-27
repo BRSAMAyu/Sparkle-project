@@ -1,0 +1,6 @@
+[prefix] step2 A plain SELECT (no lock) on absent row -> 0 row(s)
+[prefix] step2 B plain SELECT (no lock) on absent row -> 0 row(s)
+[prefix] step3 B INSERT (distinct random id) completed without blocking: done=True —— 双方复合主键互不冲突，无 IntegrityError 可言
+[prefix] step4 both committed, rows for friend user = 2 (ids ['beb4784b', 'f781b1b8']) —— 重复行落地
+[prefix] step5 single-row read sees 2 row(s) -> MultipleResultsFound on every后续读—— RED（持久损坏面）
+[prefix] [serial-control] second arrival sees exactly 1 row: GREEN
