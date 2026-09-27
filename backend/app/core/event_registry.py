@@ -626,17 +626,22 @@ def derive_event_id(
       NEW sequence number (event_sequence_counters), hence a NEW key — that is
       duplicate-causes detection, which this key does not provide.
 
-    CURRENT CONSUMER STATUS: zero consumers. The only active event_outbox
-    consumer (gateway ``cqrs/outbox/publisher.go`` → Redis streams) dedupes by
-    Redis ``messageID`` / consumer-group position and DECODES metadata through
-    Go ``EventMetadata{trace_id, span_id, user_id, correlation_id, causation_id,
-    source}`` — ``event_id``/``schema_version``/``occurred_at``/``correlation{}`
-    are dropped at that hop. The gateway ``processed_events`` route is NOT
-    usable as-is: ``outbox/repository.go IsProcessed`` runs ``uuid.Parse`` on
-    the id, which REJECTS the ``evt_`` prefix — wiring a consumer there
-    requires resolving the id format first (follow-up card, see D-01 REPORT).
-    Callers that already own a globally unique id (e.g. outbox row uuid) may
-    pass it as ``event_id`` to :func:`build_event_metadata` instead.
+    CURRENT CONSUMER STATUS (V3-FIX-493: synced to the post-V3-FIX-469
+    gateway): the gateway ``processed_events`` route accepts engine-side
+    ``evt_`` keys — ``outbox/repository.go normalizeEventKey`` (V3-FIX-469)
+    passes any non-empty key up to the column width (varchar(100)) through
+    verbatim (Redis stream ``ms-seq`` ids and ``evt_`` ids alike),
+    canonicalizes UUID-form keys to lowercase hyphenated form so pre-existing
+    UUID rows keep matching regardless of input spelling, and rejects empty /
+    over-wide ids. Active consumers: the gateway ``cqrs/worker/base.go``
+    BaseWorker uses ``IsProcessed`` / ``MarkProcessed`` as the authoritative
+    durable duplicate gate, and ``processed_events_cleaner.go`` purges expired
+    rows on a retention window (V3-FIX-487). The outbox relay
+    (``cqrs/outbox/publisher.go``) consumes ``event_outbox`` rows separately
+    via ``GetUnpublished`` / ``MarkPublished`` and does not route ids through
+    ``processed_events``. Callers that already own a globally unique id (e.g.
+    outbox row uuid) may still pass it as ``event_id`` to
+    :func:`build_event_metadata`.
     """
     require_registered_event(event_name)
     corr = CorrelationIds.coerce(correlation).as_dict()

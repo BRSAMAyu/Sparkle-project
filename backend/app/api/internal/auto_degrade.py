@@ -46,6 +46,13 @@ SLO_AUTO_RESPONSE_DURATION = get_or_create_metric(
     buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0],
 )
 
+SLO_AUDIT_PUBLISH_FAILURES = get_or_create_metric(
+    Counter,
+    "sparkle_slo_auto_response_audit_publish_failures_total",
+    "Failed publishes of SLO auto-response audit events",
+    ["alert_type"],
+)
+
 # ---------------------------------------------------------------------------
 # Alert-to-action mapping
 # ---------------------------------------------------------------------------
@@ -149,18 +156,26 @@ async def _write_audit(
     try:
         from app.core.event_bus import event_bus
 
-        await event_bus.publish(
-            SLOAutoResponseAuditEvent(
-                alert_type=alert_type.value,
-                alert_status=alert_status,
-                action_taken=action_taken,
-                alert_labels=json.dumps(alert_labels, default=str),
-                result=result,
-                duration_s=round(duration_s, 4),
-                timestamp=datetime.now(UTC).isoformat(),
-            )
+        # V3-FIX-491: publish 的真实签名是 (event_type: str, payload: dict)
+        # （event_bus.py EventBus.publish）。修前把事件对象当唯一实参传入，
+        # 调用点直接 TypeError（缺第二位置实参 payload）且被下方 except 吞掉，
+        # 审计事件从未进入 Redis Stream。event_type 取事件类 to_dict() 既有
+        # 自述词表 "slo_auto_response_audit"；payload 平铺事件字段。
+        event = SLOAutoResponseAuditEvent(
+            alert_type=alert_type.value,
+            alert_status=alert_status,
+            action_taken=action_taken,
+            alert_labels=json.dumps(alert_labels, default=str),
+            result=result,
+            duration_s=round(duration_s, 4),
+            timestamp=datetime.now(UTC).isoformat(),
         )
+        await event_bus.publish("slo_auto_response_audit", event.to_dict())
     except Exception:
+        # 审计属 best-effort：发布失败不得破坏 kill-switch 响应主链，故保持
+        # 宽 except；但失败必须可观测（修前 TypeError 只落日志、零指标，
+        # 签名错配这类恒现故障静默数月无人知），此处计数暴露给 SLO 告警。
+        SLO_AUDIT_PUBLISH_FAILURES.labels(alert_type=alert_type.value).inc()
         logger.exception("Failed to publish SLO auto-response audit event")
 
 

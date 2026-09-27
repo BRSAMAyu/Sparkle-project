@@ -14,6 +14,7 @@ from app.api.internal.auto_degrade import (
     SLO_AUTO_DEGRADE_BINDINGS,
     AlertType,
     ClientDisconnectGuard,
+    _write_audit,
     execute_auto_response,
     router,
 )
@@ -187,6 +188,78 @@ class TestExecuteAutoResponse:
             assert binding.stage == "slo_auto"
             assert binding.redis_key.startswith("aurora:slo_auto:")
             assert binding.fallback_mode == "off"
+
+
+# ---------------------------------------------------------------------------
+# Audit event publishing tests (V3-FIX-491)
+# ---------------------------------------------------------------------------
+
+
+class TestAuditEventPublishing:
+    """V3-FIX-491: ``_write_audit`` must call ``event_bus.publish`` with the
+    real ``(event_type: str, payload: dict)`` signature. 修前单实参传事件对象，
+    publish 调用点直接 TypeError 且被本函数 ``except Exception`` 吞掉——SLO
+    自动降级/升级的审计事件从未进入 Redis Stream。"""
+
+    @pytest.mark.asyncio
+    async def test_publish_called_with_event_type_str_and_dict_payload(self):
+        with patch("app.core.event_bus.event_bus.publish", new_callable=AsyncMock) as mock_publish:
+            await _write_audit(
+                alert_type=AlertType.LLM_LATENCY_HIGH,
+                alert_status="firing",
+                action_taken="Degrading LLM to cheaper/faster model tier",
+                alert_labels={"alertname": "SparkleBackendP95LatencyHigh"},
+                result="mode=live",
+                duration_s=0.123456,
+            )
+
+        mock_publish.assert_awaited_once()
+        args, kwargs = mock_publish.await_args
+        event_type = args[0] if args else kwargs["event_type"]
+        payload = args[1] if len(args) > 1 else kwargs["payload"]
+
+        assert isinstance(event_type, str), "publish 第一实参必须是 event_type 字符串（修前把事件对象当 event_type 传）"
+        assert event_type == "slo_auto_response_audit"
+        assert isinstance(payload, dict), "publish 第二实参必须是 payload dict"
+
+        assert payload["event_type"] == "slo_auto_response_audit"
+        assert payload["alert_type"] == "LLM_LATENCY_HIGH"
+        assert payload["alert_status"] == "firing"
+        assert payload["action_taken"] == "Degrading LLM to cheaper/faster model tier"
+        assert payload["result"] == "mode=live"
+        assert payload["duration_s"] == 0.1235  # round(…, 4)
+        assert json.loads(payload["alert_labels"]) == {"alertname": "SparkleBackendP95LatencyHigh"}
+        assert "timestamp" in payload
+
+    @pytest.mark.asyncio
+    async def test_audit_event_reaches_redis_stream(self):
+        """端到端回归：真实 publish 路径把审计事件写入 sparkle_events 流。"""
+        from app.core.event_bus import event_bus
+
+        mock_redis = AsyncMock()
+        mock_redis.xadd.return_value = "1758-0"
+        mock_redis.xinfo_groups.return_value = [{"name": "test-group"}]
+
+        with patch.object(event_bus, "redis", mock_redis):
+            await _write_audit(
+                alert_type=AlertType.GW_HIGH_5XX,
+                alert_status="resolved",
+                action_taken="Relaxing rate limits to normal",
+                alert_labels={"alertname": "SparkleBackendHigh5xxRate"},
+                result="mode=off",
+                duration_s=0.05,
+            )
+
+        mock_redis.xadd.assert_awaited_once()
+        call = mock_redis.xadd.await_args
+        stream_name = call.args[0]
+        body = call.args[1]
+        assert stream_name == "sparkle_events"
+        # _serialize_stream_body 会把所有值字符串化
+        assert body["event_type"] == "slo_auto_response_audit"
+        assert body["alert_type"] == "GW_HIGH_5XX"
+        assert body["alert_status"] == "resolved"
+        assert body["result"] == "mode=off"
 
 
 # ---------------------------------------------------------------------------

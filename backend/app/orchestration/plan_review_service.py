@@ -936,7 +936,10 @@ class PlanReviewService:
                     return False
 
                 # Additional check: liberal arts background needs more time for technical goals
-                if _is_liberal_arts(user_background) and daily_hours < 3:
+                # V3-FIX-492: daily_hours 来自 params.get（键缺失即 None），与
+                # 上方 <2 分支及下方 :948 同款 `daily_hours and` 短路守卫对齐；
+                # 修前缺参路径 None < 3 直接 TypeError 500。
+                if _is_liberal_arts(user_background) and daily_hours and daily_hours < 3:
                     logger.warning(
                         f"Feasibility check failed: liberal arts user attempting {difficulty} "
                         f"technical goal with only {daily_hours}h/day"
