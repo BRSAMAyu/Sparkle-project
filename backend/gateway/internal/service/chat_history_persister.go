@@ -127,6 +127,11 @@ const (
 	PersisterInitialBackoff = 100 * time.Millisecond
 	// PersisterMaxBackoff is the maximum backoff duration for retries
 	PersisterMaxBackoff = 30 * time.Second
+	// PersisterShutdownFlushTimeout bounds the final flush when the process
+	// context is already cancelled (V3-FIX-427): long enough to cover the
+	// PersisterMaxRetries backoff ladder against a reachable database, short
+	// enough not to stall process exit.
+	PersisterShutdownFlushTimeout = 5 * time.Second
 )
 
 // ChatHistoryPersister consumes messages from Redis queue and persists them to PostgreSQL
@@ -141,6 +146,7 @@ type ChatHistoryPersister struct {
 	// Metrics
 	totalPersisted int64
 	totalFailed    int64
+	requeueFailed  int64
 	lastFlushTime  time.Time
 }
 
@@ -166,19 +172,23 @@ func (p *ChatHistoryPersister) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			log.Printf("[ChatHistoryPersister] Context cancelled, flushing remaining messages")
-			// Best-effort final flush; flushWithRetry already logs failures and
-			// re-queues the batch, and Run must still report ctx.Err().
-			if flushErr := p.flushWithRetry(ctx); flushErr != nil {
-				log.Printf("[ChatHistoryPersister] Final flush on cancel failed: %v", flushErr)
-			}
+			// V3-FIX-427: bgCtx is cancelled before the drain phases finish
+			// (main.go bgCancel precedes srv.Shutdown), so flushing on the raw
+			// ctx used to fail pool.Acquire on the first attempt and drop the
+			// swapped-out batch — neither written nor re-queued. The final
+			// flush runs on a detached context with its own short budget
+			// instead (detachedPersistCtx precedent in
+			// handler/chat_orchestrator_chatflow.go); Run still reports
+			// ctx.Err() so LogRunnerStopped grades the exit as INFO.
+			p.flushOnShutdown(ctx)
 			return ctx.Err()
 		case <-p.stopCh:
 			log.Printf("[ChatHistoryPersister] Stop signal received, flushing remaining messages")
-			// Best-effort final flush; failures are logged and the batch is
-			// re-queued for the next process.
-			if flushErr := p.flushWithRetry(ctx); flushErr != nil {
-				log.Printf("[ChatHistoryPersister] Final flush on stop failed: %v", flushErr)
-			}
+			// V3-FIX-427: same detachment as the ctx.Done branch — bgCancel
+			// always fires before this defer runs (main.go), so the raw ctx
+			// is already cancelled here too. Best-effort final flush; failures
+			// are logged and the batch is re-queued for the next process.
+			p.flushOnShutdown(ctx)
 			return nil
 		case <-p.ticker.C:
 			// Periodic flush
@@ -198,6 +208,20 @@ func (p *ChatHistoryPersister) Run(ctx context.Context) error {
 // Stop gracefully stops the persister
 func (p *ChatHistoryPersister) Stop() {
 	close(p.stopCh)
+}
+
+// flushOnShutdown performs the best-effort final flush on a context detached
+// from the (typically already cancelled) shutdown context, with a short
+// independent budget. V3-FIX-427: flushWithRetry on the cancelled bgCtx could
+// neither reach the database nor requeue, silently dropping the in-flight
+// batch (≤ PersisterBatchSize messages) on every deploy. Mirrors
+// handler.detachedPersistCtx (R2-GW-1).
+func (p *ChatHistoryPersister) flushOnShutdown(cancelled context.Context) {
+	flushCtx, cancel := context.WithTimeout(context.WithoutCancel(cancelled), PersisterShutdownFlushTimeout)
+	defer cancel()
+	if err := p.flushWithRetry(flushCtx); err != nil {
+		log.Printf("[ChatHistoryPersister] Final flush failed: %v", err)
+	}
 }
 
 // DrainOnce pops up to PersisterBatchSize queued messages and flushes them to
@@ -287,6 +311,12 @@ func (p *ChatHistoryPersister) flushWithRetry(ctx context.Context) error {
 			log.Printf("[ChatHistoryPersister] Retry attempt %d/%d after %v", attempt, PersisterMaxRetries, backoff)
 			select {
 			case <-ctx.Done():
+				// V3-FIX-427: never return with the batch swapped out and
+				// dropped — hand it back to the queue on a context that is
+				// not the cancelled one so the push actually goes through.
+				p.totalFailed += int64(len(batch))
+				log.Printf("[ChatHistoryPersister] Flush cancelled, re-queuing %d messages", len(batch))
+				p.requeueMessages(context.WithoutCancel(ctx), batch)
 				return ctx.Err()
 			case <-time.After(backoff):
 			}
@@ -403,18 +433,31 @@ func (p *ChatHistoryPersister) writeBatchToDB(ctx context.Context, batch []ChatH
 	return tx.Commit(ctx)
 }
 
-// requeueMessages pushes failed messages back to Redis queue
-func (p *ChatHistoryPersister) requeueMessages(ctx context.Context, batch []ChatHistoryMessage) {
+// requeueMessages pushes failed messages back to the Redis queue. It returns
+// the number of messages that could NOT be re-queued; the count is also
+// accumulated in the requeue_failed stat. V3-FIX-427: LPush errors used to be
+// discarded entirely, so a flush against an unreachable Redis dropped the
+// batch without any signal.
+func (p *ChatHistoryPersister) requeueMessages(ctx context.Context, batch []ChatHistoryMessage) int {
 	queueKey := "queue:persist:history"
+	failed := 0
 
 	for _, msg := range batch {
 		data, err := json.Marshal(msg)
 		if err != nil {
+			failed++
+			log.Printf("[ChatHistoryPersister] Failed to marshal message %s for re-queue: %v", msg.ID, err)
 			continue
 		}
 		// Use LPush to add to front of queue (will be processed next)
-		p.rdb.LPush(ctx, queueKey, data)
+		if err := p.rdb.LPush(ctx, queueKey, data).Err(); err != nil {
+			failed++
+			log.Printf("[ChatHistoryPersister] Failed to re-queue message %s: %v", msg.ID, err)
+		}
 	}
+
+	p.requeueFailed += int64(failed)
+	return failed
 }
 
 // GetStats returns persister statistics
@@ -426,6 +469,7 @@ func (p *ChatHistoryPersister) GetStats() map[string]interface{} {
 	return map[string]interface{}{
 		"total_persisted": p.totalPersisted,
 		"total_failed":    p.totalFailed,
+		"requeue_failed":  p.requeueFailed,
 		"pending_batch":   batchLen,
 		"last_flush_time": p.lastFlushTime,
 		"batch_size":      PersisterBatchSize,
