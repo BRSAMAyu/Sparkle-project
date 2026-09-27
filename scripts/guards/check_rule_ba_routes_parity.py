@@ -338,6 +338,11 @@ def collect_gateway_routes() -> tuple[set[tuple[str, str]], set[str], list[str]]
 
 ENGINE_ONLY: dict[str, str] = {
     "/": "engine root index; gateway has no proxy and clients do not call it",
+    "/api/internal/ops/capabilities": "operator control plane (O-06) — kill switch must stay reachable when the gateway itself is rolled back; direct-engine internal access",
+    "/api/internal/ops/capabilities/{}": "operator control plane (O-06) — kill switch must stay reachable when the gateway itself is rolled back; direct-engine internal access",
+    "/api/internal/ops/capabilities/{}/mode": "operator control plane (O-06) — kill switch must stay reachable when the gateway itself is rolled back; direct-engine internal access",
+    "/api/internal/ops/capabilities/{}/rollback": "operator control plane (O-06) — kill switch must stay reachable when the gateway itself is rolled back; direct-engine internal access",
+    "/api/internal/ops/release-manifest": "operator control plane (O-06) — kill switch must stay reachable when the gateway itself is rolled back; direct-engine internal access",
     "/health": "direct-engine simple health check (gateway /api/v1/health is local)",
     "/live": "k8s liveness probe, direct to engine",
     "/ready": "k8s readiness probe, direct to engine",
