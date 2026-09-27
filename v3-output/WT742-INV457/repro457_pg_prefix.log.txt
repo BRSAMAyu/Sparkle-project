@@ -1,0 +1,12 @@
+[serial] charges=2 rows=1  (对照 GREEN)
+[f1] A plain SELECT on absent row -> 0 row(s) (no lock taken)
+[f1] B plain SELECT on absent row -> 0 row(s)
+[f1] B INSERT (distinct random id) completed without blocking: done=True
+[f1] rows landed for user: 2  (期望 1，重复行落地 = RED)
+[f2] A read charges=0 -> computed 1
+[f2] B read charges=0 (stale, A uncommitted) -> computed 1
+[f2] B UPDATE blocked on A uncommitted tuple: done=False
+[f2] final freeze_charges=1  (两次发货期望 2，丢更新 = RED)
+
+RESULT_JSON={"serial_charges": 2, "serial_rows": 1, "face1_rows": 2, "face1_scalar_read": "MultipleResultsFound", "face2_final_charges": 1}
+PREFIX VERDICT: RED confirmed (face1 duplicate rows + face2 lost update)

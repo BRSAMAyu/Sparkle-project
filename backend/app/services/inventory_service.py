@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
+from uuid import NAMESPACE_URL, uuid5
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import CursorResult
@@ -13,6 +14,9 @@ if TYPE_CHECKING:
 
 from loguru import logger
 from sqlalchemy import and_, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -428,14 +432,57 @@ class InventoryService:
             # min(charges+quantity, max_freeze_charges)），诚实回报实发数。
             from app.models.achievement import UserStreakStats
 
-            stats_result = await self.db.execute(
-                select(UserStreakStats).where(UserStreakStats.user_id == user_id)
-            )
+            # V3-FIX-457: 读-算-写全程无行锁（弱于 achievement_engine 420 修后
+            # 形态）+ absent 行裸 INSERT。真 PG 16.15（docker sparkle_db 一次性库
+            # wt742_race 双连接实证，复现件 v3-output/WT742-INV457/）：①首建并发
+            # 与 451 同型——PK=(user_id,id) 复合主键 id 为 BaseModel 随机 uuid4，
+            # 双方复合键互不冲突、无阻塞双落 2 行，此后 scalar_one_or_none 同型
+            # 读恒 MultipleResultsFound 持久 500（引擎侧即便 451 已修，本路径
+            # 随机 id 仍与其确定性 id 互异落双行）；②无锁读改写在 A 未提交窗内
+            # B 同读旧 charges，盲 UPDATE 覆写丢更新（两卡只计一份，白花光子）。
+            # 修法（451 三件套同构，P4 最小面）：读改写加 with_for_update（420
+            # 先例，锁由调用方 use_consumable 的 commit 释放，覆盖整段读算写）；
+            # 首建 INSERT 的 id 改与 451 完全同源的 uuid5 派生（
+            # achievement_engine._get_or_create_streak_stats 同一字符串——复合
+            # 主键 (user_id,id) 依赖两侧 id 相等才能仲裁 inventory↔engine 跨
+            # 路径并发首建，改字符串即重开双行竞态，两处必须同步变更），目标
+            # 无关 ON CONFLICT DO NOTHING（user_id 无独立唯一约束，指名会
+            # 42P10）后重走上面的 FOR UPDATE 收敛读——后到方阻塞在先到方未
+            # 提交元组上，先到方提交后其 INSERT 被静默跳过并锁读同一行；先到
+            # 方自插自读语义不变。sqlite 同构 on_conflict_do_nothing（该方言
+            # 写锁天然串行，仅保形态一致）。不选 UNIQUE(user_id) 迁移：迁移+
+            # schema 快照导出+存量去重超 P4 卡面（与 451 同判）。
+            query = select(UserStreakStats).where(UserStreakStats.user_id == user_id).with_for_update()
+            stats_result = await self.db.execute(query)
             stats = stats_result.scalar_one_or_none()
             if stats is None:
-                stats = UserStreakStats(user_id=user_id)
-                self.db.add(stats)
-                await self.db.flush()
+                stats_id = uuid5(NAMESPACE_URL, f"achievement-streak-stats:{user_id}")
+                bind = self.db.sync_session.get_bind()
+                dialect_name = bind.dialect.name if bind is not None else ""
+
+                if dialect_name == "postgresql":
+                    stmt = pg_insert(UserStreakStats).values(user_id=user_id, id=stats_id).on_conflict_do_nothing()
+                    await self.db.execute(stmt)
+                elif dialect_name == "sqlite":
+                    stmt_sqlite = (
+                        sqlite_insert(UserStreakStats).values(user_id=user_id, id=stats_id).on_conflict_do_nothing()
+                    )
+                    await self.db.execute(stmt_sqlite)
+                else:
+                    try:
+                        async with self.db.begin_nested():
+                            self.db.add(UserStreakStats(user_id=user_id, id=stats_id))
+                            await self.db.flush()
+                    except IntegrityError:
+                        pass
+                stats_result = await self.db.execute(query)
+                stats = stats_result.scalar_one_or_none()
+                if stats is None:
+                    # 防御回退（理论不可达：upsert 已落行或行已存在；仅当窗口内
+                    # 行被外力删除时到达）——挂起实例随调用方 use_consumable
+                    # 后续 commit 落库，仍带确定性 id 以保 pkey 去重能力。
+                    stats = UserStreakStats(user_id=user_id, id=stats_id)
+                    self.db.add(stats)
 
             before = int(stats.freeze_charges or 0)
             max_charges = int(stats.max_freeze_charges or 0)

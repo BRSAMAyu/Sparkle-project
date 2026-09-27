@@ -171,3 +171,80 @@ async def test_insufficient_quantity_atomic_no_delivery(db_session, test_user):
         )
     ).scalar_one()
     assert consumable.quantity == 1  # 库存未动
+
+
+# ── V3-FIX-457：发货路径首建并发+无锁读改写（451 三件套同构）────────────────
+
+
+@pytest.mark.asyncio
+async def test_streak_freeze_firstbuild_id_deterministic_shared_with_engine(db_session, test_user):
+    """首建 id=uuid5 确定性派生，且与 achievement_engine 451 派生同一字符串——
+    复合主键 (user_id,id) 依赖两侧 id 相等仲裁 inventory↔engine 跨路径并发
+    首建（真 PG 双连接实证见 v3-output/WT742-INV457/）。"""
+    from uuid import NAMESPACE_URL, uuid5
+
+    db_session.add(_freeze_item())
+    db_session.add(
+        UserConsumable(
+            id=str(uuid4()),
+            user_id=test_user.id,
+            consumable_id="tune_streak_freeze_001",
+            effect_type="streak_freeze",
+            quantity=1,
+        )
+    )
+    await db_session.commit()
+
+    service = InventoryService(db_session)
+    result = await service.use_consumable(str(test_user.id), "tune_streak_freeze_001", quantity=1)
+
+    assert result["effect_result"]["effect"] == "streak_freeze"
+    stats = (
+        await db_session.execute(
+            select(UserStreakStats).where(UserStreakStats.user_id == test_user.id)
+        )
+    ).scalar_one()  # 单行；随机 id 旧形态在 PG 下双行此处 MultipleResultsFound
+    expected_id = uuid5(NAMESPACE_URL, f"achievement-streak-stats:{str(test_user.id)}")
+    assert stats.id == expected_id
+
+
+@pytest.mark.asyncio
+async def test_streak_freeze_firstbuild_then_engine_reads_same_row(db_session, test_user):
+    """跨路径收敛钉子：inventory 首建后，engine _get_or_create_streak_stats
+    命中同一行（不另建）——交叉读单行，无重复行落地面。"""
+    from app.services.achievement_engine import AchievementEngine
+
+    db_session.add(_freeze_item())
+    db_session.add(
+        UserConsumable(
+            id=str(uuid4()),
+            user_id=test_user.id,
+            consumable_id="tune_streak_freeze_001",
+            effect_type="streak_freeze",
+            quantity=2,
+        )
+    )
+    await db_session.commit()
+
+    service = InventoryService(db_session)
+    await service.use_consumable(str(test_user.id), "tune_streak_freeze_001", quantity=1)
+
+    engine = AchievementEngine(db_session)
+    stats = await engine._get_or_create_streak_stats(str(test_user.id))
+    assert int(stats.freeze_charges or 0) >= 1
+
+    rows = (
+        (await db_session.execute(select(UserStreakStats).where(UserStreakStats.user_id == test_user.id)))
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    # engine 后续奖励路径对同一行继续累加，不产生第二行
+    stats.freeze_charges = min(int(stats.freeze_charges or 0) + 1, int(stats.max_freeze_charges or 0))
+    await db_session.flush()
+    rows_after = (
+        (await db_session.execute(select(UserStreakStats).where(UserStreakStats.user_id == test_user.id)))
+        .scalars()
+        .all()
+    )
+    assert len(rows_after) == 1

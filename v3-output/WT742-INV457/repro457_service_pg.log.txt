@@ -1,0 +1,12 @@
+SECRET_KEY is only 22 characters. Recommended minimum: 32 characters for production.
+2026-09-27 23:39:54.221 | INFO     | app.core.llm_router:_load_model_configs:931 - XIAOMI_MIMO_API_KEY not configured: xiaomi mimo entries kept out of registry (无 key 不注册); explicit selection falls back to default lane
+2026-09-27 23:39:54.221 | INFO     | app.core.llm_router:_load_model_configs:1088 - LLMRouter initialized with 27 model configs
+2026-09-27 23:39:54.797 | INFO     | app.services.inventory_service:_apply_consumable_effect:496 - Streak freeze consumable delivered: user=85836f34-d306-58b1-b792-7289ae472739 charges=1 (before=1, after=2, cap=3)
+2026-09-27 23:39:54.800 | INFO     | app.services.inventory_service:_apply_consumable_effect:496 - Streak freeze consumable delivered: user=85836f34-d306-58b1-b792-7289ae472739 charges=1 (before=2, after=3, cap=3)
+[svc] A={'effect': 'streak_freeze', 'charges_added': 1, 'charges_capped': False, 'freeze_charges': 2, 'max_freeze_charges': 3}
+[svc] B={'effect': 'streak_freeze', 'charges_added': 1, 'charges_capped': False, 'freeze_charges': 3, 'max_freeze_charges': 3}
+[svc] rows=1 freeze_charges=3 (期望 1 行；charges=默认1+发货2=3 = GREEN)
+[svc] engine cross-read rows=1 (期望 1 = GREEN)
+
+RESULT_JSON={"service_rows": 1, "service_charges": 3, "engine_cross_rows": 1}
+SERVICE VERDICT: GREEN (fixed real code path on real PG)

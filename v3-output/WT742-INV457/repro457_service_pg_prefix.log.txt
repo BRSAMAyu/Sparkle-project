@@ -1,0 +1,11 @@
+2026-09-27 23:40:47.263 | INFO     | app.core.llm_router:_override_tier_mapping_from_env:1116 - LLM tier override applied for pro: ['dashscope_standard_thinking', 'glm_4_7_pro']
+2026-09-27 23:40:47.263 | INFO     | app.core.llm_router:_load_model_configs:1088 - LLMRouter initialized with 31 model configs
+2026-09-27 23:40:47.834 | INFO     | app.services.inventory_service:_apply_consumable_effect:447 - Streak freeze consumable delivered: user=85836f34-d306-58b1-b792-7289ae472739 charges=1 (before=1, after=2, cap=3)
+2026-09-27 23:40:47.836 | INFO     | app.services.inventory_service:_apply_consumable_effect:447 - Streak freeze consumable delivered: user=85836f34-d306-58b1-b792-7289ae472739 charges=1 (before=1, after=2, cap=3)
+[svc-prefix] A={'effect': 'streak_freeze', 'charges_added': 1, 'charges_capped': False, 'freeze_charges': 2, 'max_freeze_charges': 3}
+[svc-prefix] B={'effect': 'streak_freeze', 'charges_added': 1, 'charges_capped': False, 'freeze_charges': 2, 'max_freeze_charges': 3}
+[svc-prefix] rows=2  (修复前：随机 id 双行落地 = RED)
+[svc-prefix] scalar_one read outcome: MultipleResultsFound (期望 MultipleResultsFound = RED)
+
+RESULT_JSON={"service_rows": 2, "scalar_read": "MultipleResultsFound"}
+SERVICE PREFIX VERDICT: RED confirmed (real pre-fix code on real PG)

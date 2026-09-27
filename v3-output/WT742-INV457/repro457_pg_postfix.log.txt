@@ -1,0 +1,12 @@
+[serial] charges=2  (对照 GREEN)
+[f1f] A(engine) FOR UPDATE on absent row -> 0 row(s)
+[f1f] B ON CONFLICT DO NOTHING blocked on A uncommitted tuple: done=False
+[f1f] A committed; B INSERT arbitrated by pkey -> INSERT 0 0 (INSERT 0 0 = silently skipped)
+[f1f] rows for user: 1, ids=['10134d3d-29d6-56d5-a95b-203fdf08cce9']  (单行收敛 = GREEN)
+[f2f] A locked-read charges=0 -> computed 1 (uncommitted)
+[f2f] B FOR UPDATE blocked before compute: done=False
+[f2f] A committed; B locked-read charges=1 (committed value)
+[f2f] final freeze_charges=2 rows=1  (两次发货=2，丢更新闭合 = GREEN)
+
+RESULT_JSON={"serial_charges": 2, "face1_fixed_rows": 1, "face1_fixed_id_is_deterministic": true, "face2_fixed_final_charges": 2}
+POSTFIX VERDICT: GREEN confirmed (single-row convergence + no lost update)
