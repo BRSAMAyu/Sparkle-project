@@ -48043,7 +48043,7 @@
     },
     "/api/v1/agent-stats/performance": {
       "get": {
-        "description": "获取Agent性能指标\n\n包括：\n- 平均耗时\n- 中位数耗时\n- P95耗时\n- 成功率/失败率",
+        "description": "获取Agent性能指标（写侧接线前如实返回 unavailable）\n\ndegraded=True：耗时/成功率等全部数值是不可用占位，不是测量值（V3-FIX-330）。",
         "operationId": "get_performance_metrics_api_v1_agent_stats_performance_get",
         "parameters": [
           {
@@ -48137,7 +48137,7 @@
     },
     "/api/v1/agent-stats/user/overview": {
       "get": {
-        "description": "获取用户的Agent使用统计概览\n\n返回：\n- 总体统计（总执行次数、平均耗时、会话数）\n- 各Agent类型统计\n- 最近活动记录",
+        "description": "获取用户的Agent使用统计概览（写侧接线前如实返回 unavailable）\n\n返回字段结构保持稳定，但 degraded=True 表明全部数值是不可用占位，\n不是测量值：写侧 record_agent_execution 未接线（V3-FIX-330）。",
         "operationId": "get_user_stats_overview_api_v1_agent_stats_user_overview_get",
         "parameters": [
           {
@@ -48188,7 +48188,7 @@
     },
     "/api/v1/agent-stats/user/top-agents": {
       "get": {
-        "description": "获取用户最常使用的Agent\n\n返回：\n- Agent类型\n- 使用次数\n- 平均耗时",
+        "description": "获取用户最常使用的Agent（写侧接线前如实返回 unavailable）\n\ndegraded=True：top_agents 为不可用占位，不是测量值（V3-FIX-330）。",
         "operationId": "get_top_agents_api_v1_agent_stats_user_top_agents_get",
         "parameters": [
           {
