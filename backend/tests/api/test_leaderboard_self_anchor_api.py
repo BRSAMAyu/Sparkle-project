@@ -151,7 +151,12 @@ async def test_self_anchor_buckets_tasks_and_mastery_by_day(anchor_client, db_se
     await db_session.commit()
     anchor_client[1]["current_user"] = user
 
-    now = _utcnow()
+    # 冻结钟（锚定当日 12:00 UTC，V3-FIX-120/321 时间窗族纪律）：种子偏移
+    # （-2h/-1h/-1d/-2d/-3d/-8d）不得跨越 UTC 日界——裸 now 在 00:00–02:00
+    # UTC 运行时 now-2h 落昨日桶，今日 mastery 恒 12.5≠10.0（分片 CI 夜间
+    # 窗假红，V3-FIX-324 裁决：产品按 created_at 日分桶无误，期望 10.0 不变，
+    # 数值链 12.5+(-2.5)=10.0 随锚定钟全 24h 成立）。
+    now = datetime.combine(_utcnow().date(), datetime.min.time()) + timedelta(hours=12)
 
     # 完成面：今天 2 单 + 2 天前 1 单（应计入）；噪声：ABANDONED（写过 completed_at）、
     # 软删完成、窗口外（8 天前）——均不得计入
