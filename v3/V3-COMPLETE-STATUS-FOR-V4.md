@@ -49,18 +49,18 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 **当前：100/107 done（93.5%）**。三源核验已完成（wt759，2026-09-28）：15 张三源齐 + 84 张销账核正 + S-01（wt763 独立审查 APPROVE）。
 
-**剩余 7 张**：
+**剩余 5 张（102/107，2026-09-28 04:05）**：
 | 卡 | 状态 | 阻塞点 |
 |---|---|---|
-| J-02 Onboarding: Value Before Profile | wt764 在航（partial 续做：wt282 增量已存在） | — |
-| O-06 Kill Switch/Release/Rollback 统一面 | wt765 在航 | — |
+| J-02 Onboarding: Value Before Profile | PARTIAL（wt764 交付+wt282 增量在主干；simulator 证据卡门后执行） | FIRST_3_MINUTES 清单：fresh install+3min 脚本+截图（需设备） |
 | E-08 AI Stack 集成 Bench | partial（wt372 104 条真模型 bench 已交付 a1418084；wt755 L0 首帧前移在分支待门后集成） | 真模型复测（有 key 环境）+ review receipt |
 | O-01 公网 Staging HTTPS/WSS 一键部署 | 未启动 | 云凭据（用户 TCC 授权解锁后立即可做；ECS i-2ze439t934c2gsdqm778 已配） |
-| O-05 Backup/Restore 演练 | 未启动 | HEAVY 位排队（wt764 返航后） |
 | Q-07 Chaos/Recovery/Offline/Restore Storm 终验 | 未启动 | 依赖 O-01 |
-| Q-08 V3 Final Gate Audit / Commercial RC | 未启动 | 压轴（Q-07 后） |
+| Q-08 V3 Final Gate Audit / Commercial RC | 未启动 | 压轴（Q-07 后；day7 终门 09-28 08:00 先行） |
 
-**各线完成度**（13 线全量表见 wt759 报告）：A 线 8/8｜B 线 6/6｜C 线 8/8｜D 线 6/8（D-07/D-08 已销账✓ 实为 8/8——待复核）｜E 线 7/8｜G 线 5/5｜J 线 7/8｜M 线 10/10｜O 线 4/7｜P 线 6/6｜Q 线 1/8｜S 线 5/5｜U 线 10/10｜X 线 10/10
+已销账补记：O-06（wt765 交付+wt771 审查 APPROVE，ops 面 OPS_SURFACE.md）｜O-05（wt773 交付 1680d16c+wt782 独立审查 APPROVE：14/14+变异 M1/M1b/M2/M4 红、CLI e2e rc=1；销账前置全履——被撞号顶丢的 FIX-504 行补登为 FIX-531、FIX-505 范围纠偏（prod compose 已 `--dir /data`，真错位面=dev compose；AOF yes+RDB-only backup 新残差转 ops）、FIX-532 审查附带四项登记）。
+
+**各线完成度**（13 线全量表见 wt759 报告）：A 线 8/8｜B 线 6/6｜C 线 8/8｜D 线 6/8（D-07/D-08 已销账✓ 实为 8/8——待复核）｜E 线 7/8｜G 线 5/5｜J 线 7/8｜M 线 10/10｜O 线 6/7（O-05/O-06 已销账；余 O-01 卡 TCC）｜P 线 6/6｜Q 线 1/8｜S 线 5/5｜U 线 10/10｜X 线 10/10
 （⏳ 此表 v0.2 将逐线复核修正——D 线两卡的销账依据需重列）
 
 ## 4. 各线深度状态（⏳ v0.1 仅骨架，随轮次逐线深挖填充）
@@ -122,8 +122,8 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 - **代码规模**：手写生产 ~113.5 万行——backend/app 1,356 文件/533k 行；mobile/lib 手写 1,187 文件/564k 行（排除 vendored 与生成物）；gateway 105 文件/38k 行（+141 测试文件 27k 行）。测试文件：backend 1,443 + gateway 141 + mobile 518。
 - **模块依赖**：35 顶层包/192 边/34 对双向依赖；最重边 services→core 314、services→models 310；**core↔services 双向对是 V4 分层解环首批对象**。
 - **测试分布**：backend/tests 收集 **13,799 用例 0 错误**（unit 占 70.8%）；tests_e2e 36+1 收集错误（死文件 FIX-528）；gateway 746 测试函数；flutter 2,628（静态）。测量卫生：worktree 需先补 gen 否则数字失真。
-- **FIX 台账**：351 条数据行，**FIXED 276（78.6%）/OPEN 71/CLOSED 3/WONTFIX 1**；P0 5/5 全闭；P1 27/28（唯一 OPEN=FIX-53）；底重金字塔（P3 占 44%）。热点 top10：services 90、mobile 68、models/orchestration 各 45…（V4 债务治理地理图）。
-- mypy **70**（本日 922→70 十一批冷缓存主干口径；CI 侧基线 380 平台代际差待 CI 实数对齐）；卡片 101/107+J-02 PARTIAL+O-05 待审查；本地栈三容器 healthy 双端 200（生产部署 N/A）。
+- **FIX 台账**：360 条数据行，**FIXED 270（75%）/OPEN 58/CLOSED 3/WONTFIX 1**+27 行旧格式自由态备忘；P0 5/5 全闭；P1 27/30（OPEN=FIX-53+**FIX-530**：engine FastAPI 进程被 Redis 瞬时断连杀死——billing 消费循环异常上抛整进程退出，2026-09-28 03:02 实录死亡 30 分钟，心跳探活抓获，已复活+门后派修）；底重金字塔（P3 占 44%）。热点 top10：services 90、mobile 68、models/orchestration 各 45…（V4 债务治理地理图）。
+- mypy **55**（本日 922→70→55：wt777 集成 −6 + wt778 批十一 −15，合并态冷缓存实测与台账逐数对账；CI 侧基线 380 平台代际差待 CI 实数对齐）；卡片 **102/107**（O-05 已销账：wt782 独立审查 APPROVE+前置全履）；本地栈三容器 healthy、gateway 200+engine /health 200（engine 03:02 曾死 30 分钟已复活，见 FIX-530；生产部署 N/A）。
 
 ## 10. V4 设计建议输入（⏳ v0.2 起充实）
 
@@ -137,6 +137,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 ## 更新日志
 
+- v0.5.1（2026-09-28 04:05）：**O-05 销账→102/107**（wt782 独立审查 APPROVE 附前置全履：FIX-531 补登被撞号顶丢行 FIXED@1680d16c、FIX-505 范围纠偏 dev compose+AOF 新残差、FIX-532 四项附带登记）；wt781（FIX-506 演示群标记）+wt778（mypy 批十一 76→61）集成收口，**合并态 mypy 55**（70−15 逐数对账）；**FIX-530 登记**（engine 03:02 被 Redis 瞬时断连杀死、30 分钟后心跳抓获复活——单进程栈可用性单点，V4 需进程守护）；合并态测试 288 过+1 环境错配归因（integration 套件 PG 预建 schema 口径，conftest:58 create_all 注释在案）。
 - v0.1（2026-09-28 03:00）：首版。骨架+当日三源核验快照+FIX 族谱初版+诚实边界。各线深挖章节标注 ⏳ 待填充。
 - v0.2（2026-09-28 02:10）：**M/X 线深挖并入**（wt770，代码亲验级）：Memory Epoch/Provenance 真实数据流、M-09 缺陷发现器叙事、X 线真模型证据分层、V4 教材级考古三条；新登记 FIX-502（M/X 卡级 receipt 断链）/FIX-503（FIX-36 真模型复验承诺未兑现）。详章 v3-output/WT770-DOC-MX/。
 - v0.3（2026-09-28 02:40）：**B/C 线深挖并入**（wt769 五源核验）：B 线诚实性红线执行者叙事+残差六项；C 线 10 模块亲证全活+「就绪未激活」面三项；**FIX-258 行补闭**（@52fbed29，闭账曾被行重建回退——台账指针会腐烂的实证）；新登 FIX-504。
