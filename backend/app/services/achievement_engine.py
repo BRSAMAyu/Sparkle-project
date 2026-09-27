@@ -2242,7 +2242,15 @@ class AchievementEngine:
 
     async def _get_or_create_streak_stats(self, user_id: str) -> UserStreakStats:
         """获取或创建连胜统计"""
-        query = select(UserStreakStats).where(UserStreakStats.user_id == user_id)
+        # V3-FIX-420: 连胜统计读-算-写需要行锁。无锁时跨本地日 straddle 并发下
+        # （A=23:59:59 事件未提交窗内 B=00:00:01 事件读旧 last_activity_date），
+        # B 按 stale delta 误走断签/冻结分支：无卡连胜被毁+day0 误 MISSED、
+        # 有卡白烧冻结卡+day0 误 FROZEN（真 PG 16 READ COMMITTED 三环实证，
+        # 复现件 v3-output/WT719-VERIFY1/repro420_pg_straddle.py）。行锁使后到
+        # 事务阻塞至先到提交后再读，freeze 分支的 stale 覆写面随之自然闭合。
+        # 先例：同文件 _unlock_achievement 成就解锁路径 with_for_update。
+        # sqlite 无行锁语义，with_for_update 在该方言下为 no-op，不影响测试面。
+        query = select(UserStreakStats).where(UserStreakStats.user_id == user_id).with_for_update()
         result = await self.db.execute(query)
         stats = result.scalar_one_or_none()
 
