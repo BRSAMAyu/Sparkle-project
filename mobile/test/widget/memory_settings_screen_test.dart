@@ -31,8 +31,8 @@ class _MemorySettingsApiStub implements MemoryApiService {
 
   /// When non-null the corresponding read fails with this error
   /// (R2-01: read failure must surface, never fall back to defaults).
-  Object? memorySettingsError;
-  Object? pushSettingsError;
+  Exception? memorySettingsError;
+  Exception? pushSettingsError;
 
   @override
   Future<List<MemoryPreferenceItem>> getPreferences() async => [];

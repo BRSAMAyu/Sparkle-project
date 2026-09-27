@@ -91,6 +91,14 @@ class _GateChannel with StreamChannelMixin<dynamic> implements WebSocketChannel 
   Future<void> closeImmediately() async {
     await incoming.close();
   }
+
+  /// Test teardown: close the write end and the incoming controller so the
+  /// fake has no unclosed sinks (incoming.close is idempotent if
+  /// closeImmediately already ran).
+  Future<void> dispose() async {
+    await _sink.close();
+    await incoming.close();
+  }
 }
 
 void main() {
@@ -123,9 +131,12 @@ void main() {
     );
   });
 
-  tearDown(() {
+  tearDown(() async {
     service.dispose();
     container.dispose();
+    for (final channel in channels) {
+      await channel.dispose();
+    }
     debugPrint = debugPrintThrottled;
   });
 

@@ -249,8 +249,13 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
         _previewError = _friendlyError(error);
       });
       AppFeedback.error(context, context.l10n.posterPreviewErrorWith(_friendlyError(error)));
-    } finally {
-      if (!mounted) return;
+    }
+    // The spinner reset used to live in `finally` behind a mounted guard;
+    // a `return` inside `finally` swallows any in-flight exception, so the
+    // reset moved out of the finally block. The early returns above already
+    // skip the write when unmounted, so the mounted check below keeps the
+    // old guard's semantics (never setState after dispose).
+    if (mounted) {
       setState(() {
         _isGeneratingPreview = false;
       });

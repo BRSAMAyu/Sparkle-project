@@ -79,6 +79,13 @@ class _ReplayChannel
       readyCompleter.complete();
     }
   }
+
+  /// Test teardown: close the write end and the incoming controller so the
+  /// fake has no unclosed sinks (mirrors real channel disposal order).
+  Future<void> dispose() async {
+    await _sink.close();
+    await incoming.close();
+  }
 }
 
 void main() {
@@ -112,6 +119,9 @@ void main() {
 
   tearDown(() async {
     container.dispose();
+    for (final channel in channels) {
+      await channel.dispose();
+    }
     try {
       await isar.close(deleteFromDisk: true);
     } catch (_) {}
@@ -142,8 +152,8 @@ void main() {
   }
 
   Map<String, dynamic>? lastChatFrame(_ReplayChannel channel) {
-    final sink = channel.sink as _MockWebSocketSink;
-    for (final raw in sink.sentData.reversed) {
+    // Inline cast (no Sink-typed local): this helper only reads sentData.
+    for (final raw in (channel.sink as _MockWebSocketSink).sentData.reversed) {
       if (raw is String && raw.contains('"request_id"')) {
         return json.decode(raw) as Map<String, dynamic>;
       }

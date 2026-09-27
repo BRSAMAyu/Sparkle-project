@@ -223,7 +223,7 @@ class _FakeCommunityRepository implements CommunityRepository {
 
   final List<List<MessageInfo>> pages;
   final List<MessageInfo> searchResults;
-  final Object? searchError;
+  final Exception? searchError;
 
   @override
   Future<List<MessageInfo>> getMessages(

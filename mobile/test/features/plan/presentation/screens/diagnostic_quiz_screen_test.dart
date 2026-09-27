@@ -22,7 +22,7 @@ class _FakeDiagnosticRepository extends ExamSprintRepository {
 
   final DiagnosticGenerateResult? generated;
   final DiagnosticGradeResult? graded;
-  final Object? gradeError;
+  final Exception? gradeError;
 
   int generateCalls = 0;
   int gradeCalls = 0;

@@ -6,6 +6,12 @@
 //
 // Or in Flutter:
 //   flutter test test/interactive_intent_test.dart
+//
+// This is a standalone pure-Dart CLI: its import graph
+// (enhanced_intent_classifier.dart -> intent_keywords.dart) has zero Flutter
+// dependencies, print() is the runner's stdout contract, and debugPrint would
+// drag in package:flutter/dart:ui and break plain `dart` invocation.
+// ignore_for_file: avoid_print
 
 import 'package:sparkle/features/home/domain/services/enhanced_intent_classifier.dart';
 

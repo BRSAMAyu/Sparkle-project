@@ -52,12 +52,14 @@ class PlanNotifier extends StateNotifier<PlanListState> {
     } catch (e) {
       if (!mounted) return;
       state = state.copyWith(isLoading: false, error: e.toString());
-    } finally {
-      if (!mounted) return;
-      // In case the action itself doesn't set isLoading to false
-      if (state.isLoading) {
-        state = state.copyWith(isLoading: false);
-      }
+    }
+    // The isLoading reset used to live in `finally` behind a mounted guard;
+    // a `return` inside `finally` swallows any in-flight exception, so the
+    // reset moved out of the finally block. Skipping the write when unmounted
+    // keeps the old guard's semantics (never touch state after dispose).
+    // In case the action itself doesn't set isLoading to false
+    if (mounted && state.isLoading) {
+      state = state.copyWith(isLoading: false);
     }
   }
 

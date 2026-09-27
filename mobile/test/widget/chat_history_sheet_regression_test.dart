@@ -141,8 +141,8 @@ class _HistoryChatRepository extends Fake implements ChatRepository {
 
   final List<Map<String, dynamic>> recentConversations;
   final Map<String, List<ChatMessageModel>> historyBySession;
-  final Object? recentError;
-  final Map<String, Object> historyErrorBySession = const <String, Object>{};
+  final Exception? recentError;
+  final Map<String, Exception> historyErrorBySession = const <String, Exception>{};
   final List<String> requestedSessions = <String>[];
 
   @override

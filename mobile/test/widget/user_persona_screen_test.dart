@@ -105,9 +105,9 @@ class _FakeUserRepository implements UserRepository {
   final Map<String, dynamic> _profileContext;
   final List<Map<String, dynamic>> _inferredPreferences;
   final List<Map<String, dynamic>> _activePolicies;
-  final Object? transparentProfileError;
-  final Object? inferredPreferencesError;
-  final Object? resetOverrideError;
+  final Exception? transparentProfileError;
+  final Exception? inferredPreferencesError;
+  final Exception? resetOverrideError;
 
   final List<String> resetOverrideCalls = <String>[];
 
