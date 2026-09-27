@@ -1,0 +1,12 @@
+# run 36326661860 第 15 层：shard 与 merge 均自仓库根运行，coverage 只找根目录配置——
+# backend/pyproject.toml 的 omit 从未被读到。根 .coveragerc 双段兜底：
+# [run] 防止分片记录 gen；[report] 过滤既有数据（combine 后 xml/report 均生效）。
+[run]
+omit =
+    backend/app/gen/*
+    */app/gen/*
+
+[report]
+omit =
+    backend/app/gen/*
+    */app/gen/*
