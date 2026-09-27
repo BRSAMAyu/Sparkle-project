@@ -125,8 +125,9 @@ async def test_update_feedback_decision_persists_without_redis(sqlite_session):
     state = await service.get_plan_state(user_id, plan_id, refresh=True)
     reloaded = await _reload(sqlite_session, state)
     entry = reloaded.feedback_log[0]
-    assert entry["applied_adjustment"]["decision"] == "approve", f"decision lost without redis: {entry}"
-    assert entry["decision"] == "approve"
+    # V3-FIX-355: 输入历史别名 "approve" 归一为规范词表值 "approved" 持久化
+    assert entry["applied_adjustment"]["decision"] == "approved", f"decision lost without redis: {entry}"
+    assert entry["decision"] == "approved"
     assert entry["user_comment"] == "看起来不错"
 
 
@@ -154,6 +155,7 @@ async def test_update_feedback_decision_reject_bumps_priority(sqlite_session):
     state = await service.get_plan_state(user_id, plan_id, refresh=True)
     reloaded = await _reload(sqlite_session, state)
     entry = reloaded.feedback_log[0]
-    assert entry["applied_adjustment"]["decision"] == "reject"
+    # V3-FIX-355: 输入历史别名 "reject" 归一为规范 "rejected" 持久化并升 high
+    assert entry["applied_adjustment"]["decision"] == "rejected"
     assert entry["applied_adjustment"]["priority"] == "high"
     assert entry["priority"] == "high"

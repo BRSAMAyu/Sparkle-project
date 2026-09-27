@@ -56,6 +56,17 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+# V3-FIX-355: proto 枚举 → 内部规范决策词表（ReviewDecision 四值）的唯一映射点。
+# 该映射产物即 handle_review_feedback / plan_feedback_service 持久化到
+# feedback_log 的字符串面；proto wire 值本身不变（移动端契约）。
+PROTO_DECISION_TO_REVIEW_DECISION: dict[int, ReviewDecision] = {
+    agent_service_pb2.APPROVE: ReviewDecision.APPROVED,
+    agent_service_pb2.REJECT: ReviewDecision.REJECTED,
+    agent_service_pb2.MODIFY: ReviewDecision.NEEDS_MODIFICATION,
+    agent_service_pb2.ACKNOWLEDGE: ReviewDecision.REQUIRES_CONFIRMATION,
+}
+
+
 def _grpc_status_for_chat_error(error_code: int) -> grpc.StatusCode:
     # ErrorCode 是 int 枚举（EnumTypeWrapper），运行时键即 int 值，显式按 int 键标注
     _MAP: dict[int, grpc.StatusCode] = {
@@ -994,8 +1005,10 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         """
         Submit user feedback for a plan review.
 
-        Handles the user's decision (approve, reject, modify, acknowledge) on a plan review
-        and triggers appropriate follow-up actions.
+        Handles the user's proto decision (APPROVE/REJECT/MODIFY/ACKNOWLEDGE),
+        mapped to the internal canonical ReviewDecision vocabulary
+        (approved/rejected/needs_modification/requires_confirmation,
+        V3-FIX-355) and triggers appropriate follow-up actions.
         """
         try:
             raw_metadata = context.invocation_metadata()
@@ -1020,13 +1033,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             trace_id = request.trace_id or metadata.get("x-trace-id") or str(uuid.uuid4())
 
-            # Map proto enum to internal ReviewDecision
-            decision_map = {
-                agent_service_pb2.APPROVE: ReviewDecision.APPROVED,
-                agent_service_pb2.REJECT: ReviewDecision.REJECTED,
-                agent_service_pb2.MODIFY: ReviewDecision.NEEDS_MODIFICATION,
-                agent_service_pb2.ACKNOWLEDGE: ReviewDecision.REQUIRES_CONFIRMATION,
-            }
+            # Map proto enum to internal canonical ReviewDecision vocabulary
+            # (V3-FIX-355: module-level single mapping point)
+            decision_map = PROTO_DECISION_TO_REVIEW_DECISION
 
             proto_decision = request.decision
             if proto_decision not in decision_map:

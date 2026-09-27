@@ -19,7 +19,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.orchestration.schemas import PlanFeedback
+from app.orchestration.schemas import PlanFeedback, normalize_plan_feedback_decision
 from app.services.outcome_learning_service import OutcomeLearningService
 from app.services.outcome_promotion_governor import OutcomePromotionGovernor
 from app.services.plan_outcome_service import (
@@ -69,7 +69,10 @@ class PlanFeedbackService:
             user_id: 用户 ID
             plan_id: 计划 ID
             review_result: 审查结果
-            user_decision: 用户决策 (approve/reject/modify)
+            user_decision: 用户决策，规范词表为 ReviewDecision 四值
+                (approved/rejected/needs_modification/requires_confirmation)；
+                历史别名（approve/reject/modify 等）经
+                normalize_plan_feedback_decision 归一（V3-FIX-355）
 
         Returns:
             更新后的 PlanState
@@ -79,8 +82,9 @@ class PlanFeedbackService:
 
         # 如果用户有决策，更新反馈
         if user_decision:
-            feedback.decision = user_decision
-            if user_decision == "reject":
+            canonical_decision = normalize_plan_feedback_decision(user_decision)
+            feedback.decision = canonical_decision
+            if canonical_decision == "rejected":
                 feedback.priority = "high"
                 feedback.feedback_type = "plan_disagree"
             feedback.source = "user"
@@ -136,7 +140,7 @@ class PlanFeedbackService:
         user_id: UUID,
         plan_id: UUID,
         content: str,
-        decision: str = "supplement",
+        decision: str = "needs_modification",
         priority: str = "normal",
         related_task_id: UUID | None = None,
     ) -> dict[str, Any] | None:
@@ -147,17 +151,18 @@ class PlanFeedbackService:
             user_id: 用户 ID
             plan_id: 计划 ID
             content: 反馈内容
-            decision: 决策类型
+            decision: 决策类型，规范词表 ReviewDecision 四值；历史别名归一
             priority: 优先级
             related_task_id: 关联任务 ID
 
         Returns:
             更新后的 PlanState
         """
+        canonical_decision = normalize_plan_feedback_decision(decision)
         feedback = PlanFeedback(
             feedback_type="user_feedback",
             content=content,
-            decision=decision,
+            decision=canonical_decision,
             priority=priority,
             source="user",
             related_plan_id=str(plan_id),
@@ -184,13 +189,13 @@ class PlanFeedbackService:
         await self._plan_outcome_service.record_outcome(
             user_id,
             source_family="plan_user_feedback",
-            source_id=f"{plan_id}:{decision}:{len(content)}",
+            source_id=f"{plan_id}:{canonical_decision}:{len(content)}",
             evidence_level=EVIDENCE_LEVEL_TURN_REACTION,
             target_type="plan",
             target_layer="episode",
             target_object=str(plan_id),
             target_hypothesis="plan_user_feedback",
-            observed_outcome=decision,
+            observed_outcome=canonical_decision,
             outcome_signal={
                 "priority": priority,
                 "content": content[:180],
@@ -278,6 +283,11 @@ class PlanFeedbackService:
 
         return (new_count, should_rollback)
 
+    # V3-FIX-355: pending 语义 = 「非 approved 的决策或高优先级」。规范词表下
+    # rejected/needs_modification/requires_confirmation 均需跟进；存量 accept/
+    # supplement 行经别名归一保持原 pending 语义（accept 不进、supplement 进）。
+    _PENDING_DECISIONS = ("rejected", "needs_modification", "requires_confirmation")
+
     async def get_pending_feedback(
         self,
         user_id: UUID,
@@ -300,7 +310,9 @@ class PlanFeedbackService:
         pending = []
         for entry in state.feedback_log:
             adj = entry.get("applied_adjustment", {})
-            if adj.get("priority") == "high" or adj.get("decision") in ["reject", "supplement"]:
+            raw_decision = adj.get("decision")
+            decision = normalize_plan_feedback_decision(raw_decision) if raw_decision else ""
+            if adj.get("priority") == "high" or decision in self._PENDING_DECISIONS:
                 pending.append(entry)
 
         return pending
@@ -320,12 +332,15 @@ class PlanFeedbackService:
             user_id: 用户 ID
             plan_id: 计划 ID
             review_id: 审查 ID
-            user_decision: 用户决策 (approve/reject/modify)
+            user_decision: 用户决策，规范词表为 ReviewDecision 四值
+                (approved/rejected/needs_modification/requires_confirmation)；
+                历史别名（approve/reject/modify 等）经归一后持久化（V3-FIX-355）
             user_comment: 用户评论
 
         Returns:
             更新后的 PlanState
         """
+        canonical_decision = normalize_plan_feedback_decision(user_decision)
         state = await self._plan_state_service.get_plan_state(user_id, plan_id)
         if not state or not state.feedback_log:
             logger.warning(f"No feedback_log found for plan_id={plan_id}")
@@ -339,12 +354,12 @@ class PlanFeedbackService:
         updated = False
         for entry in reversed(feedback_log):
             if entry.get("applied_adjustment", {}).get("review_id") == review_id:
-                entry["applied_adjustment"]["decision"] = user_decision
-                if user_decision == "reject":
+                entry["applied_adjustment"]["decision"] = canonical_decision
+                if canonical_decision == "rejected":
                     entry["applied_adjustment"]["priority"] = "high"
                 entry["source"] = "user"
-                entry["decision"] = user_decision
-                if user_decision == "reject":
+                entry["decision"] = canonical_decision
+                if canonical_decision == "rejected":
                     entry["priority"] = "high"
                 if user_comment:
                     entry["user_comment"] = user_comment
@@ -361,7 +376,7 @@ class PlanFeedbackService:
             )
 
             logger.info(
-                f"Updated feedback decision: plan_id={plan_id}, review_id={review_id}, decision={user_decision}"
+                f"Updated feedback decision: plan_id={plan_id}, review_id={review_id}, decision={canonical_decision}"
             )
 
             return state.to_dict() if state else None

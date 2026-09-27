@@ -38,7 +38,7 @@ from app.core.pending_actions import pending_actions_store
 from app.event_publishers.srl_events import publish_srl_event
 from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
 from app.orchestration.plan_quality_gate import PlanQualityGate
-from app.orchestration.schemas import ExecutablePlan
+from app.orchestration.schemas import ExecutablePlan, normalize_plan_feedback_decision
 from app.services.llm_service import llm_service
 from app.services.self_evolution_service import StrategyCalibrationService
 
@@ -1814,17 +1814,25 @@ Please review this plan and provide your assessment."""
 
         P1 Fix #10: db_session is now required for feedback writing.
 
+        V3-FIX-355: user_decision 以 ReviewDecision 四值为规范词表
+        (approved/rejected/needs_modification/requires_confirmation，即 gRPC
+        decision_map 实写值)；历史别名 (approve/reject/modify) 经
+        normalize_plan_feedback_decision 归一后判等与持久化。
+
         Args:
             review_id: Review ID
-            user_decision: User's decision (approve, reject, modify)
+            user_decision: User's decision (canonical ReviewDecision value;
+                legacy aliases accepted and normalized)
             user_id: User ID
             db_session: Database session for feedback writing (required)
             user_comment: Optional user comment
             modifications: Optional user-provided modifications
 
         Returns:
-            Status dictionary
+            Status dictionary（user_decision 回显原始入参）
         """
+        canonical_decision = normalize_plan_feedback_decision(user_decision)
+
         # Atomically claim the action (get-and-delete) to prevent concurrent processing
         action = await pending_actions_store.claim(review_id, user_id)
         if not action:
@@ -1839,7 +1847,7 @@ Please review this plan and provide your assessment."""
         logger.info(f"User {user_decision} review {review_id} for plan {plan_id}")
 
         # Fix #3: 追踪拒绝次数，检测连续两次拒绝
-        if user_decision == "reject" and plan_id:
+        if canonical_decision == ReviewDecision.REJECTED.value and plan_id:
             rejection_count = await self.track_rejection_count(plan_id, user_id)
             logger.info(f"Plan {plan_id} rejection count: {rejection_count}")
 
@@ -1872,7 +1880,7 @@ Please review this plan and provide your assessment."""
                 }
 
         # 用户接受方案，重置拒绝计数
-        if user_decision == "approve" and plan_id:
+        if canonical_decision == ReviewDecision.APPROVED.value and plan_id:
             await self.reset_rejection_count(plan_id, user_id)
 
         # === Phase 4: 时机2: Write user decision to feedback_log ===
@@ -1889,7 +1897,7 @@ Please review this plan and provide your assessment."""
                     user_id=UUID(user_id),
                     plan_id=UUID(plan_id),
                     review_id=review_id,
-                    user_decision=user_decision,
+                    user_decision=canonical_decision,
                     user_comment=user_comment,
                 )
 
@@ -1901,8 +1909,8 @@ Please review this plan and provide your assessment."""
                         user_id=UUID(user_id),
                         plan_id=UUID(plan_id),
                         content=user_comment or f"User decision: {user_decision}",
-                        decision=user_decision,
-                        priority="high" if user_decision == "reject" else "normal",
+                        decision=canonical_decision,
+                        priority="high" if canonical_decision == ReviewDecision.REJECTED.value else "normal",
                     )
                     logger.info(f"User decision feedback appended (new entry) for plan {plan_id}")
             except Exception as e:

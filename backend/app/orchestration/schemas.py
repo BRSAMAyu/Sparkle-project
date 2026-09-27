@@ -486,16 +486,62 @@ class ObservabilityEvent:
 
 # ============ Phase 4: Plan Feedback ============
 
+# V3-FIX-355: 规范决策词表 = ReviewDecision 四值（plan_review_service 权威枚举）。
+# 历史上的四套词汇（声明 accept/reject/supplement、docstring approve/reject/modify、
+# workflow 通道 modify/reject）经 normalize_plan_feedback_decision 归一到此词表；
+# proto wire 值（APPROVE/REJECT/MODIFY/ACKNOWLEDGE）不在此层，由 gRPC 侧映射。
+PlanFeedbackDecision = Literal[
+    "approved",
+    "rejected",
+    "needs_modification",
+    "requires_confirmation",
+]
+
+# 存量与别名 → 规范值。feedback_log 为无约束 JSONB，历史行里 accept/supplement
+# （from_review_result 旧映射）与规范四值并存；读侧归一保证过滤语义稳定。
+_PLAN_FEEDBACK_DECISION_ALIASES: dict[str, PlanFeedbackDecision] = {
+    # 规范词表（幂等）
+    "approved": "approved",
+    "rejected": "rejected",
+    "needs_modification": "needs_modification",
+    "requires_confirmation": "requires_confirmation",
+    # 声明 Literal 旧词表（存量数据）
+    "accept": "approved",
+    "accepted": "approved",
+    "supplement": "needs_modification",
+    # docstring / workflow 通道旧词表
+    "approve": "approved",
+    "reject": "rejected",
+    "modify": "needs_modification",
+    # proto ACKNOWLEDGE 语义
+    "acknowledge": "requires_confirmation",
+}
+
+
+def normalize_plan_feedback_decision(value: Any) -> PlanFeedbackDecision:
+    """把任意一套历史决策词汇归一为规范 PlanFeedbackDecision。
+
+    未知/空白值回退 requires_confirmation（与 plan_review_service
+    _map_quality_gate_decision 的未知值惯例一致：不确定即要求用户确认）。
+    """
+    key = str(value or "").strip().lower()
+    return _PLAN_FEEDBACK_DECISION_ALIASES.get(key, "requires_confirmation")
+
+
 @dataclass
 class PlanFeedback:
     """计划反馈条目 (Phase 4)
 
     用于记录审查意见和用户反馈到 PlanState.feedback_log
+
+    decision 使用规范词表 PlanFeedbackDecision（V3-FIX-355）：
+    approved / rejected / needs_modification / requires_confirmation。
+    非规范输入在写入路径经 normalize_plan_feedback_decision 归一。
     """
     feedback_id: str = field(default_factory=lambda: f"fb-{uuid.uuid4().hex[:8]}")
     feedback_type: Literal["review", "user_feedback", "plan_disagree"] = "review"
     content: str = ""
-    decision: Literal["accept", "reject", "supplement"] = "accept"
+    decision: PlanFeedbackDecision = "approved"
     priority: Literal["high", "normal"] = "normal"
     source: Literal["reviewer", "user"] = "reviewer"
     related_plan_id: str | None = None
@@ -531,13 +577,15 @@ class PlanFeedback:
             review_result: PlanReviewResult instance from plan_review_service
 
         Returns:
-            PlanFeedback instance
+            PlanFeedback instance（decision 为规范词表值；skipped/未知归一为
+            requires_confirmation，沿用 _map_quality_gate_decision 的未知值惯例）
         """
+        raw_decision = str(getattr(review_result, "decision", "") or "")
         return cls(
             feedback_type="review",
             content=f"Plan review completed: {review_result.decision}",
-            decision="accept" if review_result.decision == "approved" else "supplement",
-            priority="high" if review_result.decision == "rejected" else "normal",
+            decision=normalize_plan_feedback_decision(raw_decision),
+            priority="high" if raw_decision == "rejected" else "normal",
             source="reviewer",
             related_plan_id=review_result.plan_id,
             review_id=review_result.review_id,

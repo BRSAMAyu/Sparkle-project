@@ -325,7 +325,16 @@ def route_after_router_with_collaboration(state: SparkleState):
     # Vision Item 8: Review Loop
     # If there is review feedback (Modify/Reject), route to reset node first
     # State mutation must happen in a node, not in a routing function
-    if review_feedback and review_feedback.get("decision") in ["modify", "reject"]:
+    # V3-FIX-355: 本通道声明词表为 ReviewDecisionType(approve/reject/modify)；
+    # 同时容错 PlanFeedback 规范词表值（needs_modification/rejected），
+    # 两个词表写入任一形态都能正确路由。requires_confirmation/approved
+    # 不重置——确认与接受不触发 replanning。
+    if review_feedback and review_feedback.get("decision") in [
+        "modify",
+        "reject",
+        "needs_modification",
+        "rejected",
+    ]:
         return "reset_collaboration"
 
     # If collaboration_mode not set yet, route to collaboration node
