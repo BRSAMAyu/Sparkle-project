@@ -7394,215 +7394,40 @@ abstract class AppLocalizations {
   /// **'跳过'**
   String get onboardingSkip;
 
-  /// No description provided for @onboardingGetStarted.
-  ///
-  /// In zh, this message translates to:
-  /// **'开始使用'**
-  String get onboardingGetStarted;
 
-  /// No description provided for @onboardingNext.
-  ///
-  /// In zh, this message translates to:
-  /// **'下一步'**
-  String get onboardingNext;
 
-  /// No description provided for @onboardingWelcomeTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'欢迎来到 Sparkle'**
-  String get onboardingWelcomeTitle;
 
-  /// No description provided for @onboardingWelcomeSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'你的 AI 学习助手\n让知识点亮智慧之光'**
-  String get onboardingWelcomeSubtitle;
 
-  /// No description provided for @onboardingFeatureGalaxy.
-  ///
-  /// In zh, this message translates to:
-  /// **'知识星图'**
-  String get onboardingFeatureGalaxy;
 
-  /// No description provided for @onboardingFeatureGalaxyDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'可视化学习网络'**
-  String get onboardingFeatureGalaxyDesc;
 
-  /// No description provided for @onboardingFeatureChat.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 对话'**
-  String get onboardingFeatureChat;
 
-  /// No description provided for @onboardingFeatureChatDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'智能学习伙伴'**
-  String get onboardingFeatureChatDesc;
 
-  /// No description provided for @onboardingFeatureTasks.
-  ///
-  /// In zh, this message translates to:
-  /// **'智能任务'**
-  String get onboardingFeatureTasks;
 
-  /// No description provided for @onboardingFeatureTasksDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'个性化学习计划'**
-  String get onboardingFeatureTasksDesc;
 
-  /// No description provided for @onboardingArchitectureTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'系统架构'**
-  String get onboardingArchitectureTitle;
 
-  /// No description provided for @onboardingArchitectureSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'了解 Sparkle 如何工作'**
-  String get onboardingArchitectureSubtitle;
 
-  /// No description provided for @onboardingGalaxyTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'知识星图'**
-  String get onboardingGalaxyTitle;
 
-  /// No description provided for @onboardingGalaxyDescription.
-  ///
-  /// In zh, this message translates to:
-  /// **'将你的知识可视化为一张星图'**
-  String get onboardingGalaxyDescription;
 
-  /// No description provided for @onboardingGalaxyFeature1.
-  ///
-  /// In zh, this message translates to:
-  /// **'6 大学习领域：理性、造物、灵感、文明、生活、精神'**
-  String get onboardingGalaxyFeature1;
 
-  /// No description provided for @onboardingGalaxyFeature2.
-  ///
-  /// In zh, this message translates to:
-  /// **'实时衰减预测：了解知识遗忘曲线'**
-  String get onboardingGalaxyFeature2;
 
-  /// No description provided for @onboardingGalaxyFeature3.
-  ///
-  /// In zh, this message translates to:
-  /// **'交互式时间机器：预测未来学习状态'**
-  String get onboardingGalaxyFeature3;
 
-  /// No description provided for @onboardingGalaxyFeature4.
-  ///
-  /// In zh, this message translates to:
-  /// **'智能推荐：基于知识图谱的学习路径'**
-  String get onboardingGalaxyFeature4;
 
-  /// No description provided for @onboardingAiHelpTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 怎么帮你'**
-  String get onboardingAiHelpTitle;
 
-  /// No description provided for @onboardingPersonalizationTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'个性化设置'**
-  String get onboardingPersonalizationTitle;
 
-  /// No description provided for @onboardingPersonalizationSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'让 Sparkle 更懂你'**
-  String get onboardingPersonalizationSubtitle;
 
-  /// No description provided for @onboardingSettingReminders.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习提醒'**
-  String get onboardingSettingReminders;
 
-  /// No description provided for @onboardingSettingRemindersDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'在最佳时间推送学习建议'**
-  String get onboardingSettingRemindersDesc;
 
-  /// No description provided for @onboardingSettingAssistant.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 助手'**
-  String get onboardingSettingAssistant;
 
-  /// No description provided for @onboardingSettingAssistantDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'自动创建学习任务'**
-  String get onboardingSettingAssistantDesc;
 
-  /// No description provided for @onboardingArchitectureStep1Title.
-  ///
-  /// In zh, this message translates to:
-  /// **'移动端'**
-  String get onboardingArchitectureStep1Title;
 
-  /// No description provided for @onboardingArchitectureStep1Desc.
-  ///
-  /// In zh, this message translates to:
-  /// **'Flutter 跨平台应用\n提供流畅的用户体验'**
-  String get onboardingArchitectureStep1Desc;
 
-  /// No description provided for @onboardingArchitectureStep2Title.
-  ///
-  /// In zh, this message translates to:
-  /// **'WebSocket 连接'**
-  String get onboardingArchitectureStep2Title;
 
-  /// No description provided for @onboardingArchitectureStep2Desc.
-  ///
-  /// In zh, this message translates to:
-  /// **'Go Gateway 提供实时双向通信\n高性能、低延迟'**
-  String get onboardingArchitectureStep2Desc;
 
-  /// No description provided for @onboardingArchitectureStep3Title.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 引擎'**
-  String get onboardingArchitectureStep3Title;
 
-  /// No description provided for @onboardingArchitectureStep3Desc.
-  ///
-  /// In zh, this message translates to:
-  /// **'Python Agent Engine\n强大的推理和工具调用能力'**
-  String get onboardingArchitectureStep3Desc;
 
-  /// No description provided for @onboardingArchitectureStep4Title.
-  ///
-  /// In zh, this message translates to:
-  /// **'数据存储'**
-  String get onboardingArchitectureStep4Title;
 
-  /// No description provided for @onboardingArchitectureStep4Desc.
-  ///
-  /// In zh, this message translates to:
-  /// **'PostgreSQL + pgvector\n向量检索 + 图谱存储'**
-  String get onboardingArchitectureStep4Desc;
 
-  /// No description provided for @onboardingArchitectureStep5Title.
-  ///
-  /// In zh, this message translates to:
-  /// **'完整链路'**
-  String get onboardingArchitectureStep5Title;
 
-  /// No description provided for @onboardingArchitectureStep5Desc.
-  ///
-  /// In zh, this message translates to:
-  /// **'从提问到回答\n毫秒级响应体验'**
-  String get onboardingArchitectureStep5Desc;
 
   /// No description provided for @capsuleQualityUnrated.
   ///
@@ -28117,47 +27942,12 @@ abstract class AppLocalizations {
   /// **'附件'**
   String get executionResultArtifactFallback;
 
-  /// No description provided for @onboardingVoiceInput.
-  ///
-  /// In zh, this message translates to:
-  /// **'语音输入'**
-  String get onboardingVoiceInput;
 
-  /// No description provided for @onboardingVoiceInputDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'开启麦克风权限，支持语音指令与听写输入'**
-  String get onboardingVoiceInputDesc;
 
-  /// No description provided for @onboardingPermissionEnable.
-  ///
-  /// In zh, this message translates to:
-  /// **'启用'**
-  String get onboardingPermissionEnable;
 
-  /// No description provided for @onboardingPermissionEnabled.
-  ///
-  /// In zh, this message translates to:
-  /// **'已启用'**
-  String get onboardingPermissionEnabled;
 
-  /// No description provided for @onboardingPermissionReady.
-  ///
-  /// In zh, this message translates to:
-  /// **'就绪 — 已全部设置好'**
-  String get onboardingPermissionReady;
 
-  /// No description provided for @onboardingPermissionPending.
-  ///
-  /// In zh, this message translates to:
-  /// **'尚未启用，启用后可使用语音功能。'**
-  String get onboardingPermissionPending;
 
-  /// No description provided for @onboardingPermissionWorking.
-  ///
-  /// In zh, this message translates to:
-  /// **'请求中...'**
-  String get onboardingPermissionWorking;
 
   /// No description provided for @homeNotificationUnreadMessages.
   ///
