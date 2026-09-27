@@ -163,6 +163,24 @@ func TestRunRedeliversAbandonedPendingEventAfterCrash(t *testing.T) {
 		t.Fatalf("redelivered event ID = %q, want %q", got.ID, "evt-abandoned-1")
 	}
 
+	// 成功重放后 ack 是 handler→markProcessed→XAck 的异步收尾；-race 下测试侧
+	// cancel 可抢在 XAck 前（461 设计语义：取消态 XAck 失败留 PEL 待重启重放），
+	// 故先轮询 PEL 归零再关停，消除 cancel-vs-ack 赛跑（层19，run 36334268606 双 shard 复现）。
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		poll, err := rdb.XPending(context.Background(), streamKey, group).Result()
+		if err != nil {
+			t.Fatalf("XPending: %v", err)
+		}
+		if poll.Count == 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("PEL count = %d after successful replay, want 0 (acked within 2s)", poll.Count)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
 	drainWorker(t, cancel, runResult)
 
 	pending, err := rdb.XPending(context.Background(), streamKey, group).Result()
