@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
-import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/offline/local_database_store.dart';
 import 'package:sparkle/core/offline/models/cached_list_snapshot.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
@@ -177,7 +176,6 @@ class LocalDatabase {
       PendingUpdateSchema,
       LocalCRDTSnapshotSchema,
       OutboxItemSchema,
-      UserAnalyticsEventSchema,
       TranslationRecordSchema,
       TranslationWordLinkSchema,
       VocabWordSchema,
@@ -199,7 +197,6 @@ class LocalDatabase {
       await isar.pendingUpdates.clear();
       await isar.localCRDTSnapshots.clear();
       await isar.outboxItems.clear();
-      await isar.userAnalyticsEvents.clear();
       await isar.focusSessionRecords.clear();
       await isar.cachedStatisticsModels.clear();
       await isar.cachedListSnapshots.clear();
@@ -220,7 +217,6 @@ class LocalDatabase {
   IsarCollection<PendingUpdate> get pendingUpdates => isar.pendingUpdates;
   IsarCollection<LocalCRDTSnapshot> get crdtSnapshots => isar.localCRDTSnapshots;
   IsarCollection<OutboxItem> get outboxItems => isar.outboxItems;
-  IsarCollection<UserAnalyticsEvent> get analyticsEvents => isar.userAnalyticsEvents;
   IsarCollection<FocusSessionRecord> get focusSessionRecords => isar.focusSessionRecords;
   IsarCollection<CachedStatisticsModel> get cachedStatistics => isar.cachedStatisticsModels;
   IsarCollection<CachedListSnapshot> get cachedListSnapshots => isar.cachedListSnapshots;

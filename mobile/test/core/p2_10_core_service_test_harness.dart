@@ -12,7 +12,6 @@ import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_
     show ConnectivityPlatform;
 import 'package:dio/dio.dart';
 import 'package:isar/isar.dart';
-import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
@@ -47,8 +46,7 @@ Future<P2TestIsar> openP2TestIsar(String prefix) async {
       PendingUpdateSchema,
       LocalCRDTSnapshotSchema,
       OutboxItemSchema,
-      UserAnalyticsEventSchema,
-    ],
+          ],
     directory: tempDir.path,
     name: '${prefix}_${DateTime.now().microsecondsSinceEpoch}',
   );

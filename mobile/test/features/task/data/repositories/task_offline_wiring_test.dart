@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
-import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:sparkle/core/offline/local_database.dart';
@@ -40,8 +39,7 @@ void main() {
         PendingUpdateSchema,
         LocalCRDTSnapshotSchema,
         OutboxItemSchema,
-        UserAnalyticsEventSchema,
-        CachedListSnapshotSchema,
+                CachedListSnapshotSchema,
       ],
       directory: tempDir.path,
     );

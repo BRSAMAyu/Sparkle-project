@@ -10,7 +10,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:isar/isar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/app/routes.dart';
-import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/navigation/cold_start_motion.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
@@ -73,8 +72,7 @@ void main() {
         PendingUpdateSchema,
         LocalCRDTSnapshotSchema,
         OutboxItemSchema,
-        UserAnalyticsEventSchema,
-        TranslationRecordSchema,
+                TranslationRecordSchema,
         TranslationWordLinkSchema,
         VocabWordSchema,
         VocabReviewSchema,

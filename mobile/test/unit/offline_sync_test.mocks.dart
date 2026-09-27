@@ -4,27 +4,26 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
-import 'dart:typed_data' as _i18;
+import 'dart:typed_data' as _i17;
 
-import 'package:connectivity_plus/connectivity_plus.dart' as _i15;
+import 'package:connectivity_plus/connectivity_plus.dart' as _i14;
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart'
-    as _i16;
+    as _i15;
 import 'package:dio/dio.dart' as _i3;
 import 'package:isar/isar.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i17;
-import 'package:sparkle/core/analytics/models/user_analytics_event.dart' as _i8;
-import 'package:sparkle/core/network/api_client.dart' as _i14;
+import 'package:mockito/src/dummies.dart' as _i16;
+import 'package:sparkle/core/network/api_client.dart' as _i13;
 import 'package:sparkle/core/offline/local_database.dart' as _i5;
-import 'package:sparkle/core/offline/models/cached_list_snapshot.dart' as _i11;
-import 'package:sparkle/core/offline/models/focus_session_record.dart' as _i9;
-import 'package:sparkle/core/offline/models/offline_chat_message.dart' as _i12;
+import 'package:sparkle/core/offline/models/cached_list_snapshot.dart' as _i10;
+import 'package:sparkle/core/offline/models/focus_session_record.dart' as _i8;
+import 'package:sparkle/core/offline/models/offline_chat_message.dart' as _i11;
 import 'package:sparkle/core/offline/models/translation_record.dart' as _i6;
 import 'package:sparkle/core/offline/models/vocab_word.dart' as _i7;
-import 'package:sparkle/core/offline/sync_engine.dart' as _i19;
-import 'package:sparkle/core/services/websocket_service.dart' as _i13;
+import 'package:sparkle/core/offline/sync_engine.dart' as _i18;
+import 'package:sparkle/core/services/websocket_service.dart' as _i12;
 import 'package:sparkle/core/statistics/data/models/cached_statistics_model.dart'
-    as _i10;
+    as _i9;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -232,54 +231,44 @@ class MockLocalDatabase extends _i1.Mock implements _i5.LocalDatabase {
       ) as _i2.IsarCollection<_i5.OutboxItem>);
 
   @override
-  _i2.IsarCollection<_i8.UserAnalyticsEvent> get analyticsEvents =>
-      (super.noSuchMethod(
-        Invocation.getter(#analyticsEvents),
-        returnValue: _FakeIsarCollection_1<_i8.UserAnalyticsEvent>(
-          this,
-          Invocation.getter(#analyticsEvents),
-        ),
-      ) as _i2.IsarCollection<_i8.UserAnalyticsEvent>);
-
-  @override
-  _i2.IsarCollection<_i9.FocusSessionRecord> get focusSessionRecords =>
+  _i2.IsarCollection<_i8.FocusSessionRecord> get focusSessionRecords =>
       (super.noSuchMethod(
         Invocation.getter(#focusSessionRecords),
-        returnValue: _FakeIsarCollection_1<_i9.FocusSessionRecord>(
+        returnValue: _FakeIsarCollection_1<_i8.FocusSessionRecord>(
           this,
           Invocation.getter(#focusSessionRecords),
         ),
-      ) as _i2.IsarCollection<_i9.FocusSessionRecord>);
+      ) as _i2.IsarCollection<_i8.FocusSessionRecord>);
 
   @override
-  _i2.IsarCollection<_i10.CachedStatisticsModel> get cachedStatistics =>
+  _i2.IsarCollection<_i9.CachedStatisticsModel> get cachedStatistics =>
       (super.noSuchMethod(
         Invocation.getter(#cachedStatistics),
-        returnValue: _FakeIsarCollection_1<_i10.CachedStatisticsModel>(
+        returnValue: _FakeIsarCollection_1<_i9.CachedStatisticsModel>(
           this,
           Invocation.getter(#cachedStatistics),
         ),
-      ) as _i2.IsarCollection<_i10.CachedStatisticsModel>);
+      ) as _i2.IsarCollection<_i9.CachedStatisticsModel>);
 
   @override
-  _i2.IsarCollection<_i11.CachedListSnapshot> get cachedListSnapshots =>
+  _i2.IsarCollection<_i10.CachedListSnapshot> get cachedListSnapshots =>
       (super.noSuchMethod(
         Invocation.getter(#cachedListSnapshots),
-        returnValue: _FakeIsarCollection_1<_i11.CachedListSnapshot>(
+        returnValue: _FakeIsarCollection_1<_i10.CachedListSnapshot>(
           this,
           Invocation.getter(#cachedListSnapshots),
         ),
-      ) as _i2.IsarCollection<_i11.CachedListSnapshot>);
+      ) as _i2.IsarCollection<_i10.CachedListSnapshot>);
 
   @override
-  _i2.IsarCollection<_i12.OfflineChatMessage> get offlineChatMessages =>
+  _i2.IsarCollection<_i11.OfflineChatMessage> get offlineChatMessages =>
       (super.noSuchMethod(
         Invocation.getter(#offlineChatMessages),
-        returnValue: _FakeIsarCollection_1<_i12.OfflineChatMessage>(
+        returnValue: _FakeIsarCollection_1<_i11.OfflineChatMessage>(
           this,
           Invocation.getter(#offlineChatMessages),
         ),
-      ) as _i2.IsarCollection<_i12.OfflineChatMessage>);
+      ) as _i2.IsarCollection<_i11.OfflineChatMessage>);
 
   @override
   _i4.Future<void> init() => (super.noSuchMethod(
@@ -305,7 +294,7 @@ class MockLocalDatabase extends _i1.Mock implements _i5.LocalDatabase {
 /// A class which mocks [WebSocketService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockWebSocketService extends _i1.Mock implements _i13.WebSocketService {
+class MockWebSocketService extends _i1.Mock implements _i12.WebSocketService {
   MockWebSocketService() {
     _i1.throwOnMissingStub(this);
   }
@@ -358,7 +347,7 @@ class MockWebSocketService extends _i1.Mock implements _i13.WebSocketService {
 /// A class which mocks [ApiClient].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockApiClient extends _i1.Mock implements _i14.ApiClient {
+class MockApiClient extends _i1.Mock implements _i13.ApiClient {
   MockApiClient() {
     _i1.throwOnMissingStub(this);
   }
@@ -499,7 +488,7 @@ class MockApiClient extends _i1.Mock implements _i14.ApiClient {
       ) as _i4.Future<_i3.Response<T>>);
 
   @override
-  _i4.Stream<_i14.SSEEvent> getStream(
+  _i4.Stream<_i13.SSEEvent> getStream(
     String? path, {
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? headers,
@@ -513,11 +502,11 @@ class MockApiClient extends _i1.Mock implements _i14.ApiClient {
             #headers: headers,
           },
         ),
-        returnValue: _i4.Stream<_i14.SSEEvent>.empty(),
-      ) as _i4.Stream<_i14.SSEEvent>);
+        returnValue: _i4.Stream<_i13.SSEEvent>.empty(),
+      ) as _i4.Stream<_i13.SSEEvent>);
 
   @override
-  _i4.Stream<_i14.SSEEvent> postStream(
+  _i4.Stream<_i13.SSEEvent> postStream(
     String? path, {
     Object? data,
   }) =>
@@ -527,35 +516,35 @@ class MockApiClient extends _i1.Mock implements _i14.ApiClient {
           [path],
           {#data: data},
         ),
-        returnValue: _i4.Stream<_i14.SSEEvent>.empty(),
-      ) as _i4.Stream<_i14.SSEEvent>);
+        returnValue: _i4.Stream<_i13.SSEEvent>.empty(),
+      ) as _i4.Stream<_i13.SSEEvent>);
 }
 
 /// A class which mocks [Connectivity].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockConnectivity extends _i1.Mock implements _i15.Connectivity {
+class MockConnectivity extends _i1.Mock implements _i14.Connectivity {
   MockConnectivity() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.Stream<List<_i16.ConnectivityResult>> get onConnectivityChanged =>
+  _i4.Stream<List<_i15.ConnectivityResult>> get onConnectivityChanged =>
       (super.noSuchMethod(
         Invocation.getter(#onConnectivityChanged),
-        returnValue: _i4.Stream<List<_i16.ConnectivityResult>>.empty(),
-      ) as _i4.Stream<List<_i16.ConnectivityResult>>);
+        returnValue: _i4.Stream<List<_i15.ConnectivityResult>>.empty(),
+      ) as _i4.Stream<List<_i15.ConnectivityResult>>);
 
   @override
-  _i4.Future<List<_i16.ConnectivityResult>> checkConnectivity() =>
+  _i4.Future<List<_i15.ConnectivityResult>> checkConnectivity() =>
       (super.noSuchMethod(
         Invocation.method(
           #checkConnectivity,
           [],
         ),
-        returnValue: _i4.Future<List<_i16.ConnectivityResult>>.value(
-            <_i16.ConnectivityResult>[]),
-      ) as _i4.Future<List<_i16.ConnectivityResult>>);
+        returnValue: _i4.Future<List<_i15.ConnectivityResult>>.value(
+            <_i15.ConnectivityResult>[]),
+      ) as _i4.Future<List<_i15.ConnectivityResult>>);
 }
 
 /// A class which mocks [Isar].
@@ -569,7 +558,7 @@ class MockIsar extends _i1.Mock implements _i2.Isar {
   @override
   String get name => (super.noSuchMethod(
         Invocation.getter(#name),
-        returnValue: _i17.dummyValue<String>(
+        returnValue: _i16.dummyValue<String>(
           this,
           Invocation.getter(#name),
         ),
@@ -597,8 +586,8 @@ class MockIsar extends _i1.Mock implements _i2.Isar {
           #txn,
           [callback],
         ),
-        returnValue: _i17.ifNotNull(
-              _i17.dummyValueOrNull<T>(
+        returnValue: _i16.ifNotNull(
+              _i16.dummyValueOrNull<T>(
                 this,
                 Invocation.method(
                   #txn,
@@ -627,8 +616,8 @@ class MockIsar extends _i1.Mock implements _i2.Isar {
           [callback],
           {#silent: silent},
         ),
-        returnValue: _i17.ifNotNull(
-              _i17.dummyValueOrNull<T>(
+        returnValue: _i16.ifNotNull(
+              _i16.dummyValueOrNull<T>(
                 this,
                 Invocation.method(
                   #writeTxn,
@@ -654,7 +643,7 @@ class MockIsar extends _i1.Mock implements _i2.Isar {
           #txnSync,
           [callback],
         ),
-        returnValue: _i17.dummyValue<T>(
+        returnValue: _i16.dummyValue<T>(
           this,
           Invocation.method(
             #txnSync,
@@ -674,7 +663,7 @@ class MockIsar extends _i1.Mock implements _i2.Isar {
           [callback],
           {#silent: silent},
         ),
-        returnValue: _i17.dummyValue<T>(
+        returnValue: _i16.dummyValue<T>(
           this,
           Invocation.method(
             #writeTxnSync,
@@ -830,7 +819,7 @@ class MockIsarCollection<OBJ> extends _i1.Mock
   @override
   String get name => (super.noSuchMethod(
         Invocation.getter(#name),
-        returnValue: _i17.dummyValue<String>(
+        returnValue: _i16.dummyValue<String>(
           this,
           Invocation.getter(#name),
         ),
@@ -1164,7 +1153,7 @@ class MockIsarCollection<OBJ> extends _i1.Mock
       );
 
   @override
-  _i4.Future<void> importJsonRaw(_i18.Uint8List? jsonBytes) =>
+  _i4.Future<void> importJsonRaw(_i17.Uint8List? jsonBytes) =>
       (super.noSuchMethod(
         Invocation.method(
           #importJsonRaw,
@@ -1175,7 +1164,7 @@ class MockIsarCollection<OBJ> extends _i1.Mock
       ) as _i4.Future<void>);
 
   @override
-  void importJsonRawSync(_i18.Uint8List? jsonBytes) => super.noSuchMethod(
+  void importJsonRawSync(_i17.Uint8List? jsonBytes) => super.noSuchMethod(
         Invocation.method(
           #importJsonRawSync,
           [jsonBytes],
@@ -1588,14 +1577,14 @@ class MockQuery<T> extends _i1.Mock implements _i2.Query<T> {
       ) as _i4.Stream<void>);
 
   @override
-  _i4.Future<R> exportJsonRaw<R>(R Function(_i18.Uint8List)? callback) =>
+  _i4.Future<R> exportJsonRaw<R>(R Function(_i17.Uint8List)? callback) =>
       (super.noSuchMethod(
         Invocation.method(
           #exportJsonRaw,
           [callback],
         ),
-        returnValue: _i17.ifNotNull(
-              _i17.dummyValueOrNull<R>(
+        returnValue: _i16.ifNotNull(
+              _i16.dummyValueOrNull<R>(
                 this,
                 Invocation.method(
                   #exportJsonRaw,
@@ -1614,13 +1603,13 @@ class MockQuery<T> extends _i1.Mock implements _i2.Query<T> {
       ) as _i4.Future<R>);
 
   @override
-  R exportJsonRawSync<R>(R Function(_i18.Uint8List)? callback) =>
+  R exportJsonRawSync<R>(R Function(_i17.Uint8List)? callback) =>
       (super.noSuchMethod(
         Invocation.method(
           #exportJsonRawSync,
           [callback],
         ),
-        returnValue: _i17.dummyValue<R>(
+        returnValue: _i16.dummyValue<R>(
           this,
           Invocation.method(
             #exportJsonRawSync,
@@ -1662,7 +1651,7 @@ class MockQueryBuilder<OBJ, R, S> extends _i1.Mock
 /// A class which mocks [SyncEngine].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSyncEngine extends _i1.Mock implements _i19.SyncEngine {
+class MockSyncEngine extends _i1.Mock implements _i18.SyncEngine {
   MockSyncEngine() {
     _i1.throwOnMissingStub(this);
   }
