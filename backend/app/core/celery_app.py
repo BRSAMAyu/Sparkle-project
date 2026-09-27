@@ -82,6 +82,12 @@ celery_app = Celery(
         # PHOTON-TUNE: 经济仪表三指标日快照（D-MONETIZE 审计 §1.6-5）。
         # 同 SESSION-GC：beat 静态条目引用其任务名，模块必须随 worker 加载（EI-02 守卫）。
         "app.tasks.economy_metrics_snapshot",
+        # V3-FIX-340（wt646 SPLIT 裁决的接线半）：学习画像日刷新 + 推荐缓存过期
+        # 清理，两模块 beat 静态条目引用其任务名，必须随 worker 加载（EI-02 守卫）。
+        # 退役半：update_similarities.py 的两个相似度任务已删除（读面零产品消费者），
+        # 不再回来——除非推荐位消费面先落地。
+        "app.tasks.learning_profile_refresh",
+        "app.tasks.recommendation_cache_cleanup",
         # EI-11: signals_learning_worker 已从 backend/workers/ 顶层包并入 app/workers/，
         # include 用 app.* 全路径，消除双根歧义（pytest 进程内顶层 `workers` 名
         # 会被 conftest 的 sys.path 前排抢占为 app.workers）。
@@ -155,6 +161,9 @@ celery_app.conf.update(
         "tasks.cleanup_expired_user_sessions": {"queue": "low_priority"},
         # PHOTON-TUNE: 经济仪表日快照（只读聚合，可延迟，走 low 车道）
         "tasks.economy_metrics_snapshot": {"queue": "low_priority"},
+        # V3-FIX-340: 学习画像日刷新 / 推荐缓存过期清理（纯 DB 批量读写，可延迟）
+        "tasks.update_user_learning_profiles": {"queue": "low_priority"},
+        "tasks.expire_old_recommendation_cache": {"queue": "low_priority"},
         "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
         "generate_capsules_batch": {"queue": "glm_batch"},
         "analyze_cognitive_fragment_batch": {"queue": "glm_batch"},
@@ -1084,6 +1093,21 @@ celery_app.conf.beat_schedule = {
     "photon-economy-metrics-daily": {
         "task": "tasks.economy_metrics_snapshot",
         "schedule": crontab(hour=5, minute=40),
+        "options": {"queue": "low_priority"},
+    },
+    # V3-FIX-340 · 学习画像日刷新（UserLearningProfile 唯一写入方；活消费链=
+    # SeedExtractor._onboarding_seeds 的 chat 上下文/仿真种子）。02:20 与
+    # intervention-outcomes-full（02:00）错峰；路由与 beat 双处显式 low_priority。
+    "learning-profile-daily-refresh": {
+        "task": "tasks.update_user_learning_profiles",
+        "schedule": crontab(hour=2, minute=20),
+        "options": {"queue": "low_priority"},
+    },
+    # V3-FIX-340 · 推荐缓存过期清扫（RecommendationCache 活写入方=community
+    # 好友/群组推荐缓存；过期行此前无全局清扫）。每小时一次，low 车道。
+    "recommendation-cache-expiry-hourly": {
+        "task": "tasks.expire_old_recommendation_cache",
+        "schedule": 3600.0,
         "options": {"queue": "low_priority"},
     },
     # 每天早上8点生成日报

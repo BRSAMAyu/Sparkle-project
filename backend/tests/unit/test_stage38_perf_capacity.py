@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock
 from uuid import uuid4
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, Mock
 
-from app.tasks.update_similarities import _update_learning_profiles
+from app.tasks.learning_profile_refresh import _update_learning_profiles
 
 
 @pytest.mark.asyncio
@@ -24,9 +24,9 @@ async def test_update_learning_profiles_flushes_in_batches(monkeypatch):
 
     db.execute = AsyncMock(side_effect=[users_result, profile_result, profile_result, profile_result])
 
-    monkeypatch.setattr("app.tasks.update_similarities.SIMILARITY_BATCH_FLUSH_SIZE", 2)
+    monkeypatch.setattr("app.tasks.learning_profile_refresh.SIMILARITY_BATCH_FLUSH_SIZE", 2)
     monkeypatch.setattr(
-        "app.tasks.update_similarities._get_user_learning_stats",
+        "app.tasks.learning_profile_refresh._get_user_learning_stats",
         AsyncMock(
             side_effect=[
                 {"subject_distribution": {"math": 1}, "total_study_minutes": 10, "total_items_completed": 1},
