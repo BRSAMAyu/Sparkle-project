@@ -1,29 +1,28 @@
-"""
-权限控制服务
-Permission Service - 统一权限检查和管理
+"""角色权限映射常量（原「权限控制服务」死 enforcement 面已退役）。
 
-功能:
-- 统一权限枚举定义
-- 角色权限映射
-- 权限检查装饰器
-- 资源访问控制
+V3-FIX-346 如实化裁决（wt655，FIX-339 退役删除先例）：
+
+本模块的可达消费面只有「角色→权限清单」映射——auth.py 注册流程取
+MEMBER 清单写入审计元数据与 user.registered 事件（write-only 遥测）。
+
+原宣称「统一权限检查和管理」的 enforcement 机械（check_permission/
+check_permissions/get_member_role/is_admin/is_owner/can_mute_user/
+can_kick_user + require_permission/require_admin/require_owner 三装饰器）
+经 wt652 深查为全仓零调用方的死平行实现，且装饰器取参
+``kwargs.get('current_user', {}).get('id')`` 对 ORM User 对象必
+AttributeError（latent bug，因从不被调用而从未暴露），已全部删除。
+
+真实的群管权限 enforcement 在 community_service.GroupService.
+_can_manage_member（operator/target 角色判禁言/踢人，单一实现，
+tests/unit/test_v3_fix346_permission_surface_truth.py 钉死其语义）。
+未来如需统一权限装饰器，须带 ORM 取参修复+调用方+测试重建，
+不得从本模块历史版本复活死代码。
 """
 from __future__ import annotations
 
-from collections.abc import Callable
 from enum import StrEnum
-from functools import wraps
-from typing import Any, TypeVar
-from uuid import UUID
 
-from fastapi import HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.community import (
-    GroupMember,
-    GroupRole,
-)
+from app.models.community import GroupRole
 
 
 class Permission(StrEnum):
@@ -148,272 +147,9 @@ ROLE_PERMISSIONS: dict[GroupRole, set[Permission]] = {
 
 
 class PermissionService:
-    """权限服务"""
+    """角色权限映射查询（唯一消费方：auth.py 注册审计遥测）"""
 
     @staticmethod
     def get_role_permissions(role: GroupRole) -> set[Permission]:
         """获取角色的所有权限"""
         return ROLE_PERMISSIONS.get(role, set())
-
-    @staticmethod
-    async def check_permission(
-        db: AsyncSession,
-        user_id: UUID,
-        group_id: UUID,
-        permission: Permission
-    ) -> bool:
-        """
-        检查用户是否拥有指定权限
-
-        Args:
-            db: 数据库会话
-            user_id: 用户ID
-            group_id: 群组ID
-            permission: 需要检查的权限
-
-        Returns:
-            是否拥有权限
-        """
-        # 获取用户在群组中的角色
-        result = await db.execute(
-            select(GroupMember).where(
-                GroupMember.group_id == group_id,
-                GroupMember.user_id == user_id,
-                GroupMember.not_deleted_filter()
-            )
-        )
-        member = result.scalar_one_or_none()
-
-        if not member:
-            return False
-
-        # 检查角色权限
-        role_permissions = PermissionService.get_role_permissions(member.role)
-        return permission in role_permissions
-
-    @staticmethod
-    async def check_permissions(
-        db: AsyncSession,
-        user_id: UUID,
-        group_id: UUID,
-        permissions: set[Permission],
-        require_all: bool = True
-    ) -> bool:
-        """
-        检查用户是否拥有多个权限
-
-        Args:
-            db: 数据库会话
-            user_id: 用户ID
-            group_id: 群组ID
-            permissions: 需要检查的权限集合
-            require_all: 是否需要全部权限
-
-        Returns:
-            是否拥有权限
-        """
-        # 获取用户在群组中的角色
-        result = await db.execute(
-            select(GroupMember).where(
-                GroupMember.group_id == group_id,
-                GroupMember.user_id == user_id,
-                GroupMember.not_deleted_filter()
-            )
-        )
-        member = result.scalar_one_or_none()
-
-        if not member:
-            return False
-
-        # 检查角色权限
-        role_permissions = PermissionService.get_role_permissions(member.role)
-
-        if require_all:
-            return permissions.issubset(role_permissions)
-        else:
-            return bool(permissions & role_permissions)
-
-    @staticmethod
-    async def get_member_role(
-        db: AsyncSession,
-        user_id: UUID,
-        group_id: UUID
-    ) -> GroupRole | None:
-        """获取用户在群组中的角色"""
-        result = await db.execute(
-            select(GroupMember.role).where(
-                GroupMember.group_id == group_id,
-                GroupMember.user_id == user_id,
-                GroupMember.not_deleted_filter()
-            )
-        )
-        return result.scalar_one_or_none()
-
-    @staticmethod
-    async def is_admin(
-        db: AsyncSession,
-        user_id: UUID,
-        group_id: UUID
-    ) -> bool:
-        """检查用户是否是管理员或群主"""
-        role = await PermissionService.get_member_role(db, user_id, group_id)
-        return role in (GroupRole.OWNER, GroupRole.ADMIN)
-
-    @staticmethod
-    async def is_owner(
-        db: AsyncSession,
-        user_id: UUID,
-        group_id: UUID
-    ) -> bool:
-        """检查用户是否是群主"""
-        role = await PermissionService.get_member_role(db, user_id, group_id)
-        return role == GroupRole.OWNER
-
-    @staticmethod
-    async def can_mute_user(
-        db: AsyncSession,
-        operator_id: UUID,
-        target_id: UUID,
-        group_id: UUID
-    ) -> bool:
-        """检查是否可以禁言目标用户"""
-        # 获取操作者角色
-        operator_role = await PermissionService.get_member_role(db, operator_id, group_id)
-        if not operator_role:
-            return False
-
-        # 获取目标用户角色
-        target_role = await PermissionService.get_member_role(db, target_id, group_id)
-        if not target_role:
-            return False
-
-        # 不能禁言群主
-        if target_role == GroupRole.OWNER:
-            return False
-
-        # 管理员不能禁言管理员
-        if operator_role == GroupRole.ADMIN and target_role == GroupRole.ADMIN:
-            return False
-
-        # 群主可以禁言任何人，管理员可以禁言普通成员
-        return operator_role in (GroupRole.OWNER, GroupRole.ADMIN)
-
-    @staticmethod
-    async def can_kick_user(
-        db: AsyncSession,
-        operator_id: UUID,
-        target_id: UUID,
-        group_id: UUID
-    ) -> bool:
-        """检查是否可以踢出目标用户"""
-        # 与禁言逻辑相同
-        return await PermissionService.can_mute_user(db, operator_id, target_id, group_id)
-
-
-# 装饰器类型
-F = TypeVar('F', bound=Callable[..., Any])
-
-
-def require_permission(permission: Permission):
-    """
-    权限检查装饰器
-
-    用法:
-        @require_permission(Permission.MANAGE_MEMBERS)
-        async def some_endpoint(...):
-            ...
-    """
-    def decorator(func: F) -> F:
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            # 从参数中提取db, user_id, group_id
-            # 这需要根据实际的endpoint参数命名调整
-            db = kwargs.get('db')
-            user_id = kwargs.get('current_user', {}).get('id')
-            group_id = kwargs.get('group_id')
-
-            if not all([db, user_id, group_id]):
-                raise HTTPException(
-                    status_code=500,
-                    detail="Permission check failed: missing required parameters"
-                )
-
-            has_permission = await PermissionService.check_permission(
-                db, user_id, group_id, permission
-            )
-
-            if not has_permission:
-                raise HTTPException(
-                    status_code=403,
-                    detail=f"Permission denied: {permission.value}"
-                )
-
-            return await func(*args, **kwargs)
-
-        return wrapper  # type: ignore
-
-    return decorator
-
-
-def require_admin():
-    """
-    管理员权限检查装饰器
-    """
-    def decorator(func: F) -> F:
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            db = kwargs.get('db')
-            user_id = kwargs.get('current_user', {}).get('id')
-            group_id = kwargs.get('group_id')
-
-            if not all([db, user_id, group_id]):
-                raise HTTPException(
-                    status_code=500,
-                    detail="Permission check failed: missing required parameters"
-                )
-
-            is_admin = await PermissionService.is_admin(db, user_id, group_id)
-
-            if not is_admin:
-                raise HTTPException(
-                    status_code=403,
-                    detail="Admin permission required"
-                )
-
-            return await func(*args, **kwargs)
-
-        return wrapper  # type: ignore
-
-    return decorator
-
-
-def require_owner():
-    """
-    群主权限检查装饰器
-    """
-    def decorator(func: F) -> F:
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            db = kwargs.get('db')
-            user_id = kwargs.get('current_user', {}).get('id')
-            group_id = kwargs.get('group_id')
-
-            if not all([db, user_id, group_id]):
-                raise HTTPException(
-                    status_code=500,
-                    detail="Permission check failed: missing required parameters"
-                )
-
-            is_owner = await PermissionService.is_owner(db, user_id, group_id)
-
-            if not is_owner:
-                raise HTTPException(
-                    status_code=403,
-                    detail="Owner permission required"
-                )
-
-            return await func(*args, **kwargs)
-
-        return wrapper  # type: ignore
-
-    return decorator
