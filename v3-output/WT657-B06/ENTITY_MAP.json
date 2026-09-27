@@ -1,0 +1,179 @@
+{
+  "$schema_note": "B-06 V3 核心实体映射（round-1 增量，wt657）。后续任务引用本文件定位既有权威实现，禁止为 V3 概念新建平行存储/服务。行号基准 = worktree base 8a0a868f（main）。与 wt534 基线（v3/06_agent_fleet/B06_ENTITY_TRUTH_BASELINE.md，枚举/状态机四面）互补，不重复其内容。",
+  "meta": {
+    "card": "v3/07_tasks/cards/B-06.md",
+    "agent": "wt657",
+    "worktree": "Sparkle-sysrev/wt657-b06",
+    "base_sha": "8a0a868f",
+    "date": "2026-09-25",
+    "method": "只读静态审计（file:line 亲证），无产品码改动",
+    "baseline_predecessor": "v3/06_agent_fleet/B06_ENTITY_TRUTH_BASELINE.md (wt534, f46b60d7)",
+    "related_maps": ["v3-output/A-01/RUNTIME_MAP.md", "v3-output/X-05/RUNTIME_MAP.md", "scripts/guards/check_enum_value_set_parity.py (ENUM-PARITY 76 族)"]
+  },
+  "storage_truth_chain": {
+    "storage_truth": "backend SQLAlchemy model + Alembic 迁移（唯一 schema 入口）",
+    "wire_truth_rest": "backend Pydantic schemas",
+    "wire_truth_grpc": "proto/*.proto（buf；三语言 gen/ 全 gitignore，无手改面）",
+    "gateway_derived": "gateway/internal/db/models.go = sqlc 从 schema.sql（Alembic 自动导出）生成的只读派生",
+    "mobile_derived": "mobile Dart model = wire 消费端手工镜像，值集对账由 ENUM-PARITY 守卫常驻（scripts/rule_guard_manifest.tsv:90）"
+  },
+  "quad_split": {
+    "State": {
+      "concept": "业务真值：Goal/Milestone/Action/Schedule/Artifact/Run/Membership/current constraints",
+      "entities": {
+        "Goal": "backend/app/models/goal.py goals",
+        "Plan": "backend/app/models/plan.py plans; plan_state.py plan_states; plan_execution_record.py plan_execution_records",
+        "Task/Action": "backend/app/models/task.py tasks+subtasks; execution_intent.py execution_intents; action_proposal.py action_proposals+action_proposal_transitions; card_protocol.py planning_artifacts+task_occurrences",
+        "Schedule": "backend/app/models/calendar_event.py calendar_events; execution_schedule.py execution_schedules",
+        "Artifact": "backend/app/models/card_protocol.py planning_artifacts; hybrid_journey.py hybrid_journey_artifacts; file_storage.py stored_files",
+        "Run": "backend/app/models/agent_run.py agent_runs+agent_run_transitions",
+        "Membership": "backend/app/models/community.py group_members; achievement.py study_buddies",
+        "Milestone": "无独立实体（plan_states/里程碑语义内嵌 plan 域，无专用表）"
+      },
+      "verdict": "reuse"
+    },
+    "Memory": {
+      "concept": "FACT / CONFIRMED_PREFERENCE / OBSERVATION / HYPOTHESIS / EXPERIENCE（未来可能复用的用户信息）",
+      "authority": "backend/app/services/memory_epistemic_contract.py（M-01，五记录类型唯一权威，显式声明 no second store，复用既有存储）",
+      "entities": {
+        "FACT/OBSERVATION/HYPOTHESIS/EXPERIENCE": "backend/app/models/memory.py:94 episodic_memories",
+        "CONFIRMED_PREFERENCE": "backend/app/models/memory.py:20 memory_preferences + :55 memory_goals（按表成员身份承载，非 episodic 列值）",
+        "correction/supersede": "backend/app/models/memory.py:173 memory_corrections + memory_evolution.py",
+        "scene": "backend/app/models/memory.py:151 scenes",
+        "semantic/strategy": "backend/app/models/semantic_memory.py:14 strategy_nodes + :35 semantic_links",
+        "transient": "backend/app/working_memory/service.py（Redis，会话级，契约规定不污染长期表）",
+        "sole_writer": "backend/app/services/memory_service.py:142 MemoryService = episodic_memories 唯一构造写入方（全仓 grep 亲证）"
+      },
+      "verdict": "reuse"
+    },
+    "Knowledge": {
+      "concept": "document / chunk / knowledge node / citation / embedding",
+      "entities": {
+        "document+chunk+embedding": "backend/app/models/document_chunks.py document_chunks（写入方 document_service.py + rag_indexing_service.py）",
+        "knowledge_node": "backend/app/models/galaxy.py knowledge_nodes + node_relations + knowledge_node_documents + user_node_status + node_expansion_queue（写入方 galaxy_service.py/galaxy_event_consumer.py）",
+        "task 绑定": "backend/app/models/task_resources.py task_knowledge_links + task_documents",
+        "citation": "无独立 citation 实体——provenance 由 document_chunks 溯源列 + knowledge_node_documents 关联承载（galaxy.py source_file_id 注释自述 legacy/primary provenance pointer）",
+        "检索": "backend/app/orchestration/graph_rag.py（Redis 向量 + 图检索混合）"
+      },
+      "verdict": "reuse"
+    },
+    "Events": {
+      "concept": "不可变/追加式历史",
+      "authority": "backend/app/core/event_registry.py（D-01：事件名封闭词表唯一权威 + 信封契约 + telemetry 边界）",
+      "entities": {
+        "integration_bus": "event_outbox（迁移 alembic/versions/5f2b9b3c0e6f_create_event_outbox_tables.py；引擎事务内写入、gateway RW 授权 c17_20260502_create_service_roles.py:37-46；7 天 cleanup，只承载集成通知）",
+        "durable_log": "event_store（迁移 9c4d7e8f1a2b_align_cqrs_schema_with_gateway.py:25 建表；无 ORM model；gateway/internal/cqrs/outbox/repository.go:183-197 InsertEventStoreEntry 由 outbox publisher 原子落库；Python 侧零直用）",
+        "client_telemetry": "backend/app/models/event.py:15 tracking_events（D-01 声明 non-truth，不得作为业务真源消费）",
+        "lifecycle_persistent": "backend/app/models/intervention_lifecycle.py intervention_lifecycle_events（刻意区别于会消失的 outbox）",
+        "run_history": "backend/app/models/agent_run.py:218 agent_run_transitions（append-only，与 outbox 同事务）",
+        "decision_audit": "backend/app/models/aurora_stage20.py aurora_judgment_records(充分性判定)+routing_decision_log(路由); decision_record.py decision_records(module=ai|push|task 通用决策含偏好快照) —— 三表三面不互为副本"
+      },
+      "verdict": "reuse"
+    }
+  },
+  "concepts": {
+    "UserState": {
+      "verdict": "reuse",
+      "planes": [
+        {"plane": "canonical snapshot (PG)", "entity": "backend/app/models/user_state.py:15 user_state_snapshots", "writer": "backend/app/services/state_estimator_service.py:203（telemetry-derived；读侧须 TELEMETRY_DERIVED_READ_WAIVER，先例 core/plan_context.py:291-310）"},
+        {"plane": "live context assembly (wire UserStateV1)", "entity": "backend/app/state_aggregator/service.py:162 get_user_state + schema.py UserStateFieldName 20 字段; proto/user_state.proto:304 UserStateV1", "note": "从原表活装配（episodic/focus/chat/achievement/calendar 等），不读 snapshot 表——与 snapshot 生产面互不复制"},
+        {"plane": "routing belief (Redis)", "entity": "backend/app/services/evidence/fusion_engine.py:38-43 aurora:belief_state:v1:* (TTL 7d)", "consumers": "dual_core_router/routing_engine/rl/routing_mdp"},
+        {"plane": "aurora runtime presence (Redis)", "entity": "backend/app/aurora/runtime_v1/state.py:412-427 AuroraRuntimeStore aurora:runtime:* (TTL 24h)"},
+        {"plane": "personality dynamics (PG)", "entity": "backend/app/models/aurora_stage31.py daily_behavior_vector/idiographic_associations/persdyn_attractors"}
+      ],
+      "risk_note": "五面同挂 state 名；各面边界靠注释/契约声明，无跨面一致性测试。观测级，不登记"
+    },
+    "FiveLayerModel": {
+      "verdict": "reuse (distributed)",
+      "mapping": "raw evidence = UnifiedEvidence(services/evidence/unified_evidence.py)+server events（tracking_events 被 D-01 判 non-truth）；projection = app/profile/projection_contract.py M1(source)/M2(canonical UserInsightState)；inference = M3 + FusionEngine BeliefState；shadow = safe_experiment.py assignment_mode=shadow + check_rule_be_shadow_semantics 守卫；correction = memory_corrections + conflict_resolver_service.py(KNOWN_SOURCE_LANES 档位唯一权威) + aurora/runtime_v1/correction_feedback.py",
+      "invariants": "inference/shadow 不写回 raw fact、correction 走 supersede/revoke——由 memory_epistemic_contract.py guard predicates + MemoryService 写路径执行"
+    },
+    "Aurora": {
+      "verdict": "reuse",
+      "owners": {
+        "control_decision": "backend/app/core/aurora_decision.py A-01 契约（aurora_decision.v1 冻结：intervention_type/rationale/cognition_tier/no_action_reason）——控制决策面唯一权威，四边界显式声明（C-01 证据装配/X-01 任务结构/X-02 执行分配/A-01 控制决策互不重述）",
+        "routing_plane": "backend/app/aurora/engine.py（确定性路由/降级，被 orchestration/routing_engine.py 消费）",
+        "presence_plane": "backend/app/aurora/runtime_v1/（L0-L4 能量/唤醒/决策循环；l2_intervention.py:19-39 经 A-01 契约接线）",
+        "policy": "backend/app/models/policy_patch.py aurora_policy_patches + aurora/intervention_catalog.py",
+        "judgment_telemetry": "backend/app/models/aurora_stage20.py aurora_judgment_records"
+      },
+      "dual_owner_check": "无双权威。runtime_v1/decision_loop.py:225 同名类 AuroraDecision 是会话面动作决策（emit_message/wait/schedule_wake），非 A-01 控制决策，L2 命中点显式桥接进契约（l2_intervention.py:104-127）——同名异面是导航隐患（报告观测项），非所有权分裂",
+      "contract_gap_note": "l2_intervention.py:24 自述 pipeline_context 键『写后暂无生产读者』已由 A-04 spine 真通道接通（signals/spine_orchestrator.py:2699 feed_aurora_decision）"
+    },
+    "AgentRuntime": {
+      "verdict": "reuse",
+      "owners": {
+        "chat_orchestration": "backend/app/agents/graph（ChatOrchestrator；execution_engine.py=ExecutionEngineMixin 工具执行面）",
+        "run_state": "backend/app/services/agent_run_service.py:1-30 X-05 run 状态机唯一写入权威（(user_id,idempotency_key) 唯一+FOR UPDATE 复查+封闭迁移图 core/run_state_machine.py 12 值）；网关零复制（wt534 已证）；RunLedgerStore(run_ledger.py) 保持 chat 观测定位（agent_run_service.py:33 显式声明，非双源）",
+        "execution_allocation": "backend/app/services/action_allocation_policy.py X-02（human/agent/hybrid rubric 权威；Aurora 契约只镜像生效模式）"
+      },
+      "dual_owner_check": "无双权威"
+    },
+    "Action": {
+      "verdict": "reuse",
+      "owner": "backend/app/services/action_command_service.py X-03 proposal→approve→validate→commit→receipt 唯一权威（幂等骨架=agent_run_service 同构；D-01 词表 action.proposed/accepted/rejected；event_outbox 同事务）；任务结构=X-01 action_plan.v1（tasks 表 V3 列）",
+      "dual_owner_check": "无双权威；A-01 决策侧仅携 action_proposal_ref 指针（task://<id>），不内联任务结构"
+    },
+    "Memory_RAG": "见 quad_split.Memory / quad_split.Knowledge",
+    "Task_Plan": "实体映射见 quad_split.State；枚举/状态机三面值集对齐与断链由 wt534 基线 + ENUM-PARITY 守卫（check_enum_value_set_parity.py，dual 55+passthrough 21=76 族）常驻覆盖",
+    "Event": "见 quad_split.Events",
+    "Attempt": {
+      "verdict": "reuse",
+      "entities": "backend/app/models/agent_run.py:98 attempt 列（retry 从终态开新 attempt）+ :46/:133 活跃 run 唯一索引 + idempotency_key.py idempotency_keys + execution_audit_log.py——BASELINE_V2_V2_5 所述『幂等/receipt/attempt ledger』既有实现满足，不重建"
+    },
+    "Run": "见 AgentRuntime.run_state",
+    "Permission": {
+      "verdict": "no-authority (unified concept) / reuse (components)",
+      "components": {
+        "infra_rbac": "DB 级角色授权 alembic/versions/c17_20260502_create_service_roles.py（sparkle_gateway RW=GATEWAY_RW_TABLES 37-46；sparkle_celery=ENGINE_RW+CELERY_EXTRA 152-）——表级读写权限单一事实在迁移",
+        "collab": "backend/app/models/galaxy.py:63 galaxy_user_permissions",
+        "allocation": "X-02 allocation.v1.1（human/agent/hybrid）",
+        "intervention_opt": "backend/app/models/intervention.py user_intervention_settings"
+      },
+      "note": "USER_WORLD_MODEL UserWorldSnapshot 的 capabilities/permissions 字段当前无统一实体——北极限权/信任面若需统一 permission 对象属 extend（新契约），不得复用任一组件表冒充"
+    },
+    "Outbox": {
+      "verdict": "reuse",
+      "chain": "引擎事务内写 event_outbox（D-01 封闭词表+event_sequence_counters 单调序列）→ gateway cqrs/outbox/publisher.go 原子落 event_store + 发 Redis streams → 投影消费。事件名词表权威 = backend/app/core/event_registry.py（Free-string 事件名=契约违规）"
+    }
+  },
+  "north_star_machines": {
+    "UserWorldModel": "reuse——四分法映射见 quad_split；五层不变量见 concepts.FiveLayerModel",
+    "ContextCompiler": "reuse——backend/app/core/context_pack.py + context_pack_runs/context_budget_profiles/context_pack_feedback + M-07 缓存失效（memory_epoch）；UserStateV1 投影入 state 段（orchestration/context_sources.py:34,139,731）",
+    "ConflictResolver": "reuse——backend/app/services/conflict_resolver_service.py（KNOWN_SOURCE_LANES 档位唯一权威，M-01 委托）",
+    "ExperienceMemory": "reuse——backend/app/core/experience_memory.py + intervention_strategy_outcomes/community_strategy_outcomes（D-05 摘要聚合）",
+    "AuroraPolicy": "reuse——aurora_policy_patches + aurora/intervention_policy.py + policy_loader.py（bounded plasticity）",
+    "HumanAIAllocation": "reuse——X-02 action_allocation_policy.py（decide_allocation/vet_agent_offer）",
+    "OutcomeLedger": "reuse——backend/app/core/outcome_ledger.py + intervention_outcome.py behavioral_outcomes + community_outcome_evidence",
+    "TrustLayer": "partial——组件在位（audit_log.py 多审计表/compliance.py/research_consent.py/memory 用户控制 C-07/safe_experiment 影子语义守卫 BE），统一 Trust 面属后续 UI/runtime 卡，本卡只证组件真实存在，不宣称完成"
+  },
+  "duplicate_truth_scan": {
+    "task": "FOUND：gateway 任务 CQRS 投影族（task:view:*/user:tasks:*/user:task:stats:* Redis 键）双投影器零读面 → V3-FIX-355（本卡新登记）。任务真实读面 = 引擎 REST（mobile api）+ gateway internal/service/user_context.go 直读 PG",
+    "run": "已知已声明：PG agent_runs（权威）vs Redis RunLedgerStore（chat 观测）——agent_run_service.py:33 显式定位，wt534 §2.5 在册，非新发现",
+    "profile": "无同概念双写：user_learning_profiles 写=tasks/learning_profile_refresh.py:96（V3-FIX-340 已接线 celery）读=simulation/seed_extractor.py 单链；UserInsightState/BigFive=画像投影面；understanding_*_daily=理解度日表；aurora_stage31=人格动力学——各面消费者不相交",
+    "memory": "episodic_memories 全仓唯一构造写入方 = MemoryService（grep 亲证）；cognitive_fragments 是输入碎片（经 unified_analysis_service 分析管线），非第二记忆存储",
+    "user_state": "五面多 plane（见 concepts.UserState），边界靠声明；今日无同数据双写",
+    "enum_parity": "wt534 指出的结构性空档（backend StrEnum ↔ mobile Dart enum 零守卫）已由 ENUM-PARITY 守卫封堵（scripts/guards/check_enum_value_set_parity.py，manifest:90；76 族）——基线遗留项不再开放"
+  },
+  "findings_new": [
+    {
+      "id": "V3-FIX-355",
+      "severity": "P3",
+      "title": "gateway 任务 CQRS 投影族零读面双投影器",
+      "evidence": [
+        "gateway/internal/worker/task_sync.go:189-348（live 投影写 task:view:*/user:tasks:*）+ :33-37 流定义 + setup.go:396,462 注册并运行",
+        "gateway/internal/cqrs/projection/handlers.go:287-560（TaskProjectionHandler，event_store 重放路径写同批键）+ :339 reset 键清单 + :417-514 stats HIncrBy + setup.go:386-387 注册",
+        "零读面：gateway/internal/{handler,service,agent} 无任何 task:view/user:tasks 读；唯一 Get(task:view) 在 task_sync.go:403 =投影自维护；引擎/mobile/scripts 无此键（scripts/devtools/audit_community_readmodel.py:272 仅 SCAN 计数）",
+        "真实任务读面：mobile 走引擎 REST；gateway user_context 直读 PG（wt534 基线 §1 task 行）"
+      ],
+      "action": "T-待裁决：删任务投影族+TaskSyncWorker/TaskProjectionHandler 任务段（community/galaxy 投影另查不波及），或先指定真实消费面再保留单投影器"
+    }
+  ],
+  "observations_not_registered": [
+    "AuroraDecision 同名双类（runtime_v1/decision_loop.py:225 会话面 vs core/aurora_decision.py A-01 契约面）：同名异面导航隐患，桥接已声明（l2_intervention.py:19-39），无双权威",
+    "user_state 五 plane 无跨面一致性测试（边界靠声明+waiver 注释）",
+    "decision_records 表（module=ai|push|task 含 preferences_snapshot）与 A-01 契约记录面并存但用途不同（通用决策留痕 vs 控制决策契约）",
+    "Milestone 无独立实体（plan_states 内嵌）——若 NORTH_STAR 后续需要显式 Milestone 对象属 extend",
+    "event_store 无 Python ORM 面（gateway 专用持久日志，D-01 词表权威仍在 backend）——单向流健康，仅记录形态"
+  ]
+}
