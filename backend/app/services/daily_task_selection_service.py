@@ -108,11 +108,22 @@ def _as_local_date(value: date | datetime | None, tz_name: str) -> date | None:
 def _plan_current_day(plan: Plan, today: date, tz_name: str = "UTC") -> int | None:
     """1-based day a sprint plan has progressed to, or None when unknown.
 
-    plan.target_date 是日界语义（透传）；plan.created_at 是 UTC 存储列，
-    按用户本地日换算（V3-FIX-221）后与 today 同钟相减。
+    plan.target_date 是日界语义（透传）；plan.created_at 是**本地墙上钟**
+    存储列（mobile/服务写入无时区后缀的本地 ISO，wt582 已实证同库约定；
+    JOURNEY 计划 7917e864 created 21:15:30 与 day0 会话 run_id 同钟），
+    按墙上钟语义直接取 ``.date()`` 与 today 同钟相减（V3-FIX-314）。
+    修前经 ``_as_local_date``（V3-FIX-221 UTC 假设统一入口）+8 换算，
+    created 21:15 被推成次日 → total_days 少一天 → current_day 恒偏小 →
+    当日 day:N 任务被 today 面排除（JOURNEY day6 门 /tasks/today 返回
+    []）。同族约定：exam_sprint_dashboard_service._derive_initial_days_left
+    与 api/v1/plans._initial_days_for_today 均为
+    ``(target_date - created_at.date()).days``（无 tz 换算），本函数注释
+    自称「the same convention」却在 221 统一入口时被误带成 UTC 换算。
+    tz_name 形参保留仅为调用方签名兼容（_is_today_relevant 位置传参）——
+    墙上钟语义下 day 数学与读侧时区无关。
     """
     target_date = getattr(plan, "target_date", None)
-    created = _as_local_date(getattr(plan, "created_at", None), tz_name)
+    created = _as_date(getattr(plan, "created_at", None))
     if target_date is None or created is None:
         return None
     total_days = (target_date - created).days
