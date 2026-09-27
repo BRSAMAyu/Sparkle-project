@@ -2101,7 +2101,7 @@ class DemoDataService {
       'flame': {
         'level': 15,
         'brightness': 85,
-        'today_focus_minutes': 120,
+        'today_completed_task_minutes': 120,
         'tasks_completed':
             tasks.where((task) => task.status == TaskStatus.completed).length,
         'nudge_message': '你今天已经完成了理工复盘和语言热身，晚上更适合做轻一点的表达与整理。',

@@ -150,7 +150,7 @@ class PredictiveService {
     return {
       'dailyStats': {
         'tasksCompleted': flame['tasks_completed'],
-        'focusTime': flame['today_focus_minutes'],
+        'focusTime': flame['today_completed_task_minutes'],
         'learningProgress': growth['progress'],
       },
       'weeklyTrend': [0.46, 0.49, 0.53, 0.6, 0.66, 0.71, 0.74],

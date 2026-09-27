@@ -474,7 +474,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       final flame = FlameData(
         level: _asInt(flameMap['level'], fallback: 1),
         brightness: _asDouble(flameMap['brightness'], fallback: 0.5),
-        todayFocusMinutes: _asInt(flameMap['today_focus_minutes']),
+        todayFocusMinutes: _asInt(flameMap['today_completed_task_minutes']),
         tasksCompleted: _asInt(flameMap['tasks_completed']),
         nudgeMessage: _asString(
           flameMap['nudge_message'],

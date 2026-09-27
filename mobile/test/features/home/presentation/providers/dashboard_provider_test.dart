@@ -45,7 +45,7 @@ void main() {
             'flame': {
               'level': 4,
               'brightness': 0.75,
-              'today_focus_minutes': 45,
+              'today_completed_task_minutes': 45,
             },
             'sprint': {
               'id': 'sprint-1',

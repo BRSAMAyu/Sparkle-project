@@ -1,7 +1,7 @@
 """V3-FIX-329（dashboard flame 卡时钟族修漏）红绿测：今日桶与 days_left 切用户本地日。
 
 定界（wt624 B-02 审计 F2；37/197/209/211 同族余量）：
-- ``_get_today_focus_minutes``/``_get_today_completed_tasks`` 修前
+- ``_get_today_completed_task_minutes``/``_get_today_completed_tasks`` 修前
   ``today_start = _utcnow().replace(hour=0, …)`` 是 naive-UTC 零点，直比
   ``Task.completed_at``（UTC 存储列，V3-FIX-37 定界）——UTC+8 晨间
   （本地 00:00-08:00，UTC 尚在前日）今日桶混入本地昨日 08:00-24:00 全部
@@ -16,7 +16,8 @@
 ``local_date`` 取用户本地今日 + ``local_midnight_as_utc_naive`` 换算 UTC
 存储列窗口起点；时区沿 wt608 先例 PushPreference.timezone 标量直查、缺省
 Asia/Shanghai。本卡只修日界不改数据源语义（focus 实为任务 actual_minutes
-而非 FocusSession——命名面留报告）。
+而非 FocusSession——命名面由 V3-FIX-332 改名 today_completed_task_minutes
+收口）。
 
 冻结钟（沿双冻结钟族）：NOW_LATE = 2026-09-25 20:00 UTC（上海 = 09-26
 04:00 晨间窗口）；UTC 控制组用户双版桶位不变。
@@ -111,12 +112,12 @@ async def test_flame_today_buckets_follow_user_local_day(
 
     service = DashboardService(db_session)
 
-    focus_minutes = await service._get_today_focus_minutes(user.id)
+    completed_task_minutes = await service._get_today_completed_task_minutes(user.id)
     completed_count = await service._get_today_completed_tasks(user.id)
 
-    assert focus_minutes == 45, (
+    assert completed_task_minutes == 45, (
         f"上海晨间今日桶应按本地零点（09-26 00:00 = 09-25 16:00Z）只计凌晨任务 45 分钟；"
-        f"修前 UTC 日界（09-25 00:00Z）把本地昨日白天 50 分钟误计入今日桶：{focus_minutes}"
+        f"修前 UTC 日界（09-25 00:00Z）把本地昨日白天 50 分钟误计入今日桶：{completed_task_minutes}"
     )
     assert completed_count == 1, (
         f"本地今日完成任务数应为 1；修前把本地昨日 2 条任务计入今日桶得 3：{completed_count}"
@@ -146,12 +147,12 @@ async def test_flame_today_buckets_negative_offset_local_evening(
 
     service = DashboardService(db_session)
 
-    focus_minutes = await service._get_today_focus_minutes(user.id)
+    completed_task_minutes = await service._get_today_completed_task_minutes(user.id)
     completed_count = await service._get_today_completed_tasks(user.id)
 
-    assert focus_minutes == 60, (
+    assert completed_task_minutes == 60, (
         f"纽约晚间今日桶应按本地零点（09-25 04:00Z）计入傍晚 60 分钟；"
-        f"修前 UTC 日界（09-26 00:00Z）把本地今日任务整段漏计：{focus_minutes}"
+        f"修前 UTC 日界（09-26 00:00Z）把本地今日任务整段漏计：{completed_task_minutes}"
     )
     assert completed_count == 1, f"本地今日完成任务数应为 1；修前 UTC 日界漏计得 0：{completed_count}"
 
@@ -177,7 +178,7 @@ async def test_flame_today_buckets_utc_user_unchanged(
 
     service = DashboardService(db_session)
 
-    assert await service._get_today_focus_minutes(user.id) == 55, "UTC 用户今日桶应保持 UTC 日界不变"
+    assert await service._get_today_completed_task_minutes(user.id) == 55, "UTC 用户今日桶应保持 UTC 日界不变"
     assert await service._get_today_completed_tasks(user.id) == 1, "UTC 用户完成数应保持 UTC 日界不变"
 
 

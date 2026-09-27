@@ -111,8 +111,8 @@ class DashboardService:
         # Get cognitive data
         cognitive = await self._get_cognitive_summary(user_id)
 
-        # Calculate today's focus minutes from completed tasks
-        today_focus_minutes = await self._get_today_focus_minutes(user_id)
+        # Calculate today's completed-task minutes (V3-FIX-332 改名消歧)
+        today_completed_task_minutes = await self._get_today_completed_task_minutes(user_id)
         tasks_completed_today = await self._get_today_completed_tasks(user_id)
         growth_dashboard = await GrowthDashboardService(self.db).build_snapshot(user_id, user=user)
 
@@ -121,7 +121,7 @@ class DashboardService:
             "flame": {
                 "level": user.flame_level,
                 "brightness": user.flame_brightness,
-                "today_focus_minutes": today_focus_minutes,
+                "today_completed_task_minutes": today_completed_task_minutes,
                 "tasks_completed": tasks_completed_today,
             },
             "sprint": sprint,
@@ -223,15 +223,18 @@ class DashboardService:
             }
         return None
 
-    async def _get_today_focus_minutes(self, user_id: UUID) -> int:
-        """Calculate today's focus time from completed tasks.
+    async def _get_today_completed_task_minutes(self, user_id: UUID) -> int:
+        """Calculate today's completed-task minutes (sum of Task.actual_minutes).
 
         V3-FIX-329：「今日」按用户本地日切（37/197/209/211 同族先例）——
         ``Task.completed_at`` 是 UTC 存储列，窗口起点用
         ``local_midnight_as_utc_naive`` 把本地零点换算成 naive-UTC 瞬间；
         修前 naive-UTC 零点直比，UTC+8 晨间今日桶混入本地昨日白天完成量、
-        UTC 负偏移时区晚间本地今日完成整段漏计。数据源语义（任务
-        actual_minutes 而非 FocusSession）保持不变，命名面另行登记。
+        UTC 负偏移时区晚间本地今日完成整段漏计。
+        V3-FIX-332：原键名 ``today_focus_minutes`` 与 growth 侧真 FocusSession
+        口径 ``focus_hours_week`` 同屏易误读为同源，改名
+        ``today_completed_task_minutes`` 消歧；数据源语义（任务
+        actual_minutes 而非 FocusSession）自始未变，纯改名零行为变化。
         """
         timezone_name = await self._resolve_user_timezone_name(user_id)
         today_start = local_midnight_as_utc_naive(local_date(_utcnow(), timezone_name), timezone_name)

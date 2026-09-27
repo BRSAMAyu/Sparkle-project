@@ -3,9 +3,7 @@ import os
 from datetime import UTC, datetime, timedelta
 
 import requests
-
 from _acceptance_common import login_with_requests
-
 
 BASE_URL = "http://127.0.0.1:8000/api/v1"
 USERNAME = os.getenv("LOCAL_SMOKE_USERNAME", "chat_test")
@@ -53,7 +51,7 @@ def main() -> None:
 
     assert weather["type"] in {"sunny", "cloudy", "rainy", "meteor"}
     assert isinstance(weather["condition"], str) and weather["condition"]
-    assert "level" in flame and "brightness" in flame and "today_focus_minutes" in flame
+    assert "level" in flame and "brightness" in flame and "today_completed_task_minutes" in flame
     assert isinstance(next_actions, list)
     assert "status" in cognitive
 

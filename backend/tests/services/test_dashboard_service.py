@@ -108,7 +108,7 @@ async def test_get_dashboard_status_caches_computed_payload():
     service._calculate_weather = AsyncMock(return_value={"type": "cloudy", "condition": "需要动起来"})
     service._get_next_actions = AsyncMock(return_value=[{"id": "t1"}])
     service._get_cognitive_summary = AsyncMock(return_value={"status": "active"})
-    service._get_today_focus_minutes = AsyncMock(return_value=45)
+    service._get_today_completed_task_minutes = AsyncMock(return_value=45)
     service._get_today_completed_tasks = AsyncMock(return_value=3)
     growth_snapshot = {
         "growth_status": {"headline": "Ava，你本周在热力学上进步了 22%"},
@@ -130,7 +130,7 @@ async def test_get_dashboard_status_caches_computed_payload():
         result = await service.get_dashboard_status(user_id)
 
     assert result["weather"]["type"] == "cloudy"
-    assert result["flame"]["today_focus_minutes"] == 45
+    assert result["flame"]["today_completed_task_minutes"] == 45
     assert result["flame"]["tasks_completed"] == 3
     assert result["growth_status"] == growth_snapshot["growth_status"]
     assert result["most_important_task"] == growth_snapshot["most_important_task"]
@@ -185,7 +185,7 @@ async def test_get_spine_status_returns_band_data():
     service._calculate_weather = AsyncMock(return_value={"type": "sunny", "condition": "晴朗"})
     service._get_next_actions = AsyncMock(return_value=[])
     service._get_cognitive_summary = AsyncMock(return_value={"status": "empty"})
-    service._get_today_focus_minutes = AsyncMock(return_value=0)
+    service._get_today_completed_task_minutes = AsyncMock(return_value=0)
     service._get_today_completed_tasks = AsyncMock(return_value=0)
 
     mock_summary = {
@@ -263,7 +263,7 @@ async def test_dashboard_payload_backward_compatible_with_spine():
     service._calculate_weather = AsyncMock(return_value={"type": "cloudy", "condition": "进度落后"})
     service._get_next_actions = AsyncMock(return_value=[{"id": "t1", "title": "复习热力学"}])
     service._get_cognitive_summary = AsyncMock(return_value={"status": "active"})
-    service._get_today_focus_minutes = AsyncMock(return_value=30)
+    service._get_today_completed_task_minutes = AsyncMock(return_value=30)
     service._get_today_completed_tasks = AsyncMock(return_value=2)
 
     with (
