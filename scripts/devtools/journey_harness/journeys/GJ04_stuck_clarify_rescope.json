@@ -1,5 +1,6 @@
 {
   "id": "GJ04",
+  "persona": "P01",
   "title": "“我卡住了” → one clarification → rescope",
   "golden_ref": "v3/05_metrics_eval/GOLDEN_JOURNEYS.md#GJ04",
   "description": "带目标用户卡住求助：Aurora 应先澄清（一次）再给出收窄后的可执行下一步。结构断言：第一轮回复必须含真实问句（？/?，即先澄清），第二轮针对补充信息给出可行动回复；完整回复留存供视觉 Reviewer 独立评分（EVAL_PROTOCOL）。注：本轮基线实测 Aurora 未先澄清直接 rescope，该 journey 对当前产品为 FAIL——这是 harness 的真实测试信号，见 v3-output/B-03/FINDINGS.md。",

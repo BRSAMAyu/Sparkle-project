@@ -157,6 +157,17 @@ class ApiDriver(BaseDriver):
         return {"text": text, "metadata": meta, "frames": frames}
 
     # ---------- step handlers ----------
+    def do_set_network(self, mode: str = "") -> tuple[bool, str, list[str]]:
+        """网络切换：api lane 明确 unsupported（原因登记，不冒充）。
+
+        api lane 是 localhost 回环直驱网关的非 UI 通道，没有可损伤的"用户侧网络"；
+        网络损伤语义属 UI 通道（web=CDP emulation，android=飞行模式）。
+        """
+        raise StepFailure(
+            f"api backend（non-ui lane）不支持 set_network（mode={mode!r}）："
+            "localhost 回环无用户侧网络可切；网络损伤请用 web/android UI 通道"
+        )
+
     def do_api_register(
         self,
         username_prefix: str = "jh",

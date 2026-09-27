@@ -1,5 +1,6 @@
 {
   "id": "GJ01",
+  "persona": "P04",
   "title": "Fresh user → register → onboarding → first useful action (home)",
   "golden_ref": "v3/05_metrics_eval/GOLDEN_JOURNEYS.md#GJ01 (Fresh user → goal → first useful action)",
   "description": "全新邮箱用户：注册 → 进入 Persona Guide onboarding（5 步）→ 完成后落到建模对话 → Skip 进入五 Tab 壳 → 回到 Cockpit 首页。对应协调卡『注册→onboarding→首页』。文本按产品实际渲染（zh-first，见 I18nService.resolveSupportedLocale 默认 zh）。",

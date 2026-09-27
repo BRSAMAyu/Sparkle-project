@@ -58,6 +58,18 @@ class MacosDriver(BaseDriver):
         if self.process and self.process.poll() is None:
             self.process.terminate()
 
+    def do_set_network(self, mode: str = "") -> tuple[bool, str, list[str]]:
+        """网络切换：macOS backend 明确 unsupported（任务卡验收「明确 unsupported 原因」）。
+
+        flutter test 进程内无网络 seam；OS 级断网会连宿主 flutter/后端栈一起撕掉，
+        无法只损伤被测 App 的网络面——需要进程级网络注入（如 Toxiproxy）才能支持，
+        属后续增量，不在本基线冒充。
+        """
+        raise StepFailure(
+            f"macos backend 不支持 set_network（mode={mode!r}）：flutter test 进程内无网络 seam，"
+            "OS 级断网会撕裂宿主工具链与后端连通；待进程级网络注入（Toxiproxy 类）增量"
+        )
+
     def do_run_journey_test(self, screenshot: str = "after_journey") -> tuple[bool, str, list[str]]:
         """运行既有 macos_journey_test.dart 并判定结果。"""
         flutter = shutil.which("flutter")

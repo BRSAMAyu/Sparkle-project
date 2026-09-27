@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .models import RunManifest, StepResult
+from .models import SIM_RUN_SCHEMA, SIM_STEP_SCHEMA, RunManifest
 
 DB_CONTAINER = "sparkle_db"
 DB_NAME = "sparkle"
@@ -78,10 +78,22 @@ class EvidenceCollector:
         return value
 
     # ---------- 汇总 ----------
-    def write_steps(self, steps: list[StepResult]) -> Path:
+    def write_steps(self, manifest: RunManifest) -> Path:
+        """steps.json 带 simulator schema envelope（逐步证据可被机器识别为仿真数据，
+        与 sparkle.northstar.real-drive.step.v1 的真实驱动证据在 schema 层互斥）。"""
         path = self.run_dir / "steps.json"
+        payload = {
+            "schema": SIM_STEP_SCHEMA,
+            "run_schema": SIM_RUN_SCHEMA,
+            "run_id": manifest.run_id,
+            "journey_id": manifest.journey_id,
+            "backend": manifest.backend,
+            "lane": manifest.lane,
+            "ok": manifest.ok,
+            "steps": [s.to_dict() for s in manifest.steps],
+        }
         path.write_text(
-            json.dumps([s.to_dict() for s in steps], ensure_ascii=False, indent=2),
+            json.dumps(payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
         return path

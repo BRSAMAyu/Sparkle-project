@@ -17,7 +17,13 @@ from .drivers.macos_driver import MacosDriver
 from .drivers.web_driver import WebDriver
 from .evidence import EvidenceCollector, utcnow_iso
 from .loader import load_journey
-from .models import RunManifest, StepResult
+from .models import (
+    LANE_NONUI,
+    LANE_UI,
+    SIM_RUN_SCHEMA,
+    RunManifest,
+    StepResult,
+)
 
 DRIVERS: dict[str, type[BaseDriver]] = {
     "web": WebDriver,
@@ -70,8 +76,12 @@ def run_journey(
         gateway=str((driver_config or {}).get("gateway", "http://localhost:8080")),
         app_build=_collect_app_build(backend, driver_config or {}),
         device=_collect_device(backend, driver_config or {}),
+        schema=SIM_RUN_SCHEMA,
+        lane=LANE_NONUI if backend in NON_UI_BACKENDS else LANE_UI,
+        persona=dict(journey.persona or {}),
     )
     if backend in NON_UI_BACKENDS:
+        # lane 字段已是结构化标记；summary 保留人读注记（双通道，防只读其一）
         manifest.summary = "non-ui lane（API/WS 直驱真实后端，不冒充 UI 实测）"
 
     driver = DRIVERS[backend](evidence, driver_config or {})
@@ -181,9 +191,9 @@ def run_journey(
     manifest.finished_at = utcnow_iso()
     manifest.ok = not failed
     manifest.summary = manifest.summary or ("all steps passed" if not failed else "FAILED (see steps.json)")
-    evidence.write_steps(manifest.steps)
+    evidence.write_steps(manifest)
     evidence.write_manifest(manifest)
-    # journey 元信息快照（可复现）
+    # journey 元信息快照（可复现；persona/clock 一并留档）
     evidence.save_text(
         "journey_definition.json",
         json.dumps(
@@ -193,6 +203,7 @@ def run_journey(
                 "golden_ref": journey.golden_ref,
                 "description": journey.description,
                 "platforms": journey.platforms,
+                "persona": journey.persona,
                 "backend": backend,
                 "steps": journey.backends[backend] and [
                     {"name": s.name, "action": s.action, "args": s.args} for s in steps

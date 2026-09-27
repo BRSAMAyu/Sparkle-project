@@ -367,6 +367,42 @@ class WebDriver(BaseDriver):
         raise StepFailure(f"语义树未就绪（{timeout:.0f}s 内节点数未达到 {min_nodes}）")
 
     # ---------- step handlers ----------
+    # 网络切换预设（Chrome DevTools 同源的常用档；latency/throughput 可被 args 覆盖）
+    NETWORK_PRESETS: dict[str, dict[str, Any]] = {
+        "offline": {"offline": True, "latency": 0, "downloadThroughput": 0, "uploadThroughput": 0},
+        "online": {"offline": False, "latency": 0, "downloadThroughput": -1, "uploadThroughput": -1},
+        "slow": {"offline": False, "latency": 400, "downloadThroughput": 400 * 1024 // 8, "uploadThroughput": 400 * 1024 // 8},
+    }
+
+    def do_set_network(
+        self,
+        mode: str,
+        latency_ms: int | None = None,
+        download_kbps: int | None = None,
+        upload_kbps: int | None = None,
+    ) -> tuple[bool, str, list[str]]:
+        """统一网络切换步（web=CDP Network.emulateNetworkConditions，浏览器栈内真实生效）。
+
+        offline=GJ13 offline action 形态；online=恢复；slow=慢网（默认 Slow-3G 档，
+        可用 latency_ms/download_kbps/upload_kbps 覆盖）。模拟生命周期=浏览器进程
+        生命周期（每 run 一个临时 profile 的 Chrome），不跨 run 泄漏。
+        """
+        if mode not in self.NETWORK_PRESETS:
+            raise StepFailure(
+                f"set_network 未知 mode={mode!r}（支持：{sorted(self.NETWORK_PRESETS)}）"
+            )
+        assert self.cdp is not None
+        conditions = dict(self.NETWORK_PRESETS[mode])
+        if latency_ms is not None:
+            conditions["latency"] = int(latency_ms)
+        if download_kbps is not None:
+            conditions["downloadThroughput"] = int(download_kbps) * 1024 // 8
+        if upload_kbps is not None:
+            conditions["uploadThroughput"] = int(upload_kbps) * 1024 // 8
+        self.cdp.cmd("Network.emulateNetworkConditions", conditions, timeout=10)
+        self.evidence.log_api("network_switch", {"backend": "web", "mode": mode, "conditions": conditions})
+        return True, f"web 网络切到 {mode}（{conditions}）", []
+
     def do_open_app(self, wait_text: str = "", timeout: float = 90.0) -> tuple[bool, str, list[str]]:
         """打开 App 入口 URL（等价于用户打开网页），等待首帧语义树。"""
         assert self.cdp is not None

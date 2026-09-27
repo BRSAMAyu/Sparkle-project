@@ -137,6 +137,34 @@ class AndroidDriver(BaseDriver):
             self.emulator_proc = None
 
     # ---------- step handlers ----------
+    def do_set_network(self, mode: str = "", settle_seconds: float = 3.0) -> tuple[bool, str, list[str]]:
+        """统一网络切换步（android=系统飞行模式，真实设备级切换，MULTIPLATFORM.md 飞行模式面）。
+
+        offline=开飞行模式；online=关飞行模式。slow/自定义限速 unsupported（非 root
+        Android 无干净限速 seam，如实登记不冒充）。切换生效经 `cmd connectivity
+        airplane-mode` 查询回读确认，失败按 StepFailure 处理。模拟生命周期=模拟器
+        进程生命周期（本 driver 每 run boot/杀 AVD），不跨 run 泄漏。
+        """
+        if mode not in ("offline", "online"):
+            raise StepFailure(
+                f"android set_network 仅支持 offline/online（got {mode!r}）；"
+                "slow/限速 unsupported（非 root 无干净限速 seam，已登记原因）"
+            )
+        want = "true" if mode == "offline" else "false"
+        self.adb("-s", self.serial, "shell", "cmd", "connectivity", "airplane-mode", "enable" if mode == "offline" else "disable", timeout=30)
+        deadline = time.time() + 20
+        got = ""
+        while time.time() < deadline:
+            got = self.adb("-s", self.serial, "shell", "settings", "get", "global", "airplane_mode_on", check=False, timeout=15).strip()
+            if got == want:
+                break
+            time.sleep(1.5)
+        else:
+            raise StepFailure(f"飞行模式切换未生效：期望 airplane_mode_on={want}，回读={got!r}")
+        time.sleep(float(settle_seconds))
+        self.evidence.log_api("network_switch", {"backend": "android", "mode": mode, "airplane_mode_on": got})
+        return True, f"android 网络切到 {mode}（airplane_mode_on={got}，settle {settle_seconds}s）", []
+
     def do_install_apk(self, apk: str = "") -> tuple[bool, str, list[str]]:
         path = apk or self.apk
         if not path or not Path(path).exists():
