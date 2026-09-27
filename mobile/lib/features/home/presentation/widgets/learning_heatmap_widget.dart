@@ -527,7 +527,7 @@ class _HeatmapCellState extends State<_HeatmapCell> {
                 key: ValueKey('learning-heatmap-tooltip-${widget.dateKey}'),
                 color: Theme.of(context).colorScheme.surface,
                 elevation: 8,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(DS.radius12),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 220),
                   child: Padding(
@@ -568,7 +568,7 @@ class _HeatmapSkeleton extends StatelessWidget {
             height: 14,
             decoration: BoxDecoration(
               color: DS.surfaceTertiary.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: DS.borderRadius4,
             ),
           ),
           const SizedBox(height: DS.spacing12),

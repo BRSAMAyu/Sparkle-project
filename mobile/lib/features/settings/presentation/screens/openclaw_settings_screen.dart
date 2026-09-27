@@ -116,7 +116,7 @@ class _OpenClawSettingsScreenState
                             ),
                             decoration: BoxDecoration(
                               color: DS.warning.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(999),
+                              borderRadius: DS.borderRadiusFull,
                             ),
                             child: Text(
                               l10n.settOpenclawQueuedTasks(
@@ -147,7 +147,7 @@ class _OpenClawSettingsScreenState
                                 padding: const EdgeInsets.all(DS.spacing10),
                                 decoration: BoxDecoration(
                                   color: DS.surfaceSecondary,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(DS.radius12),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,

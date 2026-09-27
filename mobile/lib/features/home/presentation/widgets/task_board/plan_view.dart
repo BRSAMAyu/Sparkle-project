@@ -277,7 +277,7 @@ class _PlanManagerHeader extends StatelessWidget {
           height: compact ? 32 : 36,
           decoration: BoxDecoration(
             color: DS.brandPrimary.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(DS.radius12),
           ),
           child: Icon(
             Icons.account_tree_rounded,
@@ -314,7 +314,7 @@ class _PlanManagerHeader extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: DS.brandPrimary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: DS.borderRadiusFull,
           ),
           child: Text(
             '$activeCount/3',
@@ -536,7 +536,7 @@ class _ActivePlanSlot extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing10),
           ClipRRect(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: DS.borderRadiusFull,
             // U-01 Step 3：确定性进度条迁 owner（背景为 owner 默认轨道色）。
             child: LoadingIndicator.linear(
               value: plan.progress.clamp(0, 1),
@@ -763,7 +763,7 @@ class _PlanTag extends StatelessWidget {
         decoration: BoxDecoration(
           color: (highlighted ? DS.brandPrimary : DS.textSecondary)
               .withValues(alpha: highlighted ? 0.14 : 0.08),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: DS.borderRadiusFull,
         ),
         child: Text(
           label,

@@ -71,7 +71,7 @@ class _ReturnCaseBody extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: DS.surfaceHigh,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(DS.radius16),
         border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.30)),
         boxShadow: [
           BoxShadow(

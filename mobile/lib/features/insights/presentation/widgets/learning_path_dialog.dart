@@ -303,7 +303,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(DS.radius16),
         onTap: _isBusy ? null : () => _showNodeActions(context, node),
         child: IntrinsicHeight(
           child: Row(
@@ -813,7 +813,7 @@ class _MetaChip extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: DS.surfaceSecondary,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: DS.borderRadiusFull,
           border: Border.all(color: DS.borderSubtle),
         ),
         child: Row(

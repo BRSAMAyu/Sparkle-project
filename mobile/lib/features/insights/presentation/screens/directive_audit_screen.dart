@@ -266,7 +266,7 @@ class DirectiveAuditCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: resultColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: DS.borderRadiusFull,
                 ),
                 child: Text(
                   result,

@@ -155,7 +155,7 @@ class _CompactNextActions extends StatelessWidget {
                 height: dense ? 30 : 34,
                 decoration: BoxDecoration(
                   color: DS.brandPrimary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(DS.radius12),
                 ),
                 child: Icon(
                   Icons.playlist_play_rounded,
@@ -364,7 +364,7 @@ class _FlowActionBody extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: InkWell(
                 onTap: onViewAll,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: DS.borderRadiusFull,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: DS.spacing4,
@@ -426,7 +426,7 @@ class _CompactNextActionRow extends ConsumerWidget {
               ),
               decoration: BoxDecoration(
                 color: DS.brandPrimary.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: DS.borderRadiusFull,
               ),
               child: compactAction
                   ? Icon(

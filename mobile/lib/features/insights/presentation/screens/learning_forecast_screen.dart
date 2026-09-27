@@ -180,7 +180,7 @@ class _LearningForecastScreenState
                                       .colorScheme
                                       .errorContainer
                                       .withValues(alpha: 0.7),
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(DS.radius16),
                                 ),
                                 child: Text(
                                   _errorMessage!,
@@ -250,7 +250,7 @@ class _LearningForecastScreenState
               padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: DS.brandPrimary10,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(DS.radius12),
               ),
               child: Icon(Icons.auto_graph, color: DS.brandPrimary, size: 30),
             ),
@@ -311,7 +311,7 @@ class _LearningForecastScreenState
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(DS.radius16)),
       child: Padding(
         padding: const EdgeInsets.all(DS.lg),
         child: Column(
@@ -424,7 +424,7 @@ class _LearningForecastScreenState
 
   Widget _buildLearningTips() => Card(
         elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(DS.radius16)),
         child: Padding(
           padding: const EdgeInsets.all(DS.lg),
           child: Column(

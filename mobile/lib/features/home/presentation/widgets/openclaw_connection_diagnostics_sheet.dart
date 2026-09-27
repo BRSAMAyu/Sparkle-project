@@ -229,7 +229,7 @@ class _DiagnosticPill extends StatelessWidget {
   Widget build(BuildContext context) => DecoratedBox(
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: DS.borderRadiusFull,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(

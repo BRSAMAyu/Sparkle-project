@@ -160,7 +160,7 @@ class _NotificationBanner extends StatelessWidget {
                 ),
                 InkWell(
                   onTap: onTap,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: DS.borderRadiusFull,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: DS.spacing4,

@@ -265,7 +265,7 @@ class _OverviewHero extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: DS.info.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: DS.borderRadiusFull,
             ),
             child: Text(
               focusLabel,
@@ -368,7 +368,7 @@ class _InsightModuleCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: DS.borderRadiusFull,
                     ),
                     child: Text(
                       context.l10n.insRecommended,

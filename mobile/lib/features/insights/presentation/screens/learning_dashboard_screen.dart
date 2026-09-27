@@ -195,7 +195,7 @@ class _TimeDistributionChart extends StatelessWidget {
               const SizedBox(width: DS.spacing8),
               Expanded(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: DS.borderRadiusFull,
                   child: LinearProgressIndicator(
                     value: value.clamp(0.0, 1.0),
                     minHeight: 12,
@@ -424,7 +424,7 @@ class _MetricChip extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: colors.secondaryContainer,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: DS.borderRadiusFull,
       ),
       child: Text(
         label,

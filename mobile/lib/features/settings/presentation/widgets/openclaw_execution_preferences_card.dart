@@ -342,7 +342,7 @@ class _OpenClawExecutionPreferencesCardState
                 padding: const EdgeInsets.all(DS.spacing10),
                 decoration: BoxDecoration(
                   color: DS.info.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(DS.radius12),
                   border: Border.all(
                     color: DS.info.withValues(alpha: 0.18),
                   ),

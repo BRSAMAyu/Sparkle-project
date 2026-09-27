@@ -259,7 +259,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
   ) =>
       InkWell(
         onTap: () => context.push('/cognitive/patterns'),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(DS.radius16),
         child: Padding(
           padding: const EdgeInsets.all(DS.spacing4),
           child: Column(
@@ -321,7 +321,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                   _buildTag(context, context.l10n.cognitiveToolCoreTag),
                   InkWell(
                     onTap: () => context.push(ReviewRoutes.planHub),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: DS.borderRadiusFull,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: DS.spacing8,
@@ -329,7 +329,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                       ),
                       decoration: BoxDecoration(
                         color: DS.prismPurple.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: DS.borderRadiusFull,
                         border: Border.all(
                           color: DS.prismPurple.withValues(alpha: 0.25),
                         ),
@@ -416,7 +416,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                   color: _currentPage == index
                       ? DS.prismPurple
                       : DS.prismPurple.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: DS.borderRadiusFull,
                 ),
               ),
             ),
@@ -488,7 +488,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                   color: _currentPage == index
                       ? DS.prismPurple
                       : DS.prismPurple.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: DS.borderRadiusFull,
                 ),
               ),
             ),
@@ -500,13 +500,13 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
 
   Widget _buildEmptyToolsState(BuildContext context) => InkWell(
         onTap: () => context.push('/tools/library?tab=manage'),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(DS.radius16),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(DS.spacing16),
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(DS.radius16),
             border: Border.all(color: DS.borderSubtle),
           ),
           child: Column(
@@ -538,7 +538,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
         ),
         decoration: BoxDecoration(
           color: DS.prismPurple.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: DS.borderRadiusFull,
         ),
         child: Text(
           text,
@@ -579,11 +579,11 @@ class _ToolShortcutChip extends ConsumerWidget {
           tool.id,
           launchContext: ToolLaunchContext.home,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(DS.radius16),
         child: Ink(
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(DS.radius16),
             border: Border.all(color: DS.borderSubtle),
           ),
           child: Padding(
@@ -597,7 +597,7 @@ class _ToolShortcutChip extends ConsumerWidget {
                   padding: const EdgeInsets.all(DS.spacing8),
                   decoration: BoxDecoration(
                     color: DS.brandPrimary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(DS.radius12),
                   ),
                   child: Icon(
                     tool.icon,
@@ -672,7 +672,7 @@ class _CompactToolTile extends ConsumerWidget {
                       height: iconBoxSize,
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(DS.radius12),
                       ),
                       child: Icon(
                         tool.icon,
@@ -690,7 +690,7 @@ class _CompactToolTile extends ConsumerWidget {
                       height: iconBoxSize,
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(DS.radius12),
                       ),
                       child: Icon(
                         tool.icon,

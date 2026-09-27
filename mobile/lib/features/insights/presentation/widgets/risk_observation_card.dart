@@ -17,7 +17,7 @@ class RiskObservationCard extends StatelessWidget {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(DS.radius16)),
       child: Padding(
         padding: const EdgeInsets.all(DS.lg),
         child: Column(
@@ -29,7 +29,7 @@ class RiskObservationCard extends StatelessWidget {
                   padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
                     color: _getRiskColor(riskLevel).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(DS.radius8),
                   ),
                   child: Icon(
                     Icons.shield_outlined,
@@ -64,7 +64,7 @@ class RiskObservationCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: _getRiskColor(riskLevel).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(DS.radius12),
                   ),
                   child: Text(
                     _getRiskLevelText(riskLevel, context),

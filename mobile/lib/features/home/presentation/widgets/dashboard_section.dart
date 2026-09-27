@@ -114,7 +114,7 @@ class DashboardSectionHeader extends StatelessWidget {
           height: iconSize,
           decoration: BoxDecoration(
             color: resolvedAccent.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(DS.radius12),
             border: Border.all(
               color: resolvedAccent.withValues(alpha: 0.14),
             ),

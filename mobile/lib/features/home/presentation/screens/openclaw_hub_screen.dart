@@ -551,7 +551,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     if (moduleState.isLoading) ...[
                       const SizedBox(height: DS.spacing10),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: DS.borderRadiusFull,
                         // U-01 Step 3：裸 LinearProgressIndicator 迁 owner。
                         child: LoadingIndicator.linear(
                           size: 4,
@@ -1060,7 +1060,7 @@ class _ActivityTimelineCard extends StatelessWidget {
             margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
               color: statusColor,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: DS.borderRadiusFull,
             ),
           ),
           const SizedBox(width: DS.spacing10),

@@ -236,7 +236,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
               ),
               decoration: BoxDecoration(
                 color: DS.brandPrimary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(DS.radius8),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -473,7 +473,7 @@ class _CompactCalendarSidebar extends ConsumerWidget {
                 color: hasActivity
                     ? DS.brandPrimary.withValues(alpha: 0.10)
                     : DS.surfacePrimary.withValues(alpha: 0.72),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(DS.radius8),
                 border: Border.all(
                   color: hasActivity
                       ? DS.brandPrimary.withValues(alpha: 0.12)
@@ -537,7 +537,7 @@ class _StatChip extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: DS.surfacePrimary.withValues(alpha: 0.68),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DS.radius8),
           border: Border.all(color: DS.borderSubtle),
         ),
         child: Row(

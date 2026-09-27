@@ -97,7 +97,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
             constraints: const BoxConstraints(minHeight: 48),
             decoration: BoxDecoration(
               color: config.bgColor,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(DS.radius12),
               border: Border.all(color: config.borderColor),
             ),
             child: Column(
@@ -112,7 +112,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: config.iconBgColor,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(DS.radius8),
                       ),
                       child:
                           Icon(config.icon, size: 14, color: config.iconColor),

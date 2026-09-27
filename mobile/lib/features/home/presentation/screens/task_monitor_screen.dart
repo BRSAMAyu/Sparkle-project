@@ -329,7 +329,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
                 padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: DS.semanticError.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(DS.radius8),
                 ),
                 child: Text(
                   task.errorMessage!,
@@ -419,7 +419,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
       padding: const EdgeInsets.symmetric(horizontal: DS.sm, vertical: DS.xs),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DS.radius12),
       ),
       child: Text(
         label,

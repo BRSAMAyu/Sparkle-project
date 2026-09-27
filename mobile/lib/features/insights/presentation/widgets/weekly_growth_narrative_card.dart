@@ -173,7 +173,7 @@ class _NarrativeSurface extends StatelessWidget {
               padding: const EdgeInsets.all(DS.spacing12),
               decoration: BoxDecoration(
                 color: accent.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(DS.radius16),
                 border: Border.all(
                   color: accent.withValues(alpha: 0.18),
                 ),
@@ -314,7 +314,7 @@ class _MetricPill extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: DS.surfaceBase.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: DS.borderRadiusFull,
           border: Border.all(color: DS.borderSubtle),
         ),
         child: Row(

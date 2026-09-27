@@ -752,7 +752,7 @@ class _MetricPill extends StatelessWidget {
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
           color: Color.lerp(DS.surfaceSecondary, accentColor, 0.08),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(DS.radius16),
           border: Border.all(
             color: accentColor.withValues(alpha: 0.14),
           ),
@@ -861,7 +861,7 @@ class _TaskGroupCard extends StatelessWidget {
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(DS.radius16),
         border: Border.all(
           color: accentColor.withValues(alpha: 0.12),
         ),
@@ -950,7 +950,7 @@ class _TaskRow extends StatelessWidget {
           margin: const EdgeInsets.only(top: 1),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: DS.borderRadiusFull,
             border: Border.all(
               color: color.withValues(alpha: 0.18),
             ),
@@ -1019,7 +1019,7 @@ class _ModePill extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: accentColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: DS.borderRadiusFull,
           border: Border.all(
             color: accentColor.withValues(alpha: 0.16),
           ),

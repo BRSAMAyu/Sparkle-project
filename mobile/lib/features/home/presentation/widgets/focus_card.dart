@@ -110,7 +110,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                   decoration: BoxDecoration(
                     color: Color.lerp(DS.surfaceSecondary, DS.flameCore, 0.18) ??
                         DS.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(DS.radius8),
                   ),
                   child: Text(
                     'Lv.$flameLevel',

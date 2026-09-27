@@ -54,7 +54,7 @@ class _UnderstandingPanelState extends ConsumerState<UnderstandingPanel> {
         decoration: BoxDecoration(
           color: scheme.surfaceContainerHighest,
           border: Border.all(color: scheme.outlineVariant),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DS.radius8),
         ),
         child: snapshotAsync.when(
           data: (snapshot) => _buildContent(
@@ -320,7 +320,7 @@ class _ClaimTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: scheme.surface,
           border: Border.all(color: scheme.outlineVariant),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DS.radius8),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,7 +394,7 @@ class _ConfidencePill extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         border: Border.all(color: color.withValues(alpha: 0.35)),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DS.radius8),
       ),
       child: Text(
         label,
@@ -419,7 +419,7 @@ class _EnvelopeStyleRow extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: scheme.primaryContainer.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DS.radius8),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,7 +457,7 @@ class _RecentlyCorrectedBanner extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: scheme.tertiaryContainer.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DS.radius8),
       ),
       child: Row(
         children: [
@@ -525,7 +525,7 @@ class _EmptyUnderstandingState extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DS.radius8),
       ),
       child: Text(
         text,

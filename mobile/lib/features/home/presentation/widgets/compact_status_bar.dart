@@ -165,7 +165,7 @@ class CompactStatusBar extends StatelessWidget {
                       const SizedBox(width: DS.spacing6),
                       InkWell(
                         onTap: () => context.push(UserRoutes.settings),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: DS.borderRadiusFull,
                         child: Container(
                           width: 32,
                           height: 32,

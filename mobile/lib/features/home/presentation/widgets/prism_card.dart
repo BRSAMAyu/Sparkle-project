@@ -182,7 +182,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                         ),
                         decoration: BoxDecoration(
                           color: DS.prismPurple.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(DS.radius8),
                           border: Border.all(
                               color: DS.prismPurple.withValues(alpha: 0.3),),
                         ),
@@ -232,7 +232,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
         ),
         decoration: BoxDecoration(
           color: DS.prismPurple.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DS.radius8),
           border: Border.all(color: DS.prismPurple.withValues(alpha: 0.2)),
         ),
         child: Text(

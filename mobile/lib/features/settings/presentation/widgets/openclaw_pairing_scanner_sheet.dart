@@ -63,7 +63,7 @@ class _OpenClawPairingScannerSheetState
                   height: 4,
                   decoration: BoxDecoration(
                     color: DS.neutral300,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: DS.borderRadiusFull,
                   ),
                 ),
               ),
@@ -84,7 +84,7 @@ class _OpenClawPairingScannerSheetState
               ),
               const SizedBox(height: DS.spacing16),
               ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(DS.radius20),
                 child: AspectRatio(
                   aspectRatio: 1,
                   child: Stack(
@@ -101,7 +101,7 @@ class _OpenClawPairingScannerSheetState
                               color: DS.primaryBase.withValues(alpha: 0.8),
                               width: 2,
                             ),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(DS.radius20),
                           ),
                           margin: const EdgeInsets.all(28),
                         ),

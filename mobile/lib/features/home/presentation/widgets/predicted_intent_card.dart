@@ -201,7 +201,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.04)
                       : DS.surfaceOverlay,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(DS.radius16),
                   border: Border.all(
                     color: DS.borderSubtle,
                   ),
@@ -244,7 +244,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                 children: [
                   Expanded(
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: DS.borderRadiusFull,
                       // U-01 Step 3：确定性进度条迁 owner。
                       child: LoadingIndicator.linear(
                         size: 6,
@@ -292,7 +292,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.03)
                         : DS.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(DS.radius16),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -580,7 +580,7 @@ class _WithinCategoryPreferencePanel extends StatelessWidget {
         color: isDark
             ? Colors.white.withValues(alpha: 0.035)
             : DS.surfaceSecondary,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(DS.radius16),
         border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
@@ -783,7 +783,7 @@ class _Chip extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: subdued ? DS.surfaceOverlay : DS.info.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: DS.borderRadiusFull,
           border: Border.all(
             color: subdued ? DS.borderSubtle : DS.info.withValues(alpha: 0.18),
           ),

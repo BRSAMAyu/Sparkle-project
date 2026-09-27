@@ -179,7 +179,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
           children: [
             InkWell(
               onTap: () => context.push(InsightsRoutes.overviewLocation()),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(DS.radius16),
               child: Padding(
                 padding: const EdgeInsets.all(DS.spacing4),
                 child: Column(
@@ -197,7 +197,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                                 DS.brandPrimary.withValues(alpha: 0.82),
                               ],
                             ),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(DS.radius12),
                             boxShadow: [
                               BoxShadow(
                                 color: DS.info.withValues(alpha: 0.18),
@@ -255,7 +255,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                       ),
                       decoration: BoxDecoration(
                         color: DS.info.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: DS.borderRadiusFull,
                       ),
                       child: Text(
                         context.l10n.insightHubEnterOverview,
@@ -345,12 +345,12 @@ class _CompactInsightAction extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(DS.radius16),
           child: Ink(
             padding: const EdgeInsets.all(DS.spacing10),
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(DS.radius16),
               border: Border.all(color: accent.withValues(alpha: 0.12)),
             ),
             child: Column(
@@ -458,7 +458,7 @@ class _InsightHubStatusBanner extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(DS.radius16),
         border: Border.all(
           color: DS.warning.withValues(alpha: 0.22),
         ),

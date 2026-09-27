@@ -1400,7 +1400,7 @@ class _UnderstandingExpansionSlot extends StatelessWidget {
                   : context.l10n.understandingPanelExpand,
               child: InkWell(
                 onTap: onToggle,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(DS.radius8),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: DS.spacing12,
@@ -1408,7 +1408,7 @@ class _UnderstandingExpansionSlot extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(DS.radius8),
                     border: Border.all(color: scheme.outlineVariant),
                   ),
                   child: Row(
@@ -1600,7 +1600,7 @@ class _AccountabilityMiniCard extends StatelessWidget {
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DS.radius8),
           border: Border.all(color: scheme.outlineVariant),
         ),
         child: Column(
@@ -1775,7 +1775,7 @@ class _HomeEmptyInline extends StatelessWidget {
       padding: const EdgeInsets.all(DS.spacing14),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DS.radius8),
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: Row(
@@ -2223,7 +2223,7 @@ class _BriefingDetailTile extends StatelessWidget {
               height: 34,
               decoration: BoxDecoration(
                 color: iconColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(DS.radius12),
               ),
               child: Icon(icon, size: 18, color: iconColor),
             ),

@@ -657,7 +657,7 @@ class _OpenClawConnectionPanelState
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: DS.warning.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DS.radius12),
         border: Border.all(color: DS.warning.withValues(alpha: 0.18)),
       ),
       child: Column(
@@ -897,7 +897,7 @@ class _OpenClawConnectionPanelState
               padding: const EdgeInsets.all(DS.spacing12),
               decoration: BoxDecoration(
                 color: DS.info.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(DS.radius12),
                 border: Border.all(color: DS.info.withValues(alpha: 0.16)),
               ),
               child: Row(
@@ -994,7 +994,7 @@ class _OpenClawConnectionPanelState
                   padding: const EdgeInsets.all(DS.spacing12),
                   decoration: BoxDecoration(
                     color: DS.info.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(DS.radius12),
                     border: Border.all(
                       color: DS.info.withValues(alpha: 0.18),
                     ),

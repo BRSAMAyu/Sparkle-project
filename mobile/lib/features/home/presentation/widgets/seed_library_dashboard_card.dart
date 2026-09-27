@@ -62,7 +62,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
                   ),
                   decoration: BoxDecoration(
                     color: DS.success.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(DS.radius8),
                   ),
                   child: Text(
                     context.l10n.seedOfficial,
