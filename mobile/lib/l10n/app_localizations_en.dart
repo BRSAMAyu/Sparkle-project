@@ -2906,6 +2906,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaComplete => 'Complete';
 
   @override
+  String get personaFastPathCta => 'Get my first step now';
+
+  @override
+  String get personaFastPathHint =>
+      'Answer just the goal question to get a suggested first step — the rest of your preferences can wait.';
+
+  @override
   String get editProfile => 'Edit Profile';
 
   @override
@@ -3311,7 +3318,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contentReviewReflectionCompletedShort => 'Optimized';
 
   @override
-  String get contentReviewReflectionFailedShort => 'Failed';
+  String get contentReviewReflectionFailedShort => 'Optimization failed';
 
   @override
   String get contentReviewReflectionProcessingShort => 'Processing';
@@ -4878,7 +4885,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noData => 'No Data';
 
   @override
-  String get operationFailed => 'Failed';
+  String get operationFailed => 'Operation failed';
 
   @override
   String get errorBookTitle => 'Error Archive';
@@ -4963,7 +4970,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorBookQuestionContent => 'Question Content';
 
   @override
-  String get errorBookImageLoadFailed => 'Image Load Failed';
+  String get errorBookImageLoadFailed => 'Failed to load image';
 
   @override
   String get errorBookAnswerComparison => 'Answer Comparison';
@@ -5673,20 +5680,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memoryCorrectionLowerConfidence => 'Not so sure about this';
-
-  @override
-  String confidenceWithBand(String band, int percent) {
-    String _temp0 = intl.Intl.selectLogic(
-      band,
-      {
-        'high': 'I\'m fairly confident',
-        'medium': 'I\'m somewhat confident',
-        'low': 'I\'m not quite sure yet',
-        'other': 'Confidence',
-      },
-    );
-    return '$_temp0 ($percent%)';
-  }
 
   @override
   String get memoryCorrectionMerge => 'Merge';
@@ -6421,7 +6414,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chatActionErrorTitle => 'Chat Action Error Title';
+  String get chatActionErrorTitle => 'Action error';
 
   @override
   String get chatActionIgnore => 'Chat Action Ignore';
@@ -6442,7 +6435,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatActionStatusDismissed => 'Chat Action Status Dismissed';
 
   @override
-  String get chatActionStatusFailed => 'Chat Action Status Failed';
+  String get chatActionStatusFailed => 'Failed';
 
   @override
   String get chatActionStatusProcessing => 'Chat Action Status Processing';
@@ -6458,7 +6451,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chatActionTitleAddError => 'Chat Action Title Add Error';
+  String get chatActionTitleAddError => 'Add error';
 
   @override
   String get chatActionTitleBlockedInput => 'Chat Action Title Blocked Input';
@@ -6565,7 +6558,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatAuthRefreshing => 'Chat Auth Refreshing';
 
   @override
-  String get chatBlockedInputTitle => 'Chat Blocked Input Title';
+  String get chatBlockedInputTitle => 'Input blocked';
 
   @override
   String chatCitationLabel(Object arg0) {
@@ -6583,7 +6576,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chatCollabTimelineTitle => 'Chat Collab Timeline Title';
+  String get chatCollabTimelineTitle => 'Collaboration timeline';
 
   @override
   String get chatComparisonAfter => 'Chat Comparison After';
@@ -6733,7 +6726,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatExecutionCompleted => 'Chat Execution Completed';
 
   @override
-  String get chatExecutionFailed => 'Chat Execution Failed';
+  String get chatExecutionFailed => 'Execution failed';
 
   @override
   String get chatExecutionPartial => 'Chat Execution Partial';
@@ -6742,7 +6735,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatFeedbackThanks => 'Chat Feedback Thanks';
 
   @override
-  String get chatFocusSprintDefaultTitle => 'Chat Focus Sprint Default Title';
+  String get chatFocusSprintDefaultTitle => 'Focus sprint';
 
   @override
   String get chatFocusStart => 'Chat Focus Start';
@@ -6765,13 +6758,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatModeCustomTeam => 'Chat Mode Custom Team';
 
   @override
-  String get chatModeCustomTeamDesc => 'Chat Mode Custom Team Desc';
+  String get chatModeCustomTeamDesc =>
+      'Pick specific AI assistants to form your own team';
 
   @override
   String get chatModeKeepCurrent => 'Chat Mode Keep Current';
 
   @override
-  String get chatModeSuggestionTitle => 'Chat Mode Suggestion Title';
+  String get chatModeSuggestionTitle => 'Mode suggestion';
 
   @override
   String get chatModeSwitch => 'Chat Mode Switch';
@@ -6826,28 +6820,28 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chatNextActionsRetryHint => 'Chat Next Actions Retry Hint';
+  String get chatNextActionsRetryHint => 'Tap to retry';
 
   @override
-  String get chatNextActionsTitle => 'Chat Next Actions Title';
+  String get chatNextActionsTitle => 'Next actions';
 
   @override
   String get chatNightlyReviewTodos => 'Chat Nightly Review Todos';
 
   @override
-  String get chatNotificationGroupMessage => 'Chat Notification Group Message';
+  String get chatNotificationGroupMessage => 'Group message';
 
   @override
   String get chatNotificationMention => 'Chat Notification Mention';
 
   @override
-  String get chatOptionalNotesHint => 'Chat Optional Notes Hint';
+  String get chatOptionalNotesHint => 'Optional notes...';
 
   @override
   String get chatOrchestrationTraceStep => 'Chat Orchestration Trace Step';
 
   @override
-  String get chatOrchestrationTraceTitle => 'Chat Orchestration Trace Title';
+  String get chatOrchestrationTraceTitle => 'Orchestration trace';
 
   @override
   String chatPendingMessagesAuthExpired(int count) {
@@ -6871,10 +6865,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPlanContextSelect => 'Chat Plan Context Select';
 
   @override
-  String get chatPlanEmptySubtitle => 'Chat Plan Empty Subtitle';
+  String get chatPlanEmptySubtitle => 'No plans yet — go ahead and create one';
 
   @override
-  String get chatPlanEmptyTitle => 'Chat Plan Empty Title';
+  String get chatPlanEmptyTitle => 'No plans yet';
 
   @override
   String get chatPlanReviewAcknowledged => 'Chat Plan Review Acknowledged';
@@ -6967,7 +6961,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatReflectionDegraded => 'Chat Reflection Degraded';
 
   @override
-  String get chatReflectionFailed => 'Chat Reflection Failed';
+  String get chatReflectionFailed => 'Reflection failed';
 
   @override
   String chatReflectionFixed(Object arg0, Object arg1) {
@@ -7080,20 +7074,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatWorkflowDebateProcessing => 'Chat Workflow Debate Processing';
 
   @override
-  String get chatWorkflowDebateSubtitle => 'Chat Workflow Debate Subtitle';
+  String get chatWorkflowDebateSubtitle => 'Explore from multiple angles';
 
   @override
-  String get chatWorkflowDebateTitle => 'Chat Workflow Debate Title';
+  String get chatWorkflowDebateTitle => 'Debate mode';
 
   @override
   String get chatWorkflowDefault => 'Chat Workflow Default';
 
   @override
   String get chatWorkflowDelegationSubtitle =>
-      'Chat Workflow Delegation Subtitle';
+      'Delegate to specialist assistants';
 
   @override
-  String get chatWorkflowDelegationTitle => 'Chat Workflow Delegation Title';
+  String get chatWorkflowDelegationTitle => 'Delegation mode';
 
   @override
   String get chatWorkflowErrorDiagnosis => 'Chat Workflow Error Diagnosis';
@@ -7112,7 +7106,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chatWorkflowParallelSubtitle => 'Chat Workflow Parallel Subtitle';
+  String get chatWorkflowParallelSubtitle =>
+      'Work on multiple tasks in parallel';
 
   @override
   String chatWorkflowPhaseLabel(Object arg0) {
@@ -7130,7 +7125,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatWorkflowStatusDone => 'Chat Workflow Status Done';
 
   @override
-  String get chatWorkflowStatusError => 'Chat Workflow Status Error';
+  String get chatWorkflowStatusError => 'Error';
 
   @override
   String get chatWorkflowStatusWaiting => 'Chat Workflow Status Waiting';
@@ -7161,7 +7156,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityAgentProcessing => 'Community Agent Processing';
 
   @override
-  String get communityAgentPromptHint => 'Community Agent Prompt Hint';
+  String get communityAgentPromptHint => 'Enter a prompt...';
 
   @override
   String get communityAgentQuickConsensus => 'Community Agent Quick Consensus';
@@ -7186,14 +7181,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityChatReconnect => 'Reconnect';
 
   @override
-  String get communityChatTitle => 'Community Chat Title';
+  String get communityChatTitle => 'Community chat';
 
   @override
   String get communityCheckInAction => 'Community Check In Action';
 
   @override
-  String get communityCheckInDurationLabel =>
-      'Community Check In Duration Label';
+  String get communityCheckInDurationLabel => 'Duration';
 
   @override
   String communityCheckInFailed(Object arg0) {
@@ -7201,16 +7195,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get communityCheckInMessageHint => 'Community Check In Message Hint';
+  String get communityCheckInMessageHint => 'Share how it went...';
 
   @override
-  String get communityCheckInMessageLabel => 'Community Check In Message Label';
+  String get communityCheckInMessageLabel => 'Check-in note';
 
   @override
-  String get communityCheckInSuccess => 'Community Check In Success';
+  String get communityCheckInSuccess => 'Check-in successful!';
 
   @override
-  String get communityCheckInTitle => 'Community Check In Title';
+  String get communityCheckInTitle => 'Daily check-in';
 
   @override
   String communityFileSharedFailed(Object arg0) {
@@ -7218,7 +7212,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get communityFileSharedSuccess => 'Community File Shared Success';
+  String get communityFileSharedSuccess => 'File shared';
 
   @override
   String get communityGroupFiles => 'Community Group Files';
@@ -7696,7 +7690,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studyMaterialsStatusReady => 'Ready';
 
   @override
-  String get studyMaterialsStatusFailed => 'Failed';
+  String get studyMaterialsStatusFailed => 'Processing failed';
 
   @override
   String studyMaterialsChunkHitCount(Object count) {
@@ -7724,7 +7718,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityMessageFallback => 'Community Message Fallback';
 
   @override
-  String get communityMessageInputHint => 'Community Message Input Hint';
+  String get communityMessageInputHint => 'Type a message...';
 
   @override
   String get communitySearchGroupMessages => 'Community Search Group Messages';
@@ -7864,7 +7858,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editProfileVerifyEmailTitle => 'Verify Email';
 
   @override
-  String get fileStatusFailed => 'File Status Failed';
+  String get fileStatusFailed => 'Upload failed';
 
   @override
   String get fileStatusProcessing => 'File Status Processing';
@@ -8226,16 +8220,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get passwordSetConfirm => 'Password Set Confirm';
 
   @override
-  String get passwordSetHint => 'Password Set Hint';
+  String get passwordSetHint => 'Enter a password of at least 8 characters';
 
   @override
-  String get passwordSetLabel => 'Password Set Label';
+  String get passwordSetLabel => 'Set password';
 
   @override
-  String get passwordSetSuccess => 'Password Set Success';
+  String get passwordSetSuccess => 'Password set';
 
   @override
-  String get passwordSetTitle => 'Password Set Title';
+  String get passwordSetTitle => 'Set password';
 
   @override
   String get planArchive => 'Plan Archive';
@@ -8244,13 +8238,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planArchiveConfirm => 'Plan Archive Confirm';
 
   @override
-  String get planArchiveMessage => 'Plan Archive Message';
+  String get planArchiveMessage =>
+      'Once archived, this plan moves to history. Archive it?';
 
   @override
-  String get planArchiveTitle => 'Plan Archive Title';
+  String get planArchiveTitle => 'Archive plan';
 
   @override
-  String get planArchivedSuccess => 'Plan Archived Success';
+  String get planArchivedSuccess => 'Plan archived';
 
   @override
   String get planConfirmAction => 'Confirm this plan';
@@ -8273,7 +8268,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get planContextTitle => 'Plan Context Title';
+  String get planContextTitle => 'Plan context';
 
   @override
   String get planContextExpand => 'Expand plan context';
@@ -8287,7 +8282,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get planDetailTitle => 'Plan Detail Title';
+  String get planDetailTitle => 'Plan details';
 
   @override
   String get planDetailAddExistingTask => 'Add Existing';
@@ -8391,7 +8386,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get planDetailLoadError => 'Plan Load Failed';
+  String get planDetailLoadError => 'Failed to load plan';
 
   @override
   String get planDetailLoadError404 =>
@@ -8567,7 +8562,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get planProgressLabel => 'Plan Progress Label';
+  String get planProgressLabel => 'Plan progress';
 
   @override
   String get planRecentFeedback => 'Plan Recent Feedback';
@@ -8576,11 +8571,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planRestore => 'Plan Restore';
 
   @override
-  String get planRestoredSuccess => 'Plan Restored Success';
+  String get planRestoredSuccess => 'Plan restored';
 
   @override
-  String get planReviewAdditionalNotesHint =>
-      'Plan Review Additional Notes Hint';
+  String get planReviewAdditionalNotesHint => 'Add a note (optional)...';
 
   @override
   String get planReviewAdditionalNotesRequired =>
@@ -8654,7 +8648,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Plan Review Reason Tasks Too Many';
 
   @override
-  String get planReviewRejectReasonTitle => 'Plan Review Reject Reason Title';
+  String get planReviewRejectReasonTitle => 'Reason for rejection';
 
   @override
   String get planReviewRejectWithFeedback => 'Plan Review Reject With Feedback';
@@ -8771,13 +8765,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileUpgradeGuest => 'Upgrade Account';
 
   @override
-  String get regenCustomHint => 'Regen Custom Hint';
+  String get regenCustomHint => 'Describe the changes you want...';
 
   @override
   String get regenDescCompleted => 'Regen Desc Completed';
 
   @override
-  String get regenDescFailed => 'Regen Desc Failed';
+  String get regenDescFailed => 'Regeneration failed';
 
   @override
   String get regenDescInProgress => 'Regen Desc In Progress';
@@ -8807,10 +8801,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get regenHintsOptional => 'Regen Hints Optional';
 
   @override
-  String get regenImprovementsTitle => 'Regen Improvements Title';
+  String get regenImprovementsTitle => 'Improvement suggestions';
 
   @override
-  String get regenProgressTitle => 'Regen Progress Title';
+  String get regenProgressTitle => 'Regeneration progress';
 
   @override
   String regenQualityImprovement(Object arg0) {
@@ -8818,13 +8812,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get regenResultFailed => 'Regen Result Failed';
+  String get regenResultFailed => 'Generation failed';
 
   @override
-  String get regenResultSuccess => 'Regen Result Success';
+  String get regenResultSuccess => 'Generated';
 
   @override
-  String get regenRetryMessage => 'Regen Retry Message';
+  String get regenRetryMessage => 'Tap to retry';
 
   @override
   String get regenSelectType => 'Regen Select Type';
@@ -8836,7 +8830,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get regenTitleCompleted => 'Regen Title Completed';
 
   @override
-  String get regenTitleFailed => 'Regen Title Failed';
+  String get regenTitleFailed => 'Regeneration failed';
 
   @override
   String get regenTitleIdle => 'Regen Title Idle';
@@ -8866,7 +8860,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get regenTypeSimplify => 'Regen Type Simplify';
 
   @override
-  String get reviewRatingAccuracyTitle => 'Review Rating Accuracy Title';
+  String get reviewRatingAccuracyTitle => 'Accuracy';
 
   @override
   String get reviewRatingAccurate => 'Review Rating Accurate';
@@ -8876,10 +8870,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Review Rating Add Inaccurate Point';
 
   @override
-  String get reviewRatingCommentsHint => 'Review Rating Comments Hint';
+  String get reviewRatingCommentsHint => 'Write your feedback...';
 
   @override
-  String get reviewRatingCommentsTitle => 'Review Rating Comments Title';
+  String get reviewRatingCommentsTitle => 'Your feedback';
 
   @override
   String get reviewRatingHelpful => 'Review Rating Helpful';
@@ -8888,12 +8882,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewRatingInaccurate => 'Review Rating Inaccurate';
 
   @override
-  String get reviewRatingInaccuratePointHint =>
-      'Review Rating Inaccurate Point Hint';
+  String get reviewRatingInaccuratePointHint => 'Describe what was off...';
 
   @override
-  String get reviewRatingInaccuratePointsTitle =>
-      'Review Rating Inaccurate Points Title';
+  String get reviewRatingInaccuratePointsTitle => 'What was off';
 
   @override
   String get reviewRatingLessOptions => 'Review Rating Less Options';
@@ -8905,25 +8897,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewRatingNotHelpful => 'Review Rating Not Helpful';
 
   @override
-  String get reviewRatingSpecificityTitle => 'Review Rating Specificity Title';
+  String get reviewRatingSpecificityTitle => 'Specificity';
 
   @override
   String get reviewRatingSubmit => 'Review Rating Submit';
 
   @override
-  String get reviewRatingSubmitFailed => 'Review Rating Submit Failed';
+  String get reviewRatingSubmitFailed => 'Submission failed';
 
   @override
-  String get reviewRatingSubmitSuccess => 'Review Rating Submit Success';
+  String get reviewRatingSubmitSuccess => 'Feedback submitted';
 
   @override
-  String get reviewRatingSubtitle => 'Review Rating Subtitle';
+  String get reviewRatingSubtitle => 'Your feedback helps me improve';
 
   @override
-  String get reviewRatingTagsTitle => 'Review Rating Tags Title';
+  String get reviewRatingTagsTitle => 'Pick tags';
 
   @override
-  String get reviewRatingTitle => 'Review Rating Title';
+  String get reviewRatingTitle => 'Rate this reply';
 
   @override
   String get reviewSpecificityAppropriate => 'Review Specificity Appropriate';
@@ -8962,7 +8954,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get securityLogActionGuestUpgrade => 'Guest Upgraded';
 
   @override
-  String get securityLogActionLoginFailed => 'Login Failed';
+  String get securityLogActionLoginFailed => 'Login failed';
 
   @override
   String get securityLogActionLoginSuccess => 'Login';
@@ -9081,28 +9073,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintActionAbandonButton => 'Sprint Action Abandon Button';
 
   @override
-  String get sprintActionAbandonSubtitle => 'Sprint Action Abandon Subtitle';
+  String get sprintActionAbandonSubtitle => 'Give up the current sprint';
 
   @override
-  String get sprintActionAbandonTitle => 'Sprint Action Abandon Title';
+  String get sprintActionAbandonTitle => 'Abandon sprint';
 
   @override
   String get sprintActionCompleteButton => 'Sprint Action Complete Button';
 
   @override
-  String get sprintActionCompleteSubtitle => 'Sprint Action Complete Subtitle';
+  String get sprintActionCompleteSubtitle => 'Mark this sprint as done';
 
   @override
-  String get sprintActionCompleteTitle => 'Sprint Action Complete Title';
+  String get sprintActionCompleteTitle => 'Finish sprint';
 
   @override
-  String get sprintActionExtendSubtitle => 'Sprint Action Extend Subtitle';
+  String get sprintActionExtendSubtitle => 'Extend the sprint';
 
   @override
-  String get sprintActionExtendTitle => 'Sprint Action Extend Title';
+  String get sprintActionExtendTitle => 'Extend sprint';
 
   @override
-  String get sprintActionsTitle => 'Sprint Actions Title';
+  String get sprintActionsTitle => 'Sprint actions';
 
   @override
   String get sprintCompletedTasks => 'Sprint Completed Tasks';
@@ -9111,7 +9103,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintCompletionRate => 'Sprint Completion Rate';
 
   @override
-  String get sprintConfirmAbandonDesc => 'Sprint Confirm Abandon Desc';
+  String get sprintConfirmAbandonDesc =>
+      'Abandon this sprint? Unfinished tasks will be kept.';
 
   @override
   String sprintConfirmAbandonMessage(Object arg0) {
@@ -9119,10 +9112,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get sprintConfirmAbandonTitle => 'Sprint Confirm Abandon Title';
+  String get sprintConfirmAbandonTitle => 'Confirm abandon';
 
   @override
-  String get sprintConfirmCompleteDesc => 'Sprint Confirm Complete Desc';
+  String get sprintConfirmCompleteDesc => 'Sprint finished — mark it as done?';
 
   @override
   String sprintConfirmCompleteMessage(Object arg0) {
@@ -9130,13 +9123,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get sprintConfirmCompleteTitle => 'Sprint Confirm Complete Title';
+  String get sprintConfirmCompleteTitle => 'Confirm completion';
 
   @override
   String get sprintDailyCompletion => 'Sprint Daily Completion';
 
   @override
-  String get sprintDurationDaysLabel => 'Sprint Duration Days Label';
+  String get sprintDurationDaysLabel => 'Days';
 
   @override
   String sprintDurationDaysValue(Object arg0) {
@@ -9144,10 +9137,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get sprintDurationLabel => 'Sprint Duration Label';
+  String get sprintDurationLabel => 'Duration';
 
   @override
-  String get sprintEndDateLabel => 'Sprint End Date Label';
+  String get sprintEndDateLabel => 'End date';
 
   @override
   String sprintExtendConfirm(Object arg0) {
@@ -9168,31 +9161,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintExtendSelectDays => 'Sprint Extend Select Days';
 
   @override
-  String get sprintExtendTitle => 'Sprint Extend Title';
+  String get sprintExtendTitle => 'Extend sprint';
 
   @override
   String get sprintIncompleteTasks => 'Sprint Incomplete Tasks';
 
   @override
-  String get sprintInfoTitle => 'Sprint Info Title';
+  String get sprintInfoTitle => 'Sprint info';
 
   @override
   String get sprintOngoing => 'Sprint Ongoing';
 
   @override
-  String get sprintProgressTitle => 'Sprint Progress Title';
+  String get sprintProgressTitle => 'Sprint progress';
 
   @override
   String get sprintRemainingTasks => 'Sprint Remaining Tasks';
 
   @override
-  String get sprintStartDateLabel => 'Sprint Start Date Label';
+  String get sprintStartDateLabel => 'Start date';
 
   @override
   String get sprintStatsEmpty => 'Sprint Stats Empty';
 
   @override
-  String get sprintStatsTitle => 'Sprint Stats Title';
+  String get sprintStatsTitle => 'Sprint stats';
 
   @override
   String get sprintStatusCompleted => 'Sprint Status Completed';
@@ -9201,7 +9194,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintStatusInProgress => 'Sprint Status In Progress';
 
   @override
-  String get sprintStatusLabel => 'Sprint Status Label';
+  String get sprintStatusLabel => 'Sprint status';
 
   @override
   String get sprintStatusTodo => 'Sprint Status Todo';
@@ -9212,7 +9205,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get sprintTaskSummaryTitle => 'Sprint Task Summary Title';
+  String get sprintTaskSummaryTitle => 'Task summary';
 
   @override
   String get sprintTotalTasks => 'Sprint Total Tasks';
@@ -9221,7 +9214,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusCompleted => 'Status Completed';
 
   @override
-  String get statusFailed => 'Status Failed';
+  String get statusFailed => 'Failed';
 
   @override
   String get statusInProgress => 'Status In Progress';
@@ -9235,22 +9228,22 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get taskChatAssistantTitle => 'Task Chat Assistant Title';
+  String get taskChatAssistantTitle => 'Task assistant';
 
   @override
   String get taskChatEmptyPrompt => 'Task Chat Empty Prompt';
 
   @override
-  String get taskChatInputHint => 'Task Chat Input Hint';
+  String get taskChatInputHint => 'Type a message...';
 
   @override
   String get taskCreateAction => 'Task Create Action';
 
   @override
-  String get taskCreateSuccess => 'Task Create Success';
+  String get taskCreateSuccess => 'Task created';
 
   @override
-  String get taskCreateTitle => 'Task Create Title';
+  String get taskCreateTitle => 'Create task';
 
   @override
   String get taskCreatedWithSuggestions => 'Task Created With Suggestions';
@@ -9262,7 +9255,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDeadline => 'Task Deadline';
 
   @override
-  String get taskDeadlineLabel => 'Task Deadline Label';
+  String get taskDeadlineLabel => 'Deadline';
 
   @override
   String get taskDeleteConfirm => 'Task Delete Confirm';
@@ -9271,7 +9264,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskPreviewLoadFailed => 'Failed to load task preview';
 
   @override
-  String get taskDeleteTitle => 'Task Delete Title';
+  String get taskDeleteTitle => 'Delete task';
 
   @override
   String taskDetailLoadFailed(Object arg0) {
@@ -9285,7 +9278,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDifficulty => 'Task Difficulty';
 
   @override
-  String get taskDifficultyLabel => 'Task Difficulty Label';
+  String get taskDifficultyLabel => 'Difficulty';
 
   @override
   String taskDifficultyLevel(Object arg0) {
@@ -9296,7 +9289,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskEnergyCost => 'Task Energy Cost';
 
   @override
-  String get taskEnergyCostLabel => 'Task Energy Cost Label';
+  String get taskEnergyCostLabel => 'Energy cost';
 
   @override
   String taskEnergyCostValue(Object arg0) {
@@ -9307,13 +9300,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskEstimatedDuration => 'Task Estimated Duration';
 
   @override
-  String get taskEstimatedDurationLabel => 'Task Estimated Duration Label';
+  String get taskEstimatedDurationLabel => 'Estimated time';
 
   @override
   String get taskExecutionAbandon => 'Task Execution Abandon';
 
   @override
-  String get taskExecutionCompleteTitle => 'Task Execution Complete Title';
+  String get taskExecutionCompleteTitle => 'Finish task';
 
   @override
   String get taskConfirmCompleteTitle => 'Confirm completion?';
@@ -9362,10 +9355,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExecutionNoTask => 'Task Execution No Task';
 
   @override
-  String get taskExecutionNoteHint => 'Task Execution Note Hint';
+  String get taskExecutionNoteHint => 'Add a note...';
 
   @override
-  String get taskExecutionNoteLabel => 'Task Execution Note Label';
+  String get taskExecutionNoteLabel => 'Execution note';
 
   @override
   String taskExecutionStartFailed(Object arg0) {
@@ -9376,13 +9369,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExecutionStartNow => 'Task Execution Start Now';
 
   @override
-  String get taskExecutionSyncFailed => 'Task Execution Sync Failed';
+  String get taskExecutionSyncFailed => 'Sync failed';
 
   @override
   String get taskExecutionFreeFocusCompleted => 'Free focus completed';
 
   @override
-  String get taskExecutionTimerLabel => 'Task Execution Timer Label';
+  String get taskExecutionTimerLabel => 'Timer';
 
   @override
   String get taskExitCancelStep1 => 'Task Exit Cancel Step1';
@@ -9423,10 +9416,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExitTitleStep3 => 'Task Exit Title Step3';
 
   @override
-  String get taskGenerateGuideSubtitle => 'Task Generate Guide Subtitle';
+  String get taskGenerateGuideSubtitle =>
+      'AI is writing the execution guide...';
 
   @override
-  String get taskGenerateGuideTitle => 'Task Generate Guide Title';
+  String get taskGenerateGuideTitle => 'Generate execution guide';
 
   @override
   String get taskDetailNoteSection => 'Task Note';
@@ -9554,7 +9548,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskGuideEmpty => 'Task Guide Empty';
 
   @override
-  String get taskGuideTitle => 'Task Guide Title';
+  String get taskGuideTitle => 'Task guide';
 
   @override
   String get taskListLoading => 'Loading tasks...';
@@ -9584,19 +9578,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskNudgeDismiss => 'Task Nudge Dismiss';
 
   @override
-  String get taskNudgeTitle => 'Task Nudge Title';
+  String get taskNudgeTitle => 'Task suggestion';
 
   @override
-  String get taskReminderEnableSubtitle => 'Task Reminder Enable Subtitle';
+  String get taskReminderEnableSubtitle => 'Turn on task reminders';
 
   @override
-  String get taskReminderEnableTitle => 'Task Reminder Enable Title';
+  String get taskReminderEnableTitle => 'Turn on reminders';
 
   @override
   String get taskReminderInfoBody => 'Task Reminder Info Body';
 
   @override
-  String get taskReminderInfoTitle => 'Task Reminder Info Title';
+  String get taskReminderInfoTitle => 'About reminders';
 
   @override
   String get taskReminderPermissionDenied => 'Task Reminder Permission Denied';
@@ -9605,13 +9599,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskReminderRefreshAll => 'Task Reminder Refresh All';
 
   @override
-  String get taskReminderRefreshSuccess => 'Task Reminder Refresh Success';
+  String get taskReminderRefreshSuccess => 'Reminders refreshed';
 
   @override
-  String get taskReminderSettingsTitle => 'Task Reminder Settings Title';
+  String get taskReminderSettingsTitle => 'Reminder settings';
 
   @override
-  String get taskReminderTimesTitle => 'Task Reminder Times Title';
+  String get taskReminderTimesTitle => 'Reminder times';
 
   @override
   String get taskSearchHint => 'Search tasks...';
@@ -9623,10 +9617,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskSuggestedKnowledge => 'Task Suggested Knowledge';
 
   @override
-  String get taskTagsHint => 'Task Tags Hint';
+  String get taskTagsHint => 'Add tags...';
 
   @override
-  String get taskTagsLabel => 'Task Tags Label';
+  String get taskTagsLabel => 'Tags';
 
   @override
   String taskTimerMinutes(Object arg0) {
@@ -9637,16 +9631,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskTimerPomodoro => 'Task Timer Pomodoro';
 
   @override
-  String get taskTitleHint => 'Task Title Hint';
+  String get taskTitleHint => 'Enter a task title...';
 
   @override
-  String get taskTitleLabel => 'Task Title Label';
+  String get taskTitleLabel => 'Task title';
 
   @override
   String get taskTitleRequired => 'Task Title Required';
 
   @override
-  String get taskTypeLabel => 'Task Type Label';
+  String get taskTypeLabel => 'Task type';
 
   @override
   String get taskTypeOcr => 'OCR';
@@ -9658,10 +9652,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskViewAll => 'Task View All';
 
   @override
-  String get weeklyAgendaCollapsedHint => 'Weekly Agenda Collapsed Hint';
+  String get weeklyAgendaCollapsedHint => 'Expand to see the full week';
 
   @override
-  String get weeklyAgendaEmptyHint => 'Weekly Agenda Empty Hint';
+  String get weeklyAgendaEmptyHint => 'Nothing scheduled this week';
 
   @override
   String weeklyAgendaSummary(Object arg0, Object arg1, Object arg2) {
@@ -12547,7 +12541,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPanelEmptyTitle => 'Memory panel is empty';
 
   @override
-  String get memoryPanelForesightHint => 'Foresight Hint';
+  String get memoryPanelForesightHint => 'Foresight hint';
 
   @override
   String memoryPanelItemCount(Object count) {
@@ -15788,7 +15782,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get executionSelfVerification => 'Self-Verification';
 
   @override
-  String get executionSelfVerificationHint => 'Validation Hint';
+  String get executionSelfVerificationHint => 'Self-check hint';
 
   @override
   String get executionResultComparison => 'Result Comparison';
@@ -15892,7 +15886,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get executionStatusPartial => 'Partial';
 
   @override
-  String get executionStatusFailed => 'Failed';
+  String get executionStatusFailed => 'Execution failed';
 
   @override
   String get executionStatusCanceled => 'Canceled';
@@ -20810,7 +20804,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsCalcNoHistoryDesc => 'Complete an expression to see it here.';
 
   @override
-  String get toolsTransFailed => 'Translation Failed';
+  String get toolsTransFailed => 'Translation failed';
 
   @override
   String toolsTransError(String e) {
@@ -21960,7 +21954,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fcConceptConfusion => 'Concept Confusion';
 
   @override
-  String get fcCalculationError => 'Calculation Error';
+  String get fcCalculationError => 'Calculation error';
 
   @override
   String get fcMisreading => 'Misreading';
@@ -22367,7 +22361,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get docCleanerCopySummary => 'Copy Summary';
 
   @override
-  String get docCleanerFailedTitle => 'Cleaning Failed';
+  String get docCleanerFailedTitle => 'Cleaning failed';
 
   @override
   String get docCleanerFailedSubtitle =>
@@ -24038,7 +24032,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyNodeJustNow => 'Just now';
 
   @override
-  String get galaxyNodeImageError => 'Image Error';
+  String get galaxyNodeImageError => 'Image-based error';
 
   @override
   String get galaxyNodeHistoryFailed => 'Node history failed to load';
@@ -25900,7 +25894,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userNoRecentActivity => 'No recent activity';
 
   @override
-  String get userForesightHint => 'Foresight Hint';
+  String get userForesightHint => 'Foresight hint';
 
   @override
   String get userForesightEmpty =>
@@ -28585,14 +28579,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sprintHistoryStartSprint => 'Start a sprint';
-
-
-
-
-
-
-
-
 
   @override
   String get growthPlansTitle => 'Growth Plans';
@@ -34664,4 +34650,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authTryExample => 'Try an example';
+
+  @override
+  String confidenceWithBand(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': 'I\'m fairly confident',
+        'medium': 'I\'m somewhat confident',
+        'low': 'I\'m not quite sure yet',
+        'other': 'Confidence',
+      },
+    );
+    return '$_temp0 ($percent%)';
+  }
 }

@@ -73,6 +73,7 @@ import 'package:sparkle/features/user/presentation/screens/sync_center_screen.da
 import 'package:sparkle/features/user/presentation/screens/system_updates_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
@@ -170,6 +171,74 @@ void main() {
       );
       expect(find.byType(DashboardScreen), findsOneWidget);
       expect(find.byType(PersonaOnboardingScreen), findsNothing);
+    });
+
+    testWidgets(
+        'guest session never bounces into persona onboarding (J-02 three-'
+        'session stability: guest)', (tester) async {
+      final harness = await _pumpRouter(
+        tester,
+        authState: AuthState(
+          isAuthenticated: true,
+          user: _buildGuestUser(),
+        ),
+        onboardingCompleted: false,
+      );
+
+      await _pumpFrames(tester);
+
+      expect(harness.router.routeInformationProvider.value.uri.path, '/home');
+      expect(find.byType(DashboardScreen), findsOneWidget);
+
+      // 访客直接访问 persona 引导路由 → 折回 home（guest 无逐页引导链路，
+      // 示例体验经种子数据与转化卡承接，不落入未完成引导循环）。
+      harness.router.go(UserRoutes.personaOnboarding);
+      await _pumpFrames(tester);
+
+      expect(
+        harness.router.routeInformationProvider.value.uri.path,
+        '/home',
+        reason: 'guest 访问 persona 引导必须折回 home，session 保持稳定',
+      );
+      expect(find.byType(PersonaOnboardingScreen), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      harness.container.dispose();
+    });
+
+    testWidgets(
+        'upgraded guest (registered, onboarding pending) keeps persona '
+        'onboarding reachable (J-02 three-session stability: upgrade)',
+        (tester) async {
+      final harness = await _pumpRouter(
+        tester,
+        authState: AuthState(
+          isAuthenticated: true,
+          user: _buildUpgradedUser(),
+        ),
+        onboardingCompleted: false,
+      );
+
+      await _pumpFrames(tester);
+
+      // 升级后的 session 语义翻转为注册用户：home 软墙 + resume 卡承接，
+      // persona 引导保持可达（不被 completed/guest 折返分支弹回）。
+      expect(harness.router.routeInformationProvider.value.uri.path, '/home');
+
+      harness.router.go(UserRoutes.personaOnboarding);
+      await _pumpFrames(tester);
+
+      expect(
+        harness.router.routeInformationProvider.value.uri.path,
+        UserRoutes.personaOnboarding,
+        reason: '升级后（注册未完成引导）persona 引导必须可达，供补完延后问',
+      );
+      expect(find.byType(PersonaOnboardingScreen), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      harness.container.dispose();
     });
 
     testWidgets(
@@ -539,6 +608,41 @@ UserModel _buildUser() => UserModel(
       curiosityPreference: 0.5,
       isActive: true,
       status: UserStatus.online,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
+/// J-02 三端 session 稳定（guest 端）：registration_source='guest'。
+UserModel _buildGuestUser() => UserModel(
+      id: '00000000-0000-0000-0000-000000000002',
+      username: 'router_guest_user',
+      email: 'guest@example.com',
+      nickname: 'Router Guest',
+      flameLevel: 1,
+      flameBrightness: 0.5,
+      depthPreference: 0.5,
+      curiosityPreference: 0.5,
+      isActive: true,
+      status: UserStatus.online,
+      registrationSource: 'guest',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
+/// J-02 三端 session 稳定（升级端）：guest 转正后 registration_source 翻转
+/// 为注册身份，onboarding 仍未完成（延后问待补）。
+UserModel _buildUpgradedUser() => UserModel(
+      id: '00000000-0000-0000-0000-000000000003',
+      username: 'router_upgraded_user',
+      email: 'upgraded@example.com',
+      nickname: 'Router Upgraded',
+      flameLevel: 1,
+      flameBrightness: 0.5,
+      depthPreference: 0.5,
+      curiosityPreference: 0.5,
+      isActive: true,
+      status: UserStatus.online,
+      registrationSource: 'email',
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
     );

@@ -59,6 +59,19 @@ class PersonaOnboardingDraft {
         'curiosity_preference': curiosityPreference,
       };
 
+  /// J-02 最小 goal capture 快车道：目标已先行入库后，草稿步进到第一个
+  /// 「延后问」——重进落在其余偏好上续答，已入库的目标不重问。
+  PersonaOnboardingDraft deferredAt(int step) => PersonaOnboardingDraft(
+        step: step,
+        goalType: goalType,
+        goalText: goalText,
+        learningStyle: learningStyle,
+        knowledgeLevel: knowledgeLevel,
+        studyMinutes: studyMinutes,
+        depthPreference: depthPreference,
+        curiosityPreference: curiosityPreference,
+      );
+
   /// 屏内恢复时的安全钳位：步数越界（草稿来自旧版本/损坏数据）回落到
   /// 合法区间，滑杆值钳到屏内既有 min/max 范围。
   PersonaOnboardingDraft clamp({

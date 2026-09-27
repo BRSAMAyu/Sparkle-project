@@ -2775,6 +2775,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personaComplete => '完成';
 
   @override
+  String get personaFastPathCta => '先拿第一步行动';
+
+  @override
+  String get personaFastPathHint => '只回答目标这一个问题，先拿到建议的第一步；其余偏好在后续使用中再补。';
+
+  @override
   String get editProfile => '编辑资料';
 
   @override
@@ -5454,20 +5460,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memoryCorrectionLowerConfidence => '别太信这条';
-
-  @override
-  String confidenceWithBand(String band, int percent) {
-    String _temp0 = intl.Intl.selectLogic(
-      band,
-      {
-        'high': '我比较确定',
-        'medium': '有一定把握',
-        'low': '我还不太确定',
-        'other': '把握',
-      },
-    );
-    return '$_temp0（$percent%）';
-  }
 
   @override
   String get memoryCorrectionMerge => '合并';
@@ -14867,8 +14859,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyDraftReviewPromptBody =>
-      '你的星图由你确认：逐个通过、跳过、合并，或先改名再收下。';
+  String get galaxyDraftReviewPromptBody => '你的星图由你确认：逐个通过、跳过、合并，或先改名再收下。';
 
   @override
   String get galaxyDraftReviewNow => '现在审核';
@@ -33197,4 +33188,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get authTryExample => '体验一个示例';
+
+  @override
+  String confidenceWithBand(String band, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      band,
+      {
+        'high': '我比较确定',
+        'medium': '有一定把握',
+        'low': '我还不太确定',
+        'other': '把握',
+      },
+    );
+    return '$_temp0（$percent%）';
+  }
 }

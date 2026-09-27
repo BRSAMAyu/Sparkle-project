@@ -5199,6 +5199,18 @@ abstract class AppLocalizations {
   /// **'完成'**
   String get personaComplete;
 
+  /// No description provided for @personaFastPathCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'先拿第一步行动'**
+  String get personaFastPathCta;
+
+  /// No description provided for @personaFastPathHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'只回答目标这一个问题，先拿到建议的第一步；其余偏好在后续使用中再补。'**
+  String get personaFastPathHint;
+
   /// No description provided for @editProfile.
   ///
   /// In zh, this message translates to:
@@ -10142,11 +10154,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'别太信这条'**
   String get memoryCorrectionLowerConfidence;
-  /// No description provided for @confidenceWithBand.
-  ///
-  /// In zh, this message translates to:
-  /// **'{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）'**
-  String confidenceWithBand(String band, int percent);
 
   /// No description provided for @memoryCorrectionMerge.
   ///
@@ -60348,6 +60355,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'体验一个示例'**
   String get authTryExample;
+
+  /// No description provided for @confidenceWithBand.
+  ///
+  /// In zh, this message translates to:
+  /// **'{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）'**
+  String confidenceWithBand(String band, int percent);
 }
 
 class _AppLocalizationsDelegate

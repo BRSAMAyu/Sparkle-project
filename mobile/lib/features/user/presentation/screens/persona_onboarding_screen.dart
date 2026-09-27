@@ -41,6 +41,9 @@ class _PersonaOnboardingScreenState
   double _depthPreference = 0.5;
   double _curiosityPreference = 0.5;
   bool _submitting = false;
+  // J-02 最小 goal capture 快车道在途标记（与全量提交 _submitting 分立，
+  // 互不吞对方的按钮 loading 态）。
+  bool _fastPathInFlight = false;
   bool _previewLoading = false;
   String? _previewMessage;
   int _previewRequestId = 0;
@@ -221,6 +224,43 @@ class _PersonaOnboardingScreenState
               ),
               const SizedBox(height: DS.spacing12),
               _buildPreviewCard(context),
+              // J-02（卡面 Work 2「只问改变 first action 的问题；其他信息
+              // 延后」）：最小 goal capture 快车道——目标非空即可只带目标
+              // 提交（goal + goal_type 两字段），先拿到 first action 入场券；
+              // 四项偏好不改变 first action，延后到使用场景中渐进补全
+              // （A-SPEC8B G1 裁决「压缩靠后置/对话化」，五问零裁减只延后）。
+              // 挂步 1 内容内 → 其余步骤不渲染（快车道不是跳过引导）；
+              // ValueListenableBuilder 直读 controller，输入即现无需防抖。
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _goalController,
+                builder: (context, value, __) {
+                  if (value.text.trim().isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Column(
+                    key: const ValueKey('j02-fast-path-section'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: DS.spacing12),
+                      Text(
+                        l10n.personaFastPathHint,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      SparkleButton(
+                        key: const ValueKey('j02-fast-path-cta'),
+                        label: l10n.personaFastPathCta,
+                        variant: ButtonVariant.ghost,
+                        onPressed: _fastPathInFlight || _submitting
+                            ? null
+                            : () => unawaited(_handleFastPathSubmit()),
+                        loading: _fastPathInFlight,
+                        expand: true,
+                      ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
           isActive: _currentStep >= 0,
@@ -360,6 +400,74 @@ class _PersonaOnboardingScreenState
       ..invalidate(activePoliciesProvider);
     if (mounted) {
       context.go(UserRoutes.modelingChat);
+    }
+  }
+
+  /// J-02 最小 goal capture 快车道：只提交改变 first action 的问题
+  /// （goal + goal_type），服务端各显式偏好逐字段条件写入（`/profile/onboarding`
+  /// 部分载荷契约，见 backend tests/unit/test_j02_minimal_goal_capture.py）
+  /// ——goal-only 提交不产生偏好写入，mobile 侧 onboardingCompleted 推断
+  /// 保持 false，OnboardingResumeCard「继续引导」入口留存，其余四问经它
+  /// 延后可达（五问零裁减，TV-G3；延后语义 = 草稿步进到第一个延后问）。
+  ///
+  /// 续接面与全量提交同一处：modeling 访谈（对话化画像，A-SPEC8B G4 裁决）。
+  /// 失败诚实：可见反馈 + 重试，不跳转、不假装成功（与全量提交同形制）。
+  Future<void> _handleFastPathSubmit() async {
+    final goal = _goalController.text.trim();
+    if (goal.isEmpty || _fastPathInFlight || _submitting) return;
+
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+    setState(() => _fastPathInFlight = true);
+    final userId = _currentUserId;
+    final repo = ref.read(userRepositoryProvider);
+    try {
+      final firstMessage = await repo.submitOnboarding({
+        'learning_goal_type': _goalType,
+        'learning_goal': goal,
+      });
+      ref
+        ..invalidate(transparentProfileProvider)
+        ..invalidate(profileContextProvider)
+        ..invalidate(inferredPreferencesProvider)
+        ..invalidate(activePoliciesProvider);
+      if (userId != null) {
+        // 延后问保留在草稿：步进到第一个延后问（学习风格），重进续答
+        // 不重填目标。目标已入库（memory_goals），草稿只承载剩余偏好。
+        // 先取消挂起的防抖存稿——输入后 400ms 内点快车道时，迟到的
+        // _onFieldMutated 定时器会用步 0 快照覆盖 deferred 草稿。
+        _draftSaveDebounce?.cancel();
+        await ref
+            .read(personaOnboardingDraftStoreProvider)
+            .save(userId, _draftSnapshot().deferredAt(1));
+      }
+      if (mounted) {
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementCommon),
+        );
+        context.go(
+          UserRoutes.modelingChat,
+          extra: {'post_onboarding_message': firstMessage},
+        );
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SparkleSnackBar.error(
+          context.l10n.userOnboardingSubmitFailed,
+          onRetry: () {
+            if (mounted) {
+              unawaited(_handleFastPathSubmit());
+            }
+          },
+          retryLabel: context.l10n.retry,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _fastPathInFlight = false);
+      }
     }
   }
 
