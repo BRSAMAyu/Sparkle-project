@@ -4251,8 +4251,16 @@ class SpineOrchestrator:
         state_patches: list[dict[str, Any]] | None = None,
         policy_changes: list[dict[str, Any]] | None = None,
         user_summary: str = "",
+        user_id: str | None = None,
     ) -> dict[str, Any] | None:
-        """Close an Aurora session and apply closure through Spine."""
+        """Close an Aurora session and apply closure through Spine.
+
+        user_id: 会话在 facade 存储（spine:aurora_session:*）缺席时的显式
+        归属人。core_session 侧闭合经 apply_l3_closure_to_spine 到达此处时
+        会话只存在于 aurora:core_session:*（V3-FIX-343：旧行为在此恒以
+        session_not_found 早退、补丁整体丢弃）；传入 user_id 则继续走
+        补丁落库 + 指令再生的审计链。缺省 None 保持原行为不变。
+        """
         patches = [StatePatch(**p) for p in (state_patches or [])]
         changes = [PolicyChange(**c) for c in (policy_changes or [])]
 
@@ -4266,7 +4274,11 @@ class SpineOrchestrator:
 
         session = await self.aurora_core.close_session(session_id, closure)
         if not session or "error" in session:
-            return session
+            if not user_id:
+                return session
+            # V3-FIX-343: facade 无此会话记录（两个世界的存储键不相交），
+            # 以调用方显式归属人继续闭合，而不是丢弃校准产出。
+            session = {"session_id": session_id, "user_id": user_id}
 
         # Apply state patches through Spine (proper audit trail)
         user_id = session.get("user_id", "")

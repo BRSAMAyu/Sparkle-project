@@ -15,6 +15,7 @@ Rules:
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import inspect
 import json
@@ -62,6 +63,21 @@ def _new_resume_token() -> str:
 
 def _hash_resume_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+# V3-FIX-343: 强引用集合防止 fire-and-forget 桥任务被 GC 中途丢弃；
+# done callback 把任务内故障（Spine 不可用、补丁落库失败）以 error 级
+# 浮出——取代旧实现「异常整体吞成 debug 日志」的不可观测形态。
+_L3_BRIDGE_TASKS: set[asyncio.Task[Any]] = set()
+
+
+def _on_l3_bridge_task_done(task: asyncio.Task[Any]) -> None:
+    _L3_BRIDGE_TASKS.discard(task)
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.opt(exception=exc).error("L3 closure bridge task failed")
 
 
 def _parse_dt(value: str | None) -> datetime | None:
@@ -731,9 +747,9 @@ class AuroraCoreSessionService:
     async def close_session(self, *, user_id: str, session_id: str) -> AuroraCoreSession:
         """Force-close a session (user-initiated exit).
 
-        Phase-3: also produces a SessionClosure from the L3 engine and
-        propagates state patches + policy changes through the Spine so
-        the next task card actually changes.
+        Phase-3: also produces a SessionClosure from the session's own
+        CalibrationResult and propagates state patches + policy changes
+        through the Spine so the next task card actually changes.
         """
         session = await self.store.load(session_id)
         if session is None:
@@ -750,20 +766,42 @@ class AuroraCoreSessionService:
 
         # Phase-3: bridge L3 closure → Spine. Fire-and-forget to avoid
         # blocking the user-visible close response on Spine latency.
+        #
+        # V3-FIX-343: 此桥自登记起从未执行过，有三处独立断裂——
+        # (1) 本服务无 self.redis（redis 在 self.store.redis），
+        #     L3FullCoreEngine(self.redis) 必抛 AttributeError；
+        # (2) 旧实现走 L3FullCoreEngine.produce_closure()，读 runtime_v1
+        #     议程格式（agenda.agenda_items[].item_type/payload.user_reply），
+        #     而 to_dict() 的 agenda 是 UI 投影 agenda_snapshot()，closure
+        #     恒空 → 桥任务永不创建；
+        # (3) SpineOrchestrator.close_aurora_session 只认 facade 存储键
+        #     spine:aurora_session:*，core_session 会话不在场即早退
+        #     session_not_found（已由该侧新增显式 user_id 旁路修复）。
+        # 闭合源改为 _finalize_session 产出的 CalibrationResult，经 P2-23
+        # 适配器 to_session_closure() 进桥；桥内有 fme:l3_closure kill
+        # switch（默认 live）兜底可随时下线。
         try:
-            from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
             from app.services.fme_l3_closure_bridge import apply_l3_closure_to_spine
 
-            l3_engine = L3FullCoreEngine(self.redis)
-            session_dict = session.to_dict()
-            closure = l3_engine.produce_closure(session_dict)
-            if closure.state_patches or closure.policy_changes:
-                import asyncio
-                asyncio.create_task(
-                    apply_l3_closure_to_spine(user_id, closure)
+            if session.calibration_result is not None:
+                closure = session.calibration_result.to_session_closure()
+                # core_session_scope 是 _derive_state_patches 的占位标记
+                # （零语义产出的中途退出也会带上「完成了显式校准」）；
+                # 桥只在真实校准产出（语义补丁或策略变更）时触发，避免
+                # 用户每次直接退出都向 Spine 写噪声信号。有真实产出时
+                # 占位标记随 closure 一并入审计链。
+                has_semantic_output = bool(
+                    [p for p in closure.state_patches if p.state_key != "core_session_scope"] or closure.policy_changes
                 )
+                if has_semantic_output:
+                    bridge_task = asyncio.create_task(apply_l3_closure_to_spine(user_id, closure))
+                    _L3_BRIDGE_TASKS.add(bridge_task)
+                    bridge_task.add_done_callback(_on_l3_bridge_task_done)
         except Exception:
-            logger.opt(exception=True).debug("L3 closure bridge skipped")
+            # 桥是 close 路径上的尽力而为装饰，不得让 Spine 侧故障打断
+            # 用户可见的关闭；但失败必须以 error 级浮出（V3-FIX-343 前
+            # 这里是 debug 级吞掉一切，含本桥从未执行过的 AttributeError）。
+            logger.opt(exception=True).error("L3 closure bridge setup failed")
 
         return session
 

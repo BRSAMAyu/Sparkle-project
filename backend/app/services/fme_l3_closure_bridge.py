@@ -79,6 +79,9 @@ async def apply_l3_closure_to_spine(
             state_patches=patch_dicts,
             policy_changes=change_dicts,
             user_summary=closure.user_visible_summary,
+            # V3-FIX-343: core_session 来源的闭合在 facade 存储无记录，
+            # 必须显式带归属人，否则 Spine 侧恒 session_not_found 早退。
+            user_id=user_id,
         )
         if result and result.get("regenerated_directives"):
             directives = result["regenerated_directives"]
@@ -88,13 +91,14 @@ async def apply_l3_closure_to_spine(
                 len(directives),
                 user_id,
             )
-            old_strategy = (
-                (change_dicts[0].get("previous_strategy") if change_dicts else None)
-                or "unknown"
-            )
+            # PolicyChange 的字段名是 old_strategy（V3-FIX-343 前误读
+            # previous_strategy，恒回退 "unknown"）。
+            old_strategy = (change_dicts[0].get("old_strategy") if change_dicts else None) or "unknown"
             new_strategy = (
-                directives[0].get("strategy") if directives else None
-            ) or str(directives[0]) if directives else "unknown"
+                (directives[0].get("strategy") if directives else None) or str(directives[0])
+                if directives
+                else "unknown"
+            )
             reason = closure.user_visible_summary or ""
             await emit_strategy_change_card(
                 user_id,
