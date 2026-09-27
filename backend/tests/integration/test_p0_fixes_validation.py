@@ -9,13 +9,17 @@ P0修复验证测试脚本
 """
 
 import asyncio
+from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
-from app.db.session import AsyncSessionLocal, get_db
+from app.db.session import get_db
+from app.models.base import Base as AppBase
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
 from app.services.decision_record_service import DecisionRecordService
@@ -50,39 +54,64 @@ async def test_decision_record_service_with_none_session():
     print("✅ Test 2 passed: DecisionRecordService优雅处理None session")
 
 
+@pytest_asyncio.fixture
+async def decision_record_session() -> AsyncGenerator[AsyncSession, None]:
+    """自含建表的 sqlite 内存会话（对齐顶层 conftest db_session 纪律）。
+
+    V3-FIX-325：原实现裸 ``async for db in get_db()`` 走进程级全局 engine，其
+    背后库是否有表完全取决于环境——单 job 全量 CI（postgres+迁移先行）成立；
+    裸 worktree/sqlite 形态下全局库为空 schema，恒 ``no such table: users``
+    （wt487 即记录的 base 既有形态，wt592 分片化后进入片绿核算而暴露；wt590
+    conftest autouse 0b2273b3 只治理 LLM 全局态、wt598 迁移是 postgres alembic
+    面，均与此无关）。本测语义是「有效 AsyncSession 下服务可记录并读回」，
+    不承载 get_db 依赖链语义——改用测试自管建表会话，环境无关，不弱化其他
+    测试的隔离性。
+    """
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(AppBase.metadata.create_all)
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with session_factory() as session:
+        yield session
+    await engine.dispose()
+
+
 @pytest.mark.asyncio
-async def test_decision_record_service_with_valid_session():
+async def test_decision_record_service_with_valid_session(decision_record_session):
     """验证DecisionRecordService在有效session下正常工作"""
-    async for db in get_db():
-        decision_service = DecisionRecordService(db=db)
-        test_user_id = uuid4()
-        db.add(
-            User(
-                id=test_user_id,
-                username=f"p0_user_{test_user_id.hex[:8]}",
-                email=f"p0_{test_user_id.hex[:8]}@example.com",
-                hashed_password="hash",
-                is_active=True,
-            )
+    db = decision_record_session
+    decision_service = DecisionRecordService(db=db)
+    test_user_id = uuid4()
+    db.add(
+        User(
+            id=test_user_id,
+            username=f"p0_user_{test_user_id.hex[:8]}",
+            email=f"p0_{test_user_id.hex[:8]}@example.com",
+            hashed_password="hash",
+            is_active=True,
         )
-        await db.commit()
+    )
+    await db.commit()
 
-        # 记录决策
-        await decision_service.record_decision(
-            user_id=test_user_id,
-            module="test",
-            action="test_action_valid",
-            preference_version=1,
-            preferences_snapshot={"test": "data"},
-            outcome="success",
-        )
+    # 记录决策
+    await decision_service.record_decision(
+        user_id=test_user_id,
+        module="test",
+        action="test_action_valid",
+        preference_version=1,
+        preferences_snapshot={"test": "data"},
+        outcome="success",
+    )
 
-        # 验证记录已保存
-        records = await decision_service.get_recent_records(test_user_id, limit=1)
-        assert len(records) == 1
-        assert records[0].action == "test_action_valid"
-        print("✅ Test 3 passed: DecisionRecordService在有效session下正常记录")
-        break
+    # 验证记录已保存
+    records = await decision_service.get_recent_records(test_user_id, limit=1)
+    assert len(records) == 1
+    assert records[0].action == "test_action_valid"
+    print("✅ Test 3 passed: DecisionRecordService在有效session下正常记录")
 
 
 @pytest.mark.asyncio
@@ -159,7 +188,7 @@ async def run_all_tests():
 
     try:
         # Test 1: dashscope可用性
-        import dashscope
+        import dashscope  # noqa: F401 — 探测模块可导入性本身即断言
 
         print("✅ Test 1: dashscope模块可用性")
 
