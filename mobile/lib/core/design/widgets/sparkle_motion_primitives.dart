@@ -447,6 +447,16 @@ class SparkleExitTransition extends StatelessWidget {
     if (maintainSize) {
       return animatedChild;
     }
+    // U-02 F5（V3-FIX-374）：reduceMotion（U-02 低刺激档 / OS 减动效）下
+    // duration 为 Duration.zero——零时长 AnimatedSize 在自身 performLayout
+    // 期间同步 notifyListeners 并 markNeedsLayout(self)，触发框架断言
+    // "RenderAnimatedSize was mutated in its own performLayout"（chat 底部
+    // dock 的 prompt-starters/错误横幅/plan review/附件条四消费点 low 档
+    // 实测）。零时长 AnimatedSize 与直接挂载语义等价，禁动效时不再装壳；
+    // AnimatedOpacity/Scale 零时长只影响绘制不参与布局，安全保留。
+    if (context.reduceMotion) {
+      return visible ? animatedChild : const SizedBox.shrink();
+    }
     return AnimatedSize(
       duration: duration,
       curve: curve,

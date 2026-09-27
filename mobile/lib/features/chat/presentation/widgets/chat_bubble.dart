@@ -1101,16 +1101,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                 ? S.chatBubbleCollapse
                                                 : S.chatBubbleReadMore;
 
-                                            final animatedContent =
-                                                AnimatedSize(
-                                              duration: context.reduceMotion
-                                                  ? Duration.zero
-                                                  : DS.motionDuration(
-                                                      SparkleMotionToken.micro,
-                                                    ),
-                                              curve: Curves.easeOutCubic,
-                                              alignment: Alignment.topLeft,
-                                              child: shouldConstrain
+                                            // U-02 F5（V3-FIX-374）：禁动效档
+                                            // （低刺激 / OS reduce-motion）原先传
+                                            // Duration.zero 给 AnimatedSize——零时长
+                                            // 下控制器在本 render object 的
+                                            // performLayout 期间同步 notifyListeners
+                                            // 并 markNeedsLayout(self)，触发框架断言
+                                            // "RenderAnimatedSize was mutated in its
+                                            // own performLayout"。零时长 AnimatedSize
+                                            // 与直接挂载 child 语义等价，故禁动效时
+                                            // 不装动画外壳（standard 档不变）。
+                                            final messageContent = shouldConstrain
                                                   ? Column(
                                                       crossAxisAlignment:
                                                           CrossAxisAlignment
@@ -1236,8 +1237,20 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                         ),
                                                       ],
                                                     )
-                                                  : contentWidget,
-                                            );
+                                                  : contentWidget;
+
+                                            final animatedContent =
+                                                context.reduceMotion
+                                                ? messageContent
+                                                : AnimatedSize(
+                                                    duration:
+                                                        DS.motionDuration(
+                                                      SparkleMotionToken.micro,
+                                                    ),
+                                                    curve: Curves.easeOutCubic,
+                                                    alignment: Alignment.topLeft,
+                                                    child: messageContent,
+                                                  );
 
                                             return animatedContent;
                                           },

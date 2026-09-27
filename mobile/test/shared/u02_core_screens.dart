@@ -62,13 +62,15 @@ const Map<U02Surface, Set<String>> registeredU02Findings =
   // - F1 contrast:958a80 → chat_bubble.dart 时间戳改 textTertiary（AA 达标）；
   // - F4 layout:chat_accessory_pill.dart:63 → label Flexible 收缩；
   // - F3 layout:first_action_card.dart:367 → 三按钮 Row 改 Wrap。
-  // 仍在册（未修，见 RUBRIC_VERDICT.md）：
-  // F5 低刺激档 disableAnimations × AnimatedSize 触发框架断言
-  //   （RenderAnimatedSize mutated in its own performLayout）。
-  U02Surface.chat: {
-    'flutteranim:RenderAnimatedSize',
-  },
-  // 仍在册：F2 卡内无标题层（全部渲染文本为正文/辅助级）。
+  // wt683（V3-FIX-374）已修复并清空棘轮键：
+  // - F5 flutteranim:RenderAnimatedSize → chat_bubble.dart 禁动效档
+  //   （reduceMotion）不再给 AnimatedSize 传 Duration.zero（零时长下控制器
+  //   在 performLayout 期间同步 notifyListeners 自脏触发框架断言），改为
+  //   直接挂载 child（语义等价）；回归锁
+  //   test/widget/chat_bubble_reduced_motion_test.dart。
+  U02Surface.chat: {},
+  // 仍在册：F2 卡内无标题层（全部渲染文本为正文/辅助级）——涉及卡视觉
+  // 改版，登记 V3-FIX-375 移交后续卡。
   U02Surface.journeyFirstAction: {
     'hierarchy:no-heading',
   },
