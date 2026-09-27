@@ -4,9 +4,11 @@ import asyncio
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from loguru import logger
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,11 +29,25 @@ def _utcnow() -> datetime:
 #: V3-FIX-14: one lock per user so the debounce check-then-act below is a
 #: single critical section (check freshness -> compute -> commit). Without
 #: it, two concurrent telemetry-triggered calls both pass the freshness
-#: check and both mint a snapshot. Process-local scope: cross-process
-#: duplicates remain theoretically possible but are bounded harm (both
-#: writers apply the same cap/debounce bounds; reads take the latest row),
-#: matching the V3-FIX-11 receipt's hazard assessment.
+#: check and both mint a snapshot. V3-FIX-193: this lock is process-local by
+#: design (fast path; the service is constructed per request), so the
+#: cross-process face (FastAPI multi-worker × Celery) is covered by the
+#: Redis claim below — a residual same-process-vs-itself duplicate is
+#: bounded harm (both writers apply the same cap/debounce bounds; reads
+#: take the latest row), matching the V3-FIX-11 receipt's hazard assessment.
 _DEBOUNCE_LOCKS: defaultdict[UUID, asyncio.Lock] = defaultdict(asyncio.Lock)
+
+#: V3-FIX-193: 跨进程防抖 claim 键前缀（SET NX，先例 batch_worklane._try_claim）。
+_ESTIMATOR_CLAIM_PREFIX = "state_estimator:claim:"
+#: claim TTL：只须盖住"取数→计算→提交"时长（正常远小于 1s）。持锁进程崩溃后
+#: 残留键到期自清，行为退化回进程内锁 + 有界危害，不会永久卡死某用户。
+_ESTIMATOR_CLAIM_TTL_SECONDS = 10
+#: 对端进程持 claim 时的有界等待预算：等它提交并释放后抢到 claim，落入下方
+#: 既有 freshness 检查即走 debounce（对端快照已可见）。预算耗尽仍抢不到 →
+#: 放行（fail-open，与 batch_worklane 先例一致）："对端已提交"由 freshness
+#: 检查吸收；"对端未提交仍双写"是 V3-FIX-11 认定过的有界危害。
+_ESTIMATOR_CLAIM_WAIT_SECONDS = 1.0
+_ESTIMATOR_CLAIM_RETRY_INTERVAL_SECONDS = 0.05
 
 
 @dataclass
@@ -41,8 +57,71 @@ class StateWindow:
 
 
 class StateEstimatorService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, claim_store: Any | None = None):
         self.db = db
+        # V3-FIX-193: 跨进程 claim 存储可注入（测试用 FakeRedis）；None 时惰性
+        # 取 cache_service.redis（先例 batch_worklane._get_store）。
+        self._claim_store_override = claim_store
+
+    def _get_claim_store(self) -> Any:
+        """跨进程 claim 存储（redis）。导入放内层，测试可用注入替身。"""
+        if self._claim_store_override is not None:
+            return self._claim_store_override
+        try:
+            from app.core.cache import cache_service
+
+            return cache_service.redis
+        except Exception:  # noqa: BLE001 — cache 模块异常不阻塞估算主链路
+            return None
+
+    def _claim_key(self, user_id: UUID) -> str:
+        return f"{_ESTIMATOR_CLAIM_PREFIX}{user_id}"
+
+    async def _try_claim(self, user_id: UUID) -> bool:
+        """SET NX per-user claim（先例 batch_worklane._try_claim）。
+
+        True = 抢到（本进程负责本次重算）；False = 另一进程（FastAPI 多
+        worker 或 Celery worker）正在为该用户重算。Redis 缺席/故障时返回
+        True：退化为既有进程内锁，估算存活不依赖 Redis（fail-open）。
+        """
+        store = self._get_claim_store()
+        if store is None:
+            return True
+        try:
+            acquired = await store.set(self._claim_key(user_id), "1", nx=True, ex=_ESTIMATOR_CLAIM_TTL_SECONDS)
+            # set(nx=True) 返回 True = 抢到；None/False = 已被占
+            return bool(acquired)
+        except TypeError:
+            # 某些 fake/客户端不支持 nx/ex —— 降级为 get-then-set（测试环境）
+            try:
+                if await store.get(self._claim_key(user_id)):
+                    return False
+                await store.set(self._claim_key(user_id), "1")
+                return True
+            except Exception:  # noqa: BLE001
+                return True
+        except Exception as exc:  # noqa: BLE001 — 存储故障不阻塞估算
+            logger.warning("[StateEstimator] cross-process claim failed (proceeding): {}", exc)
+            return True
+
+    async def _await_claim(self, user_id: UUID) -> bool:
+        """对端持 claim 时有界等待其提交释放；抢到返回 True，预算耗尽返回 False。"""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + _ESTIMATOR_CLAIM_WAIT_SECONDS
+        while loop.time() < deadline:
+            await asyncio.sleep(_ESTIMATOR_CLAIM_RETRY_INTERVAL_SECONDS)
+            if await self._try_claim(user_id):
+                return True
+        return False
+
+    async def _release_claim(self, user_id: UUID) -> None:
+        store = self._get_claim_store()
+        if store is None:
+            return
+        try:
+            await store.delete(self._claim_key(user_id))
+        except Exception:  # noqa: BLE001 — 残留 claim 由 TTL 兜底
+            pass
 
     async def update_state(
         self,
@@ -75,26 +154,49 @@ class StateEstimatorService:
         first one committed and gets the existing snapshot instead of minting
         a duplicate. ``force`` still skips the freshness *check*, but its
         write is serialized against the same lock.
+
+        V3-FIX-193: that lock is process-local and the deployment runs FastAPI
+        multi-worker × Celery, so the same serialization is repeated across
+        processes with a per-user Redis SET NX claim (precedent:
+        ``batch_worklane._try_claim``). A caller that loses the claim waits
+        (bounded) for the peer to commit and release, then falls into the
+        freshness check above and is debounced onto the peer's snapshot. If
+        the wait budget runs out the call proceeds anyway (fail-open, matching
+        the batch_worklane precedent): "peer already committed" is absorbed by
+        the freshness check; the residual double write is the bounded harm the
+        V3-FIX-11 receipt already priced in. Redis absent → claim always
+        succeeds → behaviour identical to V3-FIX-14.
         """
         async with _DEBOUNCE_LOCKS[user_id]:
-            if not force:
-                latest = await self.get_latest_snapshot(user_id)
-                if latest is not None and (_utcnow() - latest.snapshot_at) < timedelta(
-                    seconds=STATE_ESTIMATOR_MIN_INTERVAL_SECONDS
-                ):
-                    STATE_ESTIMATOR_RUNS.labels(result="debounced").inc()
-                    return latest
+            claimed = await self._try_claim(user_id)
+            if not claimed:
+                # V3-FIX-193: 另一进程正在为该用户重算。有界等待其提交释放
+                # claim；抢到后落入下方 freshness 检查即走 debounce。预算耗尽
+                # 仍未抢到则放行（fail-open）：双写是有界危害，估算不被 Redis
+                # 故障卡死。未抢到时不释放 claim——那是对端的锁。
+                claimed = await self._await_claim(user_id)
+            try:
+                if not force:
+                    latest = await self.get_latest_snapshot(user_id)
+                    if latest is not None and (_utcnow() - latest.snapshot_at) < timedelta(
+                        seconds=STATE_ESTIMATOR_MIN_INTERVAL_SECONDS
+                    ):
+                        STATE_ESTIMATOR_RUNS.labels(result="debounced").inc()
+                        return latest
 
-            start_time = _utcnow()
-            window = self._default_window()
-            events = await self._fetch_recent_events(user_id, window)
-            snapshot = self._compute_state(user_id, events, window, timezone_name)
-            self.db.add(snapshot)
-            await self.db.commit()
-            await self.db.refresh(snapshot)
-            STATE_ESTIMATOR_RUNS.labels(result="success").inc()
-            STATE_ESTIMATOR_LATENCY.observe((_utcnow() - start_time).total_seconds())
-            return snapshot
+                start_time = _utcnow()
+                window = self._default_window()
+                events = await self._fetch_recent_events(user_id, window)
+                snapshot = self._compute_state(user_id, events, window, timezone_name)
+                self.db.add(snapshot)
+                await self.db.commit()
+                await self.db.refresh(snapshot)
+                STATE_ESTIMATOR_RUNS.labels(result="success").inc()
+                STATE_ESTIMATOR_LATENCY.observe((_utcnow() - start_time).total_seconds())
+                return snapshot
+            finally:
+                if claimed:
+                    await self._release_claim(user_id)
 
     async def get_latest_snapshot(self, user_id: UUID) -> UserStateSnapshot | None:
         result = await self.db.execute(
