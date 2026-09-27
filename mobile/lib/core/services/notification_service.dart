@@ -371,8 +371,15 @@ class NotificationService {
           'timestamp': DateTime.now().toUtc().toIso8601String(),
         },
       );
-    } catch (e) {
-      _logger.w('Failed to report push interaction: $e');
+    } catch (e, st) {
+      // V3-FIX-337: 这是推送交互回执的唯一写方——此前网关缺 /push 代理组导致
+      // 该请求永久 404 且仅记 warning，断链存活整个特性生命周期无人发现。
+      // 失败必须按 error 级别带上下文可见；仍吞掉异常，不打断通知 UX。
+      _logger.e(
+        'Failed to report push interaction (push_id=$pushId, action=$action)',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

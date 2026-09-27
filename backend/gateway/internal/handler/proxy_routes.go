@@ -877,6 +877,27 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered notification-center proxy routes")
 
+	// ==================== Push Interaction Routes (V3-FIX-337) ====================
+	// route-tier: authed
+	//
+	// The engine serves POST /push/interaction (api/v1/push_interaction.py,
+	// mounted at the /api/v1 prefix via api_router.include_router). Mobile
+	// notification_service._reportPushInteraction is its sole writer
+	// (ApiEndpoints.pushInteraction). Before V3-FIX-337 this group was
+	// absent and NoRoute only whitelists /api/v1/auth/*, so every push
+	// open/dismiss receipt answered a gateway-side 404 and the mobile catch
+	// swallowed it — push feedback (push_feedback/notification_analytics)
+	// was structurally starved of writers.
+	//
+	// The engine serves the POST face only — no wildcard group (same
+	// disposition as R2-08: don't register faces the engine cannot serve).
+	push := api.Group("/push")
+	push.Use(authMiddleware)
+	{
+		push.POST("/interaction", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered push proxy routes")
+
 	// ==================== Devices Routes ====================
 	devices := api.Group("/devices")
 	devices.Use(authMiddleware)
