@@ -144,13 +144,24 @@ type CommunityCommandService struct {
 #### 4.2 Task Sync Worker
 **文件**: `internal/worker/task_sync.go`
 
-维护的 Redis 投影：
+> **⚠️ 已退役（V3-FIX-356，wt661 2026-09-25）**：本节描述的任务投影族（TaskSyncWorker 与
+> TaskProjectionHandler 双投影器）已整体删除——全仓零读消费者，且双写方 schema 已漂移
+> （TaskView struct vs ad-hoc map、abandoned 语义不一致）。任务读权威仍是引擎 REST
+> （网关 `/api/v1/tasks*` 代理）+ 网关直读 PG（`internal/service/user_context.go`）。
+> 禁止在无真实消费面前提下重新接线；守卫测试
+> `internal/worker/task_projection_retired_guard_test.go` 钉死键字面量。
+> 下文原投影键清单仅作历史记录：
+
+<details><summary>历史：原维护的 Redis 投影（已退役）</summary>
+
 - `task:view:{task_id}` - 任务详情
 - `user:tasks:{user_id}` - 用户任务列表 (sorted set)
 - `user:tasks:pending:{user_id}` - 待办任务
 - `user:tasks:in_progress:{user_id}` - 进行中任务
 - `user:tasks:completed:{user_id}` - 已完成任务
 - `user:task:stats:{user_id}` - 任务统计 (hash)
+
+</details>
 
 ---
 

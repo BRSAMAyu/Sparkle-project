@@ -106,7 +106,6 @@ type cqrsBundle struct {
 	dlqHandler         *cqrsWorker.DLQHandler
 	sagaCoordinator    *cqrs.SagaCoordinator
 	commSyncWorker     *worker.CommunitySyncWorker
-	taskSyncWorker     *worker.TaskSyncWorker
 	galaxySyncWorker   *worker.GalaxySyncWorker
 	outboxPublisherRun func()
 	outboxCleanerRun   func()
@@ -379,13 +378,18 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 	snapshotManager := projection.NewSnapshotManager(dbh.pool, logger)
 	projectionBuilder := projection.NewBuilder(dbh.pool, projectionManager, snapshotManager, cqrsMetrics, logger)
 
+	// V3-FIX-356 (wt661 2026-09-25): the task projection handler and the task
+	// sync worker were retired — the retired task-view/task-list/task-stats
+	// Redis key family had zero read consumers repo-wide, and its two writers
+	// (live stream consumer + event_store replay) had already diverged in
+	// schema. Task reads stay on the engine REST surface proxied at
+	// /api/v1/tasks* plus gateway direct PG reads (user_context.go); the
+	// gateway must not grow a second task source of truth. See
+	// internal/worker/task_projection_retired_guard_test.go before ever
+	// reintroducing a task projector.
 	communityProjectionHandler := projection.NewCommunityProjectionHandler(rdb, dbh.pool, logger)
 	if err := projectionManager.RegisterHandler(communityProjectionHandler); err != nil {
 		logger.Error("Failed to register community projection handler", zap.Error(err))
-	}
-	taskProjectionHandler := projection.NewTaskProjectionHandler(rdb, dbh.pool, logger)
-	if err := projectionManager.RegisterHandler(taskProjectionHandler); err != nil {
-		logger.Error("Failed to register task projection handler", zap.Error(err))
 	}
 	galaxyProjectionHandler := projection.NewGalaxyProjectionHandler(rdb, dbh.pool, logger)
 	if err := projectionManager.RegisterHandler(galaxyProjectionHandler); err != nil {
@@ -393,7 +397,6 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 	}
 
 	commSyncWorker := worker.NewCommunitySyncWorker(rdb, dbh.pool, cqrsMetrics, logger)
-	taskSyncWorker := worker.NewTaskSyncWorker(rdb, dbh.pool, cqrsMetrics, logger)
 	galaxySyncWorker := worker.NewGalaxySyncWorker(rdb, dbh.pool, cqrsMetrics, logger)
 
 	fileEventSubscriber := service.NewFileEventSubscriber(rdb, services.fileEventHub, logger)
@@ -433,7 +436,6 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 		dlqHandler:        dlqHandler,
 		sagaCoordinator:   sagaCoordinator,
 		commSyncWorker:    commSyncWorker,
-		taskSyncWorker:    taskSyncWorker,
 		galaxySyncWorker:  galaxySyncWorker,
 		outboxPublisherRun: func() {
 			// PROD-LOG #8: shutdown-period "context canceled" → INFO, not ERROR.
@@ -457,9 +459,6 @@ func startCQRSWorkers(ctx context.Context, cqrs *cqrsBundle, log *zap.Logger) {
 	// shutdown-period cancellations are INFO, live-process failures stay ERROR.
 	go func() {
 		cqrsWorker.LogRunnerStopped(ctx, log, "Community sync worker", cqrs.commSyncWorker.Run(ctx))
-	}()
-	go func() {
-		cqrsWorker.LogRunnerStopped(ctx, log, "Task sync worker", cqrs.taskSyncWorker.Run(ctx))
 	}()
 	go func() {
 		cqrsWorker.LogRunnerStopped(ctx, log, "Galaxy sync worker", cqrs.galaxySyncWorker.Run(ctx))
@@ -556,7 +555,6 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		}
 
 		commRunning := cqrs.commSyncWorker.IsRunning()
-		taskRunning := cqrs.taskSyncWorker.IsRunning()
 		galaxyRunning := cqrs.galaxySyncWorker.IsRunning()
 
 		c.JSON(http.StatusOK, gin.H{
@@ -567,8 +565,9 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 				},
 				"workers": gin.H{
 					"community": commRunning,
-					"task":      taskRunning,
-					"galaxy":    galaxyRunning,
+					// "task" removed with the retired task projection family
+					// (V3-FIX-356) — no task worker exists to report on.
+					"galaxy": galaxyRunning,
 				},
 			},
 		})
