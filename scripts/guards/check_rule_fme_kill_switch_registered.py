@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
-"""Rule guard: FME kill switches must remain registered.
+"""Rule guard: FME kill switches must be registered iff they have real readers.
 
-Background — Phase-0 of the First-Minute Experience track introduces two
-tri-state kill switches (`goal_first_minute`, `task_card_protocol_v2`) that
-gate the Entry Wire and Execution Wire respectively. Per CLAUDE.md the
-governance contract is:
+Background — V3-FIX-345 (wt655): the original contract ("a kill switch is
+registered iff there is both a KillSwitchBinding entry and a settings
+attribute") mandated registration without requiring any reader. That let a
+zero-reader switch (`task_card_protocol_v2`) pose as live governance — the
+TaskCardProtocol render chain (GET /tasks/{id}/card-protocol) never consults
+the switch, so flipping it changed nothing (FIX-341 "fake switch" pattern).
+The dead binding has been removed.
 
-  • A kill switch is registered iff there is both a KillSwitchBinding entry
-    and a settings attribute that the binding points at.
-  • Removing either side silently disables the safety mechanism — the
-    feature would still ship but lose its `off` rollback.
+Current contract (inverted, fail-closed):
+  1. Every entry in FmeKillSwitchService.FEATURE_BINDINGS must
+     - point at a settings attribute declared with a tri-state default, and
+     - have at least one production reader: a `get_feature_mode("<feature>")`
+       call in backend/app OUTSIDE the kill-switch service itself.
+  2. The retired zero-reader feature must not come back (explicit deny-list).
 
-This guard verifies the contract; if a future refactor accidentally removes
-a binding or its settings attribute, CI fails before the change merges.
-
-Exits 0 when both switches are healthy, non-zero otherwise.
+Exits 0 when every registered FME switch is real, non-zero otherwise.
 """
 from __future__ import annotations
 
@@ -25,10 +27,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SERVICE_PATH = REPO_ROOT / "backend" / "app" / "services" / "fme_kill_switch_service.py"
 SETTINGS_PATH = REPO_ROOT / "backend" / "app" / "config" / "settings.py"
+APP_ROOT = REPO_ROOT / "backend" / "app"
 
-REQUIRED_FEATURES = {
-    "goal_first_minute": "FME_GOAL_FIRST_MINUTE_MODE",
-    "task_card_protocol_v2": "FME_TASK_CARD_PROTOCOL_MODE",
+RETIRED_FEATURES = {
+    "task_card_protocol_v2": "zero production reader (V3-FIX-345 撤面)；重建须先把 "
+    "card-protocol 渲染链接上 get_feature_mode 并更新本守卫",
 }
 
 
@@ -46,20 +49,30 @@ def main() -> int:
     service_src = SERVICE_PATH.read_text(encoding="utf-8")
     settings_src = SETTINGS_PATH.read_text(encoding="utf-8")
 
-    for feature, settings_attr in REQUIRED_FEATURES.items():
-        # Binding must mention the feature name as a key in FEATURE_BINDINGS.
-        if not re.search(rf'"{re.escape(feature)}"\s*:', service_src):
-            fail(
-                f"feature {feature!r} not registered in "
-                "FmeKillSwitchService.FEATURE_BINDINGS"
-            )
-        # Binding must point at the matching settings attribute.
-        if settings_attr not in service_src:
-            fail(
-                f"settings_attr {settings_attr!r} missing from binding for "
-                f"feature {feature!r}"
-            )
-        # Settings file must declare the attribute with a default tri-state.
+    bindings = {
+        m.group(1): m.group(2)
+        for m in re.finditer(r'"([a-z0-9_]+)":\s*KillSwitchBinding\(([^)]*)\)', service_src)
+    }
+    if not bindings:
+        fail("no KillSwitchBinding entries found in FmeKillSwitchService.FEATURE_BINDINGS")
+
+    for feature in RETIRED_FEATURES:
+        if feature in bindings:
+            fail(f"retired zero-reader feature {feature!r} re-registered: {RETIRED_FEATURES[feature]}")
+
+    # 生产读者扫描面：服务自身之外的全部 backend/app Python 源
+    reader_files = [
+        p
+        for p in APP_ROOT.rglob("*.py")
+        if "__pycache__" not in p.parts and p.resolve() != SERVICE_PATH.resolve()
+    ]
+
+    for feature, body in bindings.items():
+        # 绑定必须指向 settings 属性，且该属性以 tri-state 默认值声明。
+        attr_match = re.search(r'settings_attr="([A-Za-z0-9_]+)"', body)
+        if not attr_match:
+            fail(f"binding for feature {feature!r} lacks settings_attr")
+        settings_attr = attr_match.group(1)
         if not re.search(
             rf"\b{re.escape(settings_attr)}\s*:\s*str\s*=\s*\"(off|shadow|live)\"",
             settings_src,
@@ -68,8 +81,18 @@ def main() -> int:
                 f"settings attribute {settings_attr!r} missing or has invalid "
                 "default (must be one of off/shadow/live)"
             )
+        # 注册即须真实：存在服务外生产读者 get_feature_mode("<feature>")。
+        reader_re = re.compile(rf'get_feature_mode\(\s*[\'"]{re.escape(feature)}[\'"]')
+        if not any(reader_re.search(p.read_text(encoding="utf-8")) for p in reader_files):
+            fail(
+                f"feature {feature!r} registered but has no production reader "
+                "(zero-reader switch = fake switch, V3-FIX-345)"
+            )
 
-    print("[RG-FME] OK — both FME kill switches registered with valid defaults")
+    print(
+        f"[RG-FME] OK — {len(bindings)} FME kill switch(es) registered with "
+        "valid defaults and real production readers"
+    )
     return 0
 
 

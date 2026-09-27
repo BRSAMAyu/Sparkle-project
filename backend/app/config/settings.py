@@ -466,8 +466,9 @@ class Settings(BaseSettings):
     # Shadow: analyze + log but return disabled so behavior stays identical.
     # Promote to "live" after validating intent analysis quality on real data.
     # See backend/app/services/fme_kill_switch_service.py
+    # (V3-FIX-345：FME_TASK_CARD_PROTOCOL_MODE 已随零读者死绑定撤——
+    #  注册-读者契约见 tests/unit/test_v3_fix345_fme_dead_switch_removed.py)
     FME_GOAL_FIRST_MINUTE_MODE: str = "shadow"  # off | shadow | live
-    FME_TASK_CARD_PROTOCOL_MODE: str = "shadow"  # off | shadow | live
 
     # Email (SMTP)
     EMAIL_ENABLED: bool | None = None
