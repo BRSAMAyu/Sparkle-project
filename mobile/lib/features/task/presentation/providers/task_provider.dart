@@ -10,10 +10,7 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
-    show
-        TaskNotificationScheduler,
-        taskNotificationSchedulerProvider,
-        taskReminderConfigProvider;
+    show TaskNotificationScheduler, taskNotificationSchedulerProvider;
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
@@ -33,6 +30,11 @@ import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
+// V3-FIX-385①：提醒配置单一事实源在设置面（服务端持久化 + 乐观更新），
+// 任务执行面（createTask/updateTask/snoozeTask 的调度读取）直接读它，
+// 不再有 scheduler 侧独立 StateProvider 副本。
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart'
+    show taskReminderConfigProvider;
 import 'package:sparkle/shared/entities/task_model.dart';
 
 // A dummy filter class for now

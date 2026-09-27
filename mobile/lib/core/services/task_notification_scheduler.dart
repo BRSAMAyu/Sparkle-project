@@ -265,6 +265,9 @@ final taskNotificationSchedulerProvider =
   return TaskNotificationScheduler(notificationService, idMapper);
 });
 
-/// Provider for task reminder settings
-final taskReminderConfigProvider =
-    StateProvider<TaskReminderConfig>((ref) => const TaskReminderConfig());
+// V3-FIX-385①：本文件原有一个同名 `taskReminderConfigProvider`
+//（StateProvider<TaskReminderConfig>）与 settings_provider.dart 的
+// StateNotifierProvider 构成真分裂双定义——设置 UI 写入的配置永不达
+// task_provider 执行面读取。现已删除本侧重复定义，提醒配置单一事实源
+// 为 settings_provider.dart 的 taskReminderConfigProvider（服务端持久化
+// + 乐观更新），执行面直接读取该 provider。
