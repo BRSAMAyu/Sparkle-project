@@ -5,10 +5,10 @@
   "slots": 6,
   "active": {
     "wt745": "mypy 批八（132 基线）在航",
-    "wt746": "day7 升栈预演卡（runday7 执行手册干跑）在航",
     "wt748": "合并态审查卡（streak 表三入口收敛+proxy 族残余猎缺）补位在航",
     "wt749": "FIX-469 processed_events 幂等闸（uuid.Parse 假设）修复在航",
-    "wt750": "day7 前合并态跨卡联跑回归卡在航"
+    "wt750": "day7 前合并态跨卡联跑回归卡在航",
+    "wt751": "runday7 手册执行前安全核验（独立七项）在航"
   },
   "done": [
     "A-01",
@@ -808,6 +808,7 @@
     "[2026-09-28 02:1x 主会话轮#233] wt741 集成（e83a33f8+5bc14640：FIX-449 评论读面/删除面纳入软删+拉黑门——_active_block_exclusion_clause 共享子句复用（author_column 参数化），后端三向（list 4+delete 2+防回归）+合并态 25 绿）。lint 层十六收口（6bc797d1：requeueMessages 去 int 返回堵 unparam+wt738 测试文件 goimports --fix；golangci-lint 本地全绿实证）。推 be7c5fcf..5bc14640=第十七次尝试（含今日全部集成+六层 CI 修复链），守望已挂。补位 wt746=day7 升栈预演卡（明晨 07:35 门序列在 scratch worktree 干跑出手册，不碰真实栈/状态文件——终门前最高价值防险）。三问：①满编 6/6（wt742/743/744/745/746+主会话）②无空位③下张最高价值=第十七次裁决（六层修完后的首次全链真测）。",
     "[2026-09-28 00:0x 主会话轮#234] 双集成：wt744（85fe80e0+93b12cff：FIX-455 fusion_engine.py ruff format 4 hunks 纯格式收口，合并态 68 绿；新登 471 同族 1 hunk）+ wt742（79410f77+台账：FIX-457 冻结卡发货三件套——with_for_update+与 451 完全同源 uuid5+ON CONFLICT DO NOTHING 收敛读，真 PG 三层红→绿，跨路径并发单行收敛实证；合并态 49 绿；新登 467 guest_seed 第三入口 P4 留档）。顺带纠指补漏：449 行 FIXED@0a1fd024 不在 main（wt741 集成漏纠）→ e83a33f8 连带 465 行证据锚点两处同纠。verify 323 行零 FAIL。第十七次在航（守望在岗）。补位 wt747=471 微卡+wt748=合并态审查卡（day7 前防险）。三问：①满编 6/6（wt743/745/746/747/748+主会话）②无空位③下张最高价值=第十七次裁决。",
     "[2026-09-28 00:2x 主会话轮#235] wt743 集成（430c9147+c2881a4a：FIX-461 CQRS PEL 滞留重投——processMessages 每轮先 \"0\" 起排空自身 PEL 走同一 processMessage 门再转 > 读；崩溃模拟红→绿双测 5.01s FAIL→0.00s PASS；合并态 cqrs/worker 包 go test ok+vet 净；a/XAUTOCLAIM 与 c/detached-ctx 取舍如实入册）。关键新发现 V3-FIX-469（P3）：processed_events 幂等闸 uuid.Parse 必败于 stream ID——两组跨重启零吸收，461 重放实为 at-least-once。补位 wt749=FIX-469（与 461 叠加成真吸收闸；预占 481/482）。verify 324 行零 FAIL。三问：①满编 6/6（wt745/746/747/748/749+主会话）②无空位③下张最高价值=第十七次裁决（在航约 40min，下轮若仍无裁决细查 job 级进度）。",
-    "[2026-09-28 00:5x 主会话轮#236] wt747 集成（bc0c8087+台账：FIX-471 outcome_evidence_adapter 1 hunk 折行收口，AST 等价实证；合并态 3 绿+evidence 目录 ruff format 7 文件全净——455/471 同族漂移清零）。冲突方向修正一次（471 FIXED 注记在 theirs 侧）。补位 wt750=day7 前合并态跨卡联跑回归卡（backend 四族组合+gateway 全量+flutter analyze/test，按跨卡重叠联跑纪律，预占 483/484）。第十七次已破至深层：lint/守卫/schema/proto 五 job 全绿（六层修复全生效），Flutter+三 shard 在航——历代最深。三问：①满编 6/6（wt745/746/748/749/750+主会话）②无空位③下张最高价值=第十七次裁决（coverage merge 层验收在即）。"
+    "[2026-09-28 00:5x 主会话轮#236] wt747 集成（bc0c8087+台账：FIX-471 outcome_evidence_adapter 1 hunk 折行收口，AST 等价实证；合并态 3 绿+evidence 目录 ruff format 7 文件全净——455/471 同族漂移清零）。冲突方向修正一次（471 FIXED 注记在 theirs 侧）。补位 wt750=day7 前合并态跨卡联跑回归卡（backend 四族组合+gateway 全量+flutter analyze/test，按跨卡重叠联跑纪律，预占 483/484）。第十七次已破至深层：lint/守卫/schema/proto 五 job 全绿（六层修复全生效），Flutter+三 shard 在航——历代最深。三问：①满编 6/6（wt745/746/748/749/750+主会话）②无空位③下张最高价值=第十七次裁决（coverage merge 层验收在即）。",
+    "[2026-09-28 00:05 主会话轮#237] wt746 集成（13376533→main：runday7.md 193 行升栈手册——五步全干跑实证 proto-gen 零漂移/gateway build 双基线/alembic 恰一头/脚本核验/gate 语法依赖零缺失，零硬阻塞不占号；手册同步 /tmp/runday7.md 供晨用）。补位 wt751=手册执行前独立安全核验（kill 面收敛/状态文件不可触/docker 安全/命令真实性/回退完整/时间盒/顺序依赖七项——07:35 前最后防线，预占 485/486）。距晨门 ~7.5h。三问：①满编 6/6（wt745/748/749/750/751+主会话）②无空位③下张最高价值=第十七次裁决（coverage merge 层）。"
   ]
 }
