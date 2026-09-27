@@ -228,10 +228,10 @@ class _UnusedRef implements Ref<Object?> {
     if (provider.toString().contains('RetryInterceptor')) {
       return RetryInterceptor(dio: Dio()) as T;
     }
-    if (provider == authInterceptorProvider) {
+    if (identical(provider, authInterceptorProvider)) {
       return AuthInterceptor(this) as T;
     }
-    if (provider == loggingInterceptorProvider) {
+    if (identical(provider, loggingInterceptorProvider)) {
       return LoggingInterceptor() as T;
     }
     throw UnsupportedError('Unsupported provider in test: $provider');

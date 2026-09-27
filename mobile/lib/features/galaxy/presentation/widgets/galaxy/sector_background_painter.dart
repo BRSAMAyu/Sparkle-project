@@ -225,16 +225,16 @@ class SectorBackgroundPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     );
 
-    textPainter.layout();
-
-    // Draw text horizontally (no rotation)
-    textPainter.paint(
-      canvas,
-      Offset(
-        labelPos.dx - textPainter.width / 2,
-        labelPos.dy - textPainter.height / 2,
-      ),
-    );
+    textPainter
+      ..layout()
+      // Draw text horizontally (no rotation)
+      ..paint(
+        canvas,
+        Offset(
+          labelPos.dx - textPainter.width / 2,
+          labelPos.dy - textPainter.height / 2,
+        ),
+      );
   }
 
   @override

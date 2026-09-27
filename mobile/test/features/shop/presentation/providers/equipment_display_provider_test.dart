@@ -45,9 +45,9 @@ void main() {
         container.listen<Map<String, dynamic>?>(titleProvider, (_, __) {});
     addTearDown(subscription.close);
 
-    final authNotifier =
-        container.read(authProvider.notifier) as _SourceAwareAuthNotifier;
-    authNotifier.setUser(_achievementTitleUser());
+    (container.read(authProvider.notifier) as _SourceAwareAuthNotifier).setUser(
+      _achievementTitleUser(),
+    );
     await _settleProviderUpdates();
 
     expect(container.read(equippedTitleIdProvider), 'night_owl');

@@ -164,8 +164,9 @@ class SyncCenterService {
       return _fetchByStatus(query.statusFilter!, query, limit);
     }
 
-    final combined = <OutboxItem>[];
-    combined.addAll(await _fetchByStatus(SyncStatus.failed, query, limit));
+    final combined = <OutboxItem>[
+      ...await _fetchByStatus(SyncStatus.failed, query, limit),
+    ];
     if (combined.length < limit) {
       combined.addAll(
         await _fetchByStatus(

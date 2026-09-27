@@ -128,34 +128,34 @@ class _FakeRef implements Ref {
 
   @override
   T read<T>(ProviderListenable<T> provider) {
-    if (provider == authProvider) {
+    if (identical(provider, authProvider)) {
       return authState as T;
     }
-    if (provider == guestServiceProvider) {
+    if (identical(provider, guestServiceProvider)) {
       return guestService as T;
     }
-    if (provider == authRepositoryProvider) {
+    if (identical(provider, authRepositoryProvider)) {
       return authRepository as T;
     }
-    if (provider == activePlanProvider) {
+    if (identical(provider, activePlanProvider)) {
       return activePlanId as T;
     }
-    if (provider == aiReasoningModeProvider) {
+    if (identical(provider, aiReasoningModeProvider)) {
       return reasoningMode as T;
     }
-    if (provider == chatSeedLibraryEnabledProvider) {
+    if (identical(provider, chatSeedLibraryEnabledProvider)) {
       return seedLibraryEnabled as T;
     }
-    if (provider == chatModeProvider) {
+    if (identical(provider, chatModeProvider)) {
       return chatMode as T;
     }
-    if (provider == systemUpdateLevelProvider) {
+    if (identical(provider, systemUpdateLevelProvider)) {
       return 0 as T;
     }
-    if (provider == guidanceModeProvider) {
+    if (identical(provider, guidanceModeProvider)) {
       return GuidanceMode.aiGuide as T;
     }
-    if (provider == subscriptionsProvider) {
+    if (identical(provider, subscriptionsProvider)) {
       return const SubscriptionsState() as T;
     }
     throw UnimplementedError('Unsupported provider read: $provider');

@@ -96,8 +96,9 @@ class LocalVocabularyRepository {
       if (phonetic != null) existing.phonetic = phonetic;
       if (exampleSentence != null) existing.exampleSentence = exampleSentence;
       if (partOfSpeech != null) existing.partOfSpeech = partOfSpeech;
-      existing.importance = importance.clamp(1, 5);
-      existing.updatedAt = DateTime.now();
+      existing
+        ..importance = importance.clamp(1, 5)
+        ..updatedAt = DateTime.now();
       if (sourceTranslationId != null) {
         existing.sourceTranslationId = sourceTranslationId;
       }

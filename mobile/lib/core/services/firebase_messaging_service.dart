@@ -14,13 +14,11 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Initialize Firebase for background isolate
   await Firebase.initializeApp();
 
-  final logger = Logger();
-  logger.i(
-    '📱 Background message received: ${message.messageId}',
-  );
-  logger.d('Title: ${message.notification?.title}');
-  logger.d('Body: ${message.notification?.body}');
-  logger.d('Data: ${message.data}');
+  Logger()
+    ..i('📱 Background message received: ${message.messageId}')
+    ..d('Title: ${message.notification?.title}')
+    ..d('Body: ${message.notification?.body}')
+    ..d('Data: ${message.data}');
 
   // Note: Local notification display is handled automatically by FCM
   // when the app is in background/terminated state

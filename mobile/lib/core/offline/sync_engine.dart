@@ -240,13 +240,15 @@ class SyncEngine {
       _logger.e('Failed to process outbox item ${item.id}: $e');
 
       await _localDb.isar.writeTxn(() async {
-        item.attemptCount++;
-        item.retryCount = item.attemptCount;
-        item.error = e.toString();
-        item.lastErrorCode = _errorCode(e);
-        item.nextAttemptAt = _nextAttempt(item.attemptCount);
+        final attempts = item.attemptCount + 1;
+        item
+          ..attemptCount = attempts
+          ..retryCount = attempts
+          ..error = e.toString()
+          ..lastErrorCode = _errorCode(e)
+          ..nextAttemptAt = _nextAttempt(attempts);
 
-        if (item.attemptCount >= _maxAttempts) {
+        if (attempts >= _maxAttempts) {
           item.status = SyncStatus.failed;
         } else {
           item.status = SyncStatus.pending;
@@ -543,12 +545,14 @@ class SyncEngine {
 
     await _localDb.isar.writeTxn(() async {
       for (final item in stuckItems) {
-        item.attemptCount++;
-        item.retryCount = item.attemptCount;
-        item.status = SyncStatus.pending;
-        item.lastErrorCode = 'ACK_TIMEOUT';
-        item.error = 'Ack timeout';
-        item.nextAttemptAt = _nextAttempt(item.attemptCount);
+        final attempts = item.attemptCount + 1;
+        item
+          ..attemptCount = attempts
+          ..retryCount = attempts
+          ..status = SyncStatus.pending
+          ..lastErrorCode = 'ACK_TIMEOUT'
+          ..error = 'Ack timeout'
+          ..nextAttemptAt = _nextAttempt(attempts);
         await _localDb.isar.outboxItems.put(item);
       }
     });

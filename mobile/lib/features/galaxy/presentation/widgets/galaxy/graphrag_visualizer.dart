@@ -355,11 +355,12 @@ class _NodeGraphPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       );
 
-      textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(x - textPainter.width / 2, y + 8),
-      );
+      textPainter
+        ..layout()
+        ..paint(
+          canvas,
+          Offset(x - textPainter.width / 2, y + 8),
+        );
     }
   }
 
