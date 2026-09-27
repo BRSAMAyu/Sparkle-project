@@ -1,6 +1,6 @@
 # B-04 · 首轮视觉问题 Ledger（golden 基线批）
 
-- 基线：`v3-output/B-04/screenshots/`（9 canonical states × 3 viewport 批 = 27 张，build SHA8 `d7a961da`）
+- 基线：`v3-output/B-04/screenshots/`（9 canonical states × 3 viewport 批 = 27 张，build SHA8 `87b5f432`，wt693 重采批 2026-09-25；首轮基线 `d7a961da`（wt667）27 张已删除并由新批同位替代——26/27 逐字节相同、1 张已知时间戳噪声，见文末「重采批记录」）
 - 审查依据：`v3/04_ux/VISUAL_REVIEW_RUBRIC.md`（12 维 0–2 分；A=阻断/误导/不可读/错误主焦点，B=明显降低体验，C=微调）
 - 审查方式：逐张真实读图（本会话直接查看 PNG）+ 布局探针（`v3-output/WT401-Q03-VISUAL/layout_probe_b04.json`，27 条：pump_exception=0、截断候选=0）
 - 声明：本批为 flutter test golden 路径真实渲染；macos 批存在**环境级字形伪影**（见 ENV-1），文字级审查以 android 批为权威，布局/层级/间距审查两批均有效。
@@ -24,24 +24,25 @@
 
 ## B 级（明显降低体验）
 
-### B-04-L-01 · home：叙事区错误文案裸露在 demo 首屏
+### B-04-L-01 · home：叙事区错误文案裸露在 demo 首屏【开放——V3-FIX-376 未收口本面，见 2026-09-25 补记】
 - 现象：`home__main__demo_data`（android/macos 两批一致），主叙事句（"早上好，今天先从一小步开始…"）正下方直接渲染「ⓘ 加载失败 轻触重试」。
 - rubric：State feedback 1 分——错误态可见性本身诚实，但 demo persona 首屏把「失败」当常态展示，与「今天适合保持节奏」的头部语气冲突，5 秒测试里构成误导性焦点。
-- 复现：home__main__demo_data__android__1080x2400@3.0__d7a961da.png 中部。
+- 复现：home__main__demo_data__android__1080x2400@3.0__87b5f432.png 中部（d7a961da 首轮批同位相同）。
 - 建议裁决方向：demo 模式下叙事源失败应降级为隐藏/占位（demo 数据永不失败是 demo 契约的一部分），或 demo 数据补齐该 narrative 源。
 - 关联：Q03 基线（WT401 evidence C01_home_default.png）同位置同样存在——非本批新引入。
+- **2026-09-25 补记（wt693 重采批实拍归因）**：V3-FIX-376（wt686）给 `features/home/presentation/providers/understanding_snapshot_provider.dart` 的 `_fetch` 加了 demo 门控，但 golden home 首屏「Sparkle 对你的理解」回执卡（`UnderstandingSnapshotCard`）实际消费的是**同名双胞胎 provider**——`features/experience/presentation/providers/experience_provider.dart` 的 `understandingSnapshotProvider`（`FutureProvider.autoDispose` → `experienceRepository.getUnderstandingSnapshot()`，**无 demo 分支**）。临时探针实测（B-04 同源泵配方，isDemoMode=true）：该 provider 仍为 AsyncError(DioException 400)，错误卡父链 = CompactErrorCard < Semantics < UnderstandingSnapshotCard。87b5f432 重采 home ×3 批与 d7a961da **逐字节相同**，错误行仍在。FIX-376 收口的是 home understanding panel / chat understanding drawer 消费面（slot 系统内默认折叠，不入 golden 首屏）；本 ledger 面向的 golden 首屏回执卡未修。**L-01 保持开放**，待修面 = experience 孪生 provider（或其 repository 的 demo 分支）。
 
 ### B-04-L-02 · chat：360dp 手机宽下消息列表下方大片死区
 - 现象：`chat__history_citations`（android 批），最后一条消息的反馈操作（不是这个方向/更短一点/直接出题/重新校准）与输入坞之间约 40% 屏高的空白，无任何内容或留白设计语言支撑。
 - rubric：Hierarchy 1 分 / Density 1 分 / Spacing 1 分。
-- 复现：chat__history_citations__demo_data__android__1080x2400@3.0__d7a961da.png 中下部。
+- 复现：chat__history_citations__demo_data__android__1080x2400@3.0__87b5f432.png 中下部（d7a961da 首轮批同位相同）。
 - 建议裁决方向：会话内容不足一屏时列表锚定/留白策略需统一（死区在 macos 批同样存在）。
 
 ### B-04-L-03 · chat：桌面宽（1280）下浮动配置胶囊纵向叠在消息区
 - 现象：`chat__history_citations`（macos 1280x800 批），「选择计划 / 均衡 / 选择模式 / 引导·自主探索」四组胶囊以垂直栈形态浮在消息区中央偏下，与消息流、模式条（均衡·标准对话·未绑定计划）、底部「当前自我模型」面板三层元素相互叠压，主焦点混乱。
 - rubric：Hierarchy 1 分 / Platform fit 1 分。
 - 备注：android 批无此栈（胶囊并入模式条），属桌面宽度专属布局问题。字形伪影（ENV-1）不影响该布局判断。
-- 复现：chat__history_citations__demo_data__macos__1280x800@2.0__d7a961da.png 中下部。
+- 复现：chat__history_citations__demo_data__macos__1280x800@2.0__87b5f432.png 中下部（d7a961da 首轮批同位相同）。
 - 建议裁决方向：桌面宽度下四组配置应并入模式条或右侧栏，不得浮在消息流上。
 
 ## C 级（微调）
@@ -76,3 +77,16 @@
 
 ## 与历史基线的一致性
 - Q03（WT401）基线的 home 叙事错误态（L-01）、galaxy 首引卡（本批已按注册表入口关闭）等观察与本批吻合；本批无与既有证据矛盾的渲染。
+
+## 重采批记录（wt693 · 2026-09-25 · build SHA8 `87b5f432`）
+- 背景：wt686 落地 V3-FIX-376（demo 理解快照错误裸露收口）与 V3-FIX-377（chat fontSize 令牌双态撕裂机械收口，宣称同值零视觉）后，按「B-04 基线 PNG 陈旧待重采」预期执行重采。零产品代码改动，FIX 号不新占。
+- 采集：`B04_VISUAL_CAPTURE=true flutter test --update-goldens --dart-define=B04_BUILD_SHA8=87b5f432 --concurrency=1 test/goldens/b04_visual_baseline/` → 27/27 绿；复验（无 --update-goldens）→ 27/27 绿（0.5% 容差比较器）。注：sha8 段只认 `--dart-define`（`String.fromEnvironment`），环境变量不生效。
+- 新旧对比（d7a961da → 87b5f432，逐对 sha256）：
+  - **26/27 逐字节相同**。
+  - 唯一差异 = `chat__history_citations` android 批：diff bbox 59×23px @ app bar 下首消息时间标签（571 像素，占全图 0.022%），内容为「14:06 → 17:35」——**已知噪声类**（demo 消息时间戳，wt667 首轮已登记），远低于 0.5% 容差，非布局/文案回归。
+  - **home ×3 批逐字节相同 → V3-FIX-376 在 golden home 首屏零像素效果**：实拍证明 L-01 错误行未消失（同名双 provider 归因见 L-01 补记）。「home 基线陈旧」的预期不成立——基线未陈旧，是缺陷未修到该面。
+  - chat macos 两批逐字节相同 → **V3-FIX-377 fontSize 令牌同值零视觉的又一实证**（android 批微差已完全归因时间戳）。
+  - 其余面（onboarding/goal/task/memory/galaxy/profile/settings ×3 批）零漂移，无超容差项。
+- manifest ×3 重建于 87b5f432（`manifests/manifest_{android__1080x2400@3.0, macos__800x600@2.0, macos__1280x800@2.0}.json`，各 9 条目）→ `verify OK` ×3 → `coverage 9/9`。
+- 布局探针 `v3-output/WT401-Q03-VISUAL/layout_probe_b04.json` 随采刷新：27 条全部锚定 87b5f432，pump_exception=0、截断候选=0（与首轮同口径）。
+- 旧 d7a961da 批 27 张 PNG 已删除（由 87b5f432 批同位替代；首轮实拍事实以本 ledger 文字记录与 REPORT.md 留痕）。

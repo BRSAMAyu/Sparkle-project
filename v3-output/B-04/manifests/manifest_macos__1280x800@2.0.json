@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "kind": "visual-baseline-manifest",
-  "build_sha": "d7a961da5d28e5e238265cf56ff12703e79a6d88",
-  "generated_at": "2026-09-27T06:09:06Z",
+  "build_sha": "87b5f432c17c2a65e6e8f51bcf52630e1372fc4b",
+  "generated_at": "2026-09-27T09:43:17Z",
   "device": {
     "platform": "macos",
     "model": "golden-macos-normal-window-flutter-test (host-rendered, target-platform semantics)",
@@ -19,12 +19,12 @@
       "persona": "demo_data",
       "platform": "macos",
       "viewport": "1280x800@2.0",
-      "sha8": "d7a961da",
-      "file": "chat__history_citations__demo_data__macos__1280x800@2.0__d7a961da.png",
-      "path": "chat__history_citations__demo_data__macos__1280x800@2.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "chat__history_citations__demo_data__macos__1280x800@2.0__87b5f432.png",
+      "path": "chat__history_citations__demo_data__macos__1280x800@2.0__87b5f432.png",
       "sha256": "2019ac40dbfdca94ab5bbc655d88f723e98c962adca88085895ba1afdc0b4361",
       "bytes": 1090529,
-      "captured_at": "2026-09-27T06:06:20Z"
+      "captured_at": "2026-09-27T09:35:28Z"
     },
     {
       "surface": "galaxy",
@@ -32,12 +32,12 @@
       "persona": "demo_data",
       "platform": "macos",
       "viewport": "1280x800@2.0",
-      "sha8": "d7a961da",
-      "file": "galaxy__tree_expanded__demo_data__macos__1280x800@2.0__d7a961da.png",
-      "path": "galaxy__tree_expanded__demo_data__macos__1280x800@2.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "galaxy__tree_expanded__demo_data__macos__1280x800@2.0__87b5f432.png",
+      "path": "galaxy__tree_expanded__demo_data__macos__1280x800@2.0__87b5f432.png",
       "sha256": "62cde21cd9f73c0a88d50435adb8c3d40046d7af97fce1927e44614696f39d86",
       "bytes": 1359425,
-      "captured_at": "2026-09-27T06:03:10Z"
+      "captured_at": "2026-09-27T09:35:31Z"
     },
     {
       "surface": "goal",
@@ -45,12 +45,12 @@
       "persona": "demo_data",
       "platform": "macos",
       "viewport": "1280x800@2.0",
-      "sha8": "d7a961da",
-      "file": "goal__library_main__demo_data__macos__1280x800@2.0__d7a961da.png",
-      "path": "goal__library_main__demo_data__macos__1280x800@2.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "goal__library_main__demo_data__macos__1280x800@2.0__87b5f432.png",
+      "path": "goal__library_main__demo_data__macos__1280x800@2.0__87b5f432.png",
       "sha256": "ff63befdc895a55cdabb1c6fceab1061bca6559169f2b132ee129026a07c9372",
       "bytes": 1289363,
-      "captured_at": "2026-09-27T06:03:08Z"
+      "captured_at": "2026-09-27T09:35:29Z"
     },
     {
       "surface": "home",
@@ -58,12 +58,12 @@
       "persona": "demo_data",
       "platform": "macos",
       "viewport": "1280x800@2.0",
-      "sha8": "d7a961da",
-      "file": "home__main__demo_data__macos__1280x800@2.0__d7a961da.png",
-      "path": "home__main__demo_data__macos__1280x800@2.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "home__main__demo_data__macos__1280x800@2.0__87b5f432.png",
+      "path": "home__main__demo_data__macos__1280x800@2.0__87b5f432.png",
       "sha256": "fbf2edaba57fc32c37dc3de002e7d440493a453f5239968d4bd1bc0c4722609e",
       "bytes": 866681,
-      "captured_at": "2026-09-27T06:03:07Z"
+      "captured_at": "2026-09-27T09:35:27Z"
     },
     {
       "surface": "memory",
@@ -71,12 +71,12 @@
       "persona": "demo_data",
       "platform": "macos",
       "viewport": "1280x800@2.0",
-      "sha8": "d7a961da",
-      "file": "memory__panel_main__demo_data__macos__1280x800@2.0__d7a961da.png",
-      "path": "memory__panel_main__demo_data__macos__1280x800@2.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "memory__panel_main__demo_data__macos__1280x800@2.0__87b5f432.png",
+      "path": "memory__panel_main__demo_data__macos__1280x800@2.0__87b5f432.png",
       "sha256": "83e1079c6ef5695d10b8233dac81a2710bc5f1826bab0204093570c395ded832",
       "bytes": 1039915,
-      "captured_at": "2026-09-27T06:08:34Z"
+      "captured_at": "2026-09-27T09:35:30Z"
     },
     {
       "surface": "onboarding",
@@ -84,12 +84,12 @@
       "persona": "new_user",
       "platform": "macos",
       "viewport": "1280x800@2.0",
-      "sha8": "d7a961da",
-      "file": "onboarding__persona_start__new_user__macos__1280x800@2.0__d7a961da.png",
-      "path": "onboarding__persona_start__new_user__macos__1280x800@2.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "onboarding__persona_start__new_user__macos__1280x800@2.0__87b5f432.png",
+      "path": "onboarding__persona_start__new_user__macos__1280x800@2.0__87b5f432.png",
       "sha256": "70be9f07299f871d06007c0f1745fdaf97f8db8a596c9915b260720ad49e6632",
       "bytes": 1001025,
-      "captured_at": "2026-09-27T06:03:07Z"
+      "captured_at": "2026-09-27T09:35:27Z"
     },
     {
       "surface": "profile",
@@ -97,12 +97,12 @@
       "persona": "demo_data",
       "platform": "macos",
       "viewport": "1280x800@2.0",
-      "sha8": "d7a961da",
-      "file": "profile__main__demo_data__macos__1280x800@2.0__d7a961da.png",
-      "path": "profile__main__demo_data__macos__1280x800@2.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "profile__main__demo_data__macos__1280x800@2.0__87b5f432.png",
+      "path": "profile__main__demo_data__macos__1280x800@2.0__87b5f432.png",
       "sha256": "b67fae63721d31a404cff8cbc09c0cc859847b01125580ea8e0850ce81198955",
       "bytes": 951587,
-      "captured_at": "2026-09-27T06:03:10Z"
+      "captured_at": "2026-09-27T09:35:31Z"
     },
     {
       "surface": "settings",
@@ -110,12 +110,12 @@
       "persona": "demo_data",
       "platform": "macos",
       "viewport": "1280x800@2.0",
-      "sha8": "d7a961da",
-      "file": "settings__main__demo_data__macos__1280x800@2.0__d7a961da.png",
-      "path": "settings__main__demo_data__macos__1280x800@2.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "settings__main__demo_data__macos__1280x800@2.0__87b5f432.png",
+      "path": "settings__main__demo_data__macos__1280x800@2.0__87b5f432.png",
       "sha256": "52498abf6b1af36a0c58e79f4f2b01b94c42189f2200f48463f85bbc10f25e8c",
       "bytes": 1112899,
-      "captured_at": "2026-09-27T06:03:11Z"
+      "captured_at": "2026-09-27T09:35:32Z"
     },
     {
       "surface": "task",
@@ -123,12 +123,12 @@
       "persona": "demo_data",
       "platform": "macos",
       "viewport": "1280x800@2.0",
-      "sha8": "d7a961da",
-      "file": "task__library_main__demo_data__macos__1280x800@2.0__d7a961da.png",
-      "path": "task__library_main__demo_data__macos__1280x800@2.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "task__library_main__demo_data__macos__1280x800@2.0__87b5f432.png",
+      "path": "task__library_main__demo_data__macos__1280x800@2.0__87b5f432.png",
       "sha256": "17c39a0f8449f02ce0c3f1f255603f708c72b89f3bb38cc8362b38c39e2e50e9",
       "bytes": 1529591,
-      "captured_at": "2026-09-27T06:03:09Z"
+      "captured_at": "2026-09-27T09:35:29Z"
     }
   ]
 }

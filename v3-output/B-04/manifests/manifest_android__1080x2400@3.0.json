@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "kind": "visual-baseline-manifest",
-  "build_sha": "d7a961da5d28e5e238265cf56ff12703e79a6d88",
-  "generated_at": "2026-09-27T06:09:06Z",
+  "build_sha": "87b5f432c17c2a65e6e8f51bcf52630e1372fc4b",
+  "generated_at": "2026-09-27T09:43:16Z",
   "device": {
     "platform": "android",
     "model": "golden-android-flutter-test (host-rendered, target-platform semantics)",
@@ -19,12 +19,12 @@
       "persona": "demo_data",
       "platform": "android",
       "viewport": "1080x2400@3.0",
-      "sha8": "d7a961da",
-      "file": "chat__history_citations__demo_data__android__1080x2400@3.0__d7a961da.png",
-      "path": "chat__history_citations__demo_data__android__1080x2400@3.0__d7a961da.png",
-      "sha256": "0b1d039e9677f1372f3fb448f01f604dfcd2ae7990cc148ce99683ddcd982dab",
-      "bytes": 694625,
-      "captured_at": "2026-09-27T06:06:19Z"
+      "sha8": "87b5f432",
+      "file": "chat__history_citations__demo_data__android__1080x2400@3.0__87b5f432.png",
+      "path": "chat__history_citations__demo_data__android__1080x2400@3.0__87b5f432.png",
+      "sha256": "13d9374309507cfd60370b2ab5c12d959385ae81881d4a2ac0323b4dbb638ab9",
+      "bytes": 693631,
+      "captured_at": "2026-09-27T09:35:19Z"
     },
     {
       "surface": "galaxy",
@@ -32,12 +32,12 @@
       "persona": "demo_data",
       "platform": "android",
       "viewport": "1080x2400@3.0",
-      "sha8": "d7a961da",
-      "file": "galaxy__tree_expanded__demo_data__android__1080x2400@3.0__d7a961da.png",
-      "path": "galaxy__tree_expanded__demo_data__android__1080x2400@3.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "galaxy__tree_expanded__demo_data__android__1080x2400@3.0__87b5f432.png",
+      "path": "galaxy__tree_expanded__demo_data__android__1080x2400@3.0__87b5f432.png",
       "sha256": "e749e3352fd5a6ccfdd830b327840863e1fa68d6c8b9cd1ef6a6cc0fa5bbd741",
       "bytes": 1189737,
-      "captured_at": "2026-09-27T06:03:01Z"
+      "captured_at": "2026-09-27T09:35:21Z"
     },
     {
       "surface": "goal",
@@ -45,12 +45,12 @@
       "persona": "demo_data",
       "platform": "android",
       "viewport": "1080x2400@3.0",
-      "sha8": "d7a961da",
-      "file": "goal__library_main__demo_data__android__1080x2400@3.0__d7a961da.png",
-      "path": "goal__library_main__demo_data__android__1080x2400@3.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "goal__library_main__demo_data__android__1080x2400@3.0__87b5f432.png",
+      "path": "goal__library_main__demo_data__android__1080x2400@3.0__87b5f432.png",
       "sha256": "07b1f010fa64aa6e51094bb62573f103f8e5681164b0cbeba071a58600528a71",
       "bytes": 702925,
-      "captured_at": "2026-09-27T06:03:00Z"
+      "captured_at": "2026-09-27T09:35:19Z"
     },
     {
       "surface": "home",
@@ -58,12 +58,12 @@
       "persona": "demo_data",
       "platform": "android",
       "viewport": "1080x2400@3.0",
-      "sha8": "d7a961da",
-      "file": "home__main__demo_data__android__1080x2400@3.0__d7a961da.png",
-      "path": "home__main__demo_data__android__1080x2400@3.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "home__main__demo_data__android__1080x2400@3.0__87b5f432.png",
+      "path": "home__main__demo_data__android__1080x2400@3.0__87b5f432.png",
       "sha256": "ead38ce3390538a9b201c889e20fe83a4c46cb824b4ef524b7d869835b85ac67",
       "bytes": 862494,
-      "captured_at": "2026-09-27T06:02:59Z"
+      "captured_at": "2026-09-27T09:35:18Z"
     },
     {
       "surface": "memory",
@@ -71,12 +71,12 @@
       "persona": "demo_data",
       "platform": "android",
       "viewport": "1080x2400@3.0",
-      "sha8": "d7a961da",
-      "file": "memory__panel_main__demo_data__android__1080x2400@3.0__d7a961da.png",
-      "path": "memory__panel_main__demo_data__android__1080x2400@3.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "memory__panel_main__demo_data__android__1080x2400@3.0__87b5f432.png",
+      "path": "memory__panel_main__demo_data__android__1080x2400@3.0__87b5f432.png",
       "sha256": "217b9d414478b4491d9f3fb9f8bfc2c96354e91dba7c056deb3c71cb7cb405ff",
       "bytes": 592502,
-      "captured_at": "2026-09-27T06:08:33Z"
+      "captured_at": "2026-09-27T09:35:20Z"
     },
     {
       "surface": "onboarding",
@@ -84,12 +84,12 @@
       "persona": "new_user",
       "platform": "android",
       "viewport": "1080x2400@3.0",
-      "sha8": "d7a961da",
-      "file": "onboarding__persona_start__new_user__android__1080x2400@3.0__d7a961da.png",
-      "path": "onboarding__persona_start__new_user__android__1080x2400@3.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "onboarding__persona_start__new_user__android__1080x2400@3.0__87b5f432.png",
+      "path": "onboarding__persona_start__new_user__android__1080x2400@3.0__87b5f432.png",
       "sha256": "dbaa42f84b6f75b03464f9691d1362017a691865d5356896451b8516ac786b74",
       "bytes": 437875,
-      "captured_at": "2026-09-27T06:02:58Z"
+      "captured_at": "2026-09-27T09:35:17Z"
     },
     {
       "surface": "profile",
@@ -97,12 +97,12 @@
       "persona": "demo_data",
       "platform": "android",
       "viewport": "1080x2400@3.0",
-      "sha8": "d7a961da",
-      "file": "profile__main__demo_data__android__1080x2400@3.0__d7a961da.png",
-      "path": "profile__main__demo_data__android__1080x2400@3.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "profile__main__demo_data__android__1080x2400@3.0__87b5f432.png",
+      "path": "profile__main__demo_data__android__1080x2400@3.0__87b5f432.png",
       "sha256": "8e24a7f4989ca61245e66a1c2ec59a29c5994012dd3dcc4f81fc9645cc0f7052",
       "bytes": 590112,
-      "captured_at": "2026-09-27T06:03:02Z"
+      "captured_at": "2026-09-27T09:35:22Z"
     },
     {
       "surface": "settings",
@@ -110,12 +110,12 @@
       "persona": "demo_data",
       "platform": "android",
       "viewport": "1080x2400@3.0",
-      "sha8": "d7a961da",
-      "file": "settings__main__demo_data__android__1080x2400@3.0__d7a961da.png",
-      "path": "settings__main__demo_data__android__1080x2400@3.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "settings__main__demo_data__android__1080x2400@3.0__87b5f432.png",
+      "path": "settings__main__demo_data__android__1080x2400@3.0__87b5f432.png",
       "sha256": "ddbf87dc9d40e8a5eeb58a028cd3fae00c21bfbb3d735262e11c82362cd2ad7b",
       "bytes": 581395,
-      "captured_at": "2026-09-27T06:03:03Z"
+      "captured_at": "2026-09-27T09:35:23Z"
     },
     {
       "surface": "task",
@@ -123,12 +123,12 @@
       "persona": "demo_data",
       "platform": "android",
       "viewport": "1080x2400@3.0",
-      "sha8": "d7a961da",
-      "file": "task__library_main__demo_data__android__1080x2400@3.0__d7a961da.png",
-      "path": "task__library_main__demo_data__android__1080x2400@3.0__d7a961da.png",
+      "sha8": "87b5f432",
+      "file": "task__library_main__demo_data__android__1080x2400@3.0__87b5f432.png",
+      "path": "task__library_main__demo_data__android__1080x2400@3.0__87b5f432.png",
       "sha256": "237c9285a71a869e0c0ff37295c05894acffd07cb61f3bbf6f3ca63dce7d2c0a",
       "bytes": 1082787,
-      "captured_at": "2026-09-27T06:03:00Z"
+      "captured_at": "2026-09-27T09:35:20Z"
     }
   ]
 }
