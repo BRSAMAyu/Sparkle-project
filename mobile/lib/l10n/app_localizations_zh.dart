@@ -402,10 +402,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transparentMode => '透明模式';
 
   @override
-  String get enableTransparentMode => '启用透明模式';
+  String get enableTransparentMode => '画像透明度';
 
   @override
-  String get showStatusOverview => '显示状态与资源消耗概览';
+  String get showStatusOverview => '控制你的画像与洞察披露的详细程度';
 
   @override
   String get transparencyLevel => '透明度级别';

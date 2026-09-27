@@ -887,13 +887,13 @@ abstract class AppLocalizations {
   /// No description provided for @enableTransparentMode.
   ///
   /// In zh, this message translates to:
-  /// **'启用透明模式'**
+  /// **'画像透明度'**
   String get enableTransparentMode;
 
   /// No description provided for @showStatusOverview.
   ///
   /// In zh, this message translates to:
-  /// **'显示状态与资源消耗概览'**
+  /// **'控制你的画像与洞察披露的详细程度'**
   String get showStatusOverview;
 
   /// No description provided for @transparencyLevel.

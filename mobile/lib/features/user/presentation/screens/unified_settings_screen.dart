@@ -1966,7 +1966,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         items: [
                           DropdownMenuItem(
                             value: 0,
-                            child: Text(l10n.cancel),
+                            child: Text(l10n.close),
                           ),
                           DropdownMenuItem(
                             value: 1,

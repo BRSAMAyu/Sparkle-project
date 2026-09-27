@@ -424,11 +424,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transparentMode => 'Transparent Mode';
 
   @override
-  String get enableTransparentMode => 'Enable Transparent Mode';
+  String get enableTransparentMode => 'Profile Transparency';
 
   @override
   String get showStatusOverview =>
-      'Show status and resource consumption overview';
+      'Controls how much of your profile and insights is disclosed';
 
   @override
   String get transparencyLevel => 'Transparency Level';
