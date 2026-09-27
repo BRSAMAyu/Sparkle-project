@@ -50,6 +50,7 @@ import 'package:sparkle/features/plan/presentation/providers/active_plan_provide
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
+import 'package:sparkle/features/task/data/repositories/action_proposal_repository.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/task_routes.dart';

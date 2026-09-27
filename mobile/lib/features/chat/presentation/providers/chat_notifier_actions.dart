@@ -288,8 +288,48 @@ extension ChatNotifierActions on ChatNotifier {
               : l10n.chatFeedbackThanks,
         );
         return;
+      case 'action_proposal_approve':
+      case 'action_proposal_reject':
+      case 'action_proposal_cancel':
+        await _runActionProposalCommand(actionType, payload);
+        return;
       default:
         debugPrint('ℹ️ Unsupported widget action: $actionType');
+    }
+  }
+
+  /// U-04 · chat 挂载 Action Proposal 命令分发（GJ06/GJ07 确认腿）.
+  ///
+  /// 卡片（ActionProposalCard）已完成防抖与稳定幂等键推导
+  /// （`u04:<proposalId>:<action>`，在途重入复用同一 Future，双击只透传一次）；
+  /// 这里只把命令转发给 X-03 统一 command path（网关纯代理 → 引擎），
+  /// **不重建** proposal 生命周期/幂等语义（服务端真源 X-09）。缺键不下发
+  /// （双保险，不臆造键）。失败不伪装成功：经 lastAction 反馈面出人话
+  /// （lexicon 统一文案），卡片自身回到 awaiting 态（卡内 catch 保证）。
+  Future<void> _runActionProposalCommand(
+    String actionType,
+    Map<String, dynamic> payload,
+  ) async {
+    final proposalId = _actionString(payload, 'proposal_id');
+    final idempotencyKey = _actionString(payload, 'idempotency_key');
+    if (proposalId.isEmpty || idempotencyKey.isEmpty) {
+      return;
+    }
+    final repository = _ref.read(actionProposalRepositoryProvider);
+    try {
+      switch (actionType) {
+        case 'action_proposal_approve':
+          await repository.approve(proposalId, idempotencyKey);
+        case 'action_proposal_reject':
+          await repository.reject(proposalId, idempotencyKey);
+        case 'action_proposal_cancel':
+          await repository.cancel(proposalId, idempotencyKey);
+      }
+    } on Exception {
+      state = state.copyWith(
+        lastActionStatus: 'failed',
+        lastActionMessage: I18nService.instance.l10n.operationFailed,
+      );
     }
   }
 

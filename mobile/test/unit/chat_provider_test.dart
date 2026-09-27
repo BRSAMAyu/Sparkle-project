@@ -14,6 +14,8 @@ import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
+import 'package:sparkle/features/task/data/repositories/action_proposal_repository.dart';
+import 'package:sparkle/shared/widgets/action_proposal/proposal_card_models.dart';
 
 // 生成 Mock 类
 // 实际开发中需要运行 flutter pub run build_runner build
@@ -66,6 +68,54 @@ class MockChatRepository extends Mock implements ChatRepository {
 
   @override
   void dispose() {}
+}
+
+/// U-04 · 记录 proposal 命令调用的假仓库（测试夹具，非生产行为）。
+///
+/// 私有成员（_apiClient/_mutate）跨库 implements 不要求实现。
+class _RecordingProposalRepository implements ActionProposalRepository {
+  final calls = <String>[];
+  bool throwOnCall = false;
+
+  Future<Map<String, dynamic>?> _maybeThrow() async {
+    if (throwOnCall) throw Exception('network down');
+    return null;
+  }
+
+  @override
+  Future<Map<String, dynamic>?> approve(
+    String proposalId,
+    String idempotencyKey,
+  ) async {
+    calls.add('approve:$proposalId:$idempotencyKey');
+    return _maybeThrow();
+  }
+
+  @override
+  Future<Map<String, dynamic>?> reject(
+    String proposalId,
+    String idempotencyKey, {
+    String? reason,
+  }) async {
+    calls.add('reject:$proposalId:$idempotencyKey');
+    return _maybeThrow();
+  }
+
+  @override
+  Future<Map<String, dynamic>?> cancel(
+    String proposalId,
+    String idempotencyKey,
+  ) async {
+    calls.add('cancel:$proposalId:$idempotencyKey');
+    return _maybeThrow();
+  }
+
+  @override
+  Future<List<ActionProposalCardData>> listForSubject(
+    String subjectId, {
+    String? status,
+  }) async =>
+      const <ActionProposalCardData>[];
 }
 
 void main() {
@@ -186,6 +236,89 @@ void main() {
     });
     expect(container.read(chatProvider).lastActionStatus, 'navigation_ready');
     expect(container.read(chatProvider).lastActionMessage, '/calendar');
+  });
+
+  test('handleWidgetAction dispatches action_proposal commands with the card idempotency key (U-04 chat mount)',
+      () async {
+    I18nService.instance.reset();
+    final repository = _RecordingProposalRepository();
+    final container = ProviderContainer(
+      overrides: [
+        chatRepositoryProvider.overrideWithValue(mockChatRepository),
+        actionProposalRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(chatProvider.notifier);
+
+    // 卡片稳定幂等键（u04:<id>:<action>）经 payload 原样透传（X-09 语义）。
+    await notifier.handleWidgetAction('action_proposal_approve', {
+      'proposal_id': 'prop-9',
+      'idempotency_key': 'u04:prop-9:approve',
+    });
+    expect(
+      repository.calls,
+      ['approve:prop-9:u04:prop-9:approve'],
+    );
+
+    await notifier.handleWidgetAction('action_proposal_reject', {
+      'proposal_id': 'prop-9',
+      'idempotency_key': 'u04:prop-9:reject',
+    });
+    await notifier.handleWidgetAction('action_proposal_cancel', {
+      'proposal_id': 'prop-9',
+      'idempotency_key': 'u04:prop-9:cancel',
+    });
+    expect(repository.calls, [
+      'approve:prop-9:u04:prop-9:approve',
+      'reject:prop-9:u04:prop-9:reject',
+      'cancel:prop-9:u04:prop-9:cancel',
+    ]);
+  });
+
+  test('handleWidgetAction action_proposal failure surfaces honest feedback, never fakes success',
+      () async {
+    I18nService.instance.reset();
+    final repository = _RecordingProposalRepository()..throwOnCall = true;
+    final container = ProviderContainer(
+      overrides: [
+        chatRepositoryProvider.overrideWithValue(mockChatRepository),
+        actionProposalRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(chatProvider.notifier);
+
+    await notifier.handleWidgetAction('action_proposal_approve', {
+      'proposal_id': 'prop-9',
+      'idempotency_key': 'u04:prop-9:approve',
+    });
+
+    expect(container.read(chatProvider).lastActionStatus, 'failed');
+    expect(
+      container.read(chatProvider).lastActionMessage,
+      I18nService.instance.l10n.operationFailed,
+    );
+    expect(repository.calls, hasLength(1), reason: '命令确实发出过（非静默吞掉）');
+  });
+
+  test('action_proposal without idempotency key is not dispatched (双保险不臆造键)',
+      () async {
+    I18nService.instance.reset();
+    final repository = _RecordingProposalRepository();
+    final container = ProviderContainer(
+      overrides: [
+        chatRepositoryProvider.overrideWithValue(mockChatRepository),
+        actionProposalRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(chatProvider.notifier);
+
+    await notifier.handleWidgetAction('action_proposal_approve', {
+      'proposal_id': 'prop-9',
+    });
+    expect(repository.calls, isEmpty);
   });
 
   test('loadMoreHistory silences transient invalid session pagination errors',
