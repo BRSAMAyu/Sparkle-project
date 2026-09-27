@@ -1,0 +1,6 @@
+[claimshape] step2 A FOR UPDATE SELECT on absent row -> 0 row(s)
+[claimshape] step2 B FOR UPDATE SELECT on absent row -> 0 row(s)
+[claimshape] step4 B plain INSERT blocked on A in-flight tuple: done=False
+[claimshape] step5 B INSERT raised UniqueViolationError: duplicate key value violates unique constraint "wt737_streak_stats_pkey" -> process_event 事务回滚，事件 500（重试自愈）—— RED
+[claimshape] step6 FINAL: row={'user_id': 'u1', 'current_streak': 0, 'freeze_charges': 1}（仅 A 存活；B 事件丢失待重试）
+[claimshape] [serial-control] second arrival sees row (no INSERT needed): GREEN

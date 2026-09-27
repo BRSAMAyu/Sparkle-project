@@ -1,0 +1,6 @@
+[realshape] step2 A FOR UPDATE SELECT on absent row -> 0 row(s)
+[realshape] step2 B FOR UPDATE SELECT on absent row -> 0 row(s)
+[realshape] step3 B INSERT (distinct random id) completed without blocking: done=True —— 双方复合主键互不冲突，无 IntegrityError 可言
+[realshape] step4 both committed, rows for user = 2 (ids ['35d3d16f', '5cbf3e13']) —— 重复行落地
+[realshape] step5 engine single-row read sees 2 row(s) -> MultipleResultsFound every后续事件 —— RED（持久 500，非自愈）
+[realshape] [serial-control] second arrival sees exactly 1 row: GREEN

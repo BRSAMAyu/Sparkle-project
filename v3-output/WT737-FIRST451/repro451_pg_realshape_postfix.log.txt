@@ -1,0 +1,7 @@
+[fixedrace] step1 A first-create INSERT landed (uncommitted), id=0a15d817
+[fixedrace] step2 B same-deterministic-id INSERT blocked on A in-flight tuple: done=False
+[fixedrace] step3 B INSERT resumed after A commit: status=INSERT 0 0 —— 冲突跳过，无 IntegrityError
+[fixedrace] step4 B converged read: 1 row, same id as A —— 双方同值
+[fixedrace] FINAL: rows for user = 1 (correct 1) -> GREEN
+[fixedrace] [later-event] existing-row path returns single row: GREEN
+[fixedrace] [serial-control] two sequential first-creates -> 1 row, same id: GREEN
