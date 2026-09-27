@@ -3524,8 +3524,9 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
 
   Future<List<Map<String, dynamic>>> _fetchHistory() async {
     final notifier = ref.read(chatProvider.notifier);
-    // onTimeout 闭包在 await 后触发，文案须在 gap 前同步取好。
-    final timeoutText = context.l10n.chatLoadHistoryTimeout;
+    // initState 期调用：InheritedWidget 查找非法，文案走 I18nService 单例
+    //（本文件 build/_openSession 同款），且闭包内不碰 context。
+    final timeoutText = I18nService.instance.l10n.chatLoadHistoryTimeout;
     return notifier.getRecentConversations().timeout(
           const Duration(seconds: 8),
           onTimeout: () => throw Exception(timeoutText),
