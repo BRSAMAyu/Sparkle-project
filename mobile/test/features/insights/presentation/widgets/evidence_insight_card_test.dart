@@ -230,6 +230,121 @@ void main() {
   );
 
   testWidgets(
+    'helped card splits censored semantics: not-yet-due vs not-determinable '
+    '(V3-FIX-357-A)',
+    (WidgetTester tester) async {
+      final censoredCard = EvidenceInsightCardData.fromJson(<String, dynamic>{
+        'id': 'interventions_that_helped:rescope:recall_gap',
+        'kind': 'interventions_that_helped',
+        'fact': <String, dynamic>{
+          'intervention_type': 'rescope',
+          'friction_tag': 'recall_gap',
+          'n_exposed': 4,
+          'n_accepted': 2,
+          'n_observed': 1,
+          'n_positive': 1,
+          'n_negative': 0,
+        },
+        'interpretation': <String, dynamic>{
+          'evidence_strength': 'single_observation',
+          'direction': 'positive_association',
+          'causal': false,
+        },
+        'uncertainty': <String, dynamic>{
+          'qualifiers': <String>['correlation_not_causation'],
+          'samples': 1,
+          // 拆分后：1 次真的未到期；2 次（窗口已关/用户流失）不会有可判定结果。
+          'not_yet_observed': 1,
+          'not_determinable': 2,
+        },
+        'evidence': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'label_key': 'evidence_directive_log',
+            'deep_link': '/learning/insights/directives',
+            'refs': <String>['aurora_def'],
+          },
+        ],
+        'implication': <String, dynamic>{
+          'action_key': 'keep_observing',
+          'deep_link': '/learning/insights/directives',
+        },
+      });
+      await tester.pumpWidget(
+        testMaterialApp(
+          theme: AppThemes.lightTheme,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: EvidenceInsightCardWidget(card: censoredCard),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 未到期删失：保留「还在观察窗口内」措辞（真实语义）。
+      expect(find.text('1 次还在观察窗口内，结果未到期'), findsOneWidget);
+      // 不会有可判定结果的删失：诚实措辞，不得伪装成「结果未到期」。
+      expect(find.text('2 次未能取得可判定的结果'), findsOneWidget);
+      expect(find.textContaining('结果未到期'), findsNWidgets(1));
+    },
+  );
+
+  testWidgets(
+    'helped card renders honest sentinel for insufficient evidence strength '
+    '(V3-FIX-357-B)',
+    (WidgetTester tester) async {
+      final insufficientCard = EvidenceInsightCardData.fromJson(<String, dynamic>{
+        'id': 'interventions_that_helped:rescope:recall_gap',
+        'kind': 'interventions_that_helped',
+        'fact': <String, dynamic>{
+          'intervention_type': 'rescope',
+          'friction_tag': 'recall_gap',
+          'n_exposed': 1,
+          'n_accepted': 1,
+          'n_observed': 0,
+          'n_positive': 0,
+          'n_negative': 0,
+        },
+        'interpretation': <String, dynamic>{
+          'evidence_strength': 'insufficient',
+          'direction': 'positive_association',
+          'causal': false,
+        },
+        'uncertainty': <String, dynamic>{
+          'qualifiers': <String>['correlation_not_causation'],
+          'samples': 0,
+        },
+        'evidence': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'label_key': 'evidence_directive_log',
+            'deep_link': '/learning/insights/directives',
+            'refs': <String>['aurora_def'],
+          },
+        ],
+        'implication': <String, dynamic>{
+          'action_key': 'keep_observing',
+          'deep_link': '/learning/insights/directives',
+        },
+      });
+      await tester.pumpWidget(
+        testMaterialApp(
+          theme: AppThemes.lightTheme,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: EvidenceInsightCardWidget(card: insufficientCard),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // insufficient 档必须渲染诚实哨兵，不得兑成「多次观察都呈现同样方向」。
+      expect(find.text('证据不足，暂不下结论'), findsOneWidget);
+      expect(find.text('多次观察都呈现同样方向'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'insights overview hides the evidence section when there is no data '
     '(no persona conclusions without evidence)',
     (WidgetTester tester) async {

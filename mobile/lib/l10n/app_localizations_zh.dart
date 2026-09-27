@@ -32825,6 +32825,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eicHelpedTierAccumulated => '累积了较多一致观察';
 
   @override
+  String get eicHelpedTierInsufficient => '证据不足，暂不下结论';
+
+  @override
   String get eicGoalBandJustStarted => '刚起步';
 
   @override
@@ -32860,6 +32863,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String eicUniqNotYetObserved(int count) {
     return '$count 次还在观察窗口内，结果未到期';
+  }
+
+  @override
+  String eicUniqNotDeterminable(int count) {
+    return '$count 次未能取得可判定的结果';
   }
 
   @override

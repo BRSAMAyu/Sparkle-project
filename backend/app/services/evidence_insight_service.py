@@ -205,11 +205,14 @@ class EvidenceInsightService:
             qualifiers = ["correlation_not_causation", "counts_only_from_lifecycle_events"]
             if slice_summary.n_observed < 3:
                 qualifiers.append("small_sample")
-            censored = (
-                slice_summary.n_censored_not_yet_due
-                + slice_summary.n_censored_window_closed
-                + slice_summary.n_censored_user_churned
-                + slice_summary.n_unknown
+            censored_not_due = slice_summary.n_censored_not_yet_due
+            # V3-FIX-357-A：删失语义拆分（D-05「censored/unknown 语义明确区分」
+            # 验收①的呈现面落地）——只有 not_yet_due 才是「结果未到期」；
+            # 窗口已关/用户流失/无法判定合并进 not_determinable（诚实口径：
+            # 这些暴露不会产生可判定结果，不得伪装成「还没到期」）。
+            # 三桶加总：窗口已关 + 用户流失 + 无法判定（与 SliceSummary 删失字段一一对应）。
+            not_determinable = (
+                slice_summary.n_censored_window_closed + slice_summary.n_censored_user_churned + slice_summary.n_unknown
             )
             cards.append(
                 {
@@ -236,7 +239,8 @@ class EvidenceInsightService:
                     "uncertainty": {
                         "qualifiers": qualifiers,
                         "samples": slice_summary.n_observed,
-                        "not_yet_observed": censored,
+                        "not_yet_observed": censored_not_due,
+                        "not_determinable": not_determinable,
                     },
                     "evidence": [
                         {

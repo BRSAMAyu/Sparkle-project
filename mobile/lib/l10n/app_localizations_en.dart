@@ -34259,6 +34259,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Many consistent observations have accumulated';
 
   @override
+  String get eicHelpedTierInsufficient =>
+      'Not enough evidence to draw a conclusion yet';
+
+  @override
   String get eicGoalBandJustStarted => 'Just getting started';
 
   @override
@@ -34298,6 +34302,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String eicUniqNotYetObserved(int count) {
     return '$count still within the observation window; outcomes not yet due';
+  }
+
+  @override
+  String eicUniqNotDeterminable(int count) {
+    return '$count without a determinable outcome record';
   }
 
   @override

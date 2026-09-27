@@ -204,8 +204,14 @@ class EvidenceInsightCardWidget extends StatelessWidget {
         case 'accumulated':
           return l10n.eicHelpedTierAccumulated;
         case 'repeated':
-        default:
           return l10n.eicHelpedTierRepeated;
+        case 'insufficient':
+        default:
+          // V3-FIX-357-B 哨兵：证据不足/未知档位如实降档，绝不兑成
+          // 「多次观察都呈现同样方向」这类重复观察断言（V3-FIX-259
+          // execution_intent 哨兵兜底同范式；后端契约本就不发
+          // insufficient 卡，此处防契约漂移把无据渲染成正向断言）。
+          return l10n.eicHelpedTierInsufficient;
       }
     }
     if (card.isGoalProgress) {
@@ -244,6 +250,11 @@ class EvidenceInsightCardWidget extends StatelessWidget {
     }
     if (card.notYetObserved > 0) {
       lines.add(l10n.eicUniqNotYetObserved(card.notYetObserved));
+    }
+    // V3-FIX-357-A：不会有可判定结果的暴露（窗口已关/用户流失/无法判定）
+    // 用诚实措辞单独成行，不并入「结果未到期」。
+    if (card.notDeterminable > 0) {
+      lines.add(l10n.eicUniqNotDeterminable(card.notDeterminable));
     }
     if (lines.isEmpty) {
       lines.add(l10n.eicUniqCountsOnly);

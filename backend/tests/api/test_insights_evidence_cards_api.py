@@ -314,6 +314,89 @@ async def test_correction_updates_subsequent_reads(db_session):
 
 
 @pytest.mark.asyncio
+async def test_censored_split_not_yet_due_vs_not_determinable(db_session):
+    """删失语义拆分（V3-FIX-357-A）：censored/unknown 不得被合并谎称「未到期」。
+
+    D-05 核心（intervention_lifecycle）明确「censored/unknown 语义明确区分」
+    （验收①）：not_yet_due（结果未到期）/ window_closed（窗口已关且无结果）/
+    user_churned（用户离开无从观察）/ unknown（无法判定）是四种不同的认知状态。
+    卡片投影若把后三类也塞进 ``not_yet_observed``，移动端会渲染成「还在观察
+    窗口内，结果未到期」——对窗口已关/已流失的暴露这是事实性错误（把「不会有
+    可判定结果」伪装成「还没到期」）。契约钉死：
+
+    - ``uncertainty.not_yet_observed`` 只含 not_yet_due 删失；
+    - ``uncertainty.not_determinable`` 收口 window_closed + user_churned
+      （+ unknown，本服务路径中行不可损坏故恒 0，不作单独断言）。
+    """
+    user = await _make_user(db_session)
+    now = datetime.utcnow()
+    # 活跃面（users.last_login_at）：相对 200h/100h 两组窗口末恰好一closed一churned
+    user.last_login_at = now - timedelta(hours=50)
+    await db_session.commit()
+
+    helped_decision = f"aurora_{uuid4().hex}"
+    # observed：窗口内正向 outcome → 卡片得以发出（single_observation 档）
+    await _seed_lifecycle_event(
+        db_session,
+        user.id,
+        decision_id=helped_decision,
+        event_type="exposed",
+        friction_tag="recall_gap",
+        occurred_at=now - timedelta(hours=2),
+    )
+    await _seed_lifecycle_event(
+        db_session,
+        user.id,
+        decision_id=helped_decision,
+        event_type="outcome_observed",
+        friction_tag="recall_gap",
+        outcome_polarity="positive",
+        occurred_at=now - timedelta(hours=1),
+    )
+    # not_yet_due：窗口未到期（72h 窗，1h 前暴露 → 窗末在未来）
+    await _seed_lifecycle_event(
+        db_session,
+        user.id,
+        decision_id=f"aurora_{uuid4().hex}",
+        event_type="exposed",
+        friction_tag="recall_gap",
+        occurred_at=now - timedelta(hours=1),
+    )
+    # window_closed：200h 前暴露 → 窗末 128h 前；用户 50h 前仍活跃 → 在场未行动
+    await _seed_lifecycle_event(
+        db_session,
+        user.id,
+        decision_id=f"aurora_{uuid4().hex}",
+        event_type="exposed",
+        friction_tag="recall_gap",
+        occurred_at=now - timedelta(hours=200),
+    )
+    # user_churned：100h 前暴露 → 窗末 28h 前；用户 50h 前已不活跃 → 无从观察
+    await _seed_lifecycle_event(
+        db_session,
+        user.id,
+        decision_id=f"aurora_{uuid4().hex}",
+        event_type="exposed",
+        friction_tag="recall_gap",
+        occurred_at=now - timedelta(hours=100),
+    )
+
+    app = _build_app(db_session, user.id)
+    body = await _get_cards(app)
+    helped = next(
+        c for c in body["data"]["cards"] if c["kind"] == "interventions_that_helped"
+    )
+    assert helped["fact"]["n_positive"] == 1
+    uncertainty = helped["uncertainty"]
+    assert uncertainty["not_yet_observed"] == 1, (
+        "not_yet_observed 只能含「窗口未到期」删失，窗口已关/用户流失不得伪装成「结果未到期」"
+    )
+    assert uncertainty["not_determinable"] == 2, (
+        "窗口已关 + 用户流失必须进 not_determinable（诚实口径：这些暴露不会产生可判定结果）"
+    )
+
+
+@pytest.mark.asyncio
 async def test_user_isolation_and_window(db_session):
     """他人事件不泄漏；窗口外事件不计入。"""
     user = await _make_user(db_session)

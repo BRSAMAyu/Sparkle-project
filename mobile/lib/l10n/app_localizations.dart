@@ -7394,41 +7394,6 @@ abstract class AppLocalizations {
   /// **'跳过'**
   String get onboardingSkip;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   /// No description provided for @capsuleQualityUnrated.
   ///
   /// In zh, this message translates to:
@@ -27941,13 +27906,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'附件'**
   String get executionResultArtifactFallback;
-
-
-
-
-
-
-
 
   /// No description provided for @homeNotificationUnreadMessages.
   ///
@@ -59828,6 +59786,12 @@ abstract class AppLocalizations {
   /// **'累积了较多一致观察'**
   String get eicHelpedTierAccumulated;
 
+  /// No description provided for @eicHelpedTierInsufficient.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据不足，暂不下结论'**
+  String get eicHelpedTierInsufficient;
+
   /// No description provided for @eicGoalBandJustStarted.
   ///
   /// In zh, this message translates to:
@@ -59899,6 +59863,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{count} 次还在观察窗口内，结果未到期'**
   String eicUniqNotYetObserved(int count);
+
+  /// No description provided for @eicUniqNotDeterminable.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 次未能取得可判定的结果'**
+  String eicUniqNotDeterminable(int count);
 
   /// No description provided for @eicEvidenceDirectiveLog.
   ///

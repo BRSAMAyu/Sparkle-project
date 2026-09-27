@@ -87,6 +87,10 @@ class EvidenceInsightCardData {
           .map((item) => '$item')
           .toList(growable: false);
   int get notYetObserved => _intOf(uncertainty['not_yet_observed']);
+
+  /// 不会有可判定结果的暴露数（窗口已关/用户流失/无法判定；V3-FIX-357-A
+  /// 拆分口径——不得与「还在观察窗口内，结果未到期」混同渲染）。
+  int get notDeterminable => _intOf(uncertainty['not_determinable']);
   int get samples => _intOf(uncertainty['samples']);
 
   String get actionKey => '${implication['action_key'] ?? ''}';

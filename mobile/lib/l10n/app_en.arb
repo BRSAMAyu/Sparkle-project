@@ -15970,6 +15970,8 @@
   "@eicHelpedTierRepeated": {},
   "eicHelpedTierAccumulated": "Many consistent observations have accumulated",
   "@eicHelpedTierAccumulated": {},
+  "eicHelpedTierInsufficient": "Not enough evidence to draw a conclusion yet",
+  "@eicHelpedTierInsufficient": {},
   "eicGoalBandJustStarted": "Just getting started",
   "@eicGoalBandJustStarted": {},
   "eicGoalBandInProgress": "In progress",
@@ -15994,6 +15996,14 @@
   "@eicUniqNoTaskLedger": {},
   "eicUniqNotYetObserved": "{count} still within the observation window; outcomes not yet due",
   "@eicUniqNotYetObserved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "eicUniqNotDeterminable": "{count} without a determinable outcome record",
+  "@eicUniqNotDeterminable": {
     "placeholders": {
       "count": {
         "type": "int"

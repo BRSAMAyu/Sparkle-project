@@ -15685,6 +15685,8 @@
   "@eicHelpedTierRepeated": {},
   "eicHelpedTierAccumulated": "累积了较多一致观察",
   "@eicHelpedTierAccumulated": {},
+  "eicHelpedTierInsufficient": "证据不足，暂不下结论",
+  "@eicHelpedTierInsufficient": {},
   "eicGoalBandJustStarted": "刚起步",
   "@eicGoalBandJustStarted": {},
   "eicGoalBandInProgress": "进行中",
@@ -15709,6 +15711,14 @@
   "@eicUniqNoTaskLedger": {},
   "eicUniqNotYetObserved": "{count} 次还在观察窗口内，结果未到期",
   "@eicUniqNotYetObserved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "eicUniqNotDeterminable": "{count} 次未能取得可判定的结果",
+  "@eicUniqNotDeterminable": {
     "placeholders": {
       "count": {
         "type": "int"
