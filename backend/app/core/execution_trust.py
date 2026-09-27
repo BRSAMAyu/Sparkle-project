@@ -37,6 +37,10 @@ class TrustEvaluation:
 class ExecutionTrustEngine:
     """评估外部执行结果的可信度，防止脏数据进入主链。"""
 
+    # V3-FIX-307：_check_success_criteria 已实现的 criteria 类型全集；
+    # 除此之外（含拼写错误）按未知类型如实标注，不再静默当作通过。
+    _KNOWN_CRITERIA_TYPES = {"structured_output", "contains_text", "non_empty"}
+
     def __init__(
         self,
         *,
@@ -94,7 +98,19 @@ class ExecutionTrustEngine:
             reasons.append("quality_too_low")
         else:
             trust_level = TrustLevel.VALIDATED
-            reasons.append("schema_and_criteria_passed")
+            # V3-FIX-307：缺省通过必须如实标注——空契约（0 项 schema 校验）、
+            # criteria 缺型/未知型时不得自称 schema_and_criteria_passed；
+            # VALIDATED 缺省通过语义本身不变（修的是自称文案，不是改拒绝）。
+            schema_evaluated = bool(result_contract.get("required_fields"))
+            criteria_type = success_criteria.get("type")
+            if not schema_evaluated:
+                reasons.append("schema_not_evaluated")
+            if not criteria_type:
+                reasons.append("criteria_not_specified")
+            elif criteria_type not in self._KNOWN_CRITERIA_TYPES:
+                reasons.append(f"criteria_unknown_type:{criteria_type}")
+            if schema_evaluated and criteria_type in self._KNOWN_CRITERIA_TYPES:
+                reasons.append("schema_and_criteria_passed")
 
             if user_confirmed:
                 trust_level = TrustLevel.TRUSTED
