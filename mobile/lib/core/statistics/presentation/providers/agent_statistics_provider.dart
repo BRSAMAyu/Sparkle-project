@@ -14,8 +14,10 @@ part 'agent_statistics_provider.g.dart';
 /// Agent statistics entity
 ///
 /// Field semantics follow the backend `/agent-stats/user/overview`
-/// aggregation over `agent_execution_stats` (B-02 lineage INV-04). Fields
-/// with no real data source are `null` — never a fabricated constant.
+/// aggregation over `agent_execution_stats` (B-02 lineage INV-04). Until the
+/// backend write side is wired the endpoint reports unavailable (V3-FIX-330)
+/// and the repository throws instead of parsing values. Fields with no real
+/// data source are `null` — never a fabricated constant.
 class AgentStatisticsData extends StatisticsEntity {
 
   AgentStatisticsData({
@@ -95,11 +97,14 @@ class AgentStatisticsData extends StatisticsEntity {
 
 /// Repository for agent statistics.
 ///
-/// Data source: `GET /agent-stats/user/overview?days=<window>` — a real
-/// aggregation over the `agent_execution_stats` table served by the FastAPI
-/// engine behind the gateway. There is no client-side fallback: transport
-/// failures propagate, and a server-reported degraded aggregation surfaces
-/// as [StatisticsSourceUnavailableException] (D-04).
+/// Data source: `GET /agent-stats/user/overview?days=<window>`, served by the
+/// FastAPI engine behind the gateway. Until the server-side write path
+/// (`record_agent_execution`) is wired, the endpoint reports
+/// `degraded: true` / `data_status: "unavailable"` (V3-FIX-330) — it refuses
+/// to dress an empty `agent_execution_stats` table up as measured zeros.
+/// There is no client-side fallback: transport failures propagate, and a
+/// server-reported degraded/unavailable aggregation surfaces as
+/// [StatisticsSourceUnavailableException] (D-04).
 class AgentStatsRepository extends HybridStatisticsRepository<AgentStatisticsData> {
   AgentStatsRepository({required super.database, super.cacheConfig, Dio? dio})
       : dio = dio ??
@@ -136,8 +141,9 @@ class AgentStatsRepository extends HybridStatisticsRepository<AgentStatisticsDat
     );
 
     if (payload['degraded'] == true) {
-      // The server could not aggregate (missing stats dependency). Report it
-      // honestly instead of rendering zeros that look like real usage.
+      // Server-side aggregation is unavailable (write side not wired per
+      // V3-FIX-330, or a missing stats dependency). Report it honestly
+      // instead of rendering zeros that look like real usage.
       throw const StatisticsSourceUnavailableException(
         'agent statistics source degraded on server',
       );

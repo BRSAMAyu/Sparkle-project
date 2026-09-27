@@ -579,7 +579,9 @@ class ApiEndpoints {
   static const String focusLlmGuide = '/focus/llm/guide';
   static const String focusLlmBreakdown = '/focus/llm/breakdown';
 
-  // Agent Statistics (real DB aggregation via /agent-stats)
+  // Agent Statistics via /agent-stats — server reports degraded/unavailable
+  // until the write side (record_agent_execution) is wired (V3-FIX-330);
+  // the repository surfaces that as StatisticsSourceUnavailableException.
   static const String agentStatsUserOverview = '/agent-stats/user/overview';
 
   // Capsule Statistics (real DB aggregation)

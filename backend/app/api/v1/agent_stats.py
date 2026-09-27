@@ -1,7 +1,18 @@
 """
 Agent Statistics API Endpoints
+
+V3-FIX-330（如实化）：`agent_execution_stats` 的唯一写入口
+`AgentStatsService.record_agent_execution` 在生产链路零调用（全仓无写入方），
+读侧聚合永远只能产出「被冒充为测量值的结构性零」。在写侧接线之前，
+所有数据端点一律如实返回 unavailable 语义（degraded=True +
+data_status="unavailable" + unavailable_reason="write_side_unwired"），
+不再把空表零当作统计值返回；移动端仓库层据 degraded 抛
+StatisticsSourceUnavailableException（D-04），不会把零上屏。
+写侧接线落地时必须同步翻转本标记并恢复真实聚合查询。
 """
 from __future__ import annotations
+
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
@@ -14,62 +25,54 @@ from app.services.agent_stats_service import AgentStatsService
 
 router = APIRouter(prefix="/agent-stats", tags=["agent-stats"])
 
+# V3-FIX-330：写侧未接线的结构事实标记。接线任务须同步移除本标记并恢复读侧真实聚合。
+UNAVAILABLE_REASON_WRITE_SIDE_UNWIRED = "write_side_unwired"
 
-def _is_missing_agent_stats_dependency(exc: Exception) -> bool:
-    message = str(exc).lower()
-    return "agent_execution_stats" in message or "materialized view" in message
+
+def _unavailable_markers() -> dict[str, Any]:
+    """返回如实不可用标记：零占位字段在 degraded=True 下不代表任何测量值。"""
+    return {
+        "degraded": True,
+        "data_status": "unavailable",
+        "unavailable_reason": UNAVAILABLE_REASON_WRITE_SIDE_UNWIRED,
+    }
 
 
 @router.get("/user/overview")
 async def get_user_stats_overview(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
 ):
     """
-    获取用户的Agent使用统计概览
+    获取用户的Agent使用统计概览（写侧接线前如实返回 unavailable）
 
-    返回：
-    - 总体统计（总执行次数、平均耗时、会话数）
-    - 各Agent类型统计
-    - 最近活动记录
+    返回字段结构保持稳定，但 degraded=True 表明全部数值是不可用占位，
+    不是测量值：写侧 record_agent_execution 未接线（V3-FIX-330）。
     """
-    try:
-        stats_service = AgentStatsService(db)
-        stats = await stats_service.get_user_stats(current_user.id, days=days)
-        return {
-            "success": True,
-            "data": stats
-        }
-    except Exception as e:
-        if _is_missing_agent_stats_dependency(e):
-            await db.rollback()
-            return {
-                "success": True,
-                "data": {
-                    "period_days": days,
-                    "overall": {
-                        "total_executions": 0,
-                        "avg_duration_ms": 0,
-                        "total_sessions": 0,
-                    },
-                    "by_agent": [],
-                    "recent_executions": [],
-                    "degraded": True,
-                },
-            }
-        logger.error(f"Failed to get user stats: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve statistics") from e
+    del current_user  # 仅作鉴权门
+    return {
+        "success": True,
+        "data": {
+            "period_days": days,
+            "overall": {
+                "total_executions": 0,
+                "avg_duration_ms": 0,
+                "total_sessions": 0,
+            },
+            "by_agent": [],
+            "recent_executions": [],
+            **_unavailable_markers(),
+        },
+    }
 
 
 @router.get("/overview")
 async def get_user_stats_overview_alias(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Compatibility alias for legacy acceptance paths."""
-    return await get_user_stats_overview(days=days, current_user=current_user, db=db)
+    return await get_user_stats_overview(days=days, current_user=current_user)
 
 
 @router.get("/user/top-agents")
@@ -77,43 +80,21 @@ async def get_top_agents(
     limit: int = Query(5, ge=1, le=10, description="返回数量"),
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
 ):
     """
-    获取用户最常使用的Agent
+    获取用户最常使用的Agent（写侧接线前如实返回 unavailable）
 
-    返回：
-    - Agent类型
-    - 使用次数
-    - 平均耗时
+    degraded=True：top_agents 为不可用占位，不是测量值（V3-FIX-330）。
     """
-    try:
-        stats_service = AgentStatsService(db)
-        top_agents = await stats_service.get_most_used_agents(
-            current_user.id,
-            limit=limit,
-            days=days
-        )
-        return {
-            "success": True,
-            "data": {
-                "period_days": days,
-                "top_agents": top_agents
-            }
-        }
-    except Exception as e:
-        if _is_missing_agent_stats_dependency(e):
-            await db.rollback()
-            return {
-                "success": True,
-                "data": {
-                    "period_days": days,
-                    "top_agents": [],
-                    "degraded": True,
-                },
-            }
-        logger.error(f"Failed to get top agents: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve top agents") from e
+    del current_user, limit  # limit 语义在写侧接线后随真实聚合恢复
+    return {
+        "success": True,
+        "data": {
+            "period_days": days,
+            "top_agents": [],
+            **_unavailable_markers(),
+        },
+    }
 
 
 @router.get("/performance")
@@ -121,46 +102,26 @@ async def get_performance_metrics(
     agent_type: str | None = Query(None, description="Agent类型（可选）"),
     days: int = Query(7, ge=1, le=365, description="统计天数"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
 ):
     """
-    获取Agent性能指标
+    获取Agent性能指标（写侧接线前如实返回 unavailable）
 
-    包括：
-    - 平均耗时
-    - 中位数耗时
-    - P95耗时
-    - 成功率/失败率
+    degraded=True：耗时/成功率等全部数值是不可用占位，不是测量值（V3-FIX-330）。
     """
-    try:
-        stats_service = AgentStatsService(db)
-        metrics = await stats_service.get_performance_metrics(
-            user_id=current_user.id,
-            agent_type=agent_type,
-            days=days
-        )
-        return {
-            "success": True,
-            "data": metrics
-        }
-    except Exception as e:
-        if _is_missing_agent_stats_dependency(e):
-            await db.rollback()
-            return {
-                "success": True,
-                "data": {
-                    "period_days": days,
-                    "agent_type": agent_type,
-                    "total_executions": 0,
-                    "avg_duration_ms": 0,
-                    "max_duration_ms": 0,
-                    "success_rate": 0,
-                    "failure_rate": 0,
-                    "degraded": True,
-                },
-            }
-        logger.error(f"Failed to get performance metrics: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve performance metrics") from e
+    del current_user
+    return {
+        "success": True,
+        "data": {
+            "period_days": days,
+            "agent_type": agent_type,
+            "total_executions": 0,
+            "avg_duration_ms": 0,
+            "max_duration_ms": 0,
+            "success_rate": 0,
+            "failure_rate": 0,
+            **_unavailable_markers(),
+        },
+    }
 
 
 @router.get("/agent-types")
