@@ -4578,7 +4578,7 @@
       "resource_class": "HEAVY",
       "reviewers_required": 2,
       "gate": "V3-6",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -4590,7 +4590,10 @@
         "targeted tests",
         "integration/simulator evidence",
         "review receipt"
-      ]
+      ],
+      "completion": {
+        "evidence": "wt773 交付 1680d16c（分支 86972fc9）；wt782 独立审查 APPROVE receipt v3-output/WT782-O05-REVIEW/receipt.md（14/14+变异 M1/M1b/M2/M4 红）；销账前置已履：FIX-531 补登/FIX-505 纠偏/FIX-532 登记；2026-09-28"
+      }
     },
     {
       "id": "O-06",
