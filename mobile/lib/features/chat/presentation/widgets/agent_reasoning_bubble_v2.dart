@@ -753,7 +753,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   backgroundColor: accent.withValues(alpha: 0.14),
                   labelStyle: TextStyle(
                     color: accent,
-                    fontSize: 12,
+                    fontSize: DS.fontSizeXs,
                     fontWeight: DS.fontWeightSemibold,
                   ),
                   padding: EdgeInsets.zero,

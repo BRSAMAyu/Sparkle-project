@@ -73,7 +73,7 @@ class OfflineQueueIndicator extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: DS.textPrimary,
-                    fontSize: 12,
+                    fontSize: DS.fontSizeXs,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

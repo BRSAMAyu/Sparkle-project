@@ -98,7 +98,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                 Text(
                   context.l10n.chatCollabTimelineTitle,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: DS.fontSizeBase,
                     fontWeight: DS.fontWeightBold,
                     color: DS.prismPurple,
                   ),
@@ -107,7 +107,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                 Text(
                   _getWorkflowDisplayName(context),
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: DS.fontSizeXs,
                     color: DS.prismPurple.withValues(alpha: 0.82),
                   ),
                 ),
@@ -289,7 +289,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
             Text(
               context.l10n.viewDetails,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: DS.fontSizeXs,
                 color: step.agentColor,
                 fontWeight: DS.fontWeightSemibold,
               ),
@@ -309,7 +309,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
             child: Text(
               step.outputSummary!,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: DS.fontSizeXs,
                 color: DS.brandPrimary.shade700,
                 fontStyle: FontStyle.italic,
                 height: 1.4,

@@ -121,7 +121,7 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
               context.l10n.intentAnalysisInProgress,
               style: TextStyle(
                 color: Theme.of(context).primaryColor,
-                fontSize: 12,
+                fontSize: DS.fontSizeXs,
               ),
             ),
           ],
@@ -156,7 +156,7 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
                 context.l10n.intentAnalysisMultiIntent,
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
-                  fontSize: 12,
+                  fontSize: DS.fontSizeXs,
                   fontWeight: DS.fontWeightMedium,
                 ),
               ),

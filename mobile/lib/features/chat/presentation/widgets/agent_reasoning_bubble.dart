@@ -105,8 +105,10 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                         ),
                       ),
                       backgroundColor: widget.agentColor.withValues(alpha: 0.1),
-                      labelStyle:
-                          TextStyle(color: widget.agentColor, fontSize: 12),
+                      labelStyle: TextStyle(
+                        color: widget.agentColor,
+                        fontSize: DS.fontSizeXs,
+                      ),
                     ),
                   ),
                 Text(
@@ -200,7 +202,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontWeight: DS.fontWeightBold,
-                            fontSize: 12,
+                            fontSize: DS.fontSizeXs,
                             color: widget.agentColor,
                           ),
                         ),
@@ -473,7 +475,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   backgroundColor: DS.prismPurple.withValues(alpha: 0.18),
                   labelStyle: TextStyle(
                     color: DS.prismPurple,
-                    fontSize: 12,
+                    fontSize: DS.fontSizeXs,
                     fontWeight: DS.fontWeightSemibold,
                   ),
                   padding: EdgeInsets.zero,

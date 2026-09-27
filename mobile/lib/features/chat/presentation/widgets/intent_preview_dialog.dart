@@ -376,7 +376,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
           Text(
             planText,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: DS.fontSizeXs,
               color: DS.textPrimary,
             ),
           ),

@@ -2326,7 +2326,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: DS.fontSizeXs,
               color: contentColor,
             ),
           ),
@@ -2343,7 +2343,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                 ? context.l10n.chatRecalledSelf
                 : context.l10n.chatRecalledPeer,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: DS.fontSizeXs,
               color: DS.neutral400,
             ),
           ),
@@ -2511,7 +2511,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                   child: Text(
                     initial,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightBold,
                       color: isUser ? DS.onBrandPrimary : DS.onBrandPrimary,
                     ),
@@ -3154,7 +3154,7 @@ class _InsightLinkCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: DS.textSecondary,
-                    fontSize: 12,
+                    fontSize: DS.fontSizeXs,
                   ),
                 ),
                 if (bullets.isNotEmpty) ...[
@@ -3407,7 +3407,7 @@ class _CollaborationSignatureCard extends StatelessWidget {
               Text(
                 _formatCollaborationModeLabel(collaborationMode),
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: DS.fontSizeXs,
                   fontWeight: DS.fontWeightBold,
                   color: theme.colorScheme.primary,
                 ),

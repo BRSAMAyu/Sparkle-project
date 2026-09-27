@@ -244,7 +244,7 @@ class _MessageDetailViewState extends State<MessageDetailView> {
                       : context.l10n.chatLabelAssistant,
                   style: TextStyle(
                     color: roleTextColor,
-                    fontSize: 12,
+                    fontSize: DS.fontSizeXs,
                     fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
@@ -259,7 +259,7 @@ class _MessageDetailViewState extends State<MessageDetailView> {
             DateFormat('MM/dd HH:mm').format(widget.message.createdAt),
             style: TextStyle(
               color: DS.textSecondary,
-              fontSize: 12,
+              fontSize: DS.fontSizeXs,
             ),
           ),
 
@@ -317,7 +317,7 @@ class _MessageDetailViewState extends State<MessageDetailView> {
       return SelectableText(
         widget.message.content,
         style: TextStyle(
-          fontSize: 16,
+          fontSize: DS.fontSizeBase,
           height: 1.6,
           color: DS.textPrimary,
           fontFamilyFallback: sparkleFontFallback,
@@ -357,7 +357,7 @@ class _MessageDetailViewState extends State<MessageDetailView> {
             child: Text(
               '$charCount ${context.l10n.chatCharacters} · $wordCount ${context.l10n.chatWords}',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: DS.fontSizeXs,
                 color: DS.textTertiary,
               ),
             ),
@@ -433,7 +433,7 @@ class _ActionButton extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: DS.fontSizeXs,
                     color: DS.textSecondary,
                   ),
                 ),

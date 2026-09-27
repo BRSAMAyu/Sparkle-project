@@ -212,7 +212,7 @@ class _FileMessageBubbleWithThumbnailState
                         if (statusText.isNotEmpty) statusText,
                       ].where((part) => part.isNotEmpty).join(' · '),
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: DS.fontSizeXs,
                         color: secondaryColor,
                       ),
                     ),
@@ -369,7 +369,7 @@ class _ActionPill extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: DS.fontSizeXs,
                         fontWeight: DS.fontWeightSemiBold,
                         color: accentColor,
                       ),

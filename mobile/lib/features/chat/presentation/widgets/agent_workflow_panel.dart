@@ -195,7 +195,7 @@ class _SingleAgentBadge extends StatelessWidget {
           Text(
             entry.displayName,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: DS.fontSizeXs,
               fontWeight: DS.fontWeightMedium,
               color: agentColor,
             ),
@@ -267,7 +267,7 @@ class _WorkflowShell extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: DS.fontSizeXs,
                   fontWeight: DS.fontWeightSemibold,
                   color: theme.colorScheme.primary,
                 ),
@@ -587,7 +587,7 @@ class _ParallelAgentCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: DS.fontSizeXs,
                     fontWeight: DS.fontWeightSemibold,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -684,7 +684,7 @@ class _AgentTimelineRow extends StatelessWidget {
                         child: Text(
                           entry.displayName,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: DS.fontSizeXs,
                             fontWeight: DS.fontWeightSemibold,
                             color: theme.colorScheme.onSurface,
                           ),
