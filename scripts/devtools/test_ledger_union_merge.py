@@ -12,7 +12,11 @@
 ⑧ 8 管畸形检出——多数行容差与 --expect-pipes/--strict-pipes 阈值；
 ⑨ --verify 独立体检——合成台账全绿 + 畸形四类点名 + 真台账只读自检；
 ⑩ 转义管感知（wt578）——\\| 是格内字符、裸 | 才是列界：状态格不误报、
-ID 提取不受损、含转义管行 union-merge 正确合成、真措辞项仍被点名。
+ID 提取不受损、含转义管行 union-merge 正确合成、真措辞项仍被点名；
+⑪ deep 抽检（wt791）——FIXED@ 指针主干可达性（FIX-504 病）、行内
+FIXED@ 与行首状态枚举一致性（FIX-512 病）、commit message 幻影号
+（FIX-514 病）；默认档只报不改（warning 不阻断）、--deep-strict 升格、
+--no-deep 降级与无 git 环境护栏。
 
 用构造的最小台账样本为主，真台账只读跑 verify（自适配 wt561 存量收口）。
 运行：
@@ -551,3 +555,124 @@ def test_cli_verify_escaped_rows_pass_but_real_wording_still_fails(tmp_path):
     assert any("V3-FIX-333" in ln and "状态格非法" in ln for ln in fail_lines)
     # 转义行不被点名（升级不把误报换个地方留下）
     assert not any("V3-FIX-330" in ln or "V3-FIX-331" in ln for ln in fail_lines)
+
+
+# ---------------------------------------------------------------------------
+# ⑪ deep 抽检（wt791）：FIXED@ 可达性 / 状态一致性 / commit 幻影号
+# ---------------------------------------------------------------------------
+def _git(repo, *args):
+    return subprocess.run(
+        ["git", "-C", str(repo), "-c", "user.email=wt791@test", "-c", "user.name=wt791", *args],
+        capture_output=True,
+        text=True,
+    )
+
+
+def _run_cli(args, stdin_text, cwd=None):
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), *args],
+        input=stdin_text,
+        capture_output=True,
+        text=True,
+        cwd=cwd,
+    )
+
+
+def test_deep_no_git_env_degrades_to_warning(tmp_path, monkeypatch):
+    """无 git 环境（ledger 目录与进程 cwd 均无仓）：deep ①③ 降级 warning 不 FAIL。"""
+    monkeypatch.chdir(tmp_path)
+    ledger_path = tmp_path / "l.md"
+    ledger_path.write_text(HEADER + row(700, "FIXED@abcd1234"), encoding="utf-8")
+    fails, warnings, stats = lum.verify_ledger_deep(
+        ledger_path.read_text(encoding="utf-8"), ledger_path=str(ledger_path)
+    )
+    assert fails == []
+    assert stats["git_dir"] is None
+    assert stats["counts"]["env"] >= 1 and stats["counts"]["rot"] == 0
+    assert any("降级跳过" in w for w in warnings)
+
+
+def test_deep_rot_hybrid_phantom_on_mini_repo(tmp_path):
+    """临时仓内三病各被点名：rot（孤儿提交）/ hybrid 双向 / 幻影号；strict 升格 FAIL。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    assert _git(repo, "init", "-q", "-b", "main").returncode == 0
+    (repo / "f.txt").write_text("ledger guard deep probe\n", encoding="utf-8")
+    assert _git(repo, "add", ".").returncode == 0
+    assert (
+        _git(repo, "commit", "-q", "-m", "wt791: register V3-FIX-700 probe；幻影对照 V3-FIX-9998 不在册").returncode
+        == 0
+    )
+    # 孤儿提交：有效对象、HEAD 不可达（预 rebase 指针腐烂的最小构造）
+    tree = _git(repo, "rev-parse", "HEAD^{tree}").stdout.strip()
+    rot_sha = _git(repo, "commit-tree", tree, "-p", "HEAD", "-m", "orphan rot probe").stdout.strip()
+    text = (
+        HEADER
+        + row(700, "OPEN")
+        + row(701, f"FIXED@{rot_sha}（孤儿提交，主干不可达）")
+        + row(702, "OPEN 补记FIXED@桩位无散列（混合体构造）")
+        + row(703, "FIXED@wt999（仅 worktree 名，零 sha 指针）")
+    )
+    ledger_path = repo / "ledger.md"
+    ledger_path.write_text(text, encoding="utf-8")
+
+    # 默认档：三病全 warning、零 FAIL；在册引用（700）不报幻影（对照）
+    fails, warnings, stats = lum.verify_ledger_deep(text, ledger_path=str(ledger_path))
+    assert fails == []
+    assert stats["counts"] == {"rot": 1, "hybrid": 2, "phantom": 1, "env": 0}
+    assert any("FIX-504" in w and rot_sha in w and "V3-FIX-701" in w for w in warnings)
+    assert any("FIX-512" in w and "V3-FIX-702" in w for w in warnings)
+    assert any("收口无凭证" in w and "V3-FIX-703" in w for w in warnings)
+    assert any("V3-FIX-9998" in w and "幻影号" in w for w in warnings)
+    assert not any("V3-FIX-700" in w and "幻影号" in w for w in warnings)
+
+    # --deep-strict：rot + hybrid 双向升格 FAIL（3 项）；幻影号恒 warning 不升格
+    fails_s, warnings_s, stats_s = lum.verify_ledger_deep(text, ledger_path=str(ledger_path), strict_deep=True)
+    assert len(fails_s) == 3 and stats_s["escalated"] == 3
+    assert any("FIX-504" in p for p in fails_s) and any("FIX-512" in p for p in fails_s)
+    assert not any("9998" in p for p in fails_s)
+    assert any("V3-FIX-9998" in w for w in warnings_s)
+
+
+def test_deep_no_deep_skips_git_checks_but_keeps_consistency(tmp_path):
+    """--no-deep：git 依赖的 ①③ 跳过（不出 env 假警），纯文本的 ② 仍跑。"""
+    text = HEADER + row(702, "OPEN 补记FIXED@桩位（混合体）") + row(703, "FIXED@abcd1234")
+    ledger_path = tmp_path / "ledger.md"
+    ledger_path.write_text(text, encoding="utf-8")
+    fails, warnings, stats = lum.verify_ledger_deep(text, ledger_path=str(ledger_path), deep=False)
+    assert fails == []
+    assert stats["deep_enabled"] is False and stats["git_dir"] is None
+    assert stats["counts"] == {"rot": 0, "hybrid": 1, "phantom": 0, "env": 0}
+    assert any("FIX-512" in w and "V3-FIX-702" in w for w in warnings)
+
+
+def test_deep_reachable_pointer_clean_on_mini_repo(tmp_path):
+    """对照：FIXED@ 指向 HEAD 本身（可达）+ 无幻影 → deep 零发现。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    assert _git(repo, "init", "-q", "-b", "main").returncode == 0
+    (repo / "f.txt").write_text("clean probe\n", encoding="utf-8")
+    assert _git(repo, "add", ".").returncode == 0
+    assert _git(repo, "commit", "-q", "-m", "wt791: register V3-FIX-710 clean").returncode == 0
+    head = _git(repo, "rev-parse", "--short", "HEAD").stdout.strip()
+    text = HEADER + row(710, f"FIXED@{head}（HEAD 对照，可达）")
+    ledger_path = repo / "ledger.md"
+    ledger_path.write_text(text, encoding="utf-8")
+    fails, warnings, stats = lum.verify_ledger_deep(text, ledger_path=str(ledger_path))
+    assert fails == [] and warnings == []
+    assert stats["counts"] == {"rot": 0, "hybrid": 0, "phantom": 0, "env": 0}
+
+
+def test_cli_verify_deep_warnings_do_not_block(tmp_path, monkeypatch):
+    """CLI 端到端：无 git 环境 deep 以 WARN 出账仍 exit 0；新旗标用法护栏。"""
+    monkeypatch.chdir(tmp_path)  # 进程 cwd 移出仓 → deep 降级
+    green = tmp_path / "green.md"
+    green.write_text(_clean_ledger(), encoding="utf-8")
+    proc = _run_cli(["--verify", str(green)], "")
+    assert proc.returncode == 0, proc.stderr
+    assert "verify 通过" in proc.stderr
+    assert "WARN：" in proc.stderr and "降级跳过" in proc.stderr
+
+    # 用法护栏：新旗标仅 --verify 适用、互斥
+    assert _run_cli(["--verify", str(green), "--no-deep", "--deep-strict"], "").returncode == 2
+    assert _run_cli(["--check", "--no-deep"], "").returncode == 2

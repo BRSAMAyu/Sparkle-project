@@ -35,6 +35,17 @@
 - 新增 ``--verify FILE``：对任一台账文件独立体检——零冲突标记残留 +
   8 裸管形态 + 行首锚定 ID 无重号 + 行尾状态枚举合法
   （OPEN/FIXED@/CLOSED@/WONTFIX 前缀；仅对形态合法行检查）。
+- ``--verify`` deep 抽检三项（wt791；治 FIX-504/512/514 同族「台账行内容
+  丢失/幻影号」病，默认开启、只报不改）：① FIXED@ 指针主干可达性——
+  ``git merge-base --is-ancestor <sha> HEAD`` 不可达=指针腐烂（预 rebase
+  SHA），git 调用失败/无 git 环境降级 warning 不 FAIL；② 行内 FIXED@ 与
+  行首状态枚举一致性——状态格 OPEN 开头而行内含 FIXED@=混合体（53 行
+  事故的机器口径误报源），状态格 FIXED@ 开头而全行零 sha 指针=收口无
+  凭证；③ HEAD 前 200 条 commit message 的 V3-FIX-N 引用号存在性——
+  台账全文查无=幻影号（历史 message 不可改写，恒 warning 不 FAIL）。
+  ``--no-deep`` 跳过 git 依赖的 ①③（性能受限/无 git 环境）；②为纯
+  文本面恒跑。``--deep-strict`` 把 ①② 升格 FAIL（③与环境降级恒
+  warning）——台账卫生卡收口后的零红验收用。
 - **转义管全链感知**：格切分统一按裸管口径（``\\|`` 是格内字面竖线、
   裸 ``|`` 才是列界）——status_cell 提取、重编号注记落位与形态计数
   同源，状态格含 ``\\|`` 注记（如 ``OPEN [wt474分诊:备忘型\\|…]``、
@@ -56,6 +67,12 @@
     # 独立体检任一台账文件（只读，不改文件）
     python3 scripts/devtools/ledger_union_merge.py --verify v3/06_agent_fleet/DYNAMIC_ISSUES.md
 
+    # deep 抽检性能受限/无 git 环境降级（跳过 ①可达性 ③幻影号，②仍跑）
+    python3 scripts/devtools/ledger_union_merge.py --verify 台账.md --no-deep
+
+    # 卫生卡收口验收：deep 抽检 ①② 升格 FAIL（③幻影号恒 warning）
+    python3 scripts/devtools/ledger_union_merge.py --verify 台账.md --deep-strict
+
 退出码：0 成功/验证通过；1 --check/--verify 验证失败；2 输入/用法错误
 （如未闭合冲突块、非法 --renumber）。
 """
@@ -63,13 +80,20 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import subprocess
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
 
 # 表格行 ID：以 | 开头且含 V3-FIX-N
 FIX_ID_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9-])V3-FIX-\d+(?!\d)")
+# FIXED@ 指针：FIXED@<sha>（7-40 位十六进制；deep 抽检① 主干可达性用；
+# 后随守卫防把超长散列/字串截半当指针）
+FIXED_SHA_RE = re.compile(r"FIXED@([0-9a-f]{7,40})(?![0-9a-f])")
+# deep 抽检③：commit message 幻影号扫描深度（HEAD 前 N 条）
+PHANTOM_SCAN_LIMIT = 200
 # 已收口状态标记：进化于 OPEN（台账实录形态：FIXED@sha / CLOSED@tag / WONTFIX，
 # 含「OPEN 补记FIXED@...」扫陈补记形态）
 RESOLVED_MARK_RE = re.compile(r"FIXED@|CLOSED@|WONTFIX")
@@ -460,6 +484,191 @@ def check_status_enum(text: str, skip_lines: set[int] | None = None) -> list[str
     return problems
 
 
+def resolve_git_dir(ledger_path: str | None) -> str | None:
+    """deep 抽检的 git 上下文解析：ledger 所在仓优先，回退进程 cwd；均无则 None。
+
+    返回 toplevel 目录（worktree 感知：HEAD=当前分支头）。两处都解析不
+    出仓即判「无 git 环境」，调用方按护栏降级 warning。
+    """
+    candidates: list[str] = []
+    if ledger_path:
+        candidates.append(os.path.dirname(os.path.abspath(ledger_path)) or ".")
+    candidates.append(os.getcwd())
+    for directory in candidates:
+        proc = subprocess.run(["git", "-C", directory, "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+        if proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout.strip()
+    return None
+
+
+def check_fixed_pointer_reachability(
+    text: str, git_dir: str | None, skip_lines: set[int] | None = None
+) -> tuple[list[str], list[str]]:
+    """deep 抽检①：FIXED@ 指针主干可达性（FIX-504 病——预 rebase SHA 指针腐烂）。
+
+    对每行（形态合法行）内全部 FIXED@<sha> 指针跑
+    ``git merge-base --is-ancestor <sha> HEAD``：不可达（exit 1）即确证
+    指针腐烂。返回 (rot_findings, env_warnings)：
+
+    - rot_findings：确证不可达——指针腐烂证据，默认档出 warning、
+      ``--deep-strict`` 升格 FAIL；
+    - env_warnings：无 git 仓/无 HEAD/单次调用出错（exit ∉ {0,1}）——
+      环境性降级，恒 warning 不 FAIL（性能/环境护栏），任何模式不升格。
+
+    同 sha 去重缓存；调用成本 O(去重指针数) 次 git 子进程。
+    """
+    if git_dir is None:
+        return [], ["git 环境不可用（ledger 所在目录与进程 cwd 均无 git 仓）——FIXED@ 可达性抽检降级跳过"]
+    probe = subprocess.run(["git", "-C", git_dir, "rev-parse", "--verify", "HEAD"], capture_output=True, text=True)
+    if probe.returncode != 0:
+        return [], [f"git HEAD 不可用（{probe.stderr.strip()[:80]}）——FIXED@ 可达性抽检降级跳过"]
+    skip = skip_lines or set()
+    rot: list[str] = []
+    env: list[str] = []
+    cache: dict[str, bool | None] = {}  # sha → 可达 True / 确证不可达 False / 无法核验 None
+    for lineno, line in enumerate(text.splitlines(), 1):
+        if lineno in skip or row_id(line) is None:
+            continue
+        rid = row_id(line)
+        for match in FIXED_SHA_RE.finditer(line):
+            sha = match.group(1)
+            if sha not in cache:
+                proc = subprocess.run(
+                    ["git", "-C", git_dir, "merge-base", "--is-ancestor", sha, "HEAD"],
+                    capture_output=True,
+                    text=True,
+                )
+                if proc.returncode == 0:
+                    cache[sha] = True
+                elif proc.returncode == 1:
+                    cache[sha] = False
+                else:
+                    cache[sha] = None
+                    env.append(
+                        f"git merge-base 调用失败（exit {proc.returncode}：{proc.stderr.strip()[:60]}），"
+                        f"{rid} 行 FIXED@{sha} 可达性无法核验——降级 warning 不 FAIL"
+                    )
+            if cache[sha] is False:
+                rot.append(
+                    f"第 {lineno} 行 {rid} FIXED@{sha} 主干不可达"
+                    "（merge-base --is-ancestor HEAD 判否）——指针腐烂/预 rebase 提交（FIX-504 病）"
+                )
+    return rot, env
+
+
+def check_status_pointer_consistency(text: str, skip_lines: set[int] | None = None) -> list[str]:
+    """deep 抽检②：行内 FIXED@ 与行首状态枚举一致性（FIX-512 病混合体）。
+
+    两个方向（纯文本面，无 git 依赖，``--no-deep`` 仍跑）：
+
+    - 正向混合体：状态格以 OPEN 开头而行内含 FIXED@——OPEN/FIXED 双口径
+      并存（53 行事故的机器误报源：统计按 OPEN 计、收口指针却在行内）；
+    - 反向无凭证：状态格以 FIXED@ 开头而全行零 FIXED@<sha> 指针——收口
+      无 commit 凭证（仅 worktree 名/文字桩位，审计断链）。
+    """
+    skip = skip_lines or set()
+    problems: list[str] = []
+    for lineno, line in enumerate(text.splitlines(), 1):
+        if lineno in skip or row_id(line) is None:
+            continue
+        rid = row_id(line)
+        cell = status_cell(line)
+        if cell.startswith("OPEN") and "FIXED@" in line:
+            problems.append(
+                f"第 {lineno} 行 {rid} 状态格 OPEN 开头而行内含 FIXED@——OPEN/FIXED 混合体"
+                "（FIX-512 病：统计按 OPEN 计而收口指针在行内，口径误报源）"
+            )
+        elif cell.startswith("FIXED@") and not FIXED_SHA_RE.search(line):
+            problems.append(f"第 {lineno} 行 {rid} 状态格 FIXED@ 开头而全行零 FIXED@<sha> 指针——收口无凭证（审计断链）")
+    return problems
+
+
+def check_commit_message_phantoms(
+    text: str, git_dir: str | None, scan_limit: int = PHANTOM_SCAN_LIMIT
+) -> tuple[list[str], list[str]]:
+    """deep 抽检③（可选低配）：commit message 引用号 vs 台账存在性（FIX-514 病幻影号）。
+
+    扫 HEAD 前 scan_limit 条 commit message 里的 V3-FIX-N 引用：台账全文
+    （行首锚定或任何位置提及）都查无的号=幻影号。恒 warning 不 FAIL
+    （历史 message 不可改写，任何模式下不升格）；无 git 环境降级跳过。
+    """
+    if git_dir is None:
+        return [], ["git 环境不可用——commit message 幻影号抽检降级跳过"]
+    proc = subprocess.run(
+        ["git", "-C", git_dir, "log", f"-n{scan_limit}", "--format=%x1e%H%x1f%B"],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return [], [f"git log 调用失败（{proc.stderr.strip()[:60]}）——幻影号抽检降级跳过"]
+    known = set(FIX_ID_TOKEN_RE.findall(text))
+    refs: dict[str, list[str]] = {}
+    scanned = 0
+    for record in proc.stdout.split("\x1e"):
+        record = record.lstrip("\n")
+        if not record:
+            continue
+        sha, _, body = record.partition("\x1f")
+        scanned += 1
+        for token in FIX_ID_TOKEN_RE.findall(body):
+            refs.setdefault(token, []).append(sha)
+    phantoms = [
+        f"commit message（HEAD 前 {scanned} 条）引用 {token}（如 {shas[0][:12]}）而台账全文无此号"
+        "——幻影号（FIX-514 病）；历史 message 不可改写，仅登记不阻断"
+        for token, shas in sorted(refs.items(), key=lambda kv: int(kv[0].rsplit("-", 1)[1]))
+        if token not in known
+    ]
+    return phantoms, []
+
+
+def verify_ledger_deep(
+    text: str,
+    ledger_path: str | None = None,
+    skip_lines: set[int] | None = None,
+    deep: bool = True,
+    strict_deep: bool = False,
+) -> tuple[list[str], list[str], dict]:
+    """deep 抽检聚合（--verify 叠加三项，只报不改；FIX-504/512/514 同族病）。
+
+    返回 (fail_problems, deep_warnings, stats)：
+
+    - 默认档：三项发现全走 deep_warnings——现行台账历史残留不阻断，
+      与既有四项结构检查的退出语义零耦合；
+    - ``--deep-strict``：①指针腐烂与②状态混合体升格 fail_problems；
+      ③幻影号（历史 message 改不了）与环境性降级（git 非本工具可控）
+      恒 warning 不升格；
+    - ``deep=False``（``--no-deep``）：跳过 git 依赖的 ①③，纯文本的
+      ②仍跑。
+    """
+    hybrids = check_status_pointer_consistency(text, skip_lines=skip_lines)
+    rot: list[str] = []
+    phantoms: list[str] = []
+    env: list[str] = []
+    git_dir: str | None = None
+    if deep:
+        git_dir = resolve_git_dir(ledger_path)
+        rot, rot_env = check_fixed_pointer_reachability(text, git_dir, skip_lines=skip_lines)
+        phantoms, phantom_env = check_commit_message_phantoms(text, git_dir)
+        env = rot_env + phantom_env
+    deep_warnings = env + phantoms + rot + hybrids
+    fail_problems: list[str] = []
+    if strict_deep:
+        fail_problems = rot + hybrids
+        deep_warnings = env + phantoms
+    stats = {
+        "git_dir": git_dir,
+        "deep_enabled": deep,
+        "counts": {
+            "rot": len(rot),
+            "hybrid": len(hybrids),
+            "phantom": len(phantoms),
+            "env": len(env),
+        },
+        "escalated": len(fail_problems),
+    }
+    return fail_problems, deep_warnings, stats
+
+
 def verify_ledger_file(
     text: str, expect_pipes: int = DEFAULT_EXPECT_PIPES, majority_tolerance: bool = True
 ) -> tuple[list[str], dict]:
@@ -560,10 +769,24 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="关闭多数行形态容差：裸管数凡非期望值即 FAIL",
     )
+    parser.add_argument(
+        "--no-deep",
+        action="store_true",
+        help="--verify 附加项：跳过 git 依赖的 deep 抽检 ①FIXED@ 可达性与 ③幻影号（②状态一致性仍跑）",
+    )
+    parser.add_argument(
+        "--deep-strict",
+        action="store_true",
+        help="--verify 附加项：deep 抽检 ①② 升格 FAIL（③幻影号与环境降级恒 warning）；卫生卡收口零红验收用",
+    )
     args = parser.parse_args(argv)
 
     if args.verify is not None and args.input != "-":
         parser.error("--verify 与位置参数 input 互斥（体检文件由 --verify FILE 给出）")
+    if (args.no_deep or args.deep_strict) and args.verify is None:
+        parser.error("--no-deep/--deep-strict 仅在 --verify 模式适用")
+    if args.no_deep and args.deep_strict:
+        parser.error("--no-deep 与 --deep-strict 互斥")
 
     try:
         renumber = parse_renumber(args.renumber)
@@ -582,19 +805,46 @@ def main(argv: list[str] | None = None) -> int:
         problems, stats = verify_ledger_file(
             text, expect_pipes=args.expect_pipes, majority_tolerance=not args.strict_pipes
         )
+        deep_fail, deep_warnings, deep_stats = verify_ledger_deep(
+            text,
+            ledger_path=verify_path,
+            skip_lines=stats["failed_lines"],
+            deep=not args.no_deep,
+            strict_deep=args.deep_strict,
+        )
+        problems.extend(deep_fail)
         print(
             f"verify：{stats['checked']} 行 V3-FIX 行，"
             f"裸管分布 {stats['distribution']}，多数形态 {stats['majority']}",
             file=sys.stderr,
         )
+        git_label = (
+            "跳过（--no-deep）" if not deep_stats["deep_enabled"] else (deep_stats["git_dir"] or "不可用（降级）")
+        )
+        counts = deep_stats["counts"]
+        deep_mode = "关闭（--no-deep，仅②状态一致性）" if not deep_stats["deep_enabled"] else "开启"
+        print(
+            f"deep 抽检（{deep_mode}）：git 上下文 {git_label}，"
+            f"rot {counts['rot']} / hybrid {counts['hybrid']} / phantom {counts['phantom']} / env {counts['env']}"
+            f"{'，升格 FAIL ' + str(deep_stats['escalated']) + ' 项' if deep_stats['escalated'] else ''}",
+            file=sys.stderr,
+        )
+        for warning in deep_warnings:
+            print(f"WARN：{warning}", file=sys.stderr)
         if problems:
             for problem in problems:
                 print(f"FAIL：{problem}", file=sys.stderr)
+            if deep_warnings:
+                print(f"（另有 deep 抽检 warning {len(deep_warnings)} 项，见 WARN 行）", file=sys.stderr)
             print(f"verify 失败：{len(problems)} 项", file=sys.stderr)
             return 1
+        deep_note = (
+            f"，deep 抽检 warning {len(deep_warnings)} 项（默认档不阻断）" if deep_warnings else "，deep 抽检零发现"
+        )
         print(
             "verify 通过：零冲突标记残留，8 裸管形态合法（多数容差"
-            f"{'开' if not args.strict_pipes else '关'}），ID 无重号，状态枚举合法",
+            f"{'开' if not args.strict_pipes else '关'}），ID 无重号，状态枚举合法"
+            f"{deep_note}",
             file=sys.stderr,
         )
         return 0
