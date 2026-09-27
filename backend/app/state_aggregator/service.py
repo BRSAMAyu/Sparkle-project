@@ -171,7 +171,8 @@ class StateAggregatorService:
                 skill_selection_context=skill_selection_context,
                 expose_shadow=expose_shadow,
             )
-            state = replace(state, **{field_name: envelope})
+            patch: dict[str, Any] = {field_name: envelope}
+            state = replace(state, **patch)
         return state
 
     async def _get_field(
@@ -611,6 +612,8 @@ class StateAggregatorService:
         rows = (await self.db.execute(stmt)).scalars().all()
         distribution: dict[str, int] = {}
         for s in rows:
+            if s is None:  # SQL 层已 isnot(None) 过滤；此处仅为类型收窄
+                continue
             distribution[s] = distribution.get(s, 0) + 1
 
         # Supplement with keyword-based sentiment from recent user chat messages
@@ -1117,7 +1120,7 @@ class StateAggregatorService:
             confidence=float(getattr(row, "confidence", 0.0) or 0.0),
             source=str(getattr(row, "source", "default") or "default"),
         )
-        snapshot_ids = ()
+        snapshot_ids: tuple[str, ...] = ()
         if row is not None:
             snapshot_ids = (f"srl_phase:{row.user_id}",)
         return StateFieldEnvelope(

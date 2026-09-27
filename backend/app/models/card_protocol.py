@@ -312,7 +312,8 @@ class TaskOccurrence(BaseModel):
     scheduled_for: Mapped[date] = mapped_column(Date, nullable=True, index=True)
     window_start: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     window_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    occurrence_status: Mapped[OccurrenceStatus | None] = mapped_column(
+    # 注解对齐 DDL：nullable=False + default PLANNED，全库无 None 赋值/查询——旧 Optional 注解迫使所有 .value 读点做无谓 None 分支。
+    occurrence_status: Mapped[OccurrenceStatus] = mapped_column(
         Enum(OccurrenceStatus, name="occurrence_status_enum"),
         nullable=False,
         default=OccurrenceStatus.PLANNED,

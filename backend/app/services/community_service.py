@@ -58,6 +58,7 @@ from app.schemas.community import (
     GroupCollaborativeGalaxyResponse,
     GroupCollaborativeGalaxyStats,
     GroupCreate,
+    GroupFileTrustLevelEnum,
     GroupKnowledgeBaseStats,
     GroupTaskCreate,
     MessageEdit,
@@ -1519,7 +1520,7 @@ class GroupKnowledgeService:
                     id=GroupKnowledgeService._document_node_id(group_file.file_id),
                     label=group_file.file.file_name if group_file.file else str(group_file.file_id),
                     node_type="document",
-                    trust_level=group_file.trust_level.value,
+                    trust_level=GroupFileTrustLevelEnum(group_file.trust_level.value),
                     knowledge_base=group_file.is_knowledge_base,
                     file_id=group_file.file_id,
                     source_document_id=group_file.file_id,
@@ -1583,7 +1584,7 @@ class GroupKnowledgeService:
                     id=GroupKnowledgeService._knowledge_node_id(node.id),
                     label=node.name,
                     node_type="knowledge_node",
-                    trust_level=primary_doc.trust_level.value,
+                    trust_level=GroupFileTrustLevelEnum(primary_doc.trust_level.value),
                     knowledge_base=True,
                     file_id=primary_file_id,
                     source_document_id=primary_file_id,
@@ -1617,13 +1618,13 @@ class GroupKnowledgeService:
                     NodeRelation.target_node_id.in_(knowledge_node_ids),
                 )
             )
-            for relation in relation_result.scalars().all():
+            for node_relation in relation_result.scalars().all():
                 relations.append(
                     GroupCollaborativeGalaxyRelation(
-                        source_id=GroupKnowledgeService._knowledge_node_id(relation.source_node_id),
-                        target_id=GroupKnowledgeService._knowledge_node_id(relation.target_node_id),
-                        relation_type=relation.relation_type,
-                        strength=float(relation.strength or 0.5),
+                        source_id=GroupKnowledgeService._knowledge_node_id(node_relation.source_node_id),
+                        target_id=GroupKnowledgeService._knowledge_node_id(node_relation.target_node_id),
+                        relation_type=node_relation.relation_type,
+                        strength=float(node_relation.strength or 0.5),
                     )
                 )
 
@@ -1716,7 +1717,7 @@ class GroupMessageService:
         # Keyword filter enforcement
         from app.services.community_advanced_service import ModerationService
 
-        keyword_ok, matched = await ModerationService.check_keyword_filter(db, group_id, data.content)
+        keyword_ok, matched = await ModerationService.check_keyword_filter(db, group_id, data.content or "")
         if not keyword_ok:
             raise ValueError(f"消息包含不允许的关键词：{', '.join(matched)}")
 
@@ -3419,6 +3420,7 @@ async def find_users_with_similar_goals(
     cand_texts = [
         f"{g.title} {g.description or ''}".strip() for g, _ in candidates
     ]
+    cand_embeddings: Sequence[list[float] | None]
     try:
         cand_embeddings = await embedding_service.batch_embeddings(cand_texts, text_type="document")
     except Exception:

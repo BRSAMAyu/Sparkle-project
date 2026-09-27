@@ -7,7 +7,9 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, TypeVar
+
+_FloatDefaultT = TypeVar("_FloatDefaultT", bound=float | None)
 
 from app.aurora.runtime_v1.control_surface import AuroraHardBounds, ControlSurfaceReading
 from app.aurora.runtime_v1.skills import SkillAffordance
@@ -377,10 +379,11 @@ class DashboardReadout:
         # G28: compact budget returns the minimal COMPACT_CONTEXT_KEYS set only.
         if normalized_context_budget == "compact":
             return set(COMPACT_CONTEXT_KEYS)
+        allowed_keys: set[str]
         if action:
             allowed_keys = set(_ACTION_CONTEXT_MASK.get(action, _ACTION_CONTEXT_MASK["emit_message"]))
         else:
-            allowed_keys: set[str] = set(_PROMPT_CONTEXT_MASK)
+            allowed_keys = set(_PROMPT_CONTEXT_MASK)
             for keys in _ACTION_CONTEXT_MASK.values():
                 allowed_keys.update(keys)
         allowed_keys.update(_SURFACE_CONTEXT_ADDITIONS.get(self.surface, frozenset()))
@@ -732,6 +735,8 @@ class DashboardReadoutBuilder:
                             raw.close()
                         return None
                     except RuntimeError:
+                        if not inspect.iscoroutine(raw):
+                            return None
                         try:
                             raw = asyncio.run(raw)
                         except Exception:
@@ -937,6 +942,8 @@ class DashboardReadoutBuilder:
                             raw.close()
                         return []
                     except RuntimeError:
+                        if not inspect.iscoroutine(raw):
+                            return []
                         try:
                             raw = asyncio.run(raw)
                         except Exception:
@@ -963,15 +970,15 @@ class DashboardReadoutBuilder:
             ]
             return self._merge_unique(values, direct_value, [item for item in claims if item])
         if isinstance(raw, list):
-            values: list[str] = []
+            list_values: list[str] = []
             for item in raw:
                 if isinstance(item, Mapping):
                     value = self._weak_node_value_from_claim(item)
                     if value:
-                        values.append(value)
+                        list_values.append(value)
                 else:
-                    values.extend(self._coerce_weak_node_values(item))
-            return self._merge_unique(values)
+                    list_values.extend(self._coerce_weak_node_values(item))
+            return self._merge_unique(list_values)
         return []
 
     def _weak_node_value_from_claim(self, claim: Mapping[str, Any]) -> str | None:
@@ -1452,7 +1459,7 @@ class DashboardReadoutBuilder:
             parsed = parsed.replace(tzinfo=UTC)
         return parsed.astimezone(UTC)
 
-    def _safe_float(self, value: Any, *, default: float | None) -> float | None:
+    def _safe_float(self, value: Any, *, default: _FloatDefaultT) -> float | _FloatDefaultT:
         try:
             return float(value)
         except (TypeError, ValueError):

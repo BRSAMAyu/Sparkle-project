@@ -638,8 +638,8 @@ class MainChainArtifactService:
             description = str(risk.get("description") or "").strip()
             if description:
                 recommendations.append(description)
-        for item in what_failed[:3]:
-            content = str(item.get("content") or item.get("trigger_type") or "").strip()
+        for failed_item in what_failed[:3]:
+            content = str(failed_item.get("content") or failed_item.get("trigger_type") or "").strip()
             if content:
                 recommendations.append(content)
         for candidate in list((active_phase_pack or {}).get("next_focus_candidates") or [])[:3]:

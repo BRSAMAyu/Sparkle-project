@@ -134,11 +134,17 @@ class CalibrationResult:
         return SessionClosure(
             session_id=self.session_id or "",
             state_patches=[
-                StatePatch(key=p.get("key", ""), value=p.get("value", ""), reason=p.get("reason", "calibration"))
+                StatePatch(
+                    state_key=p.get("state_key", ""),
+                    old_value=p.get("old_value", ""),
+                    new_value=p.get("new_value", ""),
+                    reason=p.get("reason", "calibration"),
+                    confidence=p.get("confidence", 0.0),
+                )
                 for p in self.state_patches
             ],
             policy_changes=[
-                PolicyChange(policy_key=s, change_type="strategy_change", reason="calibration_result")
+                PolicyChange(signal_state_key="", old_strategy="", new_strategy=s, reason="calibration_result")
                 for s in self.strategy_changes
             ],
             directives_to_regenerate=[],
@@ -171,6 +177,8 @@ class AuroraCoreSession:
     created_at: str = field(default_factory=lambda: _utcnow().isoformat())
     last_activity_at: str = field(default_factory=lambda: _utcnow().isoformat())
     expires_at: str = field(default_factory=lambda: (_utcnow() + timedelta(seconds=SESSION_TTL_SECONDS)).isoformat())
+    # 写副作用暂存（仅 _apply_write_effect 追加，暂无消费方）；不入 to_dict/eq/repr。
+    _pending_effects: list[dict[str, Any]] = field(default_factory=list, compare=False, repr=False)
 
     @property
     def is_expired(self) -> bool:
@@ -253,6 +261,8 @@ class AuroraCoreSession:
         messages = [AuroraCoreMessage(**m) for m in data.get("messages", [])]
         raw_result = data.get("calibration_result")
         result = CalibrationResult(**raw_result) if isinstance(raw_result, dict) else None
+        raw_entry_reason = data.get("entry_reason")
+        raw_case_file = data.get("case_file")
         return cls(
             session_id=data["session_id"],
             user_id=data["user_id"],
@@ -262,8 +272,8 @@ class AuroraCoreSession:
             stage=data.get("stage", "declare"),
             scope=data.get("scope", ""),
             session_type=data.get("session_type", "user_initiated"),
-            entry_reason=data.get("entry_reason") if isinstance(data.get("entry_reason"), dict) else {},
-            case_file=data.get("case_file") if isinstance(data.get("case_file"), dict) else {},
+            entry_reason=raw_entry_reason if isinstance(raw_entry_reason, dict) else {},
+            case_file=raw_case_file if isinstance(raw_case_file, dict) else {},
             resume_token=data.get("resume_token") or "",
             messages=messages,
             calibration_result=result,
@@ -1310,9 +1320,7 @@ class AuroraCoreSessionService:
         """Record model write effect as pending calibration update."""
         if not effect or not effect.get("field_key"):
             return
-        if not hasattr(session, "_pending_effects"):
-            object.__setattr__(session, "_pending_effects", [])
-        session._pending_effects = getattr(session, "_pending_effects", []) + [effect]
+        session._pending_effects = [*session._pending_effects, effect]
 
     # ── Strategy change derivation ─────────────────────────────────
 

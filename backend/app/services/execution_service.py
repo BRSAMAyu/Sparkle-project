@@ -126,7 +126,7 @@ class ExecutionService:
 
     async def get_health(self, *, user_id: UUID | None = None) -> dict[str, Any]:
         await self._ensure_runtime(user_id=user_id)
-        health_snapshot = await self._client.health_snapshot() if self._client else {"reachable": False}
+        health_snapshot: dict[str, Any] = await self._client.health_snapshot() if self._client else {"reachable": False}
         nodes = []
         if self._client:
             try:
@@ -1822,7 +1822,7 @@ class ExecutionService:
         if policy.get("contains_sensitive_data") is not True:
             return None
         risk = policy.get("_risk_assessment")
-        matches = []
+        matches: list[Any] = []
         if isinstance(risk, dict):
             matches = [
                 item.get("label")
@@ -2913,12 +2913,16 @@ class ExecutionService:
         target_env: ExecutionTargetEnv | None,
         error_message: str,
     ) -> list[dict[str, Any]]:
-        env_label = {
-            ExecutionTargetEnv.BROWSER: "浏览器",
-            ExecutionTargetEnv.SHELL: "终端",
-            ExecutionTargetEnv.API: "接口工具",
-            ExecutionTargetEnv.DOCUMENT: "文档工具",
-        }.get(target_env, "你的设备")
+        env_label = (
+            "你的设备"
+            if target_env is None
+            else {
+                ExecutionTargetEnv.BROWSER: "浏览器",
+                ExecutionTargetEnv.SHELL: "终端",
+                ExecutionTargetEnv.API: "接口工具",
+                ExecutionTargetEnv.DOCUMENT: "文档工具",
+            }.get(target_env, "你的设备")
+        )
         steps = [
             {
                 "title": f"打开{env_label}",

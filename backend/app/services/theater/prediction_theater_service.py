@@ -9,7 +9,7 @@ import re
 import statistics
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
-from typing import Any, TypedDict
+from typing import Any, NoReturn, TypedDict
 from urllib.parse import quote, urlencode
 from uuid import UUID, uuid4
 
@@ -377,8 +377,9 @@ class PredictionTheaterService:
         materials: str | None = None,
         goal_type: str | None = None,
     ) -> dict[str, Any]:
+        resolved_context: str | None = str(context or "").strip() or None
         request_context = {
-            "context": str(context or "").strip() or None,
+            "context": resolved_context,
             "available_time_per_day": available_time_per_day,
             "current_level": str(current_level or "").strip() or None,
             "materials": str(materials or "").strip() or None,
@@ -398,7 +399,7 @@ class PredictionTheaterService:
             user_id=user_id,
             topic=topic,
             target_node_id=target_node_id,
-            context=request_context["context"],
+            context=resolved_context,
         )
         backbone = list(target_context.backbone)
         if not backbone:
@@ -1051,7 +1052,7 @@ class PredictionTheaterService:
         cached = await cache_service.get(cache_key)
         if isinstance(cached, list) and cached:
             return [str(item).strip().lower() for item in cached]
-        serialized_steps = [
+        serialized_steps: list[dict[str, Any]] = [
             {
                 "id": str(step.get("id") or ""),
                 "name": str(step.get("name") or step.get("node_name") or ""),
@@ -2762,7 +2763,12 @@ class PredictionTheaterService:
             completion_high = selected_prediction.get("completion_range_high")
             mastery_low = selected_prediction.get("mastery_range_low")
             mastery_high = selected_prediction.get("mastery_range_high")
-            if all(value is not None for value in [completion_low, completion_high, mastery_low, mastery_high]):
+            if (
+                completion_low is not None
+                and completion_high is not None
+                and mastery_low is not None
+                and mastery_high is not None
+            ):
                 coverage_total += 1
                 if float(completion_low) <= actual_completion <= float(completion_high) and float(
                     mastery_low
@@ -3674,7 +3680,7 @@ class PredictionTheaterService:
             logger.debug("Prediction cache refresh failed for %s: %s", prediction_id, exc, exc_info=True)
         return payload
 
-    async def _raise_prediction_access_denied(self, *, user_id: UUID, prediction_id: str) -> None:
+    async def _raise_prediction_access_denied(self, *, user_id: UUID, prediction_id: str) -> NoReturn:
         payload = {
             "event_type": "theater.access_denied",
             "requester_id": str(user_id),
