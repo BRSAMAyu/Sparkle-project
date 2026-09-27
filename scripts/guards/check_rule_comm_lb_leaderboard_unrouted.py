@@ -16,6 +16,15 @@
      任何在 leaderboards 组上显式注册具体榜面路由的行都是「把某张榜 promoted
      成产品路由」的动作，必须先改裁决再接线。
 
+口径（V3-FIX-191 收窄，2026-09）：不变量 1 校验的是「挂载/注册形态」。路径
+前缀消费（`state.uri.path.startsWith('/leaderboard')` 一类，把全站榜路径
+redirect away 到 /home）是 D17/D-COMM-1 裁决的执行面而非注册，不计入违规；
+同文件内 redirect/导航目标指向 leaderboard 路径（`return '/leaderboard'`、
+`go('/leaderboard')`）仍是 promote 动作，照常打红。携带挂载 token
+（LeaderboardScreen / Routes.routes 展开 / GoRoute( / go|push 导航）的行
+不适用消费豁免，防 `if (startsWith('/leaderboard')) return LeaderboardScreen()`
+类混合行漏网。
+
 Escape hatch（两处皆适用）：行内注 `rule-comm-lb: ignore <reason>`。
 """
 from __future__ import annotations
@@ -29,6 +38,16 @@ MOBILE_ROUTES_PATH = REPO_ROOT / "mobile/lib/app/routes.dart"
 PROXY_ROUTES_PATH = REPO_ROOT / "backend/gateway/internal/handler/proxy_routes.go"
 
 LEADERBOARD_UI_RE = re.compile(r"LeaderboardScreen|leaderboard", re.IGNORECASE)
+# V3-FIX-191：路径消费形态——startsWith/== 后紧跟 /leaderboard 前缀字符串
+# 字面量（'/leaderboard'、'/leaderboards/self-anchor' 等均覆盖），是对读入
+# 路径的判定消费，不是路由注册。
+LEADERBOARD_CONSUMPTION_RE = re.compile(
+    r"""(?:startsWith\(\s*|==\s*)['"]/leaderboard"""
+)
+# 挂载/导航形态永不因消费形态在场而豁免（不变量 1 的本体）。
+LEADERBOARD_MOUNT_RE = re.compile(
+    r"LeaderboardScreen|Routes\.routes|GoRoute\(|\.(?:go|push)\("
+)
 LEADERBOARD_GROUP_EXPLICIT_RE = re.compile(
     r'\bleaderboards\.(GET|POST|PUT|PATCH|DELETE|Any)\("'
 )
@@ -50,6 +69,14 @@ def _scan_mobile_routes() -> list[str]:
         if IGNORE_RE.search(prev):
             continue
         if LEADERBOARD_UI_RE.search(raw):
+            # V3-FIX-191 口径收窄：路径消费形态（startsWith/== '/leaderboard*'，
+            # 把全站榜路径 redirect away）是裁决执行而非注册，不再误报；但
+            # 挂载/导航 token 在场的行不适用本豁免（混合行仍按违规处理）。
+            if (
+                LEADERBOARD_CONSUMPTION_RE.search(raw)
+                and not LEADERBOARD_MOUNT_RE.search(raw)
+            ):
+                continue
             failures.append(
                 f"{MOBILE_ROUTES_PATH.relative_to(REPO_ROOT)}:{lineno}: 全站榜 UI 挂路由 "
                 f"(D17 隐藏裁决被破坏; D-COMM-1/DESIGN §3.2——自我锚视图走独立 widget, "
