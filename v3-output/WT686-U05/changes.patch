@@ -1,0 +1,392 @@
+diff --git a/mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble.dart b/mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble.dart
+index bf90c4fc..e172d107 100755
+--- a/mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble.dart
++++ b/mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble.dart
+@@ -105,8 +105,10 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
+                         ),
+                       ),
+                       backgroundColor: widget.agentColor.withValues(alpha: 0.1),
+-                      labelStyle:
+-                          TextStyle(color: widget.agentColor, fontSize: 12),
++                      labelStyle: TextStyle(
++                        color: widget.agentColor,
++                        fontSize: DS.fontSizeXs,
++                      ),
+                     ),
+                   ),
+                 Text(
+@@ -200,7 +202,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
+                           overflow: TextOverflow.ellipsis,
+                           style: TextStyle(
+                             fontWeight: DS.fontWeightBold,
+-                            fontSize: 12,
++                            fontSize: DS.fontSizeXs,
+                             color: widget.agentColor,
+                           ),
+                         ),
+@@ -473,7 +475,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
+                   backgroundColor: DS.prismPurple.withValues(alpha: 0.18),
+                   labelStyle: TextStyle(
+                     color: DS.prismPurple,
+-                    fontSize: 12,
++                    fontSize: DS.fontSizeXs,
+                     fontWeight: DS.fontWeightSemibold,
+                   ),
+                   padding: EdgeInsets.zero,
+diff --git a/mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart b/mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart
+index a913e135..11649952 100755
+--- a/mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart
++++ b/mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart
+@@ -753,7 +753,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
+                   backgroundColor: accent.withValues(alpha: 0.14),
+                   labelStyle: TextStyle(
+                     color: accent,
+-                    fontSize: 12,
++                    fontSize: DS.fontSizeXs,
+                     fontWeight: DS.fontWeightSemibold,
+                   ),
+                   padding: EdgeInsets.zero,
+diff --git a/mobile/lib/features/chat/presentation/widgets/agent_workflow_panel.dart b/mobile/lib/features/chat/presentation/widgets/agent_workflow_panel.dart
+index dce629d5..7e2bada2 100644
+--- a/mobile/lib/features/chat/presentation/widgets/agent_workflow_panel.dart
++++ b/mobile/lib/features/chat/presentation/widgets/agent_workflow_panel.dart
+@@ -195,7 +195,7 @@ class _SingleAgentBadge extends StatelessWidget {
+           Text(
+             entry.displayName,
+             style: TextStyle(
+-              fontSize: 12,
++              fontSize: DS.fontSizeXs,
+               fontWeight: DS.fontWeightMedium,
+               color: agentColor,
+             ),
+@@ -267,7 +267,7 @@ class _WorkflowShell extends StatelessWidget {
+               Text(
+                 title,
+                 style: TextStyle(
+-                  fontSize: 12,
++                  fontSize: DS.fontSizeXs,
+                   fontWeight: DS.fontWeightSemibold,
+                   color: theme.colorScheme.primary,
+                 ),
+@@ -587,7 +587,7 @@ class _ParallelAgentCard extends StatelessWidget {
+                   maxLines: 1,
+                   overflow: TextOverflow.ellipsis,
+                   style: TextStyle(
+-                    fontSize: 12,
++                    fontSize: DS.fontSizeXs,
+                     fontWeight: DS.fontWeightSemibold,
+                     color: theme.colorScheme.onSurface,
+                   ),
+@@ -684,7 +684,7 @@ class _AgentTimelineRow extends StatelessWidget {
+                         child: Text(
+                           entry.displayName,
+                           style: TextStyle(
+-                            fontSize: 12,
++                            fontSize: DS.fontSizeXs,
+                             fontWeight: DS.fontWeightSemibold,
+                             color: theme.colorScheme.onSurface,
+                           ),
+diff --git a/mobile/lib/features/chat/presentation/widgets/chat_bubble.dart b/mobile/lib/features/chat/presentation/widgets/chat_bubble.dart
+index 135c0b94..99adf59e 100755
+--- a/mobile/lib/features/chat/presentation/widgets/chat_bubble.dart
++++ b/mobile/lib/features/chat/presentation/widgets/chat_bubble.dart
+@@ -2326,7 +2326,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
+             maxLines: 2,
+             overflow: TextOverflow.ellipsis,
+             style: TextStyle(
+-              fontSize: 12,
++              fontSize: DS.fontSizeXs,
+               color: contentColor,
+             ),
+           ),
+@@ -2343,7 +2343,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
+                 ? context.l10n.chatRecalledSelf
+                 : context.l10n.chatRecalledPeer,
+             style: TextStyle(
+-              fontSize: 12,
++              fontSize: DS.fontSizeXs,
+               color: DS.neutral400,
+             ),
+           ),
+@@ -2511,7 +2511,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
+                   child: Text(
+                     initial,
+                     style: TextStyle(
+-                      fontSize: 12,
++                      fontSize: DS.fontSizeXs,
+                       fontWeight: DS.fontWeightBold,
+                       color: isUser ? DS.onBrandPrimary : DS.onBrandPrimary,
+                     ),
+@@ -3154,7 +3154,7 @@ class _InsightLinkCard extends StatelessWidget {
+                   overflow: TextOverflow.ellipsis,
+                   style: TextStyle(
+                     color: DS.textSecondary,
+-                    fontSize: 12,
++                    fontSize: DS.fontSizeXs,
+                   ),
+                 ),
+                 if (bullets.isNotEmpty) ...[
+@@ -3407,7 +3407,7 @@ class _CollaborationSignatureCard extends StatelessWidget {
+               Text(
+                 _formatCollaborationModeLabel(collaborationMode),
+                 style: TextStyle(
+-                  fontSize: 12,
++                  fontSize: DS.fontSizeXs,
+                   fontWeight: DS.fontWeightBold,
+                   color: theme.colorScheme.primary,
+                 ),
+diff --git a/mobile/lib/features/chat/presentation/widgets/collaboration_timeline.dart b/mobile/lib/features/chat/presentation/widgets/collaboration_timeline.dart
+index ad8fcf14..ec6e627f 100755
+--- a/mobile/lib/features/chat/presentation/widgets/collaboration_timeline.dart
++++ b/mobile/lib/features/chat/presentation/widgets/collaboration_timeline.dart
+@@ -98,7 +98,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
+                 Text(
+                   context.l10n.chatCollabTimelineTitle,
+                   style: TextStyle(
+-                    fontSize: 16,
++                    fontSize: DS.fontSizeBase,
+                     fontWeight: DS.fontWeightBold,
+                     color: DS.prismPurple,
+                   ),
+@@ -107,7 +107,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
+                 Text(
+                   _getWorkflowDisplayName(context),
+                   style: TextStyle(
+-                    fontSize: 12,
++                    fontSize: DS.fontSizeXs,
+                     color: DS.prismPurple.withValues(alpha: 0.82),
+                   ),
+                 ),
+@@ -289,7 +289,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
+             Text(
+               context.l10n.viewDetails,
+               style: TextStyle(
+-                fontSize: 12,
++                fontSize: DS.fontSizeXs,
+                 color: step.agentColor,
+                 fontWeight: DS.fontWeightSemibold,
+               ),
+@@ -309,7 +309,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
+             child: Text(
+               step.outputSummary!,
+               style: TextStyle(
+-                fontSize: 12,
++                fontSize: DS.fontSizeXs,
+                 color: DS.brandPrimary.shade700,
+                 fontStyle: FontStyle.italic,
+                 height: 1.4,
+diff --git a/mobile/lib/features/chat/presentation/widgets/file_message_bubble.dart b/mobile/lib/features/chat/presentation/widgets/file_message_bubble.dart
+index fb2550a2..b529464a 100755
+--- a/mobile/lib/features/chat/presentation/widgets/file_message_bubble.dart
++++ b/mobile/lib/features/chat/presentation/widgets/file_message_bubble.dart
+@@ -212,7 +212,7 @@ class _FileMessageBubbleWithThumbnailState
+                         if (statusText.isNotEmpty) statusText,
+                       ].where((part) => part.isNotEmpty).join(' · '),
+                       style: TextStyle(
+-                        fontSize: 12,
++                        fontSize: DS.fontSizeXs,
+                         color: secondaryColor,
+                       ),
+                     ),
+@@ -369,7 +369,7 @@ class _ActionPill extends StatelessWidget {
+                       maxLines: 1,
+                       overflow: TextOverflow.ellipsis,
+                       style: TextStyle(
+-                        fontSize: 12,
++                        fontSize: DS.fontSizeXs,
+                         fontWeight: DS.fontWeightSemiBold,
+                         color: accentColor,
+                       ),
+diff --git a/mobile/lib/features/chat/presentation/widgets/intent_analysis_button.dart b/mobile/lib/features/chat/presentation/widgets/intent_analysis_button.dart
+index abe514ad..4084ecb2 100644
+--- a/mobile/lib/features/chat/presentation/widgets/intent_analysis_button.dart
++++ b/mobile/lib/features/chat/presentation/widgets/intent_analysis_button.dart
+@@ -121,7 +121,7 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
+               context.l10n.intentAnalysisInProgress,
+               style: TextStyle(
+                 color: Theme.of(context).primaryColor,
+-                fontSize: 12,
++                fontSize: DS.fontSizeXs,
+               ),
+             ),
+           ],
+@@ -156,7 +156,7 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
+                 context.l10n.intentAnalysisMultiIntent,
+                 style: TextStyle(
+                   color: Theme.of(context).primaryColor,
+-                  fontSize: 12,
++                  fontSize: DS.fontSizeXs,
+                   fontWeight: DS.fontWeightMedium,
+                 ),
+               ),
+diff --git a/mobile/lib/features/chat/presentation/widgets/intent_preview_dialog.dart b/mobile/lib/features/chat/presentation/widgets/intent_preview_dialog.dart
+index eba656c0..ce74d63f 100644
+--- a/mobile/lib/features/chat/presentation/widgets/intent_preview_dialog.dart
++++ b/mobile/lib/features/chat/presentation/widgets/intent_preview_dialog.dart
+@@ -376,7 +376,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
+           Text(
+             planText,
+             style: TextStyle(
+-              fontSize: 12,
++              fontSize: DS.fontSizeXs,
+               color: DS.textPrimary,
+             ),
+           ),
+diff --git a/mobile/lib/features/chat/presentation/widgets/message_detail_view.dart b/mobile/lib/features/chat/presentation/widgets/message_detail_view.dart
+index 53411645..ecb0f095 100644
+--- a/mobile/lib/features/chat/presentation/widgets/message_detail_view.dart
++++ b/mobile/lib/features/chat/presentation/widgets/message_detail_view.dart
+@@ -244,7 +244,7 @@ class _MessageDetailViewState extends State<MessageDetailView> {
+                       : context.l10n.chatLabelAssistant,
+                   style: TextStyle(
+                     color: roleTextColor,
+-                    fontSize: 12,
++                    fontSize: DS.fontSizeXs,
+                     fontWeight: DS.fontWeightSemibold,
+                   ),
+                 ),
+@@ -259,7 +259,7 @@ class _MessageDetailViewState extends State<MessageDetailView> {
+             DateFormat('MM/dd HH:mm').format(widget.message.createdAt),
+             style: TextStyle(
+               color: DS.textSecondary,
+-              fontSize: 12,
++              fontSize: DS.fontSizeXs,
+             ),
+           ),
+ 
+@@ -317,7 +317,7 @@ class _MessageDetailViewState extends State<MessageDetailView> {
+       return SelectableText(
+         widget.message.content,
+         style: TextStyle(
+-          fontSize: 16,
++          fontSize: DS.fontSizeBase,
+           height: 1.6,
+           color: DS.textPrimary,
+           fontFamilyFallback: sparkleFontFallback,
+@@ -357,7 +357,7 @@ class _MessageDetailViewState extends State<MessageDetailView> {
+             child: Text(
+               '$charCount ${context.l10n.chatCharacters} · $wordCount ${context.l10n.chatWords}',
+               style: TextStyle(
+-                fontSize: 12,
++                fontSize: DS.fontSizeXs,
+                 color: DS.textTertiary,
+               ),
+             ),
+@@ -433,7 +433,7 @@ class _ActionButton extends StatelessWidget {
+                 Text(
+                   label,
+                   style: TextStyle(
+-                    fontSize: 12,
++                    fontSize: DS.fontSizeXs,
+                     color: DS.textSecondary,
+                   ),
+                 ),
+diff --git a/mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart b/mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart
+index 3f2fe5b6..04accac5 100644
+--- a/mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart
++++ b/mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart
+@@ -73,7 +73,7 @@ class OfflineQueueIndicator extends StatelessWidget {
+                   overflow: TextOverflow.ellipsis,
+                   style: TextStyle(
+                     color: DS.textPrimary,
+-                    fontSize: 12,
++                    fontSize: DS.fontSizeXs,
+                     fontWeight: FontWeight.w600,
+                   ),
+                 ),
+diff --git a/mobile/lib/features/home/presentation/providers/understanding_snapshot_provider.dart b/mobile/lib/features/home/presentation/providers/understanding_snapshot_provider.dart
+index 5814712a..438d0778 100644
+--- a/mobile/lib/features/home/presentation/providers/understanding_snapshot_provider.dart
++++ b/mobile/lib/features/home/presentation/providers/understanding_snapshot_provider.dart
+@@ -1,6 +1,7 @@
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:sparkle/core/network/api_client.dart';
+ import 'package:sparkle/core/network/api_endpoints.dart';
++import 'package:sparkle/core/services/demo_data_service.dart';
+ 
+ enum UnderstandingCorrectionScope {
+   memoryClaim('memory_claim'),
+@@ -176,6 +177,22 @@ class UnderstandingSnapshotNotifier
+   Future<UnderstandingSnapshot?> build() => _fetch();
+ 
+   Future<UnderstandingSnapshot?> _fetch() async {
++    // Demo contract: demo data never fails (B-04-L-01, V3-FIX-376). The
++    // understanding receipt previously hit the real endpoint in demo mode,
++    // rendering a bare 「加载失败 轻触重试」 row on the demo home first
++    // screen; degrade to the built-in empty snapshot instead (the card and
++    // panel already render an honest empty state for it).
++    if (DemoDataService.isDemoMode) {
++      return const UnderstandingSnapshot(
++        claims: [],
++        recentlyCorrected: [],
++        memoryDeclarations: [],
++        envelopeStyle: EnvelopeStyleSnapshot.empty(),
++        lastUpdateTime: null,
++        totalClaims: 0,
++        highConfidenceRatio: 0,
++      );
++    }
+     final api = ref.read(apiClientProvider);
+     final response =
+         await api.get<Map<String, dynamic>>(ApiEndpoints.understandingSnapshot);
+diff --git a/mobile/test/features/home/presentation/providers/understanding_snapshot_demo_placeholder_test.dart b/mobile/test/features/home/presentation/providers/understanding_snapshot_demo_placeholder_test.dart
+new file mode 100644
+index 00000000..c3d0aec0
+--- /dev/null
++++ b/mobile/test/features/home/presentation/providers/understanding_snapshot_demo_placeholder_test.dart
+@@ -0,0 +1,55 @@
++/// V3-FIX-376 · B-04-L-01 pin — demo 模式下理解快照不得以错误态裸露。
++///
++/// B-04 视觉 ledger B 级项 L-01：demo 首屏主叙事句下方渲染
++/// 「ⓘ 加载失败 轻触重试」（understandingSnapshotProvider 无 demo 分支，
++/// demo 首屏直打真网端点失败）。demo 契约 = demo 数据永不失败：
++/// 本测试钉住 demo 分支返回内建空快照（卡片/面板均有既有空态渲染），
++/// provider 级降级，错误态不再可达。
++library;
++
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/design/widgets/compact_error_card.dart';
++import 'package:sparkle/core/services/demo_data_service.dart';
++import 'package:sparkle/features/experience/presentation/widgets/understanding_snapshot_card.dart';
++import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
++
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  tearDown(() {
++    DemoDataService.isDemoMode = false;
++  });
++
++  testWidgets('demo 模式：理解快照解析为空快照而非错误态', (tester) async {
++    DemoDataService.isDemoMode = true;
++    final container = ProviderContainer();
++    addTearDown(container.dispose);
++
++    final snapshot = await container.read(understandingSnapshotProvider.future);
++
++    expect(snapshot, isNotNull,
++        reason: 'demo 契约：理解快照不因无后端而失败（B-04-L-01）',);
++    expect(snapshot!.isEmpty, isTrue,
++        reason: 'demo 占位 = 内建空快照，由卡片/面板的既有空态渲染承载',);
++    expect(snapshot.claims, isEmpty);
++  });
++
++  testWidgets('demo 模式：UnderstandingSnapshotCard 不渲染 CompactErrorCard',
++      (tester) async {
++    DemoDataService.isDemoMode = true;
++    await tester.pumpWidget(
++      const ProviderScope(
++        child: MaterialApp(home: Scaffold(body: UnderstandingSnapshotCard())),
++      ),
++    );
++    await tester.pumpAndSettle();
++
++    expect(
++      find.byType(CompactErrorCard),
++      findsNothing,
++      reason: 'demo 首屏不得裸露「加载失败 轻触重试」（V3-FIX-376）',
++    );
++  });
++}
