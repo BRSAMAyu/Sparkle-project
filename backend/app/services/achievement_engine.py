@@ -15,7 +15,7 @@ import inspect
 from collections.abc import Callable, Coroutine, Sequence
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import CursorResult
@@ -2255,9 +2255,49 @@ class AchievementEngine:
         stats = result.scalar_one_or_none()
 
         if not stats:
-            stats = UserStreakStats(user_id=user_id)
-            self.db.add(stats)
-            await self.db.flush()
+            # V3-FIX-451: FOR UPDATE 对不存在的行不持锁（PG 行锁以行存在为前提），
+            # 同一用户首个核心活动事件并发到达时两事务同见 None 各自 INSERT。
+            # 真实 schema（PG \d user_streak_stats）PK=(user_id,id) 复合主键且 id 为
+            # BaseModel 随机 uuid4 缺省——双方复合键不同、互不冲突、双双落库成重复
+            # 行，此后本函数 scalar_one_or_none 恒 MultipleResultsFound：非一次性
+            # 自愈面而是持久 500（真 PG 实证复现件
+            # v3-output/WT737-FIRST451/repro451_pg_realshape.py）。修法：首建
+            # INSERT 的 id 改确定性派生 uuid5(user_id)（routing_engine
+            # stage4-routing 同型先例），复合主键 (user_id,id) 随之成为每用户天然
+            # 去重键；目标无关 ON CONFLICT DO NOTHING（pkey 仲裁，user_id 无独立
+            # 唯一约束、指名会 42P10）后重走上面的 FOR UPDATE 收敛读——后到方
+            # 阻塞在先到方未提交元组上，先到方提交后其 INSERT 被静默跳过并锁读
+            # 同一行，双方返回同值；先到方自插自读语义不变。sqlite 同构
+            # on_conflict_do_nothing（该方言写锁天然串行，仅保形态一致）。
+            # 不选 UNIQUE(user_id) 迁移：P4 最小面（迁移+schema 快照导出+存量
+            # 去重清理超本卡面）。
+            stats_id = uuid5(NAMESPACE_URL, f"achievement-streak-stats:{user_id}")
+            bind = self.db.sync_session.get_bind()
+            dialect_name = bind.dialect.name if bind is not None else ""
+
+            if dialect_name == "postgresql":
+                stmt = pg_insert(UserStreakStats).values(user_id=user_id, id=stats_id).on_conflict_do_nothing()
+                await self.db.execute(stmt)
+            elif dialect_name == "sqlite":
+                stmt_sqlite = (
+                    sqlite_insert(UserStreakStats).values(user_id=user_id, id=stats_id).on_conflict_do_nothing()
+                )
+                await self.db.execute(stmt_sqlite)
+            else:
+                try:
+                    async with self.db.begin_nested():
+                        self.db.add(UserStreakStats(user_id=user_id, id=stats_id))
+                        await self.db.flush()
+                except IntegrityError:
+                    pass
+            result = await self.db.execute(query)
+            stats = result.scalar_one_or_none()
+            if stats is None:
+                # 防御回退（理论不可达：upsert 已落行或行已存在；仅当窗口内行被
+                # 外力删除时到达）——保持返回值非 None 契约，挂起实例随调用方
+                # 后续 flush 落库，仍带确定性 id 以保 pkey 去重能力。
+                stats = UserStreakStats(user_id=user_id, id=stats_id)
+                self.db.add(stats)
 
         return stats
 
