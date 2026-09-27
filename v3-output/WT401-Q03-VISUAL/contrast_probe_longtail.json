@@ -2909,7 +2909,7 @@
         "font_size": 12.0
       },
       {
-        "text": "10月3日 结束",
+        "text": "10月4日 结束",
         "fg": "ff6c655d",
         "bg": "fff8f4ef",
         "ratio": "5.24",
@@ -3007,7 +3007,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/26",
+        "text": "09/27",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -3056,7 +3056,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/28",
+        "text": "09/29",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -3112,7 +3112,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/23",
+        "text": "09/24",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -3318,7 +3318,7 @@
         "font_size": 14.0
       },
       {
-        "text": "2026年10月3日",
+        "text": "2026年10月4日",
         "fg": "ff171717",
         "bg": "fff8f4ef",
         "ratio": "16.37",
@@ -3662,7 +3662,7 @@
         "font_size": 16.0
       },
       {
-        "text": "10月3日周六",
+        "text": "10月4日周日",
         "fg": "ff171717",
         "bg": "fff8f4ef",
         "ratio": "16.37",
@@ -7236,7 +7236,7 @@
         "font_size": 16.0
       },
       {
-        "text": "控制 Galaxy 间隔复习节点提醒",
+        "text": "控制星图间隔复习节点提醒",
         "fg": "ff171717",
         "bg": "fff8f4ef",
         "ratio": "16.37",
@@ -10371,7 +10371,7 @@
         "font_size": 16.0
       },
       {
-        "text": "过去7天你有70天完成了任务。当前连续打卡7天。",
+        "text": "过去90天你有70天完成了任务。当前连续打卡7天。",
         "fg": "ff171717",
         "bg": "fff8f4ef",
         "ratio": "16.37",
@@ -10532,13 +10532,6 @@
         "font_size": 12.0
       },
       {
-        "text": "29",
-        "fg": "ffffffff",
-        "bg": "fff1ebe4",
-        "ratio": "1.18",
-        "font_size": 12.0
-      },
-      {
         "text": "30",
         "fg": "ffffffff",
         "bg": "fff1ebe4",
@@ -10582,16 +10575,16 @@
       },
       {
         "text": "6",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "7",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10631,16 +10624,16 @@
       },
       {
         "text": "13",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "14",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10680,16 +10673,16 @@
       },
       {
         "text": "20",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "21",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10729,16 +10722,16 @@
       },
       {
         "text": "27",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "28",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10778,16 +10771,16 @@
       },
       {
         "text": "3",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "4",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10827,16 +10820,16 @@
       },
       {
         "text": "10",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "11",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10876,16 +10869,16 @@
       },
       {
         "text": "17",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "18",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10925,16 +10918,16 @@
       },
       {
         "text": "24",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "25",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10974,16 +10967,16 @@
       },
       {
         "text": "31",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "1",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -11072,16 +11065,16 @@
       },
       {
         "text": "14",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "15",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -11121,16 +11114,16 @@
       },
       {
         "text": "21",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "22",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -11162,25 +11155,11 @@
         "font_size": 12.0
       },
       {
-        "text": "需要冻结卡保护？",
-        "fg": "ff171717",
-        "bg": "fff8f4ef",
-        "ratio": "16.37",
-        "font_size": 16.0
-      },
-      {
-        "text": "前往光子商城获取补给",
-        "fg": "ff6c655d",
-        "bg": "fff8f4ef",
-        "ratio": "5.24",
-        "font_size": 16.0
-      },
-      {
-        "text": "打开商城",
+        "text": "27",
         "fg": "ffffffff",
-        "bg": "ff825d49",
-        "ratio": "5.82",
-        "font_size": 14.56
+        "bg": "fff1ebe4",
+        "ratio": "1.18",
+        "font_size": 12.0
       },
       {
         "text": "连胜详情",
@@ -15705,7 +15684,7 @@
         "font_size": 12.0
       },
       {
-        "text": "Sep 26, 2026",
+        "text": "Sep 27, 2026",
         "fg": "ff171717",
         "bg": "fff8f4ef",
         "ratio": "16.37",

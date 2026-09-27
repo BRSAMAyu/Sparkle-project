@@ -1738,7 +1738,7 @@
     "screen": "C03_chat",
     "state": "default",
     "scaffold_bg": "fffef7ff",
-    "min_ratio": "3.08",
+    "min_ratio": "4.32",
     "samples": [
       {
         "text": "视",
@@ -2035,10 +2035,10 @@
         "font_size": 12.0
       },
       {
-        "text": "00:44",
-        "fg": "ff958a80",
+        "text": "14:00",
+        "fg": "996c655d",
         "bg": "fff8f4ef",
-        "ratio": "3.08",
+        "ratio": "5.24",
         "font_size": 10.0
       },
       {
@@ -2112,10 +2112,10 @@
         "font_size": 12.0
       },
       {
-        "text": "00:44",
-        "fg": "ff958a80",
+        "text": "14:00",
+        "fg": "996c655d",
         "bg": "fff8f4ef",
-        "ratio": "3.08",
+        "ratio": "5.24",
         "font_size": 10.0
       },
       {
@@ -2168,10 +2168,10 @@
         "font_size": 12.0
       },
       {
-        "text": "00:44",
-        "fg": "ff958a80",
+        "text": "14:00",
+        "fg": "996c655d",
         "bg": "fff8f4ef",
-        "ratio": "3.08",
+        "ratio": "5.24",
         "font_size": 10.0
       },
       {
@@ -2257,7 +2257,7 @@
     "screen": "C03_chat",
     "state": "fixture_conversation",
     "scaffold_bg": "fffef7ff",
-    "min_ratio": "3.08",
+    "min_ratio": "4.32",
     "samples": [
       {
         "text": "视",
@@ -2554,10 +2554,10 @@
         "font_size": 12.0
       },
       {
-        "text": "00:44",
-        "fg": "ff958a80",
+        "text": "14:00",
+        "fg": "996c655d",
         "bg": "fff8f4ef",
-        "ratio": "3.08",
+        "ratio": "5.24",
         "font_size": 10.0
       },
       {
@@ -2631,10 +2631,10 @@
         "font_size": 12.0
       },
       {
-        "text": "00:44",
-        "fg": "ff958a80",
+        "text": "14:00",
+        "fg": "996c655d",
         "bg": "fff8f4ef",
-        "ratio": "3.08",
+        "ratio": "5.24",
         "font_size": 10.0
       },
       {
@@ -2687,10 +2687,10 @@
         "font_size": 12.0
       },
       {
-        "text": "00:44",
-        "fg": "ff958a80",
+        "text": "14:00",
+        "fg": "996c655d",
         "bg": "fff8f4ef",
-        "ratio": "3.08",
+        "ratio": "5.24",
         "font_size": 10.0
       },
       {
@@ -4490,6 +4490,13 @@
         "font_size": 14.56
       },
       {
+        "text": "体验一个示例",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.0
+      },
+      {
         "text": "或",
         "fg": "ff825d49",
         "bg": "fff8f4ef",
@@ -5445,7 +5452,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09-19",
+        "text": "09-20",
         "fg": "ff52443c",
         "bg": "fff1ebe4",
         "ratio": "7.88",
@@ -6268,7 +6275,7 @@
         "font_size": 12.0
       },
       {
-        "text": "10月3日 结束",
+        "text": "10月4日 结束",
         "fg": "ff6c655d",
         "bg": "fff8f4ef",
         "ratio": "5.24",
@@ -6366,7 +6373,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/26",
+        "text": "09/27",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -6415,7 +6422,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/28",
+        "text": "09/29",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -6471,7 +6478,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/23",
+        "text": "09/24",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
