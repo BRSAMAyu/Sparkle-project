@@ -14,8 +14,9 @@
 /// 单位口径：flutter_test `ComparisonResult.diffPercent` 是**分数**
 /// （pixelDiffCount / totalPixels ∈ [0,1]），0.18% = 0.0018。带值
 /// [kGoldenEnvDriftBand] = 0.005（0.5%）取 B-04
-/// `TolerantGoldenComparator` 容差先例的**文档意图**；其代码以 0.5 与
-/// 分数直比（实际 50% 容差）已登记 V3-FIX-383 归 wt667 在航面处置。
+/// `TolerantGoldenComparator` 容差先例的**文档意图**；其代码曾以 0.5 与
+/// 分数直比（实际 50% 容差），已由 wt702 修复（V3-FIX-383：常量改
+/// 0.005 分数口径，与本带同值，b04_tolerant_comparator_test.dart 钉等值）。
 library;
 
 import 'dart:typed_data' show ByteData, Uint8List;

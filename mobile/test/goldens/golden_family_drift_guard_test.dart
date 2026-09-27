@@ -13,8 +13,8 @@ import 'golden_family_drift_guard.dart';
 /// 单位口径（本测试钉死）：flutter_test `ComparisonResult.diffPercent`
 /// 是 **分数**（pixelDiffCount / totalPixels ∈ [0,1]），0.18% = 0.0018。
 /// 带值 0.005 = B-04 容差先例的**文档意图**（0.5%），非其代码实现值
-/// （B-04 比较器以 0.5 与分数比较 = 50% 实际容差，已登记 V3-FIX-383，
-/// 归 wt667 在航面处置）。
+/// （B-04 比较器曾以 0.5 与分数比较 = 50% 实际容差，V3-FIX-383 已由
+/// wt702 修复为 0.005 分数口径，与 kGoldenEnvDriftBand 同值）。
 void main() {
   group('单变体判定 verdictFor', () {
     test('0（逐位一致）→ exactMatch', () {

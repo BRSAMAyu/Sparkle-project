@@ -126,10 +126,21 @@ const List<B04ViewportBatch> b04ViewportBatches = [
 /// demo 相对时间标签与 Aurora/流式 shimmer 类周期动画的帧相位噪声实测
 /// ≈0.01%（224px @ 1080×2400），容差取 0.5% 只放行此类噪声，真实回归
 /// （布局漂移/文案变化）远超此界。
+///
+/// 单位口径（V3-FIX-383 钉死）：flutter_test `ComparisonResult.diffPercent`
+/// 是**分数**（pixelDiffCount / totalPixels ∈ [0,1]，SDK _goldens_io.dart
+/// `diffPercent = pixelDiffCount / totalPixels`；失败消息里的百分数是
+/// `(diffPercent * 100)`）。因此 0.5% 的容差写作 0.005——此前误写 0.5
+/// 与分数直比，实际放行 50% 像素差，回归门近乎失效（0.18% 环境漂移
+/// 0.0018 与 49% 布局崩坏 0.49 同判过）；对照先例：
+/// test/goldens/golden_family_drift_guard.dart 的 kGoldenEnvDriftBand。
 class B04TolerantGoldenComparator extends LocalFileComparator {
   B04TolerantGoldenComparator(super.testFile);
 
-  static const double diffPercentTolerance = 0.5;
+  /// 容差 0.5%，**分数口径**（diffPercent 为分数：0.005 = 0.5%）。
+  /// 带界含等号：恰 0.5% 判过；>0.5% 抛错（真实回归不放行）。
+  /// 带界单测见 b04_tolerant_comparator_test.dart。
+  static const double diffPercentTolerance = 0.005;
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {
