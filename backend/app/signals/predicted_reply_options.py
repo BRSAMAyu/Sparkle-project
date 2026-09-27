@@ -179,7 +179,7 @@ _QUESTION_TEMPLATES: dict[str, dict[str, Any]] = {
 }
 
 # 必须追加到每组选项末尾
-_FREEFORM_OPTION = {
+_FREEFORM_OPTION: dict[str, Any] = {
     "label": "都不对，我解释一下",
     "semantic_value": "freeform_correction",
     "confidence": 0.10,

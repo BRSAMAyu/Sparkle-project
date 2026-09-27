@@ -443,7 +443,7 @@ class TaskReflectionService:
             linked_nodes=linked_nodes,
             recent_reflections=recent_reflections,
         )
-        payload = {
+        payload: dict[str, Any] = {
             "prompt": prompt,
             "selected_option": (selected_option or "").strip() or None,
             "free_text": (free_text or "").strip() or None,
@@ -548,7 +548,7 @@ class TaskReflectionService:
         feedback_id: UUID | None,
         user_id: UUID | None = None,
         task_title: str,
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:
         template = self.PROMPT_TEMPLATES.get(category) or self.PROMPT_TEMPLATES["abandoned"]
         reflection_prompt_style = await self._get_reflection_prompt_style(user_id) if user_id else "default"
         question = str(template["question"])

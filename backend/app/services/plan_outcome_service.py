@@ -421,7 +421,7 @@ class PlanOutcomeService:
         return ordered[: max(1, limit)]
 
     def _normalize_record(self, record: dict[str, Any]) -> dict[str, Any]:
-        normalized = {
+        normalized: dict[str, Any] = {
             "record_id": _strip(record.get("record_id")) or str(uuid4()),
             "recorded_at": _strip(record.get("recorded_at")) or _utcnow_iso(),
             "source_family": _strip(record.get("source_family")),

@@ -82,7 +82,7 @@ import time
 from collections.abc import Coroutine
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, Callable, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence, cast
 
 from loguru import logger
 
@@ -505,6 +505,8 @@ def _run_channel_filters(
     outcomes: list[ChannelOutcome] = []
 
     if memory_candidates:
+        # fail-loud 契约由 _validate_channel_contexts 前置保证：有候选必有上下文
+        assert retrieval_ctx is not None
         channel_start = time.perf_counter()
         tokens_before = _estimate_candidates(memory_candidates, estimate)
         prefilter_result = prefilter_candidates(memory_candidates, retrieval_ctx)
@@ -528,6 +530,8 @@ def _run_channel_filters(
         )
 
     if knowledge_candidates:
+        # fail-loud 契约由 _validate_channel_contexts 前置保证：有候选必有上下文
+        assert knowledge_ctx is not None
         channel_start = time.perf_counter()
         tokens_before = _estimate_candidates(knowledge_candidates, estimate)
         knowledge_result = prefilter_knowledge_candidates(knowledge_candidates, knowledge_ctx)
@@ -588,7 +592,7 @@ def _resolve_ranked_sync(raw: Any) -> Any:
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        return asyncio.run(raw)
+        return asyncio.run(cast("Coroutine[Any, Any, Any]", raw))
     # 关闭未消费的 coroutine，避免 "never awaited" RuntimeWarning（close 对
     # 未启动的 coroutine 是安全的空操作路径）。Awaitable 家族中仅 coroutine
     # 有 close，用 isinstance 收窄。

@@ -44,10 +44,11 @@ class PushFeedbackService:
         action: str,
         timestamp: datetime | None = None,
     ) -> None:
-        action = self._normalize_action(action)
-        if action is None:
+        normalized = self._normalize_action(action)
+        if normalized is None:
             logger.warning("Unknown push interaction action={} user_id={}", action, user_id)
             return
+        action = normalized
 
         ts = timestamp or _utcnow()
         trigger_type = await self._record_push_history(user_id, push_id, action, ts)
@@ -62,7 +63,11 @@ class PushFeedbackService:
                 updates=updates,
                 source="ai_inferred",
             )
-            await self._sync_consecutive_ignores(user_id, updates.get("consecutive_ignores"))
+            consecutive_ignores = updates.get("consecutive_ignores")
+            await self._sync_consecutive_ignores(
+                user_id,
+                consecutive_ignores if isinstance(consecutive_ignores, int) else None,
+            )
 
     async def _record_push_history(
         self,
@@ -224,11 +229,11 @@ class PushFeedbackService:
             if str(item.get("action")) not in {"dismissed", "ignored"}:
                 continue
             hour_raw = item.get("hour")
-            if hour_raw is None:
+            if not isinstance(hour_raw, (int, str)):
                 continue
             try:
                 hour = int(hour_raw)
-            except (TypeError, ValueError):
+            except ValueError:
                 continue
             if 0 <= hour <= 23:
                 counter[hour] += 1

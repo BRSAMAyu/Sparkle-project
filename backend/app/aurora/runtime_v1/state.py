@@ -84,7 +84,7 @@ def _normalize_user_id(value: UUID | str) -> str:
 
 
 def default_activity_expression() -> dict[str, float]:
-    return dict(DEFAULT_ACTIVITY_EXPRESSION)
+    return {str(key): value for key, value in DEFAULT_ACTIVITY_EXPRESSION.items()}
 
 
 def normalize_expression_update(value: Any) -> dict[str, float]:
@@ -610,13 +610,14 @@ class AuroraRuntimeStore:
                 salience = float(item.get("salience") or 0.5)
             except (TypeError, ValueError):
                 salience = 0.5
+            source_intent = item.get("source_intent")
             normalized_threads.append(
                 {
                     **dict(item),
                     "thread_id": _normalize_text(item.get("thread_id")) or f"{conversation_id}:thread:{index}",
                     "source_intent": (
-                        dict(item.get("source_intent"))
-                        if isinstance(item.get("source_intent"), Mapping)
+                        dict(source_intent)
+                        if isinstance(source_intent, Mapping)
                         else default_intent
                     ),
                     "salience": max(0.0, min(1.0, salience)),
@@ -754,7 +755,9 @@ class AuroraEnergyStore:
         wake_reasons: list[str] | None = None,
     ) -> AuroraWakeEligibility:
         if energy.is_cooling_down:
-            remaining = int((energy.cooldown_until.replace(tzinfo=None) - _utcnow()).total_seconds() / 60)
+            # is_cooling_down 为真时 cooldown_until 必已设置（属性语义），局部变量收窄
+            cooldown_until = energy.cooldown_until
+            remaining = int(((cooldown_until or _utcnow()).replace(tzinfo=None) - _utcnow()).total_seconds() / 60)
             return AuroraWakeEligibility(
                 can_user_wake=False,
                 user_quota_remaining=max(0, self.DAILY_QUOTA.get(sprint_mode, 1) - energy.l3_session_count_today),

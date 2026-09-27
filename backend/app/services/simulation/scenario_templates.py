@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-SCENARIOS: dict[str, dict[str, object]] = {
+from typing import Any
+
+SCENARIOS: dict[str, dict[str, Any]] = {
     "knowledge_debate": {
         "description": "围绕一个知识点，AI 生成正反方论点，用户参与辩论。",
         "participants": ["正方专家", "反方专家", "主持人"],

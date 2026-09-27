@@ -704,7 +704,7 @@ class SimulationEngine:
         await_user_input: bool,
     ) -> AsyncIterator[tuple[str, dict[str, Any]]]:
         behavioral_context: dict[str, Any] | None = None
-        if user_id is not None:
+        if user_id is not None and self.db is not None:
             try:
                 predictive_service = PredictiveService(self.db)
                 behavioral_context = {
@@ -1417,9 +1417,14 @@ class SimulationEngine:
         current_rounds: int,
         scenario_key: str = "study_group",
     ) -> int:
+        requested_or_default = requested or 4
         try:
-            requested_int = int(requested or 4)
-        except (TypeError, ValueError):
+            requested_int = (
+                int(requested_or_default)
+                if isinstance(requested_or_default, (int, float, str))
+                else 4
+            )
+        except ValueError:
             requested_int = 4
         scenario_max = {
             "study_group": 10,

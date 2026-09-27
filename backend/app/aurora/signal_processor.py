@@ -143,7 +143,7 @@ class SignalProcessor:
                 candidate = getattr(first, "user_id", None) or (first.get("user_id") if isinstance(first, dict) else None)
                 if candidate is not None:
                     return cast("UUID | str | None", (candidate))
-            if hasattr(value, "user_id"):
+            if value is not None and hasattr(value, "user_id"):
                 return cast("UUID | str | None", (value.user_id))
             if isinstance(value, dict) and value.get("user_id") is not None:
                 return cast("UUID | str | None", (value["user_id"]))

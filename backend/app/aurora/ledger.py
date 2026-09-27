@@ -10,7 +10,13 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel
+
 from app.aurora.schemas import ClaimLifecycle, ClaimSource, InsightClaim, ProbeOutcome, ProjectionPolicy
+
+# Ledger payload accepts plain dicts or pydantic models; _json_safe() serializes
+# both (models via model_dump(mode="json")).
+LedgerPayload = dict[str, Any] | BaseModel
 
 
 def _utcnow() -> datetime:
@@ -79,7 +85,7 @@ class AppendOnlyLedgerStore:
         *,
         record_type: str,
         user_id: UUID | str,
-        payload: dict[str, Any],
+        payload: LedgerPayload,
         occurred_at: datetime | None = None,
         metadata: dict[str, Any] | None = None,
         source_record_id: str | None = None,
@@ -101,22 +107,22 @@ class AppendOnlyLedgerStore:
         self.persist()
         return dict(entry)
 
-    def record_focus_contract(self, *, user_id: UUID | str, payload: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+    def record_focus_contract(self, *, user_id: UUID | str, payload: LedgerPayload, **kwargs: Any) -> dict[str, Any]:
         return self.append_record(record_type="focus_contract", user_id=user_id, payload=payload, **kwargs)
 
-    def record_commitment(self, *, user_id: UUID | str, payload: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+    def record_commitment(self, *, user_id: UUID | str, payload: LedgerPayload, **kwargs: Any) -> dict[str, Any]:
         return self.append_record(record_type="commitment", user_id=user_id, payload=payload, **kwargs)
 
-    def record_transition_decision(self, *, user_id: UUID | str, payload: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+    def record_transition_decision(self, *, user_id: UUID | str, payload: LedgerPayload, **kwargs: Any) -> dict[str, Any]:
         return self.append_record(record_type="transition_decision", user_id=user_id, payload=payload, **kwargs)
 
-    def record_claim(self, *, user_id: UUID | str, payload: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+    def record_claim(self, *, user_id: UUID | str, payload: LedgerPayload, **kwargs: Any) -> dict[str, Any]:
         return self.append_record(record_type="insight_claim", user_id=user_id, payload=payload, **kwargs)
 
-    def record_probe_outcome(self, *, user_id: UUID | str, payload: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+    def record_probe_outcome(self, *, user_id: UUID | str, payload: LedgerPayload, **kwargs: Any) -> dict[str, Any]:
         return self.append_record(record_type="probe_outcome", user_id=user_id, payload=payload, **kwargs)
 
-    def record_rollback_event(self, *, user_id: UUID | str, payload: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+    def record_rollback_event(self, *, user_id: UUID | str, payload: LedgerPayload, **kwargs: Any) -> dict[str, Any]:
         return self.append_record(record_type="rollback_event", user_id=user_id, payload=payload, **kwargs)
 
     def list_records(
