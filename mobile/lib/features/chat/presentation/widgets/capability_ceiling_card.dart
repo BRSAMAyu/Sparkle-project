@@ -182,7 +182,7 @@ class _DismissButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'Chat capability ceiling card control 1',
+        label: I18nService.instance.l10n.commonClose,
         child: GestureDetector(
           onTap: onTap,
           child: Icon(
@@ -204,7 +204,6 @@ class _ContinueButton extends StatelessWidget {
     final l10n = I18nService.instance.l10n;
     return Semantics(
       button: true,
-      label: 'Chat capability ceiling card control 2',
       child: GestureDetector(
         onTap: onTap,
         child: Text(

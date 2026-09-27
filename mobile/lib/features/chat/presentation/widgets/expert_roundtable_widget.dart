@@ -292,16 +292,14 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Semantics(
-                button: true,
-                label: 'Chat expert roundtable widget control 1',
-                child: IconButton(
-                  onPressed: onCollapse,
-                  icon: const Icon(Icons.unfold_less_rounded, size: 18),
-                  splashRadius: 24,
-                  color: DS.textSecondary,
-                  tooltip: S.chatLabelCollapse,
-                ),
+              // 单节点化（U-08 续）：原外挂占位 Semantics（'...control 1'）
+              // 拆节点，废除；按钮已有 tooltip 单节点名。
+              IconButton(
+                onPressed: onCollapse,
+                icon: const Icon(Icons.unfold_less_rounded, size: 18),
+                splashRadius: 24,
+                color: DS.textSecondary,
+                tooltip: S.chatLabelCollapse,
               ),
             ],
           ),

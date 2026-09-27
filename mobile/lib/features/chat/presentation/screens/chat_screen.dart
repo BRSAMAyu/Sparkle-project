@@ -2469,6 +2469,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                 DS.spacing4,),
                                             child: Icon(
                                               Icons.close,
+                                              semanticLabel: context.l10n.commonClose,
                                               size: DS.iconSizeXs,
                                               color: DS.error,
                                             ),

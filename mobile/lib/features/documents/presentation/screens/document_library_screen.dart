@@ -1410,6 +1410,7 @@ class _NodeChip extends StatelessWidget {
               ),
               child: Icon(
                 Icons.filter_alt_outlined,
+                semanticLabel: context.l10n.commonFilter,
                 size: 16,
                 color: DS.textSecondary,
               ),

@@ -212,7 +212,6 @@ class _OptionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'Chat stale recovery card control 2',
         child: GestureDetector(
           onTap: onTap,
           child: Container(

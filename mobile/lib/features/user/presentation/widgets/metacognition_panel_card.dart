@@ -53,22 +53,29 @@ class _MetacognitionPanelCardState extends State<MetacognitionPanelCard> {
           children: [
             Row(
               children: [
-                GestureDetector(
-                  onTap: () => setState(() => _isExpanded = !_isExpanded),
-                  child: Container(
-                    padding: const EdgeInsets.all(DS.spacing8),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? DS.success.withValues(alpha: 0.12)
-                          : const Color(0xFFE8F1EA),
-                      borderRadius: DS.borderRadius12,
-                    ),
-                    child: Icon(
-                      Icons.insights_rounded,
-                      color: isDark
-                          ? DS.success
-                          : const Color(0xFF4A7A58),
-                      size: 18,
+                // U-08 续：图标钮按当前态命名（展开/收起）。
+                Semantics(
+                  button: true,
+                  label: _isExpanded
+                      ? context.l10n.metacognitionPanelCollapse
+                      : context.l10n.metacognitionPanelExpand,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isExpanded = !_isExpanded),
+                    child: Container(
+                      padding: const EdgeInsets.all(DS.spacing8),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? DS.success.withValues(alpha: 0.12)
+                            : const Color(0xFFE8F1EA),
+                        borderRadius: DS.borderRadius12,
+                      ),
+                      child: Icon(
+                        Icons.insights_rounded,
+                        color: isDark
+                            ? DS.success
+                            : const Color(0xFF4A7A58),
+                        size: 18,
+                      ),
                     ),
                   ),
                 ),

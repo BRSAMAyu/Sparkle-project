@@ -3,6 +3,7 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// A collapsible wrapper for metadata widgets rendered after AI messages.
@@ -86,7 +87,9 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
             color: Colors.transparent,
             child: Semantics(
               button: true,
-              label: 'Chat collapsible widget wrapper control 1',
+              label: _expanded
+                  ? context.l10n.commonCollapse
+                  : context.l10n.commonExpand,
               child: InkWell(
                 onTap: () async {
                   await SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
@@ -185,7 +188,7 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
                       color: Colors.transparent,
                       child: Semantics(
                         button: true,
-                        label: 'Chat collapsible widget wrapper control 2',
+                        label: context.l10n.commonCollapse,
                         child: InkWell(
                           onTap: () {
                             unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));

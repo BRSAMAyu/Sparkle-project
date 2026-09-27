@@ -365,6 +365,7 @@ class _CloseButton extends StatelessWidget {
           padding: const EdgeInsets.all(DS.spacing6),
           child: Icon(
             Icons.close_rounded,
+            semanticLabel: context.l10n.commonClose,
             size: DS.iconSizeSm,
             color: DS.textSecondary,
           ),

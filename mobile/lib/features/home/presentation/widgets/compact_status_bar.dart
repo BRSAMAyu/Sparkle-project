@@ -176,6 +176,7 @@ class CompactStatusBar extends StatelessWidget {
                           ),
                           child: Icon(
                             Icons.settings_outlined,
+                            semanticLabel: context.l10n.settings,
                             size: 18,
                             color: DS.textSecondary,
                           ),

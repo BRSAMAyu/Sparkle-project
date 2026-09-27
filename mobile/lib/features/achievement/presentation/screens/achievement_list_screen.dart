@@ -457,6 +457,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
                       },
                       child: Icon(
                         Icons.clear,
+                        semanticLabel: context.l10n.commonClearSearch,
                         size: DS.iconSizeSm,
                         color: DS.textSecondary,
                       ),

@@ -290,7 +290,8 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
 
           return Semantics(
             button: true,
-            label: 'Chat review rating dialog control 1',
+            label: context.l10n.translationRateStar(starValue),
+            selected: isSelected,
             child: GestureDetector(
               onTap: () {
                 unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
@@ -381,7 +382,6 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
       borderRadius: BorderRadius.circular(DS.spacing12),
       child: Semantics(
         button: true,
-        label: 'Chat review rating dialog control 2',
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(DS.spacing12),
@@ -527,7 +527,6 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
       borderRadius: BorderRadius.circular(DS.spacing8),
       child: Semantics(
         button: true,
-        label: 'Chat review rating dialog control 3',
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(DS.spacing8),
@@ -596,17 +595,15 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   onSubmitted: _addInaccuratePoint,
                 ),
               ),
-              Semantics(
-                button: true,
-                label: 'Chat review rating dialog control 4',
-                child: SparkleIconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  onPressed: () => _addInaccuratePoint(
-                    _inaccuratePointController.text,
-                  ),
-                  semanticLabel: context.l10n.reviewRatingAddInaccuratePoint,
-                  variant: ButtonVariant.ghost,
+              // 单节点化（U-08 续）：原外挂占位 Semantics（'...control 4'）
+              // 拆节点，废除；按钮已有 semanticLabel 单节点名。
+              SparkleIconButton(
+                icon: const Icon(Icons.add_circle_outline),
+                onPressed: () => _addInaccuratePoint(
+                  _inaccuratePointController.text,
                 ),
+                semanticLabel: context.l10n.reviewRatingAddInaccuratePoint,
+                variant: ButtonVariant.ghost,
               ),
             ],
           ),

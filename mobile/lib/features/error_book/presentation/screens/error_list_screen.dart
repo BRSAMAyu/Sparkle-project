@@ -214,9 +214,13 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                           .read(errorFilterProvider.notifier)
                           .setCognitiveDimension(null),
                       borderRadius: DS.borderRadiusFull,
-                      child: const Padding(
-                        padding: EdgeInsets.all(DS.spacing4),
-                        child: Icon(Icons.close, size: DS.iconSizeXs),
+                      child: Padding(
+                        padding: const EdgeInsets.all(DS.spacing4),
+                        child: Icon(
+                          Icons.close,
+                          size: DS.iconSizeXs,
+                          semanticLabel: context.l10n.commonClear,
+                        ),
                       ),
                     ),
                   ],
@@ -258,9 +262,13 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                       onTap: () =>
                           ref.read(errorFilterProvider.notifier).reset(),
                       borderRadius: DS.borderRadiusFull,
-                      child: const Padding(
-                        padding: EdgeInsets.all(DS.spacing4),
-                        child: Icon(Icons.close, size: DS.iconSizeXs),
+                      child: Padding(
+                        padding: const EdgeInsets.all(DS.spacing4),
+                        child: Icon(
+                          Icons.close,
+                          size: DS.iconSizeXs,
+                          semanticLabel: context.l10n.commonReset,
+                        ),
                       ),
                     ),
                   ],

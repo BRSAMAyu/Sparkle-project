@@ -261,7 +261,6 @@ class AgentMessageRenderer extends ConsumerWidget {
             widget.data['plan_id']?.toString();
         return Semantics(
           button: true,
-          label: 'Chat agent message renderer control 1',
           child: GestureDetector(
             onTap: planId != null
                 ? () => context.push(entity.detailRoute ?? '/plans/$planId')

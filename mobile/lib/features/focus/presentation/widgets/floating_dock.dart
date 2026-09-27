@@ -157,7 +157,12 @@ class _FocusFloatingDockState extends State<FocusFloatingDock>
         borderRadius: BorderRadius.circular(30),
         child: Center(
           child:
-              Icon(Icons.timer_rounded, color: DS.brandPrimaryConst, size: 30),
+              Icon(
+            Icons.timer_rounded,
+            semanticLabel: context.l10n.commonExpand,
+            color: DS.brandPrimaryConst,
+            size: 30,
+          ),
         ),
       );
 
@@ -167,7 +172,12 @@ class _FocusFloatingDockState extends State<FocusFloatingDock>
           // Collapse Button
           InkWell(
             onTap: _toggleExpand,
-            child: Icon(Icons.close, color: DS.brandPrimaryConst, size: 24),
+            child: Icon(
+            Icons.close,
+            semanticLabel: context.l10n.commonCollapse,
+            color: DS.brandPrimaryConst,
+            size: 24,
+          ),
           ),
 
           // Menu Items

@@ -100,7 +100,6 @@ class _UnselectedPill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
         child: Semantics(
           button: true,
-          label: 'Chat chat mode selector pill control 1',
           child: GestureDetector(
             onTap: onTap,
             child: MaterialStyler(
@@ -193,7 +192,6 @@ class _SelectedPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: Semantics(
         button: true,
-        label: 'Chat chat mode selector pill control 2',
         child: GestureDetector(
           onTap: onTap,
           child: MaterialStyler(

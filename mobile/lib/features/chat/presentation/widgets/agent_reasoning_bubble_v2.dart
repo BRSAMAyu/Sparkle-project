@@ -177,7 +177,6 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
 
     final headerContent = Semantics(
       button: true,
-      label: 'Chat agent reasoning bubble v2 control 1',
       child: InkWell(
         onTap: _toggleExpand,
         borderRadius: BorderRadius.circular(16),
@@ -444,8 +443,6 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                               .map(
                                 (citation) => Semantics(
                                   button: true,
-                                  label:
-                                      'Chat agent reasoning bubble v2 control 2',
                                   child: InkWell(
                                     onTap: () => _showCitationDialog(citation),
                                     borderRadius: BorderRadius.circular(12),

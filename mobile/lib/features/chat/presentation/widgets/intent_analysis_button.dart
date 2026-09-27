@@ -26,7 +26,6 @@ class IntentAnalysisButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Semantics(
         button: true,
-        label: 'Chat intent analysis button control 1',
         child: InkWell(
           onTap: () => _showIntentPreview(context),
           borderRadius: BorderRadius.circular(20),
@@ -132,7 +131,6 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
 
     return Semantics(
       button: true,
-      label: 'Chat intent analysis button control 2',
       child: InkWell(
         onTap: _analyzeIntents,
         borderRadius: BorderRadius.circular(16),

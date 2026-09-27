@@ -549,7 +549,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                           ),
                           Semantics(
                             button: true,
-                            label: 'Chat review appeal card control 1',
+                            label: context.l10n.commonCancel,
                             child: InkWell(
                               onTap: widget.onCancelAppeal,
                               borderRadius: DS.borderRadiusFull,
@@ -581,7 +581,6 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                           final isSelected = _selectedIssues.contains(issue);
                           return Semantics(
                             button: true,
-                            label: 'Chat review appeal card control 2',
                             child: GestureDetector(
                               onTap: () {
                                 unawaited(

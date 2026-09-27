@@ -21,7 +21,6 @@ class AiReasoningModePill extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: Semantics(
         button: true,
-        label: 'Chat ai reasoning mode pill control 1',
         child: GestureDetector(
           onTap: () => _showReasoningModeSheet(context, ref, mode),
           child: MaterialStyler(
@@ -169,7 +168,6 @@ class _ReasoningModeOption extends StatelessWidget {
         color: Colors.transparent,
         child: Semantics(
           button: true,
-          label: 'Chat ai reasoning mode pill control 2',
           child: InkWell(
             borderRadius: DS.borderRadius20,
             onTap: onTap,

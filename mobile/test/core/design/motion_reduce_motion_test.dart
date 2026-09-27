@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/features/focus/presentation/widgets/flip_clock.dart';
 import 'package:sparkle/features/focus/presentation/widgets/star_background.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// A11Y-ICONS（N33 持续动效可达守护 · reduce-motion 首批）：
 ///
@@ -19,7 +21,17 @@ import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 void main() {
   /// MaterialApp 内层注入 disableAnimations=true 的 MediaQuery
   /// （内层覆盖 MaterialApp 根 MediaQuery，子树读到的即系统减弱动效态）。
+  // U-08 续 harness 修复：TimerWidget 图标钮补语义名后读 context.l10n，
+  // 本文件原 harness 未挂 localizations delegates（产品树内恒有，测试态补齐）。
   Widget wrapDisabledAnimations(Widget child) => MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
         home: MediaQuery(
           data: const MediaQueryData(disableAnimations: true),
           child: child,
@@ -220,6 +232,14 @@ void main() {
     testWidgets('对照组：默认（未开启减弱动效）→ 脉动缩放运行', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Center(
               child: TimerWidget(

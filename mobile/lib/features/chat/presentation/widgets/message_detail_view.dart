@@ -287,15 +287,13 @@ class _MessageDetailViewState extends State<MessageDetailView> {
           const Spacer(),
 
           // Close button
-          Semantics(
-            button: true,
-            label: 'Chat message detail view control 2',
-            child: SparkleIconButton(
-              icon: const Icon(Icons.close, size: DS.iconSizeSm),
-              onPressed: () => Navigator.of(context).pop(),
-              semanticLabel: context.l10n.close,
-              variant: ButtonVariant.ghost,
-            ),
+          // 单节点化（U-08 续）：原外挂占位 Semantics（'...control 2'）
+          // 拆节点，废除；按钮已有 semanticLabel 单节点名。
+          SparkleIconButton(
+            icon: const Icon(Icons.close, size: DS.iconSizeSm),
+            onPressed: () => Navigator.of(context).pop(),
+            semanticLabel: context.l10n.close,
+            variant: ButtonVariant.ghost,
           ),
         ],
       ),
@@ -412,7 +410,6 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'Chat message detail view control 3',
         child: InkWell(
           onTap: () async {
             await SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);

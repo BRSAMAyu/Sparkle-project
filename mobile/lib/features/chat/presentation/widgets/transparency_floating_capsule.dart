@@ -89,7 +89,6 @@ class TransparencyFloatingCapsule extends StatelessWidget {
         ),
         child: Semantics(
           button: true,
-          label: 'Chat transparency floating capsule control 1',
           child: InkWell(
             borderRadius: DS.borderRadius20,
             onTap: () async {

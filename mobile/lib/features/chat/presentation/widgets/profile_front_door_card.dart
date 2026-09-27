@@ -319,7 +319,6 @@ class _ClaimTile extends StatelessWidget {
             const SizedBox(height: DS.spacing8),
             Semantics(
               button: true,
-              label: 'Chat profile front door card control 1',
               child: InkWell(
                 onTap: () => unawaited(
                   EvidenceDrawer.show(
@@ -443,7 +442,6 @@ class _PredictionTile extends StatelessWidget {
             const SizedBox(height: DS.spacing8),
             Semantics(
               button: true,
-              label: 'Chat profile front door card control 2',
               child: InkWell(
                 onTap: () => unawaited(
                   EvidenceDrawer.show(

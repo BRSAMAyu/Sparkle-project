@@ -307,7 +307,6 @@ class _ModeChip extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
       child: Semantics(
         button: true,
-        label: 'Chat study materials sheet control 1',
         child: GestureDetector(
           onTap: onTap,
           child: AnimatedContainer(
@@ -425,7 +424,6 @@ class _SourceRow extends StatelessWidget {
     final nodeCount = document.knowledgeStarCount;
     return Semantics(
       button: true,
-      label: 'Chat study materials sheet control 2',
       child: GestureDetector(
         onTap: canToggle ? onToggle : null,
         child: AnimatedOpacity(

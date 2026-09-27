@@ -274,7 +274,6 @@ class SourceBadge extends StatelessWidget {
             .map(
               (source) => Semantics(
                 button: true,
-                label: 'Chat contextual correction bar control 1',
                 child: GestureDetector(
                   onTap: () => onTapSource?.call(source),
                   child: Container(
@@ -336,7 +335,6 @@ class AuroraJudgmentTag extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Chat contextual correction bar control 2',
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -582,68 +580,66 @@ class _CorrectionChip extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           borderRadius: radius,
-          child: Semantics(
-            button: true,
-            label: 'Chat contextual correction bar control 3',
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: radius,
-              child: Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing12,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: isAccent
-                      ? DS.brandPrimary.withValues(alpha: 0.08)
-                      : DS.surfaceSecondary.withValues(alpha: 0.5),
-                  borderRadius: radius,
-                  border: isAccent
-                      ? Border.all(
-                          color: DS.brandPrimary.withValues(alpha: 0.2),
-                        )
-                      : Border.all(color: Colors.transparent),
-                ),
-                child: ExcludeSemantics(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(presentation.icon, size: 14, color: color),
-                      const SizedBox(width: DS.spacing6),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 190),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              presentation.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: color,
-                                fontSize: 11,
-                                fontWeight: isAccent
-                                    ? DS.fontWeightMedium
-                                    : DS.fontWeightRegular,
-                              ),
+          // 单节点化（U-08 续）：外层 Semantics 已有真实名（presentation.label），
+          // 原内层占位 Semantics（'...control 3'）拆节点且匿名实害，废除。
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing12,
+                vertical: 7,
+              ),
+              decoration: BoxDecoration(
+                color: isAccent
+                    ? DS.brandPrimary.withValues(alpha: 0.08)
+                    : DS.surfaceSecondary.withValues(alpha: 0.5),
+                borderRadius: radius,
+                border: isAccent
+                    ? Border.all(
+                        color: DS.brandPrimary.withValues(alpha: 0.2),
+                      )
+                    : Border.all(color: Colors.transparent),
+              ),
+              child: ExcludeSemantics(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(presentation.icon, size: 14, color: color),
+                    const SizedBox(width: DS.spacing6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 190),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            presentation.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 11,
+                              fontWeight: isAccent
+                                  ? DS.fontWeightMedium
+                                  : DS.fontWeightRegular,
                             ),
-                            Text(
-                              presentation.subtitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: color.withValues(alpha: 0.72),
-                                fontSize: 10,
-                                height: 1.1,
-                              ),
+                          ),
+                          Text(
+                            presentation.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: color.withValues(alpha: 0.72),
+                              fontSize: 10,
+                              height: 1.1,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

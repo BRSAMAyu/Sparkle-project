@@ -68,6 +68,7 @@ class NextActionsCard extends ConsumerWidget {
                   onTap: onViewAll,
                   child: Icon(
                     Icons.more_horiz_rounded,
+                    semanticLabel: context.l10n.achievementViewAll,
                     color: DS.textSecondary,
                     size: 16,
                   ),
@@ -554,6 +555,7 @@ class _DefaultNextActionItem extends ConsumerWidget {
                   onTap: () => _completeTask(ref, task),
                   child: Icon(
                     Icons.check_circle_outline_rounded,
+                    semanticLabel: context.l10n.taskActionComplete,
                     color: isDark
                         ? DS.brandPrimary.withValues(alpha: 0.7)
                         : DS.brandPrimary.withValues(alpha: 0.85),

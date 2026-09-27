@@ -168,17 +168,15 @@ class _ComebackBannerState extends State<ComebackBanner> {
                       ),
                     ),
                     if (widget.onDismiss != null)
-                      Semantics(
-                        button: true,
-                        label: 'Chat comeback banner control 1',
-                        child: IconButton(
-                          tooltip: MaterialLocalizations.of(context)
-                              .closeButtonTooltip,
-                          onPressed: widget.onDismiss,
-                          icon: Icon(
-                            Icons.close_rounded,
-                            color: DS.textSecondary,
-                          ),
+                      // 单节点化（U-08 续）：原外挂占位 Semantics（'...control 1'）
+                      // 拆节点，废除；按钮已有 tooltip 单节点名。
+                      IconButton(
+                        tooltip: MaterialLocalizations.of(context)
+                            .closeButtonTooltip,
+                        onPressed: widget.onDismiss,
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: DS.textSecondary,
                         ),
                       ),
                   ],

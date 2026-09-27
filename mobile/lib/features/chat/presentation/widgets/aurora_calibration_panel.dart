@@ -378,7 +378,6 @@ class _ConfirmOptionChip extends StatelessWidget {
     if (isSecondary) {
       return Semantics(
         button: true,
-        label: 'Chat aurora calibration panel control 1',
         child: GestureDetector(
           onTap: onTap,
           child: Container(
@@ -403,7 +402,6 @@ class _ConfirmOptionChip extends StatelessWidget {
     }
     return Semantics(
       button: true,
-      label: 'Chat aurora calibration panel control 2',
       child: GestureDetector(
         onTap: onTap,
         child: Container(

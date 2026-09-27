@@ -32,53 +32,51 @@ class MemoryReferenceReceipt extends ConsumerWidget {
     return Semantics(
       button: true,
       label: S.chatMemoryAuroraUsedCount(memories.length),
-      child: Semantics(
-        button: true,
-        label: 'Chat memory reference receipt control 1',
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () {
-            unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
-            unawaited(
-              showSensoryModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                builder: (_) => _MemoryReceiptSheet(
-                  receipt: receipt,
-                  memories: memories,
-                  onActionSelected: onActionSelected,
+      // 单节点化（U-08 续）：原内层占位 Semantics（'...control 1'）拆节点
+      // 且与外层名重复，废除；InkWell 点击动作并入外层命名节点。
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
+          unawaited(
+            showSensoryModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => _MemoryReceiptSheet(
+                receipt: receipt,
+                memories: memories,
+                onActionSelected: onActionSelected,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          margin: const EdgeInsets.only(top: 6, bottom: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: DS.surfaceHigh.withValues(alpha: 0.58),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.psychology_alt_outlined,
+                size: 13,
+                color: DS.brandPrimary,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  S.chatMemoryUsedCount(memories.length),
+                  style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.only(top: 6, bottom: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: DS.surfaceHigh.withValues(alpha: 0.58),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: DS.borderSubtle),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.psychology_alt_outlined,
-                  size: 13,
-                  color: DS.brandPrimary,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    S.chatMemoryUsedCount(memories.length),
-                    style: DS.labelSmall.copyWith(color: DS.textSecondary),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                _CountBadge(count: memories.length),
-                const SizedBox(width: 4),
-                Icon(Icons.chevron_right, size: 13, color: DS.textTertiary),
-              ],
-            ),
+              _CountBadge(count: memories.length),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, size: 13, color: DS.textTertiary),
+            ],
           ),
         ),
       ),

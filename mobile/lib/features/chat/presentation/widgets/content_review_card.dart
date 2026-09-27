@@ -569,7 +569,9 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           // Expand/collapse button
           Semantics(
             button: true,
-            label: 'Chat content review card control 1',
+            label: _isExpanded
+                ? context.l10n.commonCollapse
+                : context.l10n.commonExpand,
             child: InkWell(
               onTap: () => setState(() => _isExpanded = !_isExpanded),
               child: Icon(
@@ -1275,7 +1277,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                     final isSelected = selectedIssues.contains(issue);
                     return Semantics(
                       button: true,
-                      label: 'Chat content review card control 2',
                       child: GestureDetector(
                         onTap: () {
                           setDialogState(() {

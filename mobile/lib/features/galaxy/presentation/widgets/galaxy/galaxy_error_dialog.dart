@@ -302,6 +302,7 @@ class OfflineIndicator extends StatelessWidget {
                 ),
                 child: Icon(
                   Icons.refresh_rounded,
+                  semanticLabel: l10n.commonRetry,
                   color: DS.neutral0,
                   size: 14,
                 ),

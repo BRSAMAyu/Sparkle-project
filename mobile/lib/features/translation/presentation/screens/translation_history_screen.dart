@@ -563,6 +563,7 @@ class _TranslationCard extends StatelessWidget {
                       borderRadius: DS.borderRadiusFull,
                       child: Icon(
                         Icons.delete_outline,
+                        semanticLabel: context.l10n.translationDelete,
                         color: DS.error.withValues(alpha: 0.7),
                         size: DS.iconSizeSm,
                       ),

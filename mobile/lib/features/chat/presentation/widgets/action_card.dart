@@ -378,7 +378,6 @@ class _ActionCardState extends ConsumerState<ActionCard>
 
     return Semantics(
       button: true,
-      label: 'Chat action card control 1',
       child: GestureDetector(
         onTapDown: isPressable ? (_) => _pressController.forward() : null,
         onTapUp: isPressable ? (_) => _pressController.reverse() : null,
@@ -2400,7 +2399,6 @@ class _ActionCardState extends ConsumerState<ActionCard>
             const SizedBox(height: DS.spacing4),
             Semantics(
               button: true,
-              label: 'Chat action card control 2',
               child: InkWell(
                 onTap: () => unawaited(
                   widget.onWidgetAction!.call(
@@ -2795,7 +2793,6 @@ class _ActionCardState extends ConsumerState<ActionCard>
       final textColor = isPrimary ? DS.primaryBase : DS.neutral700;
       return Semantics(
         button: true,
-        label: 'Chat action card control 3',
         child: InkWell(
           onTap: label.isEmpty
               ? null
@@ -3745,7 +3742,6 @@ class _ActionCardState extends ConsumerState<ActionCard>
 
                 return Semantics(
                   button: true,
-                  label: 'Chat action card control 4',
                   child: InkWell(
                     onTap: () => unawaited(
                       widget.onWidgetAction?.call(

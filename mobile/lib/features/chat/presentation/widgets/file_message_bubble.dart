@@ -345,7 +345,6 @@ class _ActionPill extends StatelessWidget {
         color: Colors.transparent,
         child: Semantics(
           button: true,
-          label: 'Chat file message bubble control 1',
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(12),

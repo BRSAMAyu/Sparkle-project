@@ -224,7 +224,6 @@ class _TeamEntryTile extends StatelessWidget {
     final color = getIntentColor('chat');
     return Semantics(
       button: true,
-      label: 'Chat chat mode selector sheet control 2',
       child: InkWell(
         onTap: () {
           unawaited(
@@ -304,7 +303,6 @@ class _ModeListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'Chat chat mode selector sheet control 3',
         child: InkWell(
           onTap: () {
             unawaited(

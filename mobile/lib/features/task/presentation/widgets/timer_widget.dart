@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 
 enum TimerMode { countUp, countDown }
@@ -346,6 +347,9 @@ class _TimerWidgetState extends State<TimerWidget>
                   _isRunning
                       ? Icons.pause_circle_filled
                       : Icons.play_circle_filled,
+                  semanticLabel: _isRunning
+                      ? context.l10n.taskActionPause
+                      : context.l10n.taskActionStart,
                   size: controlIconSize,
                   color: DS.primaryBase,
                 ),

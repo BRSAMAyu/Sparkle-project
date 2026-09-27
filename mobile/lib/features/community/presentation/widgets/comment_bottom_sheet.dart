@@ -304,6 +304,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
                                           padding: const EdgeInsets.all(4),
                                           child: Icon(
                                             Icons.delete_outline,
+                                            semanticLabel: context.l10n.commonDelete,
                                             size: 16,
                                             color: DS.textTertiary,
                                           ),

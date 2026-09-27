@@ -678,6 +678,7 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
                     duration: const Duration(milliseconds: 150),
                     child: Icon(
                       filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                      semanticLabel: context.l10n.translationRateStar(v),
                       key: ValueKey(filled),
                       color: filled ? DS.warning : DS.border,
                       size: DS.spacing40,

@@ -171,7 +171,6 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               final content = (cite['content'] as String?) ?? '';
               return Semantics(
                 button: true,
-                label: 'Chat agent reasoning bubble control 1',
                 child: GestureDetector(
                   onTap: () => _showCitationDetails(context, cite),
                   child: Container(
@@ -250,7 +249,6 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           // 头部：智能体信息
           Semantics(
             button: true,
-            label: 'Chat agent reasoning bubble control 2',
             child: InkWell(
               onTap: _toggleExpand,
               borderRadius: BorderRadius.circular(16),

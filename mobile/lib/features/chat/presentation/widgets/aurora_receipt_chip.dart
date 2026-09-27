@@ -107,7 +107,7 @@ class _AuroraReceiptChipState extends State<AuroraReceiptChip> {
         margin: const EdgeInsets.only(top: 6, bottom: 2),
         child: Semantics(
           button: true,
-          label: 'Chat aurora receipt chip control 1',
+          label: S.commonLearnMore,
           child: InkWell(
             borderRadius: BorderRadius.circular(8),
             onTap: hasDetail
@@ -946,7 +946,6 @@ class _DecisionChainLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'Chat aurora receipt chip control 2',
         child: GestureDetector(
           onTap: () {
             unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));

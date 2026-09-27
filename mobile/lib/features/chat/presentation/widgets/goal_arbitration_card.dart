@@ -368,7 +368,6 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'Chat goal arbitration card control 2',
         child: GestureDetector(
           onTap: onTap,
           child: Container(

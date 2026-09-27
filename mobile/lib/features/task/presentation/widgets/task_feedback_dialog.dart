@@ -936,6 +936,7 @@ class _StarRating extends StatelessWidget {
                 rating != null && starValue <= rating!
                     ? Icons.star
                     : Icons.star_border,
+                semanticLabel: context.l10n.translationRateStar(starValue),
                 color: DS.rarityRare,
                 size: 36,
               ),

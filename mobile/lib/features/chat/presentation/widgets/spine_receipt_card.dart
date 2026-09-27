@@ -220,7 +220,6 @@ class _CorrectionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'Chat spine receipt card control 2',
         child: GestureDetector(
           onTap: onTap,
           child: Container(

@@ -185,7 +185,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
               if (sourceBadge != null) const SizedBox(width: DS.spacing8),
               Semantics(
                 button: true,
-                label: 'Chat chat prediction dock control 1',
+                label: context.l10n.commonCollapse,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(999),
                   onTap: () {
@@ -363,7 +363,6 @@ class _CollapsedDock extends StatelessWidget {
         ),
         child: Semantics(
           button: true,
-          label: 'Chat chat prediction dock control 2',
           child: InkWell(
             borderRadius: DS.borderRadius16,
             onTap: onExpand,
@@ -462,7 +461,6 @@ class _DockActionChipState extends State<_DockActionChip> {
 
     return Semantics(
       button: true,
-      label: 'Chat chat prediction dock control 3',
       child: GestureDetector(
         onTapDown: (_) => setState(() => _isPressed = true),
         onTapUp: (_) => setState(() => _isPressed = false),

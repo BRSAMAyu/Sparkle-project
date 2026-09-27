@@ -144,7 +144,6 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
                     Expanded(
                       child: Semantics(
                         button: true,
-                        label: 'Chat community insight card control 1',
                         child: GestureDetector(
                           onTap: () {
                             unawaited(
@@ -179,7 +178,6 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
                     const SizedBox(width: 8),
                     Semantics(
                       button: true,
-                      label: 'Chat community insight card control 2',
                       child: GestureDetector(
                         onTap: () {
                           unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));

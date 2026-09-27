@@ -73,7 +73,6 @@ class _Segment extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'Chat guidance mode toggle control 1',
         child: GestureDetector(
           onTap: onTap,
           child: AnimatedContainer(
