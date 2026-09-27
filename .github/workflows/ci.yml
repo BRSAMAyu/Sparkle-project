@@ -284,8 +284,13 @@ jobs:
           ENVIRONMENT=development \
           alembic upgrade head
 
+      # 层17（第17次尝试定谳）：应用代码 import 的是 buf 嵌套布局（app.gen.agent.v1 等），
+      # generate_python_protos.sh 只产扁平 _pb2——shard job 因先跑 make proto-gen（Go 面顺带
+      # 产出嵌套 Python gen）而双布局齐全；本 job 此前只有扁平脚本，OpenAPI 导入链炸
+      # ModuleNotFoundError: app.gen.agent。先 make proto-gen 再叠加扁平脚本，与 shard 端态对齐。
       - name: Generate Python Proto Code
         run: |
+          make proto-tools-build && make proto-gen
           sudo mkdir -p backend/app/gen && sudo chown -R "$(id -u):$(id -g)" backend/app/gen
           pip install grpcio-tools
           PYTHON_BIN=python3 bash scripts/generate_python_protos.sh
@@ -380,8 +385,13 @@ jobs:
 
       # 契约门（OpenAPI 快照导出 / fixture replay）经 subprocess 导入 app，需要
       # gitignored 生成物 backend/app/gen 先行再生（与分片内同形制）。
+      # 层17（第17次尝试定谳）：应用代码 import 的是 buf 嵌套布局（app.gen.agent.v1 等），
+      # generate_python_protos.sh 只产扁平 _pb2——shard job 因先跑 make proto-gen（Go 面顺带
+      # 产出嵌套 Python gen）而双布局齐全；本 job 此前只有扁平脚本，OpenAPI 导入链炸
+      # ModuleNotFoundError: app.gen.agent。先 make proto-gen 再叠加扁平脚本，与 shard 端态对齐。
       - name: Generate Python Proto Code
         run: |
+          make proto-tools-build && make proto-gen
           sudo mkdir -p backend/app/gen && sudo chown -R "$(id -u):$(id -g)" backend/app/gen
           pip install grpcio-tools
           PYTHON_BIN=python3 bash scripts/generate_python_protos.sh
@@ -450,8 +460,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.lock
 
+      # 层17（第17次尝试定谳）：应用代码 import 的是 buf 嵌套布局（app.gen.agent.v1 等），
+      # generate_python_protos.sh 只产扁平 _pb2——shard job 因先跑 make proto-gen（Go 面顺带
+      # 产出嵌套 Python gen）而双布局齐全；本 job 此前只有扁平脚本，OpenAPI 导入链炸
+      # ModuleNotFoundError: app.gen.agent。先 make proto-gen 再叠加扁平脚本，与 shard 端态对齐。
       - name: Generate Python Proto Code
         run: |
+          make proto-tools-build && make proto-gen
           sudo mkdir -p backend/app/gen && sudo chown -R "$(id -u):$(id -g)" backend/app/gen
           pip install grpcio-tools
           PYTHON_BIN=python3 bash scripts/generate_python_protos.sh
@@ -796,8 +811,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      # 层17（第17次尝试定谳）：应用代码 import 的是 buf 嵌套布局（app.gen.agent.v1 等），
+      # generate_python_protos.sh 只产扁平 _pb2——shard job 因先跑 make proto-gen（Go 面顺带
+      # 产出嵌套 Python gen）而双布局齐全；本 job 此前只有扁平脚本，OpenAPI 导入链炸
+      # ModuleNotFoundError: app.gen.agent。先 make proto-gen 再叠加扁平脚本，与 shard 端态对齐。
       - name: Generate Python Proto Code
         run: |
+          make proto-tools-build && make proto-gen
           sudo mkdir -p backend/app/gen && sudo chown -R "$(id -u):$(id -g)" backend/app/gen
           pip install grpcio-tools
           PYTHON_BIN=python3 bash scripts/generate_python_protos.sh
