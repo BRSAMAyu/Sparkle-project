@@ -69,26 +69,32 @@ class ChatHistoryInlineError extends StatelessWidget {
           surfaceRole: SparkleSurfaceRole.card,
           child: Padding(
             padding: const EdgeInsets.all(DS.md),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline_rounded, color: DS.error),
-                const SizedBox(height: DS.sm),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-                ),
-                if (onRetry != null) ...[
-                  const SizedBox(height: DS.md),
-                  SparkleButton(
-                    label: context.l10n.chatRetryGeneric,
-                    icon: const Icon(Icons.refresh_rounded),
-                    onPressed: onRetry,
-                    variant: ButtonVariant.secondary,
+            // V3-FIX-344：受约束 sheet（如 260px 错误槽）内超长文案会溢出，
+            // 包一层可滚动容器。SingleChildScrollView 在内容放得下时按子
+            // 尺寸收缩（constrain(child.size)），正常态渲染逐像素不变；
+            // 仅在超出约束时钳到上界并改为滚动，错误文案始终可读。
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline_rounded, color: DS.error),
+                  const SizedBox(height: DS.sm),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: DS.bodyMedium.copyWith(color: DS.textSecondary),
                   ),
+                  if (onRetry != null) ...[
+                    const SizedBox(height: DS.md),
+                    SparkleButton(
+                      label: context.l10n.chatRetryGeneric,
+                      icon: const Icon(Icons.refresh_rounded),
+                      onPressed: onRetry,
+                      variant: ButtonVariant.secondary,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
