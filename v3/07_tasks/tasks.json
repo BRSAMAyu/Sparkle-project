@@ -37,7 +37,7 @@
       "resource_class": "LIGHT",
       "reviewers_required": 1,
       "gate": "V3-0",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -84,7 +84,7 @@
       "resource_class": "LIGHT",
       "reviewers_required": 2,
       "gate": "V3-0",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -131,7 +131,7 @@
       "resource_class": "HEAVY",
       "reviewers_required": 1,
       "gate": "V3-0",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -176,7 +176,7 @@
       "resource_class": "HEAVY",
       "reviewers_required": 1,
       "gate": "V3-0",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -223,7 +223,7 @@
       "resource_class": "MEDIUM",
       "reviewers_required": 2,
       "gate": "V3-0",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -273,7 +273,7 @@
       "resource_class": "LIGHT",
       "reviewers_required": 2,
       "gate": "V3-0",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -805,7 +805,7 @@
       "resource_class": "MEDIUM",
       "reviewers_required": 2,
       "gate": "V3-3",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -852,7 +852,7 @@
       "resource_class": "MEDIUM",
       "reviewers_required": 2,
       "gate": "V3-3",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -900,7 +900,7 @@
       "resource_class": "MEDIUM",
       "reviewers_required": 1,
       "gate": "V3-3",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -949,7 +949,7 @@
       "resource_class": "HEAVY",
       "reviewers_required": 2,
       "gate": "V3-0",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -997,7 +997,7 @@
       "resource_class": "MEDIUM",
       "reviewers_required": 1,
       "gate": "V3-3",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -1043,7 +1043,7 @@
       "resource_class": "MEDIUM",
       "reviewers_required": 1,
       "gate": "V3-3",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -1190,7 +1190,7 @@
       "resource_class": "MEDIUM",
       "reviewers_required": 2,
       "gate": "V3-2",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
