@@ -9,12 +9,18 @@ import pytest
 from app.signals.privacy_community_intelligence import PrivacyBudget, PrivacyPreservingCommunityEngine
 
 _evidence_module = types.ModuleType("evidence_pb2")
-sys.modules.setdefault("app.gen", types.ModuleType("app.gen"))
-sys.modules.setdefault("app.gen.sparkle", types.ModuleType("app.gen.sparkle"))
-sys.modules.setdefault("app.gen.sparkle.rag", types.ModuleType("app.gen.sparkle.rag"))
-rag_v1_module = types.ModuleType("app.gen.sparkle.rag.v1")
-rag_v1_module.evidence_pb2 = _evidence_module
-sys.modules.setdefault("app.gen.sparkle.rag.v1", rag_v1_module)
+# 守卫（V3-FIX-386，同 test_phase2_intervention_pipeline / focus_service_memory
+# 判例）：仅当真实 app.gen 不可导入时才安装桩；真 gen 在场时真 evidence_pb2
+# 先落 sys.modules，空 __path__ 毒桩不再毒化同进程后续 collection。
+try:
+    import app.gen.sparkle.rag.v1.evidence_pb2  # noqa: F401
+except ModuleNotFoundError:
+    sys.modules.setdefault("app.gen", types.ModuleType("app.gen"))
+    sys.modules.setdefault("app.gen.sparkle", types.ModuleType("app.gen.sparkle"))
+    sys.modules.setdefault("app.gen.sparkle.rag", types.ModuleType("app.gen.sparkle.rag"))
+    rag_v1_module = types.ModuleType("app.gen.sparkle.rag.v1")
+    rag_v1_module.evidence_pb2 = _evidence_module
+    sys.modules.setdefault("app.gen.sparkle.rag.v1", rag_v1_module)
 
 from app.services.community_signal_bridge import CommunitySignalBridge  # noqa: E402
 

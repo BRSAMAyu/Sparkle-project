@@ -15,33 +15,39 @@ from app.core.metrics import (
     ERROR_REPLAN_BRIDGE_EVALUATED_TOTAL,
 )
 
-_gen_pkg = types.ModuleType("app.gen")
-_sparkle_pkg = types.ModuleType("app.gen.sparkle")
-_inference_pkg = types.ModuleType("app.gen.sparkle.inference")
-_v1_pkg = types.ModuleType("app.gen.sparkle.inference.v1")
-_signals_pkg = types.ModuleType("app.gen.sparkle.signals")
-_signals_v1_pkg = types.ModuleType("app.gen.sparkle.signals.v1")
-_adaptive_replanner_pkg = types.ModuleType("app.orchestration.adaptive_replanner")
-_gen_pkg.__path__ = []
-_sparkle_pkg.__path__ = []
-_inference_pkg.__path__ = []
-_signals_pkg.__path__ = []
-_v1_pkg.inference_pb2 = types.SimpleNamespace(
-    InferenceRequest=object,
-    Budgets=object,
-    Message=object,
-    PREDICT_NEXT_ACTIONS=0,
-    P0=0,
-)
-_signals_v1_pkg.signals_pb2 = types.SimpleNamespace()
-_adaptive_replanner_pkg.AdaptiveReplanner = object
-sys.modules.setdefault("app.gen", _gen_pkg)
-sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
-sys.modules.setdefault("app.gen.sparkle.inference", _inference_pkg)
-sys.modules.setdefault("app.gen.sparkle.inference.v1", _v1_pkg)
-sys.modules.setdefault("app.gen.sparkle.signals", _signals_pkg)
-sys.modules.setdefault("app.gen.sparkle.signals.v1", _signals_v1_pkg)
-sys.modules.setdefault("app.orchestration.adaptive_replanner", _adaptive_replanner_pkg)
+# 守卫（V3-FIX-386，同 test_phase2_intervention_pipeline / focus_service_memory
+# 判例）：仅当真实 app.gen 不可导入时才安装桩；真 gen 在场时真模块先落
+# sys.modules，空 __path__ 毒桩不再顶掉 PEP 420 解析毒化同进程后续 collection。
+try:
+    import app.gen.sparkle.inference.v1.inference_pb2  # noqa: F401
+except ModuleNotFoundError:
+    _gen_pkg = types.ModuleType("app.gen")
+    _sparkle_pkg = types.ModuleType("app.gen.sparkle")
+    _inference_pkg = types.ModuleType("app.gen.sparkle.inference")
+    _v1_pkg = types.ModuleType("app.gen.sparkle.inference.v1")
+    _signals_pkg = types.ModuleType("app.gen.sparkle.signals")
+    _signals_v1_pkg = types.ModuleType("app.gen.sparkle.signals.v1")
+    _adaptive_replanner_pkg = types.ModuleType("app.orchestration.adaptive_replanner")
+    _gen_pkg.__path__ = []
+    _sparkle_pkg.__path__ = []
+    _inference_pkg.__path__ = []
+    _signals_pkg.__path__ = []
+    _v1_pkg.inference_pb2 = types.SimpleNamespace(
+        InferenceRequest=object,
+        Budgets=object,
+        Message=object,
+        PREDICT_NEXT_ACTIONS=0,
+        P0=0,
+    )
+    _signals_v1_pkg.signals_pb2 = types.SimpleNamespace()
+    _adaptive_replanner_pkg.AdaptiveReplanner = object
+    sys.modules.setdefault("app.gen", _gen_pkg)
+    sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
+    sys.modules.setdefault("app.gen.sparkle.inference", _inference_pkg)
+    sys.modules.setdefault("app.gen.sparkle.inference.v1", _v1_pkg)
+    sys.modules.setdefault("app.gen.sparkle.signals", _signals_pkg)
+    sys.modules.setdefault("app.gen.sparkle.signals.v1", _signals_v1_pkg)
+    sys.modules.setdefault("app.orchestration.adaptive_replanner", _adaptive_replanner_pkg)
 
 from app.services.error_replan_bridge import ErrorReplanBridge
 from app.services.push_service import PushService

@@ -9,18 +9,24 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-_gen_pkg = types.ModuleType("app.gen")
-_sparkle_pkg = types.ModuleType("app.gen.sparkle")
-_rag_pkg = types.ModuleType("app.gen.sparkle.rag")
-_rag_v1_pkg = types.ModuleType("app.gen.sparkle.rag.v1")
-_gen_pkg.__path__ = []
-_sparkle_pkg.__path__ = []
-_rag_pkg.__path__ = []
-_rag_v1_pkg.evidence_pb2 = types.SimpleNamespace()
-sys.modules.setdefault("app.gen", _gen_pkg)
-sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
-sys.modules.setdefault("app.gen.sparkle.rag", _rag_pkg)
-sys.modules.setdefault("app.gen.sparkle.rag.v1", _rag_v1_pkg)
+# 守卫（V3-FIX-386，同 test_phase2_intervention_pipeline / focus_service_memory
+# 判例）：仅当真实 app.gen 不可导入时才安装桩；真 gen 在场时真 evidence_pb2
+# 先落 sys.modules，空 __path__ 毒桩不再毒化同进程后续 collection。
+try:
+    import app.gen.sparkle.rag.v1.evidence_pb2  # noqa: F401
+except ModuleNotFoundError:
+    _gen_pkg = types.ModuleType("app.gen")
+    _sparkle_pkg = types.ModuleType("app.gen.sparkle")
+    _rag_pkg = types.ModuleType("app.gen.sparkle.rag")
+    _rag_v1_pkg = types.ModuleType("app.gen.sparkle.rag.v1")
+    _gen_pkg.__path__ = []
+    _sparkle_pkg.__path__ = []
+    _rag_pkg.__path__ = []
+    _rag_v1_pkg.evidence_pb2 = types.SimpleNamespace()
+    sys.modules.setdefault("app.gen", _gen_pkg)
+    sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
+    sys.modules.setdefault("app.gen.sparkle.rag", _rag_pkg)
+    sys.modules.setdefault("app.gen.sparkle.rag.v1", _rag_v1_pkg)
 
 from app.api.deps import get_current_user, get_db
 from app.api.v1.tasks import router as tasks_router

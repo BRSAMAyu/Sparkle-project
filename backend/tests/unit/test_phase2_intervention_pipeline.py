@@ -10,36 +10,45 @@ import pytest
 from sqlalchemy import select
 from unittest.mock import AsyncMock
 
-_gen_pkg = types.ModuleType("app.gen")
-_sparkle_pkg = types.ModuleType("app.gen.sparkle")
-_inference_pkg = types.ModuleType("app.gen.sparkle.inference")
-_inference_v1_pkg = types.ModuleType("app.gen.sparkle.inference.v1")
-_signals_pkg = types.ModuleType("app.gen.sparkle.signals")
-_signals_v1_pkg = types.ModuleType("app.gen.sparkle.signals.v1")
-_gateway_client_pkg = types.ModuleType("app.services.gateway_client")
-_llm_dispatcher_pkg = types.ModuleType("app.services.llm_dispatcher")
-_gen_pkg.__path__ = []
-_sparkle_pkg.__path__ = []
-_inference_pkg.__path__ = []
-_signals_pkg.__path__ = []
-_inference_v1_pkg.inference_pb2 = types.SimpleNamespace(
-    InferenceRequest=object,
-    Budgets=object,
-    Message=object,
-    PREDICT_NEXT_ACTIONS=0,
-    P0=0,
-)
-_signals_v1_pkg.signals_pb2 = types.SimpleNamespace()
-_gateway_client_pkg.GatewayClient = object
-_llm_dispatcher_pkg.LLMDispatcher = object
-sys.modules.setdefault("app.gen", _gen_pkg)
-sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
-sys.modules.setdefault("app.gen.sparkle.inference", _inference_pkg)
-sys.modules.setdefault("app.gen.sparkle.inference.v1", _inference_v1_pkg)
-sys.modules.setdefault("app.gen.sparkle.signals", _signals_pkg)
-sys.modules.setdefault("app.gen.sparkle.signals.v1", _signals_v1_pkg)
-sys.modules.setdefault("app.services.gateway_client", _gateway_client_pkg)
-sys.modules.setdefault("app.services.llm_dispatcher", _llm_dispatcher_pkg)
+# 守卫（对齐 wt590 conftest 快照还原先例的最小心智模型 + focus_service_memory
+# 同款 try/except 判例，V3-FIX-386）：仅当真实 app.gen 不可导入（无 gen 隔离
+# worktree；或既有 sys.modules 条目 __path__ 为空使子模块导入必败）时才安装桩。
+# CI 口径真 gen 在场时真模块先落 sys.modules，桩全部跳过——空 __path__ 毒桩
+# 不再顶掉 PEP 420 隐式命名空间解析，同进程后续需真 gen 的测试
+# （standard_workflow 等）collection 不再被毒化（不改变两环境的判定语义）。
+try:
+    import app.gen.sparkle.inference.v1.inference_pb2  # noqa: F401
+except ModuleNotFoundError:
+    _gen_pkg = types.ModuleType("app.gen")
+    _sparkle_pkg = types.ModuleType("app.gen.sparkle")
+    _inference_pkg = types.ModuleType("app.gen.sparkle.inference")
+    _inference_v1_pkg = types.ModuleType("app.gen.sparkle.inference.v1")
+    _signals_pkg = types.ModuleType("app.gen.sparkle.signals")
+    _signals_v1_pkg = types.ModuleType("app.gen.sparkle.signals.v1")
+    _gateway_client_pkg = types.ModuleType("app.services.gateway_client")
+    _llm_dispatcher_pkg = types.ModuleType("app.services.llm_dispatcher")
+    _gen_pkg.__path__ = []
+    _sparkle_pkg.__path__ = []
+    _inference_pkg.__path__ = []
+    _signals_pkg.__path__ = []
+    _inference_v1_pkg.inference_pb2 = types.SimpleNamespace(
+        InferenceRequest=object,
+        Budgets=object,
+        Message=object,
+        PREDICT_NEXT_ACTIONS=0,
+        P0=0,
+    )
+    _signals_v1_pkg.signals_pb2 = types.SimpleNamespace()
+    _gateway_client_pkg.GatewayClient = object
+    _llm_dispatcher_pkg.LLMDispatcher = object
+    sys.modules.setdefault("app.gen", _gen_pkg)
+    sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
+    sys.modules.setdefault("app.gen.sparkle.inference", _inference_pkg)
+    sys.modules.setdefault("app.gen.sparkle.inference.v1", _inference_v1_pkg)
+    sys.modules.setdefault("app.gen.sparkle.signals", _signals_pkg)
+    sys.modules.setdefault("app.gen.sparkle.signals.v1", _signals_v1_pkg)
+    sys.modules.setdefault("app.services.gateway_client", _gateway_client_pkg)
+    sys.modules.setdefault("app.services.llm_dispatcher", _llm_dispatcher_pkg)
 
 from app.models.card_protocol import (
     CardLifecycleStatus,

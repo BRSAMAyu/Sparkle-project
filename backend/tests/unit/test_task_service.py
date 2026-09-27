@@ -12,42 +12,48 @@ from uuid import uuid4
 
 from datetime import datetime, timedelta
 
-_gen_pkg = types.ModuleType("app.gen")
-_sparkle_pkg = types.ModuleType("app.gen.sparkle")
-_inference_pkg = types.ModuleType("app.gen.sparkle.inference")
-_inference_v1_pkg = types.ModuleType("app.gen.sparkle.inference.v1")
-_signals_pkg = types.ModuleType("app.gen.sparkle.signals")
-_signals_v1_pkg = types.ModuleType("app.gen.sparkle.signals.v1")
-_gateway_client_pkg = types.ModuleType("app.services.gateway_client")
-_llm_dispatcher_pkg = types.ModuleType("app.services.llm_dispatcher")
-# 顶层桩必须挂真实目录路径：app.gen.sparkle 若是空 __path__ 的毒桩，
-# 会顶掉 PEP 420 隐式命名空间解析，使本测试先跑时 rag 等真实生成子包
-# （galaxy_service → app.gen.sparkle.rag.v1.evidence_pb2）在后续任何
-# 测试模块里都 ImportError，pytest 合跑即 collection 中断。
-# 叶子桩（inference/signals）在 sys.modules 命中先于路径扫描，保持 [] 即全吞。
-_GEN_ROOT = str(Path(__file__).resolve().parents[2] / "app" / "gen")
-_gen_pkg.__path__ = [_GEN_ROOT]
-_sparkle_pkg.__path__ = [_GEN_ROOT + "/sparkle"]
-_inference_pkg.__path__ = []
-_signals_pkg.__path__ = []
-_inference_v1_pkg.inference_pb2 = types.SimpleNamespace(
-    InferenceRequest=object,
-    Budgets=object,
-    Message=object,
-    PREDICT_NEXT_ACTIONS=0,
-    P0=0,
-)
-_signals_v1_pkg.signals_pb2 = types.SimpleNamespace()
-_gateway_client_pkg.GatewayClient = object
-_llm_dispatcher_pkg.LLMDispatcher = object
-sys.modules.setdefault("app.gen", _gen_pkg)
-sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
-sys.modules.setdefault("app.gen.sparkle.inference", _inference_pkg)
-sys.modules.setdefault("app.gen.sparkle.inference.v1", _inference_v1_pkg)
-sys.modules.setdefault("app.gen.sparkle.signals", _signals_pkg)
-sys.modules.setdefault("app.gen.sparkle.signals.v1", _signals_v1_pkg)
-sys.modules.setdefault("app.services.gateway_client", _gateway_client_pkg)
-sys.modules.setdefault("app.services.llm_dispatcher", _llm_dispatcher_pkg)
+# 守卫（V3-FIX-386，同 test_phase2_intervention_pipeline / focus_service_memory
+# 判例）：仅当真实 app.gen 不可导入时才安装桩；真 gen 在场时真模块先落
+# sys.modules，桩全部跳过，叶子桩不再顶掉真 inference/signals pb2。
+try:
+    import app.gen.sparkle.inference.v1.inference_pb2  # noqa: F401
+except ModuleNotFoundError:
+    _gen_pkg = types.ModuleType("app.gen")
+    _sparkle_pkg = types.ModuleType("app.gen.sparkle")
+    _inference_pkg = types.ModuleType("app.gen.sparkle.inference")
+    _inference_v1_pkg = types.ModuleType("app.gen.sparkle.inference.v1")
+    _signals_pkg = types.ModuleType("app.gen.sparkle.signals")
+    _signals_v1_pkg = types.ModuleType("app.gen.sparkle.signals.v1")
+    _gateway_client_pkg = types.ModuleType("app.services.gateway_client")
+    _llm_dispatcher_pkg = types.ModuleType("app.services.llm_dispatcher")
+    # 顶层桩必须挂真实目录路径：app.gen.sparkle 若是空 __path__ 的毒桩，
+    # 会顶掉 PEP 420 隐式命名空间解析，使本测试先跑时 rag 等真实生成子包
+    # （galaxy_service → app.gen.sparkle.rag.v1.evidence_pb2）在后续任何
+    # 测试模块里都 ImportError，pytest 合跑即 collection 中断。
+    # 叶子桩（inference/signals）在 sys.modules 命中先于路径扫描，保持 [] 即全吞。
+    _GEN_ROOT = str(Path(__file__).resolve().parents[2] / "app" / "gen")
+    _gen_pkg.__path__ = [_GEN_ROOT]
+    _sparkle_pkg.__path__ = [_GEN_ROOT + "/sparkle"]
+    _inference_pkg.__path__ = []
+    _signals_pkg.__path__ = []
+    _inference_v1_pkg.inference_pb2 = types.SimpleNamespace(
+        InferenceRequest=object,
+        Budgets=object,
+        Message=object,
+        PREDICT_NEXT_ACTIONS=0,
+        P0=0,
+    )
+    _signals_v1_pkg.signals_pb2 = types.SimpleNamespace()
+    _gateway_client_pkg.GatewayClient = object
+    _llm_dispatcher_pkg.LLMDispatcher = object
+    sys.modules.setdefault("app.gen", _gen_pkg)
+    sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
+    sys.modules.setdefault("app.gen.sparkle.inference", _inference_pkg)
+    sys.modules.setdefault("app.gen.sparkle.inference.v1", _inference_v1_pkg)
+    sys.modules.setdefault("app.gen.sparkle.signals", _signals_pkg)
+    sys.modules.setdefault("app.gen.sparkle.signals.v1", _signals_v1_pkg)
+    sys.modules.setdefault("app.services.gateway_client", _gateway_client_pkg)
+    sys.modules.setdefault("app.services.llm_dispatcher", _llm_dispatcher_pkg)
 
 from app.services.task_service import TaskService
 from app.models.task import Task, TaskStatus, TaskType
