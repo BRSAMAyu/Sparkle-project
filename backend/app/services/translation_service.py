@@ -84,7 +84,7 @@ class TranslationService:
         glossary_id: str | None = None,
         timeout: float = 15.0,
         # v2 Signals
-        user_id: UUID | None = None,
+        user_id: UUID | str | None = None,
         fingerprint: str | None = None,
         db: AsyncSession | None = None
     ) -> TranslationResult:

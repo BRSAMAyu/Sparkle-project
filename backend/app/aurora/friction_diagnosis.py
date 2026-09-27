@@ -1619,8 +1619,9 @@ def apply_question_answer(
 def _question_budget(inp: FrictionDiagnosisInput) -> tuple[int, int, bool]:
     """有效预算（session, day, exhausted)。A-05 clarification 偏好在此收效。"""
     session_limit, day_limit = DEFAULT_SESSION_QUESTION_LIMIT, DEFAULT_DAY_QUESTION_LIMIT
-    if inp.clarification_preference in CLARIFICATION_PREFERENCE_BUDGETS:
-        session_limit, day_limit = CLARIFICATION_PREFERENCE_BUDGETS[inp.clarification_preference]
+    preference = inp.clarification_preference
+    if preference is not None and preference in CLARIFICATION_PREFERENCE_BUDGETS:
+        session_limit, day_limit = CLARIFICATION_PREFERENCE_BUDGETS[preference]
     exhausted = inp.questions_asked_session >= session_limit or inp.questions_asked_day >= day_limit
     return session_limit, day_limit, exhausted
 

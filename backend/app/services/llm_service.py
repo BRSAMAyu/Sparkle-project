@@ -387,7 +387,7 @@ class LLMService:
         # 当前选中的模型配置
         self._current_selection: LLMSelection | None = None
         self._provider: LLMProvider | None = None
-        self._provider_error: str | None = None
+        self._provider_error: str | RuntimeError | None = None
         self._explicit_model_override = False
 
         # 向后兼容：保留原有的模型名称
@@ -622,9 +622,9 @@ class LLMService:
                 return AgentRole(role_value)
             except ValueError:
                 return AgentRole.GENERATION
-        role_value = getattr(agent_role, "value", None)
-        if role_value:
-            role_value = str(role_value).lower()
+        enum_role_value = getattr(agent_role, "value", None)
+        if enum_role_value:
+            enum_role_value = str(enum_role_value).lower()
             role_aliases = {
                 "math": AgentRole.MATH_AGENT,
                 "code": AgentRole.CODE_AGENT,
@@ -632,10 +632,10 @@ class LLMService:
                 "science": AgentRole.SCIENCE_AGENT,
                 "search": AgentRole.SEARCH_AGENT,
             }
-            if role_value in role_aliases:
-                return role_aliases[role_value]
+            if enum_role_value in role_aliases:
+                return role_aliases[enum_role_value]
             try:
-                return AgentRole(role_value)
+                return AgentRole(enum_role_value)
             except ValueError:
                 return AgentRole.GENERATION
         return AgentRole.GENERATION

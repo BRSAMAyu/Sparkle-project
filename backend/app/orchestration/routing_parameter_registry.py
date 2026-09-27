@@ -225,6 +225,9 @@ class RoutingParameterRegistry:
 
     async def _load_experiment_overrides(self, db) -> dict[str, Any] | None:
         """Load parameter overrides from an active experiment for this user."""
+        user_id = self._user_id
+        if user_id is None:
+            return None
         try:
             from app.learning.ab_test_framework_enhanced import ABTestFrameworkEnhanced
             from app.models.experiment import ABExperiment, ExperimentStatus
@@ -243,7 +246,7 @@ class RoutingParameterRegistry:
             for experiment in experiments:
                 variant, _ = await ab.assign_variant(
                     experiment_id=str(experiment.id),
-                    user_id=self._user_id,
+                    user_id=user_id,
                 )
                 if variant and not variant.is_control:
                     overrides = (variant.configuration or {}).get("overrides", {})

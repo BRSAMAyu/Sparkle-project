@@ -290,7 +290,8 @@ class ProfileEventConsumer:
         if not library_id:
             return None
         try:
-            return await db.get(SeedLibrary, UUID(str(library_id)))
+            library: SeedLibrary | None = await db.get(SeedLibrary, UUID(str(library_id)))
+            return library
         except Exception as db_exc:
             logger.warning("Failed to load SeedLibrary {}: {}", library_id, db_exc)
             return None

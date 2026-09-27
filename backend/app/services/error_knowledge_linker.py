@@ -360,7 +360,11 @@ class ErrorKnowledgeLinker:
         hints = _hint_index()
 
         scoped = pack_key in _PACK_PREFIXES
-        pack_prefix = _PACK_PREFIXES.get(pack_key, "") if scoped else ""
+        pack_prefix = (
+            _PACK_PREFIXES.get(pack_key, "")
+            if pack_key is not None and pack_key in _PACK_PREFIXES
+            else ""
+        )
 
         label_hits: list[tuple[int, str, str]] = []
         hint_hits: list[tuple[int, str, str]] = []

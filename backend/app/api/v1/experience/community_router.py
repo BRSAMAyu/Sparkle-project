@@ -260,9 +260,10 @@ async def get_community_accountability(
         )
         # N-5：last_checkin_at 来自 timestamptz 列（aware），归一化后才能
         # 与 naive now 参与冷却判断；响应体保留原值（pydantic 可序列化）。
-        is_rhythm_cooling = last_partner_checkin is None or _as_naive_utc(
-            last_partner_checkin,
-        ) < now - timedelta(days=max(2, partnership.check_in_days))
+        partner_last_checkin = _as_naive_utc(last_partner_checkin)
+        is_rhythm_cooling = partner_last_checkin is None or partner_last_checkin < now - timedelta(
+            days=max(2, partnership.check_in_days)
+        )
 
         partner_progress.append(
             PartnerProgressItem(

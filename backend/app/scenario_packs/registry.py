@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -51,7 +52,7 @@ class ScenarioPackRegistry:
     def get_by_id(self, pack_id: str) -> ScenarioPackManifest | None:
         return self._manifests.get(pack_id)
 
-    def load_from_directory(self, directory: Path | str = PACKS_DIR) -> list[PackLoadResult]:
+    def load_from_directory(self, directory: Path | str = PACKS_DIR) -> builtins.list[PackLoadResult]:
         results: list[PackLoadResult] = []
         for path in sorted(Path(directory).iterdir()):
             if path.suffix.lower() not in SUPPORTED_SUFFIXES:

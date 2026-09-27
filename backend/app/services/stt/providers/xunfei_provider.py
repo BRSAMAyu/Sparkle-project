@@ -19,6 +19,7 @@ from urllib.parse import urlencode
 
 import websockets
 from loguru import logger
+from websockets.asyncio.client import ClientConnection
 
 from app.config import settings
 from app.services.stt.providers.base import STTProvider
@@ -134,7 +135,7 @@ class XunFeiProvider(STTProvider):
 
     async def _drain_messages(
         self,
-        websocket: websockets.WebSocketClientProtocol,
+        websocket: ClientConnection,
         last_text: str,
         *,
         timeout: float,

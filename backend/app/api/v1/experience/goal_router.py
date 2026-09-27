@@ -345,7 +345,8 @@ def _iso_date(value: Any) -> str | None:
     if value is None:
         return None
     if hasattr(value, "isoformat"):
-        return value.isoformat()
+        isoformatted: str = value.isoformat()
+        return isoformatted
     return str(value)
 
 

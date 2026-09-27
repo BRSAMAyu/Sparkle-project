@@ -36,6 +36,7 @@ from app.schemas.exam_sprint import (
     ExamSprintPackSelection,
     ExamSprintStrategyPreview,
     ExamSprintUserModel,
+    TargetMode,
 )
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate, coerce_task_type
@@ -984,7 +985,9 @@ class ExamSprintIntakeService:
             return "已经学过一部分"
         return "基础较稳，主要是提分冲刺"
 
-    def _recommended_mode(self, *, current_level: int, daily_study_minutes: int, days_left: int) -> str:
+    def _recommended_mode(
+        self, *, current_level: int, daily_study_minutes: int, days_left: int
+    ) -> TargetMode:
         if current_level < 55 or (days_left <= 7 and daily_study_minutes < 120):
             return "pass"
         if current_level >= 75 and daily_study_minutes >= 120 and days_left >= 10:

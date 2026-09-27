@@ -15,7 +15,7 @@ router = APIRouter()
 
 class ChatRequest(BaseModel):
     message: str
-    session_id: str = None
+    session_id: str | None = None
     stream: bool = True
 
 async def generate_graph_events(inputs: dict, config: dict) -> AsyncGenerator[str, None]:

@@ -246,10 +246,10 @@ class ParameterCompiler:
                 )
 
         # Apply compass constraints (override)
-        max_tasks = hard_constraints.get("max_concurrent_tasks")
-        if isinstance(max_tasks, int):
+        constraint_max_tasks = hard_constraints.get("max_concurrent_tasks")
+        if isinstance(constraint_max_tasks, int):
             adjustments["max_concurrent_tasks"] = min(
-                adjustments["max_concurrent_tasks"], max_tasks
+                adjustments["max_concurrent_tasks"], constraint_max_tasks
             )
 
         # Pacing philosophy adjustments

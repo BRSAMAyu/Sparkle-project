@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
@@ -55,7 +55,7 @@ TOOL_DISPLAY_NAMES = {
 
 @event.listens_for(AsyncSession.sync_session_class, "after_commit")
 def _run_tool_history_after_commit_tasks(session) -> None:
-    callbacks: list[Callable[[], Awaitable[None]]] = session.info.pop(_AFTER_COMMIT_TASKS_KEY, [])
+    callbacks: list[Callable[[], Coroutine[Any, Any, Any]]] = session.info.pop(_AFTER_COMMIT_TASKS_KEY, [])
     if not callbacks:
         return
 
@@ -83,7 +83,7 @@ class ToolHistoryService:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
-    def _enqueue_after_commit(self, callback: Callable[[], Awaitable[None]]) -> None:
+    def _enqueue_after_commit(self, callback: Callable[[], Coroutine[Any, Any, Any]]) -> None:
         callbacks = self.db_session.sync_session.info.setdefault(_AFTER_COMMIT_TASKS_KEY, [])
         callbacks.append(callback)
 

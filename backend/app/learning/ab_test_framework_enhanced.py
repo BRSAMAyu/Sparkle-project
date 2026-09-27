@@ -48,11 +48,11 @@ class ABTestFrameworkEnhanced:
     async def create_experiment(
         self,
         name: str,
-        description: str,
+        description: str | None,
         hypothesis: str,
         variants: list[dict],
         metrics: list[str],
-        created_by: str,
+        created_by: str | None,
         sample_size_target: int | None = None,
         significance_level: float = 0.05,
         power: float = 0.8,

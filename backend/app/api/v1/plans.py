@@ -573,7 +573,7 @@ async def list_plans(
         count_query = count_query.where(Plan.is_active == is_active)
 
     count_result = await db.execute(count_query)
-    total = count_result.scalar()
+    total = count_result.scalar() or 0
 
     # Pagination and ordering
     query = query.order_by(desc(Plan.created_at)).offset((page - 1) * page_size).limit(page_size)

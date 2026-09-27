@@ -180,7 +180,7 @@ class MetacognitionService:
             + await self._collect_mastery_bias_rows(user_id)
             + await self._collect_time_estimation_bias_rows(user_id)
         )
-        grouped: dict[datetime.date, list[float]] = {}
+        grouped: dict[date, list[float]] = {}
         for row in rows:
             recorded_at = row.get("recorded_at") or reference_time
             recorded_day = local_date(recorded_at, tz_name)
