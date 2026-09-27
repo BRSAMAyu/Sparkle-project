@@ -126,13 +126,18 @@ async def test_processor_records_surface_source_and_conversation(monkeypatch):
         correction_payload=payload,
     )
 
-    correction_text = json.loads(captured["self_model_kwargs"]["correction_text"])
-    user_context_payload = captured["self_model_kwargs"]["user_context_payload"]
-    assert correction_text["surface"] == "status_band"
-    assert correction_text["source"] == "freeform_input"
-    assert correction_text["conversation_id"] == "conversation-status"
-    assert correction_text["message_id"] == "message-status"
-    assert user_context_payload["surface"] == "status_band"
-    assert user_context_payload["source"] == "freeform_input"
+    # V3-FIX-510（wt777）：record_user_correction 真实签名 keyword-only
+    # user_id/signal_id/reason/source——修前 correction_text=/user_context_payload=
+    # 两 kwarg 不存在，TypeError 被 except 吞、self_model 恒不更新；correction
+    # 上下文并入 reason（json），source 直传。本测随契约对齐。
+    self_model_kwargs = captured["self_model_kwargs"]
+    assert self_model_kwargs["user_id"] == "user-1"
+    assert self_model_kwargs["source"] == "freeform_input"
+    correction_context = json.loads(self_model_kwargs["reason"])
+    assert correction_context["surface"] == "status_band"
+    assert correction_context["source"] == "freeform_input"
+    assert correction_context["conversation_id"] == "conversation-status"
+    assert correction_context["message_id"] == "message-status"
+    assert correction_context["context_source"]
     assert result.user_visible_effect["surface"] == "status_band"
     assert result.user_visible_effect["conversation_id"] == "conversation-status"

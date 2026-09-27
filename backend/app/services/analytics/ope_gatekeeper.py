@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# rule-at: orphan-by-design V3-FIX-537 (2026-09-28): 零运行时消费者——正/负信号分类门组件当前测试独占（test_ope_gatekeeper.py），由 wt778 批十一触碰进 diff 范围后 AT 守卫暴露的预存孤儿；接线裁决移交 V4（同 community_context_boundary 判例族），移除本豁免的条件=O-PE 分析面接线。
 import json
 import math
 from collections import Counter

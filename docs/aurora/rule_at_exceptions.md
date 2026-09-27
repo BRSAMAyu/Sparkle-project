@@ -40,3 +40,5 @@
 
 - `backend/app/services/graph_knowledge_service.py` — AGE 双写/探针基础设施（orphan-by-design）：唯一生产消费者 graph_monitor router 已随 V3-FIX-341 假开关撤面删除（wt646）；预留消费方=后续 GraphRAG 可视化/运维面（ENABLE_GRAPHRAG_FASTPATH 翻开后的节点同步与探针面）。重建消费面时移除本条；裁决不建则整体退役
 
+
+- `backend/app/services/analytics/ope_gatekeeper.py` — 正/负信号分类门（orphan-by-design）：零运行时消费者、测试独占（test_ope_gatekeeper.py）——wt777 批十一触碰进 diff 范围后 AT 守卫暴露的预存孤儿（V3-FIX-537 登记 2026-09-28）；预留消费方=O-PE 分析/成本门面（O-07 族扩展）。接线时移除本条；裁决不建则整体退役
