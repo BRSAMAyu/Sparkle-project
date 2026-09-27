@@ -49,9 +49,6 @@ void main() {
     // 色板选择器：色名键 + 32px 触控目标，属结构性改造面。
     'lib/features/calendar/presentation/screens/calendar_stats_screen.dart':
         '色板选择器需色名键+触控目标改造（V3-FIX-360）',
-    // 2D 拖拽把手：slider 语义（adjustable + value），结构性改造面。
-    'lib/features/user/presentation/widgets/preference_controller_2d.dart':
-        '拖拽把手需 slider 语义（adjustable+value）（V3-FIX-360）',
   };
 
   test('占位语义标签（control N 模式）全库清零（V3-FIX-359 ratchet 只降不升）', () {

@@ -2282,32 +2282,12 @@ class AppLocalizationsZh extends AppLocalizations {
     return '好奇：$value%';
   }
 
-  @override
-  String get learningModeSaved => '学习偏好保存成功';
 
-  @override
-  String learningModeSaveFailed(Object error) {
-    return '保存失败：$error';
-  }
 
-  @override
-  String get learningModeSettingsTitle => '学习模式设置';
 
-  @override
-  String get learningModeDragHint => '拖动火苗调整你的学习偏好';
 
-  @override
-  String learningModeDepthAxisValue(Object value) {
-    return '深度偏好（Y轴）：$value%';
-  }
 
-  @override
-  String learningModeCuriosityAxisValue(Object value) {
-    return '好奇心偏好（X轴）：$value%';
-  }
 
-  @override
-  String get learningModeSave => '保存偏好';
 
   @override
   String get learningPathTitle => '学习路径';

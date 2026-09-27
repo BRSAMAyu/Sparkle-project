@@ -2403,33 +2403,12 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Curiosity: $value%';
   }
 
-  @override
-  String get learningModeSaved => 'Learning preferences saved';
 
-  @override
-  String learningModeSaveFailed(Object error) {
-    return 'Failed to save: $error';
-  }
 
-  @override
-  String get learningModeSettingsTitle => 'Learning Mode Settings';
 
-  @override
-  String get learningModeDragHint =>
-      'Drag the flame to adjust your learning preferences';
 
-  @override
-  String learningModeDepthAxisValue(Object value) {
-    return 'Depth preference (Y axis): $value%';
-  }
 
-  @override
-  String learningModeCuriosityAxisValue(Object value) {
-    return 'Curiosity preference (X axis): $value%';
-  }
 
-  @override
-  String get learningModeSave => 'Save preferences';
 
   @override
   String get learningPathTitle => 'Learning Path';

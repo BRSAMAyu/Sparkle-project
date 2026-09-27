@@ -4340,47 +4340,12 @@ abstract class AppLocalizations {
   /// **'好奇：{value}%'**
   String learningModeCuriosityValue(Object value);
 
-  /// No description provided for @learningModeSaved.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习偏好保存成功'**
-  String get learningModeSaved;
 
-  /// No description provided for @learningModeSaveFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'保存失败：{error}'**
-  String learningModeSaveFailed(Object error);
 
-  /// No description provided for @learningModeSettingsTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习模式设置'**
-  String get learningModeSettingsTitle;
 
-  /// No description provided for @learningModeDragHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'拖动火苗调整你的学习偏好'**
-  String get learningModeDragHint;
 
-  /// No description provided for @learningModeDepthAxisValue.
-  ///
-  /// In zh, this message translates to:
-  /// **'深度偏好（Y轴）：{value}%'**
-  String learningModeDepthAxisValue(Object value);
 
-  /// No description provided for @learningModeCuriosityAxisValue.
-  ///
-  /// In zh, this message translates to:
-  /// **'好奇心偏好（X轴）：{value}%'**
-  String learningModeCuriosityAxisValue(Object value);
 
-  /// No description provided for @learningModeSave.
-  ///
-  /// In zh, this message translates to:
-  /// **'保存偏好'**
-  String get learningModeSave;
 
   /// No description provided for @learningPathTitle.
   ///

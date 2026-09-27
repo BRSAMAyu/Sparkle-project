@@ -17,7 +17,6 @@ import 'package:sparkle/features/user/presentation/screens/delete_account_screen
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/export_data_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/guest_upgrade_screen.dart';
-import 'package:sparkle/features/user/presentation/screens/learning_mode_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/password_reset_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/persona_onboarding_screen.dart';
@@ -297,19 +296,6 @@ class UserRoutes {
                 trackOverride: BgmTrack.profile,
               ),
               child: const GuestUpgradeScreen(),
-            ),
-          ),
-        ),
-        GoRoute(
-          path: '/settings/learning-mode',
-          name: 'learningMode',
-          pageBuilder: (context, state) => buildSparkleTransitionPage(
-            state: state,
-            child: SceneAudioScope(
-              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
-                trackOverride: BgmTrack.profile,
-              ),
-              child: const LearningModeScreen(),
             ),
           ),
         ),
