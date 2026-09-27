@@ -317,6 +317,13 @@ jobs:
         run: |
           mkdir -p /tmp/cov
           pytest -v $(tr '\n' ' ' < .pytest-shard-files.txt) --cov=backend/app --cov-report= --timeout=300 --timeout-method=thread
+          # run 36316568689 实证：COVERAGE_FILE 指 /tmp/cov 但 pytest-cov 7.1.0
+          # 可能把数据落在 cwd 默认 .coverage——兜底搬运 + 列目录留证（下一轮若仍空，
+          # 日志可定位真实落点；两头位置都盖住，上传步路径不变）。
+          if [ ! -f "/tmp/cov/.coverage.${{ matrix.shard }}" ] && [ -f .coverage ]; then
+            mv .coverage "/tmp/cov/.coverage.${{ matrix.shard }}"
+          fi
+          ls -la /tmp/cov .coverage* 2>/dev/null || true
 
       # if: always()：片红也上传已写盘的部分数据供取证（WT572 观测失明教训）；
       # 合并侧仍要求全片绿才继续跑契约门与阈值。
