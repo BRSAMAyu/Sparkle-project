@@ -9,15 +9,6 @@
     "overflow_bounds_widgets": 1
   },
   {
-    "screen": "b04/home__main__demo_data__android__1080x2400@3.0__87b5f432.png",
-    "state": "1080x2400@3.0",
-    "pump_exception": null,
-    "logical_size": "360.0x800.0",
-    "text_widget_count": 72,
-    "truncation_candidates": [],
-    "overflow_bounds_widgets": 7
-  },
-  {
     "screen": "b04/chat__history_citations__demo_data__android__1080x2400@3.0__87b5f432.png",
     "state": "1080x2400@3.0",
     "pump_exception": null,
@@ -241,5 +232,14 @@
     "text_widget_count": 399,
     "truncation_candidates": [],
     "overflow_bounds_widgets": 1277
+  },
+  {
+    "screen": "b04/home__main__demo_data__android__1080x2400@3.0__e0777bd5.png",
+    "state": "1080x2400@3.0",
+    "pump_exception": null,
+    "logical_size": "360.0x800.0",
+    "text_widget_count": 67,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
   }
 ]
