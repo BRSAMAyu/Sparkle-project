@@ -66,32 +66,6 @@ func sanitizeErrorPayload(c *gin.Context, statusCode int, err error, internalMsg
 	}
 }
 
-func sanitizeError(err error, fallback string) string {
-	if err == nil {
-		return fallback
-	}
-	if isDevelopmentModeForErrors() {
-		return err.Error()
-	}
-	recordSanitizedError(context.Background(), "unknown", "legacy", "unknown", err, fallback, "")
-	return i18n.T(context.Background(), "errors.generic")
-}
-
-func sanitizeErrorWithDetail(err error, fallback string, detail string) gin.H {
-	if err == nil {
-		return gin.H{"error": fallback}
-	}
-	if isDevelopmentModeForErrors() {
-		return gin.H{"error": fallback, "detail": err.Error()}
-	}
-	recordSanitizedError(context.Background(), "unknown", normalizeErrorLabel(detail), "unknown", err, fallback, "")
-	return gin.H{
-		"error":      i18n.T(context.Background(), "errors.generic"),
-		"error_code": "internal_error",
-		"category":   "server_error",
-	}
-}
-
 func sanitizePlainError(ctx context.Context, statusCode int, err error, internalMsg string) string {
 	if err == nil {
 		return ""

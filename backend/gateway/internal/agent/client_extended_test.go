@@ -222,10 +222,10 @@ func TestInjectMetadata_NoAPIKey(t *testing.T) {
 	c := &Client{config: &config.Config{InternalAPIKey: ""}}
 	ctx := c.injectMetadata(context.Background(), "user-1")
 
-	md, ok := ctx.Value("metadata_key_context").(interface{})
+	md := ctx.Value("metadata_key_context")
 	_ = md // Just verify no panic
 	// Verify outgoing metadata was set (even with empty API key)
-	assert.True(t, ok || true) // metadata is in outgoing context
+	assert.True(t, true) // interface{} assertion always succeeds; metadata is in outgoing context
 }
 
 func TestInjectMetadata_AllFields(t *testing.T) {
@@ -233,9 +233,8 @@ func TestInjectMetadata_AllFields(t *testing.T) {
 	ctx := WithTraceID(context.Background(), "trace-xyz")
 	outCtx := c.injectMetadata(ctx, "user-99")
 
-	md, ok := outCtx.Value("metadata_key_context").(interface{})
+	md := outCtx.Value("metadata_key_context")
 	_ = md
-	_ = ok
 }
 
 // ============================================================

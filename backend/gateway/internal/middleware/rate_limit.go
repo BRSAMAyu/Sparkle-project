@@ -45,14 +45,12 @@ func StopAllRateLimiters() {
 
 // RateLimiter 速率限制器
 type RateLimiter struct {
-	visitors           map[string]*visitor
-	mu                 sync.RWMutex
-	rate               rate.Limit // 每秒允许的请求数
-	burst              int        // 突发请求容量
-	maxVisitors        int
-	cleanupIntervalSec int           // 清理间隔(秒)
-	expirySec          int           // 访客过期时间(秒)
-	stopCh             chan struct{} // 停止信号通道，用于优雅关闭
+	visitors    map[string]*visitor
+	mu          sync.RWMutex
+	rate        rate.Limit // 每秒允许的请求数
+	burst       int        // 突发请求容量
+	maxVisitors int
+	stopCh      chan struct{} // 停止信号通道，用于优雅关闭
 }
 
 // visitor 访问者信息

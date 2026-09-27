@@ -438,10 +438,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				msgMap := make(map[string]interface{})
 				if err := json.Unmarshal(msg, &msgMap); err != nil {
 					zap.L().Warn("Failed to parse message", zap.Error(err))
-					if !writeWSJSONLogged(writer, "invalid legacy JSON error", gin.H{"type": "message_nack", "message_id": generateRequestID(), "error_code": "invalid_json", "error_message": "Invalid JSON format", "permanent": true}) {
-						return true
-					}
-					return false
+					return !writeWSJSONLogged(writer, "invalid legacy JSON error", gin.H{"type": "message_nack", "message_id": generateRequestID(), "error_code": "invalid_json", "error_message": "Invalid JSON format", "permanent": true})
 				}
 
 				msgType, ok := msgMap["type"].(string)
@@ -545,17 +542,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 				if err := json.Unmarshal(msg, input); err != nil {
 					zap.L().Warn("Failed to parse chat message", zap.Error(err))
-					if !writeWSJSONLogged(writer, "invalid chat JSON error", gin.H{"type": "message_nack", "message_id": generateRequestID(), "error_code": "invalid_json", "error_message": "Invalid JSON format", "permanent": true}) {
-						return true
-					}
-					return false
+					return !writeWSJSONLogged(writer, "invalid chat JSON error", gin.H{"type": "message_nack", "message_id": generateRequestID(), "error_code": "invalid_json", "error_message": "Invalid JSON format", "permanent": true})
 				}
 
 				if input.Message == "" {
-					if !writeWSJSONLogged(writer, "empty message error", gin.H{"type": "message_nack", "message_id": input.RequestID, "error_code": "empty_message", "error_message": "Empty message", "permanent": true}) {
-						return true
-					}
-					return false
+					return !writeWSJSONLogged(writer, "empty message error", gin.H{"type": "message_nack", "message_id": input.RequestID, "error_code": "empty_message", "error_message": "Empty message", "permanent": true})
 				}
 				if input.RequestID == "" {
 					input.RequestID = generateRequestID()

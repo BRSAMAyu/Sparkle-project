@@ -64,18 +64,6 @@ func (h *ChatOrchestrator) getConnection(userID string) (*websocket.Conn, bool) 
 	return h.wsRegistry.Get(userID)
 }
 
-func (h *ChatOrchestrator) getConnectionWriter(userID string) (*wsSafeWriter, bool) {
-	if h.wsRegistry == nil {
-		return nil, false
-	}
-	writer, ok := h.wsRegistry.GetWriter(userID)
-	if !ok {
-		return nil, false
-	}
-	wsWriter, ok := writer.(*wsSafeWriter)
-	return wsWriter, ok
-}
-
 // Registry returns the underlying connection registry for shutdown draining.
 func (h *ChatOrchestrator) Registry() *ConnectionRegistry {
 	return h.wsRegistry

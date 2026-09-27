@@ -119,9 +119,6 @@ type AgentHealthChecker struct {
 	circuitState  CircuitState
 	halfOpenCount int
 
-	// Health check client (dedicated connection for health checks)
-	healthClient agentv1.AgentServiceClient
-
 	// Callbacks
 	onStateChange func(old, new CircuitState)
 

@@ -604,6 +604,6 @@ func TestConnectionPoolStats(t *testing.T) {
 	assert.NotNil(t, stat)
 
 	// Verify stats structure
-	assert.GreaterOrEqual(t, int32(stat.TotalConns()), int32(0))
-	assert.GreaterOrEqual(t, int32(stat.IdleConns()), int32(0))
+	assert.GreaterOrEqual(t, stat.TotalConns(), int32(0))
+	assert.GreaterOrEqual(t, stat.IdleConns(), int32(0))
 }

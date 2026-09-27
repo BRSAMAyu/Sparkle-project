@@ -80,8 +80,7 @@ func (h *GroupChatHandler) GetMessages(c *gin.Context) {
 
 		var quotedMessage map[string]interface{}
 		if msg.ReplyID.Valid {
-			var replySender map[string]interface{}
-			replySender = map[string]interface{}{
+			replySender := map[string]interface{}{
 				"username": msg.ReplySenderUsername.String,
 				"nickname": msg.ReplySenderNickname.String,
 			}

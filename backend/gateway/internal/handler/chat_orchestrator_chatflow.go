@@ -559,7 +559,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		cacheSpan.End()
 
 		if err == nil && cachedResp != "" {
-			isCacheHit = true
 			log.Printf("Semantic cache hit for user=%s scope=%s", hashUserIDForLog(userID), cacheScope)
 
 			// Construct cached response

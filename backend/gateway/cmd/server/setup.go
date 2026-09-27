@@ -95,7 +95,6 @@ type handlerBundle struct {
 	wsProxy                 *handler.WebSocketProxy
 	authHandler             *handler.AuthHandler
 	galaxyHandler           *handler.GalaxyHandler
-	proxyRoutesHandler      *handler.ProxyRoutesHandler
 }
 
 type cqrsBundle struct {

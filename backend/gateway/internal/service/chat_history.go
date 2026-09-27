@@ -1184,7 +1184,7 @@ func (s *ChatHistoryService) getRecentSessionsFromDB(ctx context.Context, userID
 		formattedTitle := strings.TrimSpace(title)
 		if formattedTitle == "" {
 			if preview != nil && len(*preview) > 24 {
-				formattedTitle = string((*preview)[:24]) + "..."
+				formattedTitle = (*preview)[:24] + "..."
 			} else if preview != nil && *preview != "" {
 				formattedTitle = *preview
 			} else {

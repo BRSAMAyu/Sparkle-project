@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -184,19 +183,6 @@ func (w *CommunitySyncWorker) handlePostCreated(ctx context.Context, evt cqrsEve
 	)
 
 	return nil
-}
-
-func parseEventTime(value interface{}) (time.Time, error) {
-	switch v := value.(type) {
-	case string:
-		return time.Parse(time.RFC3339Nano, v)
-	case time.Time:
-		return v, nil
-	case float64:
-		return time.Unix(int64(v), 0).UTC(), nil
-	default:
-		return time.Time{}, fmt.Errorf("unsupported time type")
-	}
 }
 
 // incrLikeCount atomically increments/decrements the like_count in the post view JSON using a Lua script.

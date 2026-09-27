@@ -265,7 +265,7 @@ func (s *SlidingWindowRateLimiter) Allow(ctx context.Context, key string) (bool,
 
 	// Returns: [allowed (0/1), remaining]
 	result, err := distributedSlidingWindowScript.Run(ctx, s.rdb, []string{fullKey},
-		now, windowStart, s.limit, int64(s.window.Milliseconds())).Slice()
+		now, windowStart, s.limit, s.window.Milliseconds()).Slice()
 	if err != nil {
 		return false, 0, fmt.Errorf("redis script execution failed: %w", err)
 	}
