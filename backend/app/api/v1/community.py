@@ -591,11 +591,16 @@ async def list_post_comments(
     """Get comments for a post, newest first."""
     # V3-FIX-449（读面对偶）：帖定位与 419 写面/feed 读面同闸——软删帖按不存在
     # 处理（404），评论列表不再读已删行（419 计数污染同族的读半边）。
+    # V3-FIX-465：帖定位补双向拉黑排除——feed 读面隐藏的帖（我拉黑其作者/
+    # 作者拉黑我任一向）经评论线同样按不存在处理（404，与上方软删闸同形），
+    # 堵住按 post_id 探测帖存在性的侧道；同闸同词表（复用
+    # _active_block_exclusion_clause，默认即帖作者列）。
     post = (
         await db.execute(
             select(Post).where(
                 Post.id == post_id,
                 Post.not_deleted_filter(),
+                _active_block_exclusion_clause(current_user),
             )
         )
     ).scalar_one_or_none()

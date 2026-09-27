@@ -916,7 +916,13 @@ class PlanReviewService:
             params = tc.params or {}
 
             # === Check 1: Time vs Difficulty constraints ===
-            daily_hours = params.get("daily_hours")
+            # V3-FIX-497：daily_hours 走 _positive_float 类型收口（对齐 :833
+            # _resolve_daily_capacity_minutes 对同键族的既有先例）——params 值型
+            # 不保证（dict[str, Any]），修前字符串型 "2" 真值过下方 None 守卫后
+            # `str < int` 直接 TypeError 500（"2" * 7 字符串复合同炸）。数值
+            # 字符串转 float 参与既有比较，垃圾值/缺键 → None（与 492 缺参
+            # 守卫语义衔接）。
+            daily_hours = self._positive_float(params.get("daily_hours"))
             total_days = params.get("total_days", params.get("duration_days"))
             difficulty = params.get("difficulty", "").lower()
             params.get("type", "").lower()
