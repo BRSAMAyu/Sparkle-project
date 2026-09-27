@@ -180,6 +180,17 @@ func (w *BaseWorker) Run(ctx context.Context, handler event.Handler) error {
 }
 
 func (w *BaseWorker) processMessages(ctx context.Context, handler event.Handler) error {
+	// V3-FIX-461: 崩溃/优雅关停会把 in-flight 事件留在本 consumer 的 PEL
+	// （XAck/DLQ 均持已取消 ctx 失败），而 `>` 只派发组内从未派发过的消息，
+	// 滞留项在重启后若不回放就永不重投。consumer 名固定（community_worker_1、
+	// galaxy_worker_1），故每轮先以 "0" 起始排空自身 PEL 再转 `>` 读新消息；
+	// 重放条目走同一 processMessage 门（processed_events 幂等键吸收已完成
+	// 处理的重放）。排空优先也保证恢复先于新消费。
+	if w.drainOwnPending(ctx, handler) {
+		w.updateConsumerLag(ctx)
+		return nil
+	}
+
 	// Read messages from stream
 	entries, err := w.redis.XReadGroup(ctx, &redis.XReadGroupArgs{
 		Group:    w.consumerGroup,
@@ -214,13 +225,48 @@ func (w *BaseWorker) processMessages(ctx context.Context, handler event.Handler)
 		}
 	}
 
-	// Update consumer lag metric
+	w.updateConsumerLag(ctx)
+
+	return nil
+}
+
+// drainOwnPending reads and processes this consumer's own PEL entries (start ID
+// "0"), returning true if any were delivered. An empty PEL yields redis.Nil and
+// the caller falls through to the blocking `>` read; any other read error is
+// left to the `>` path's established handling (NOGROUP self-heal, backoff).
+func (w *BaseWorker) drainOwnPending(ctx context.Context, handler event.Handler) bool {
+	entries, err := w.redis.XReadGroup(ctx, &redis.XReadGroupArgs{
+		Group:    w.consumerGroup,
+		Consumer: w.consumerName,
+		Streams:  []string{w.streamKey, "0"},
+		Count:    w.options.BatchSize,
+	}).Result()
+	if err != nil {
+		if !errors.Is(err, redis.Nil) {
+			w.logger.Debug("PEL replay read failed, falling back to new-message read",
+				zap.String("stream", w.streamKey),
+				zap.Error(err),
+			)
+		}
+		return false
+	}
+
+	found := false
+	for _, stream := range entries {
+		for _, msg := range stream.Messages {
+			found = true
+			w.processMessage(ctx, msg, handler)
+		}
+	}
+	return found
+}
+
+// updateConsumerLag refreshes the consumer lag metric (PEL depth).
+func (w *BaseWorker) updateConsumerLag(ctx context.Context) {
 	pending, err := w.redis.XPending(ctx, w.streamKey, w.consumerGroup).Result()
 	if err == nil {
 		w.metrics.SetConsumerLag(w.streamKey, w.consumerGroup, float64(pending.Count))
 	}
-
-	return nil
 }
 
 func (w *BaseWorker) ensureConsumerGroup(ctx context.Context) error {
