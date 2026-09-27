@@ -318,6 +318,27 @@ def _cohort_visible_post_clause(current_user: User):
     )
 
 
+def _active_block_exclusion_clause(current_user: User):
+    """双向拉黑排除谓词：与 feed 读面同一闸，读写共享（V3-FIX-419 写侧对偶）。
+
+    排除与当前用户存在任一向活跃拉黑关系的作者——「我拉黑的」与「拉黑我的」
+    的帖一律按不存在处理；软删行（解除拉黑）不回闸。此前该谓词只在 feed 读面
+    生效，comment/like 写面按 post_id 直写绕过闸门（软删帖可写、计数在已删行
+    自增、拉黑交互仍触发通知推送），现读写共享同一子句。
+    """
+    blocked_uids = (
+        select(UserBlock.blocked_id.label("uid"))
+        .where(UserBlock.blocker_id == current_user.id, UserBlock.not_deleted_filter())
+        .union(
+            select(UserBlock.blocker_id.label("uid")).where(
+                UserBlock.blocked_id == current_user.id, UserBlock.not_deleted_filter()
+            )
+        )
+        .subquery()
+    )
+    return ~Post.user_id.in_(select(blocked_uids.c.uid))
+
+
 # route-tier: authed
 @router.get("/feed", summary="获取社区动态流")
 async def get_feed(
@@ -418,17 +439,9 @@ async def get_feed(
         stmt = stmt.where(_cohort_visible_post_clause(current_user))
 
     # ── block guard: exclude authors with an active block relationship ──
-    blocked_uids = (
-        select(UserBlock.blocked_id.label("uid"))
-        .where(UserBlock.blocker_id == current_user.id, UserBlock.not_deleted_filter())
-        .union(
-            select(UserBlock.blocker_id.label("uid")).where(
-                UserBlock.blocked_id == current_user.id, UserBlock.not_deleted_filter()
-            )
-        )
-        .subquery()
-    )
-    stmt = stmt.where(~Post.user_id.in_(select(blocked_uids.c.uid)))
+    # V3-FIX-419：谓词抽为 _active_block_exclusion_clause，读写面共享同一子句
+    # （语义零变化，写侧对偶见 toggle_like_post / create_post_comment）。
+    stmt = stmt.where(_active_block_exclusion_clause(current_user))
 
     stmt = stmt.order_by(Post.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
@@ -514,6 +527,11 @@ async def toggle_like_post(
                 # V3-FIX-08（防御护栏）：cohort 帖对真实用户按不存在处理（404），
                 # 作者本人不受限；与 feed 读面口径一致。
                 _cohort_visible_post_clause(current_user),
+                # V3-FIX-419（写侧对偶）：软删帖与任一向拉黑作者的帖同按不存在
+                # 处理（404）——与 feed 读面 not_deleted_filter + 双向 block 同闸，
+                # 计数自增与通知推送随闸闭合，不再触达已删行/拉黑对象。
+                Post.not_deleted_filter(),
+                _active_block_exclusion_clause(current_user),
             )
         )
     ).scalar_one_or_none()
@@ -607,6 +625,11 @@ async def create_post_comment(
                 Post.id == post_id,
                 # V3-FIX-08（防御护栏）：cohort 帖对真实用户按不存在处理（404）。
                 _cohort_visible_post_clause(current_user),
+                # V3-FIX-419（写侧对偶）：软删帖与任一向拉黑作者的帖同按不存在
+                # 处理（404）——与 feed 读面 not_deleted_filter + 双向 block 同闸，
+                # 计数自增与通知推送随闸闭合，不再触达已删行/拉黑对象。
+                Post.not_deleted_filter(),
+                _active_block_exclusion_clause(current_user),
             )
         )
     ).scalar_one_or_none()
