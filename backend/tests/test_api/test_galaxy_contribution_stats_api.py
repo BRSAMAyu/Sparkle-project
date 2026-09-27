@@ -27,7 +27,8 @@ async def _ensure_mastery_audit_log(db_session) -> None:
                 reason TEXT,
                 request_id TEXT,
                 revision INTEGER DEFAULT 1,
-                created_at DATETIME NOT NULL
+                created_at DATETIME NOT NULL,
+                effect_kind TEXT
             )
         """)
     )

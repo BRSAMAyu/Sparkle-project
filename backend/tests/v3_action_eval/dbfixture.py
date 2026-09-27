@@ -152,7 +152,8 @@ _OUTBOX_DDL = (
         reason VARCHAR(255),
         request_id VARCHAR(64),
         revision INTEGER,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        effect_kind VARCHAR(20)
     )
     """,
 )

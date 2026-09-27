@@ -1548,6 +1548,8 @@ class ExamSprintDiagnosticService:
         return node_id
 
     async def _write_mastery_value(self, *, user_id: UUID, node_id: UUID, mastery: float) -> None:
+        from app.services.galaxy.mastery_evidence import MasteryEffectKind
+
         bind = self.db.get_bind()
         dialect = getattr(getattr(bind, "dialect", None), "name", "")
         if dialect and dialect != "sqlite":
@@ -1557,6 +1559,10 @@ class ExamSprintDiagnosticService:
                     node_id=node_id,
                     new_mastery=int(round(mastery)),
                     reason="exam_sprint_diagnostic",
+                    # V3-FIX-299: 诊断分是绝对 set-point——服务端调用点显式
+                    # 定性，重放器按 kind 重新套用记录数值（写侧收口，不依赖
+                    # 客户端可控的 reason 词表）。
+                    effect_kind=MasteryEffectKind.SET_POINT.value,
                 )
                 return
             except Exception as exc:

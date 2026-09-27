@@ -50,6 +50,28 @@ class MasteryEvidenceType(StrEnum):
     TIME_ON_TASK = "time_on_task"  # 纯学习时长（0 掌握权重，仅活动痕迹）
 
 
+class MasteryEffectKind(StrEnum):
+    """Effect kind of a mastery_audit_log row (V3-FIX-299, adjudication A+C).
+
+    Server-side classification written at the INSERT points; the replay
+    branches on this column instead of guessing from the (client-controllable)
+    ``reason`` string:
+
+    - ``evidence``: payload observation → replay fuses it (Kalman);
+    - ``set_point``: absolute assign (exam-sprint scores/penalties) → replay
+      re-applies the recorded value;
+    - ``projection``: shadow/trace rows (spark time path, sprint task
+      completions, client self-report syncs...) → replay skips them.
+
+    Unknown/NULL values fail closed to ``projection`` on the read side
+    (宁丢效果不注入数值).
+    """
+
+    EVIDENCE = "evidence"
+    SET_POINT = "set_point"
+    PROJECTION = "projection"
+
+
 #: Confidence scaling per evidence type. 0 means "does not move the posterior".
 EVIDENCE_WEIGHTS: dict[MasteryEvidenceType, float] = {
     MasteryEvidenceType.QUIZ: 1.0,
@@ -162,12 +184,23 @@ class MasteryBelief:
 
 @dataclass(frozen=True)
 class EvidenceHistoryEntry:
-    """One persisted evidence row (from mastery_audit_log), ready to replay."""
+    """One persisted evidence row (from mastery_audit_log), ready to replay.
+
+    ``effect_kind`` (V3-FIX-299) selects the replay semantics of the row:
+    ``evidence`` (default, payload observation → Kalman fusion) or
+    ``set_point`` (absolute assign → replay re-applies the recorded value).
+    ``projection`` rows never reach the replay core (the loader skips them).
+    """
 
     evidence_type: MasteryEvidenceType
     value: float
     confidence: float
     observed_at: datetime | None = None
+    effect_kind: str | None = None
+
+    @property
+    def is_set_point(self) -> bool:
+        return self.effect_kind == MasteryEffectKind.SET_POINT.value
 
 
 # ---------------------------------------------------------------------------
@@ -301,11 +334,23 @@ def recompute_evidence_state(
     Terminal decay (last event -> now) is intentionally NOT applied here: the
     stored mastery_score is maintained by DecayService (daily Ebbinghaus job),
     and replay must not double-count that time dimension.
+
+    V3-FIX-299: entries carrying ``effect_kind="set_point"`` are absolute
+    assignments (exam-sprint scores / penalties) — the replay re-applies the
+    recorded value (mean := value, variance unchanged, gain-1.0 trace step)
+    instead of fusing, and participates in the inter-event decay timeline like
+    any other effect row. Entries marked ``projection`` are skipped entirely.
+    The function stays a pure function of the ledger, so replay remains
+    idempotent for set-point ledgers too.
     """
     belief = fuse_mastery(legacy_mastery, LEGACY_PRIOR_VARIANCE, [])  # empty prior belief
 
     real = sorted(
-        (e for e in history if e.evidence_type in REAL_EVIDENCE_TYPES),
+        (
+            e
+            for e in history
+            if e.evidence_type in REAL_EVIDENCE_TYPES and e.effect_kind != MasteryEffectKind.PROJECTION.value
+        ),
         key=lambda e: e.observed_at or datetime.min,
     )
     previous_at: datetime | None = None
@@ -315,6 +360,32 @@ def recompute_evidence_state(
             if gap_days > 0:
                 mean, variance = apply_evidence_decay(belief.mean, belief.variance, gap_days)
                 belief.mean, belief.variance = mean, variance
+        if entry.is_set_point:
+            # V3-FIX-299: absolute set-point (exam-sprint score/penalty) —
+            # re-apply the recorded value. The recorded number is an external
+            # fact, not an uncertain observation: assign the mean, keep the
+            # variance, and leave a gain-1.0 trace step for explainability.
+            prior_mean = belief.mean
+            belief.mean = _clamp100(entry.value)
+            belief.evidence_count += 1
+            belief.breakdown[entry.evidence_type.value] = (
+                belief.breakdown.get(entry.evidence_type.value, 0) + 1
+            )
+            belief.trace.append(
+                FusionStep(
+                    evidence_type=entry.evidence_type.value,
+                    prior_mean=round(prior_mean, 4),
+                    prior_variance=round(belief.variance, 6),
+                    observed_value=_clamp100(entry.value),
+                    observation_variance=0.0,
+                    kalman_gain=1.0,
+                    posterior_mean=round(belief.mean, 4),
+                    posterior_variance=round(belief.variance, 6),
+                )
+            )
+            if entry.observed_at is not None:
+                previous_at = entry.observed_at
+            continue
         step_belief = fuse_mastery(belief.mean, belief.variance, [entry])
         belief.mean = step_belief.mean
         belief.variance = step_belief.variance
@@ -430,6 +501,12 @@ def classify_audit_reason(reason: str | None) -> MasteryEvidenceType | None:
     self-report sync, focus minutes, manual nudges...). Those never clear the
     legacy flag. ``NON_EVIDENCE_REASONS``（客户端绝对值路径）显式判 None
     （G-01 R-1 收口），其余未知字符串走同一 fall-through，方向一致。
+
+    V3-FIX-299 起本函数只服务两个面：迁移前 4 元组形状账本的 legacy 读回退
+    （重放恒等），以及从 reason 反推 evidence type 的展示/回填辅助。重放
+    效果定性已由服务端写入的 ``effect_kind`` 列接管（见 classify_effect_kind
+    与 galaxy.update_node_mastery 的 effect_kind 参数——``reason`` 三条入口
+    客户端可控，不再作为效果定性依据）。
     """
     reason = (reason or "").strip()
     if reason in NON_EVIDENCE_REASONS:
@@ -445,6 +522,52 @@ def classify_audit_reason(reason: str | None) -> MasteryEvidenceType | None:
     return None
 
 
+#: 服务端写入、按写入语义定性的 set-point reason 集（V3-FIX-299 普查口径：
+#: exam_sprint 诊断分/弱点惩罚是绝对 set-point）。仅作为
+#: ``classify_effect_kind`` 的单点映射与迁移回填口径；客户端入口经咽喉
+#: 默认 projection，伪造这些词拿不到任何效果。
+SET_POINT_EFFECT_REASONS: frozenset[str] = frozenset(
+    {
+        "exam_sprint_diagnostic",
+        "post_exam_review_weak_node",
+    }
+)
+
+
+def classify_effect_kind(reason: str | None) -> MasteryEffectKind:
+    """Single-point server-side reason→kind mapping (V3-FIX-299).
+
+    定性以写点语义为准：``evidence:*`` 载荷行=evidence、exam-sprint
+    set-point 词=set_point、其余（时长/影子行/客户端自由串）一律 projection。
+    迁移回填 SQL 与本映射同口径（回填一致性由
+    ``test_wt598_effect_kind_backfill_parity_sqlite`` 钉住）。
+
+    信任边界：该映射**不**用于从客户端可控的 reason 推断效果——咽喉
+    ``update_node_mastery`` 以显式 ``effect_kind`` 参数定性，客户端入口
+    默认 projection；本函数服务写点映射定义、回填口径与测试。
+    """
+    normalized = (reason or "").strip()
+    if normalized.startswith(EVIDENCE_REASON_PREFIX):
+        return MasteryEffectKind.EVIDENCE
+    if normalized in SET_POINT_EFFECT_REASONS:
+        return MasteryEffectKind.SET_POINT
+    return MasteryEffectKind.PROJECTION
+
+
+def parse_effect_kind(raw: str | None) -> MasteryEffectKind:
+    """Read-side kind resolution: NULL/unknown fail closed to PROJECTION.
+
+    迁移回填后账本不应再有 NULL；防御面是未来忘写列的裸 INSERT——按
+    projection 跳过（宁丢效果不注入数值），绝不按 reason 词表复活。
+    """
+    if raw:
+        try:
+            return MasteryEffectKind(raw)
+        except ValueError:
+            pass
+    return MasteryEffectKind.PROJECTION
+
+
 def decay_days_between(last_event: datetime, now: datetime) -> float:
     """Day gap used by replay decay; clamped at >= 0."""
     return max(0.0, (now - last_event).total_seconds() / 86400.0)
@@ -458,19 +581,23 @@ __all__ = [
     "LEGACY_PRIOR_VARIANCE",
     "LEGACY_TIME_MASTERY_CAP",
     "MasteryBelief",
+    "MasteryEffectKind",
     "MasteryEvidenceType",
     "EvidenceHistoryEntry",
     "EvidenceObservation",
     "FusionStep",
     "NON_EVIDENCE_REASONS",
     "REAL_EVIDENCE_TYPES",
+    "SET_POINT_EFFECT_REASONS",
     "apply_evidence_decay",
     "capped_legacy_mastery",
     "classify_audit_reason",
+    "classify_effect_kind",
     "encode_evidence_reason",
     "encode_observation_payload",
     "fuse_mastery",
     "legacy_time_delta",
+    "parse_effect_kind",
     "parse_observation_payload",
     "recompute_evidence_state",
 ]

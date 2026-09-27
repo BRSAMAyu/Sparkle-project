@@ -69,6 +69,7 @@ from app.services.galaxy.graph_evolution_service import GraphEvolutionService
 from app.services.galaxy.mastery_evidence import (
     EVIDENCE_REASON_PREFIX,
     EvidenceObservation,
+    MasteryEffectKind,
     MasteryEvidenceType,
     fuse_mastery,
 )
@@ -231,8 +232,8 @@ class GalaxyOutcomeAbsorber:
             from sqlalchemy import text as sa_text
 
             stmt = sa_text(
-                "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision, created_at) "
-                "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision, :created_at)"
+                "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision, created_at, effect_kind) "
+                "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision, :created_at, :effect_kind)"
             ).bindparams(
                 bindparam("node_id", type_=GUID),
                 bindparam("user_id", type_=GUID),
@@ -253,6 +254,8 @@ class GalaxyOutcomeAbsorber:
                     ),
                     "revision": getattr(status, "revision", 0),
                     "created_at": _utcnow(),
+                    # V3-FIX-299: 载荷观测行——服务端定性，重放按 kind 融合。
+                    "effect_kind": MasteryEffectKind.EVIDENCE.value,
                 },
             )
         except Exception as exc:  # noqa: BLE001 — audit 失败不阻断吸收（与 spark_node 同款降级）

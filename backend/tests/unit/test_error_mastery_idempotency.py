@@ -62,7 +62,8 @@ CREATE TABLE mastery_audit_log (
     reason VARCHAR(100) NOT NULL,
     request_id VARCHAR(100),
     revision INTEGER DEFAULT 1,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    effect_kind VARCHAR(20)
 )
 """
 

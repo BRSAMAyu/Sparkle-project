@@ -38,6 +38,7 @@ from app.schemas.exam_sprint import (
 )
 from app.schemas.notification import NotificationCreate
 from app.services.achievement_engine import AchievementEngine, AchievementEvent
+from app.services.galaxy.mastery_evidence import MasteryEffectKind
 from app.services.galaxy_service import GalaxyService
 from app.services.north_star_metrics_service import NorthStarMetricsService
 from app.services.notification_service import NotificationService
@@ -1598,6 +1599,10 @@ class ExamSprintReviewService:
                     node_id=node.id,
                     new_mastery=new_mastery,
                     reason="post_exam_review_weak_node",
+                    # V3-FIX-299: 弱点惩罚是绝对 set-point——服务端调用点
+                    # 显式定性，重放器按 kind 重新套用记录数值（写侧收口，
+                    # 不依赖客户端可控的 reason 词表）。
+                    effect_kind=MasteryEffectKind.SET_POINT.value,
                 )
             except Exception as exc:
                 logger.warning(

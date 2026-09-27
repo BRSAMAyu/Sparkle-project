@@ -70,7 +70,8 @@ _MASTERY_AUDIT_DDL = """
         reason TEXT,
         request_id TEXT,
         revision INTEGER DEFAULT 1,
-        created_at DATETIME NOT NULL
+        created_at DATETIME NOT NULL,
+        effect_kind TEXT
     )
 """
 

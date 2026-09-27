@@ -22,12 +22,14 @@ from app.services.galaxy.mastery_evidence import (
     EvidenceHistoryEntry,
     EvidenceObservation,
     MasteryBelief,
+    MasteryEffectKind,
     MasteryEvidenceType,
     capped_legacy_mastery,
     classify_audit_reason,
     encode_evidence_reason,
     encode_observation_payload,
     fuse_mastery,
+    parse_effect_kind,
     parse_observation_payload,
     recompute_evidence_state,
 )
@@ -189,8 +191,8 @@ class GalaxyStatsService:
             from sqlalchemy import text as sa_text
             await self.db.execute(
                 sa_text(
-                    "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision) "
-                    "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision)"
+                    "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision, effect_kind) "
+                    "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision, :effect_kind)"
                 ),
                 {
                     "node_id": node_id,
@@ -200,6 +202,8 @@ class GalaxyStatsService:
                     "reason": "task_complete",
                     "request_id": str(task_id) if task_id else None,
                     "revision": getattr(status, "revision", 0),
+                    # V3-FIX-299: 时长影子行——只留痕，重放跳过。
+                    "effect_kind": MasteryEffectKind.PROJECTION.value,
                 },
             )
             # G-01: outcome evidence gets its own audit row so the evidence
@@ -210,8 +214,8 @@ class GalaxyStatsService:
             if outcome is not None:
                 await self.db.execute(
                     sa_text(
-                        "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision) "
-                        "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision)"
+                        "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision, effect_kind) "
+                        "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision, :effect_kind)"
                     ),
                     {
                         "node_id": node_id,
@@ -221,6 +225,8 @@ class GalaxyStatsService:
                         "reason": encode_evidence_reason(outcome.evidence_type),
                         "request_id": encode_observation_payload(outcome.value, outcome.confidence),
                         "revision": getattr(status, "revision", 0),
+                        # V3-FIX-299: 载荷观测行——重放按 kind 融合。
+                        "effect_kind": MasteryEffectKind.EVIDENCE.value,
                     },
                 )
             await self.db.commit()
@@ -560,6 +566,17 @@ class GalaxyStatsService:
         never reach). The anchor is read from the append-only ledger itself,
         so recompute is a pure function of the ledger: replaying at any time
         from any stored value yields the identical belief (idempotent).
+
+        V3-FIX-299（裁决 A+C）: replay branches on the server-written
+        ``effect_kind`` column instead of guessing from the client-controllable
+        ``reason`` string — ``evidence`` rows fuse their payload observation,
+        ``set_point`` rows re-apply the recorded absolute value, and
+        ``projection`` rows (spark shadow rows, time path, client self-report
+        syncs, forged free-strings) are skipped. NULL/unknown kinds fail closed
+        to projection（宁丢效果不注入数值）. The anchor generalizes to the
+        first *evidence-effect* row (observation or set_point); pre-migration
+        row shapes (no effect_kind column) keep the FIX-292 heuristic
+        bit-for-bit.
         """
         from sqlalchemy import bindparam
         from sqlalchemy import text as sa_text
@@ -573,7 +590,7 @@ class GalaxyStatsService:
             # to the legacy-prior fallback silently.
             stmt = (
                 sa_text(
-                    "SELECT reason, request_id, created_at, old_mastery FROM mastery_audit_log "
+                    "SELECT reason, request_id, created_at, old_mastery, new_mastery, effect_kind FROM mastery_audit_log "
                     "WHERE user_id = :user_id AND node_id = :node_id ORDER BY created_at ASC"
                 )
                 .bindparams(
@@ -596,29 +613,85 @@ class GalaxyStatsService:
         history: list[EvidenceHistoryEntry] = []
         presence_only: list[MasteryEvidenceType] = []
         frozen_anchor: float | None = None
-        for reason, request_id, created_at, old_mastery in rows:
-            evidence_type = classify_audit_reason(reason)
-            if evidence_type is None:
+        for row in rows:
+            reason, request_id, created_at, old_mastery = row[0], row[1], row[2], row[3]
+            new_mastery = row[4] if len(row) > 4 else None
+            effect_kind = row[5] if len(row) > 5 else None
+            if len(row) < 6:
+                # Pre-V3-FIX-299 row shape (source DB without the effect_kind
+                # column — old fixtures/pre-migration reads): legacy classify
+                # heuristic, bit-identical to the V3-FIX-292 replay.
+                evidence_type = classify_audit_reason(reason)
+                if evidence_type is None:
+                    continue
+                parsed = parse_observation_payload(request_id)
+                if parsed is None:
+                    # Quiz-grade rows from other flows (error book / exam sprint)
+                    # carry no observation payload; they count as evidence
+                    # presence (they clear the legacy flag) but are not re-fused.
+                    # Rows preceding the first payload row are baked into the
+                    # frozen anchor below; later ones stay presence-only exactly
+                    # as before this fix.
+                    presence_only.append(evidence_type)
+                    continue
+                if frozen_anchor is None:
+                    # V3-FIX-292: freeze the pre-evidence legacy baseline from the
+                    # ledger itself. The first payload row's old_mastery is the
+                    # stored value before any evidence fusion touched this node
+                    # (the baseline corruption only ever appears from the second
+                    # event on), and the log is append-only, so the anchor is
+                    # stable across recomputes.
+                    frozen_anchor = None if old_mastery is None else float(old_mastery)
+                value, confidence = parsed
+                history.append(
+                    EvidenceHistoryEntry(
+                        evidence_type=evidence_type,
+                        value=float(value),
+                        confidence=float(confidence),
+                        observed_at=_as_naive_datetime(created_at),
+                    )
+                )
                 continue
+            # Post-migration shape: branch on the server-written effect_kind.
+            kind = parse_effect_kind(effect_kind)
+            if kind is MasteryEffectKind.PROJECTION:
+                # Shadow/trace rows (spark time path, sprint completions,
+                # client self-report syncs, forged reason free-strings):
+                # presence without effect — never re-fused, never re-applied.
+                continue
+            if kind is MasteryEffectKind.SET_POINT:
+                if new_mastery is None:
+                    # Malformed row (set-point without a recorded value):
+                    # fail closed — skip rather than guess.
+                    continue
+                if frozen_anchor is None:
+                    # V3-FIX-299 anchor generalization: the first evidence
+                    # *effect* row (observation or set_point) freezes the
+                    # pre-effect legacy baseline.
+                    frozen_anchor = None if old_mastery is None else float(old_mastery)
+                evidence_type = classify_audit_reason(reason) or MasteryEvidenceType.QUIZ
+                history.append(
+                    EvidenceHistoryEntry(
+                        evidence_type=evidence_type,
+                        value=float(new_mastery),
+                        confidence=1.0,
+                        observed_at=_as_naive_datetime(created_at),
+                        effect_kind=MasteryEffectKind.SET_POINT.value,
+                    )
+                )
+                continue
+            # MasteryEffectKind.EVIDENCE: payload observation → fusion.
             parsed = parse_observation_payload(request_id)
             if parsed is None:
-                # Quiz-grade rows from other flows (error book / exam sprint)
-                # carry no observation payload; they count as evidence
-                # presence (they clear the legacy flag) but are not re-fused.
-                # Rows preceding the first payload row are baked into the
-                # frozen anchor below; later ones stay presence-only exactly
-                # as before this fix.
-                presence_only.append(evidence_type)
+                # Evidence-kind row with an unreadable payload: keep the
+                # presence semantics (clears the legacy flag) without
+                # inventing a value.
+                presence_only.append(classify_audit_reason(reason) or MasteryEvidenceType.TASK_OUTCOME)
                 continue
             if frozen_anchor is None:
-                # V3-FIX-292: freeze the pre-evidence legacy baseline from the
-                # ledger itself. The first payload row's old_mastery is the
-                # stored value before any evidence fusion touched this node
-                # (the baseline corruption only ever appears from the second
-                # event on), and the log is append-only, so the anchor is
-                # stable across recomputes.
                 frozen_anchor = None if old_mastery is None else float(old_mastery)
             value, confidence = parsed
+            evidence_type = classify_audit_reason(reason) or MasteryEvidenceType.TASK_OUTCOME
             history.append(
                 EvidenceHistoryEntry(
                     evidence_type=evidence_type,
@@ -629,7 +702,7 @@ class GalaxyStatsService:
             )
         if not history and not presence_only:
             return MasteryBelief(mean=current_mastery)
-        # Anchor fallback (no payload row / anchor column unreadable) keeps the
+        # Anchor fallback (no effect row / anchor column unreadable) keeps the
         # stored value, i.e. the pre-fix behavior for those shapes only.
         anchor = frozen_anchor if frozen_anchor is not None else current_mastery
         belief = recompute_evidence_state(anchor, history)

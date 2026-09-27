@@ -57,7 +57,7 @@ from app.schemas.galaxy import (
 )
 from app.services.embedding_service import embedding_service, stamp_embedding_version
 from app.services.expansion_service import ExpansionService, validate_knowledge_node_name
-from app.services.galaxy.mastery_evidence import EvidenceObservation
+from app.services.galaxy.mastery_evidence import EvidenceObservation, MasteryEffectKind
 from app.services.galaxy.ontology_generator import (
     OntologyExtractionResult,
     OntologyGenerator,
@@ -3177,9 +3177,21 @@ class GalaxyService:
         request_id: str | None = None,
         revision: int | None = None,
         merge_higher: bool = False,
+        effect_kind: str | None = None,
     ):
         """
         Update node mastery with Outbox pattern and atomic revision checking to prevent race conditions.
+
+        Race condition fix (C1): Uses atomic UPDATE with WHERE revision = expected_revision
+        and RETURNING clause to detect conflicts in a single database operation.
+
+        V3-FIX-299（信任边界）: ``effect_kind`` 由**服务端调用点**显式定性审计行
+        的重放效果（``evidence`` / ``set_point`` / ``projection``，见
+        ``mastery_evidence.MasteryEffectKind``）。默认与客户端入口（/sync/mastery、
+        /nodes/{id}/mastery、gRPC UpdateNodeMastery——``reason`` 三条客户端可控
+        入口）一致为 ``projection``：伪造 reason 词表拿不到任何重放效果；只有
+        服务端流程（exam-sprint 诊断/惩罚 set-point）显式传 ``set_point``。
+        非法取值 fail-closed 归 ``projection``。
 
         Race condition fix (C1): Uses atomic UPDATE with WHERE revision = expected_revision
         and RETURNING clause to detect conflicts in a single database operation.
@@ -3511,6 +3523,22 @@ class GalaxyService:
 
             # B. Audit Log
             if await self._table_exists("mastery_audit_log"):
+                # V3-FIX-299 效果定性（信任边界收口）：kind 只认服务端调用点
+                # 显式传入的 effect_kind；客户端可控的 reason 不参与定性——
+                # 非法/缺省一律 projection（宁丢效果不注入数值）。
+                try:
+                    resolved_effect_kind = (
+                        MasteryEffectKind(effect_kind).value
+                        if effect_kind
+                        else MasteryEffectKind.PROJECTION.value
+                    )
+                except ValueError:
+                    logger.warning(
+                        "GalaxyService: unknown effect_kind {!r} for node {}, failing closed to projection",
+                        effect_kind,
+                        node_id,
+                    )
+                    resolved_effect_kind = MasteryEffectKind.PROJECTION.value
                 # ERR-IDEM-CONCUR：error-book 幂等键（edi:/erv: 命名空间，见
                 # ErrorBookMasterySyncService）以审计行为天然去重账本，其
                 # 唯一部分索引（uq_mastery_audit_log_idem_key）仲裁读侧门的
@@ -3525,8 +3553,8 @@ class GalaxyService:
                 # asyncpg 原生绑 UUID，aiosqlite 绑 str。
                 audit_query = text(
                     """
-                    INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision)
-                    VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision)
+                    INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision, effect_kind)
+                    VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision, :effect_kind)
                     ON CONFLICT DO NOTHING
                     RETURNING id
                     """
@@ -3546,6 +3574,7 @@ class GalaxyService:
                         "reason": reason,
                         "request_id": request_id,
                         "revision": new_revision,
+                        "effect_kind": resolved_effect_kind,
                     },
                 )
                 if (

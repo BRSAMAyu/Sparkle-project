@@ -52,6 +52,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def _ensure_mastery_audit_log(db_session) -> None:
+    # schema 与生产迁移同步（V3-FIX-299：effect_kind 服务端效果定性列）
     await db_session.execute(text("""
             CREATE TABLE IF NOT EXISTS mastery_audit_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,7 +63,8 @@ async def _ensure_mastery_audit_log(db_session) -> None:
                 reason TEXT,
                 request_id TEXT,
                 revision INTEGER DEFAULT 1,
-                created_at DATETIME NOT NULL
+                created_at DATETIME NOT NULL,
+                effect_kind TEXT
             )
         """))
     await db_session.commit()
