@@ -4626,7 +4626,7 @@
       "resource_class": "MEDIUM",
       "reviewers_required": 2,
       "gate": "V3-6",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
