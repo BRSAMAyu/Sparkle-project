@@ -82,6 +82,46 @@ class _AuroraCalibrationStripState
           return const SizedBox.shrink();
         }
 
+        // V3-FIX-384（V3-FIX-374 同款「禁动效不装壳」）：校准条展开/收起
+        // 面的 AnimatedSize 在 reduceMotion（U-02 低刺激档 / OS 减动效）下
+        // 原收 Duration.zero——零时长下控制器在自身 render object 的
+        // performLayout 期间同步 notifyListeners 并 markNeedsLayout(self)，
+        // 触发框架断言 "RenderAnimatedSize was mutated in its own
+        // performLayout"（机制同 chat_bubble / SparkleExitTransition，
+        // 宿主 dashboard_screen.dart 低层渲染面）。零时长 AnimatedSize 与
+        // 直接挂载 child 语义等价，故禁动效时不装动画外壳；standard 档
+        // 动画外壳不变。
+        final calibrationBody = _expanded
+            ? Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: Column(
+                  children: [
+                    for (var index = 0;
+                        index < surface.items.length;
+                        index++) ...[
+                      _CalibrationCardTile(
+                        card: surface.items[index],
+                        isBusy: _pendingResponses
+                            .containsKey(surface.items[index].id),
+                        pendingResponse:
+                            _pendingResponses[surface.items[index].id],
+                        onRespond: _respondToCard,
+                      ),
+                      if (index != surface.items.length - 1)
+                        const SizedBox(height: DS.spacing12),
+                    ],
+                  ],
+                ),
+              )
+            : const SizedBox.shrink();
+        final expandableSection = context.reduceMotion
+            ? calibrationBody
+            : AnimatedSize(
+                duration: DS.motionDuration(SparkleMotionToken.standard),
+                curve: DS.motionCurve(SparkleMotionToken.standard),
+                child: calibrationBody,
+              );
+
         return ContentConstraint(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -175,36 +215,7 @@ class _AuroraCalibrationStripState
                       ],
                     ),
                   ),
-                  AnimatedSize(
-                    duration: DS.motionDuration(
-                      SparkleMotionToken.standard,
-                      reduceMotion: context.reduceMotion,
-                    ),
-                    curve: DS.motionCurve(SparkleMotionToken.standard),
-                    child: _expanded
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 14),
-                            child: Column(
-                              children: [
-                                for (var index = 0;
-                                    index < surface.items.length;
-                                    index++) ...[
-                                  _CalibrationCardTile(
-                                    card: surface.items[index],
-                                    isBusy: _pendingResponses
-                                        .containsKey(surface.items[index].id),
-                                    pendingResponse: _pendingResponses[
-                                        surface.items[index].id],
-                                    onRespond: _respondToCard,
-                                  ),
-                                  if (index != surface.items.length - 1)
-                                    const SizedBox(height: DS.spacing12),
-                                ],
-                              ],
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
+                  expandableSection,
                 ],
               ),
             ),
