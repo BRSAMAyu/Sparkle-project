@@ -286,7 +286,7 @@ jobs:
 
       - name: Generate Python Proto Code
         run: |
-          sudo chown -R "$(id -u):$(id -g)" backend/app/gen
+          sudo mkdir -p backend/app/gen && sudo chown -R "$(id -u):$(id -g)" backend/app/gen
           pip install grpcio-tools
           PYTHON_BIN=python3 bash scripts/generate_python_protos.sh
 
@@ -371,7 +371,7 @@ jobs:
       # gitignored 生成物 backend/app/gen 先行再生（与分片内同形制）。
       - name: Generate Python Proto Code
         run: |
-          sudo chown -R "$(id -u):$(id -g)" backend/app/gen
+          sudo mkdir -p backend/app/gen && sudo chown -R "$(id -u):$(id -g)" backend/app/gen
           pip install grpcio-tools
           PYTHON_BIN=python3 bash scripts/generate_python_protos.sh
 
@@ -441,7 +441,7 @@ jobs:
 
       - name: Generate Python Proto Code
         run: |
-          sudo chown -R "$(id -u):$(id -g)" backend/app/gen
+          sudo mkdir -p backend/app/gen && sudo chown -R "$(id -u):$(id -g)" backend/app/gen
           pip install grpcio-tools
           PYTHON_BIN=python3 bash scripts/generate_python_protos.sh
 
