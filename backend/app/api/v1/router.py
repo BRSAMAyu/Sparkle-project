@@ -44,8 +44,6 @@ from app.api.v1 import (
     counterfactual,
     dashboard,
     data_export,
-    # graph_monitor,
-    # graphrag_trace,
     decay_timemachine,
     devices,
     dlq_admin,
@@ -64,8 +62,6 @@ from app.api.v1 import (
     galaxy,
     goal_intent,
     goals,
-    graph_monitor,
-    graphrag_trace,
     growth,
     health_production,
     ingestion,
@@ -129,7 +125,6 @@ from app.api.v1 import (
     visual_elements,  # Visual Element System
     vocabulary,
 )
-from app.config import settings
 from app.config.release_flags import release_flags_response, require_release_flag
 
 api_router = APIRouter()
@@ -314,9 +309,14 @@ api_router.include_router(
 api_router.include_router(devices.router, tags=["devices"])
 # WebSocket monitoring endpoints
 api_router.include_router(monitoring.router, prefix="/ws", tags=["WebSocket Monitoring"])
-if settings.ENABLE_GRAPHRAG_MONITOR_API:
-    api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
-    api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
+# V3-FIX-341（wt646 裁决=撤面）：原此处以 ENABLE_GRAPHRAG_MONITOR_API 门注册
+# graph_monitor(/monitor/graph) 与 graphrag_trace(/graphrag)——假开关：旗默认
+# False，且网关 proxy_routes.go 无 /monitor、/graphrag 代理组，翻旗客户端仍
+# 404；消费面（mobile GraphRAGVisualizer）从未被喂数，GraphRAG fastpath 自身
+# 亦默认关（ENABLE_GRAPHRAG_FASTPATH=False）。两 router 模块已删；trace 落存
+# 侧（graphrag_trace_store.cache_trace）保留（graph_rag.py 活调用，旗语义收敛
+# 为"是否缓存 trace"）。若 GraphRAG 可视化成为产品诉求：网关补代理组 + router
+# 重建 + mobile 喂数三件齐上，勿单翻旗。
 api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])
 api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 # Calendar Events

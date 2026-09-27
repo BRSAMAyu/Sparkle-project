@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -93,22 +93,7 @@ async def cache_trace(trace: RetrievalTrace, user_id: str | None) -> None:
         )
 
 
-async def get_trace(trace_id: str) -> dict[str, Any] | None:
-    if not cache_service.redis:
-        return None
-    raw = await cache_service.redis.get(_trace_key(trace_id))
-    if not raw:
-        return None
-    try:
-        return cast("dict[str, Any] | None", (json.loads(raw)))
-    except json.JSONDecodeError:
-        return None
-
-
-async def get_latest_trace(user_id: str) -> dict[str, Any] | None:
-    if not cache_service.redis:
-        return None
-    trace_id = await cache_service.redis.get(_latest_key(user_id))
-    if not trace_id:
-        return None
-    return await get_trace(trace_id)
+# V3-FIX-341（wt646 撤面）：get_trace / get_latest_trace 读侧 API 曾只被
+# 已删除的 graphrag_trace router 消费，随撤面删除；cache_trace 写侧保留
+# （graph_rag.py 活调用，ENABLE_GRAPHRAG_MONITOR_API 语义收敛为
+# "是否把 retrieval trace 缓存进 Redis"）。重建读侧时从 git 历史取回。

@@ -171,8 +171,10 @@ def collect_engine_routes() -> tuple[dict[tuple[str, str], str], list[str]]:
             )
 
     # api/v1/router.py — module composition + its own @api_router routes.
+    # V3-FIX-341（wt646 撤面）：原 graph_monitor/graphrag_trace 的
+    # settings 门控豁免随两模块删除而移除——撤面后不存在需要豁免的
+    # 条件挂载模块；若未来重建，须与网关代理组同卡落地，不得再要豁免。
     router_py = APP_DIR / "api" / "v1" / "router.py"
-    graphrag_on = _settings_default("ENABLE_GRAPHRAG_MONITOR_API")
     _, _, includes, unresolved = _module_routes(router_py)
     problems.extend(unresolved)
     mod_prefixes: dict[str, set[str]] = {}
@@ -180,8 +182,6 @@ def collect_engine_routes() -> tuple[dict[tuple[str, str], str], list[str]]:
         if not target or "." not in target:
             continue
         mod = target.split(".")[0]
-        if not graphrag_on and mod in ("graph_monitor", "graphrag_trace"):
-            continue  # mounted only under settings-gated include (default off)
         mod_prefixes.setdefault(mod, set()).add(prefix)
     mount(router_py, "/api/v1", var_filter="api_router")
     for mod, prefixes in sorted(mod_prefixes.items()):

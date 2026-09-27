@@ -2,6 +2,10 @@
 增强的知识服务 - 支持双写和 GraphRAG
 
 在原有 KnowledgeService 基础上增加图数据库支持
+
+V3-FIX-341（wt646）注：唯一生产消费者 graph_monitor router 已随假开关撤面
+删除；本服务暂以测试为唯一调用方保留（AGE 双写/探针基础设施资产）。
+后续卡须二选一：给它接真实消费面，或整体退役。勿再新增无消费面的调用方。
 """
 
 from __future__ import annotations

@@ -5,9 +5,11 @@ GraphRAG 监控探针测试（wt308）
 get_graph_statistics / get_detailed_statistics 曾在 GraphKnowledgeService 上不存在，
 监控端点一被调用即 AttributeError → 500（生产监控盲区）。
 
-本文件两类断言：
-1. 探针分支逻辑单测（mock session / mock age_client）
-2. detailed_health_check 组装层契约测试（全组件字典结构断言，防字段再漂移）
+V3-FIX-341（wt646 撤面裁决）后本文件只保留一类断言：
+1. 探针分支逻辑单测（mock session / mock age_client）——GraphKnowledgeService
+   作为 AGE 基础设施资产保留（生产消费者 graph_monitor router 已删，
+   下一张卡要么给它接真实消费面要么整体退役）。
+原第 2 类（detailed_health_check 组装层契约测试）随 router 模块删除。
 """
 
 import asyncio
@@ -15,7 +17,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.api.v1.graph_monitor import detailed_health_check
 from app.services.graph_knowledge_service import GraphKnowledgeService
 
 
@@ -227,129 +228,3 @@ class TestGetDetailedStatistics:
                 stats = await service.get_detailed_statistics()
 
         assert stats["sync_stream_length"] == 0
-
-
-class TestDetailedHealthEndpointAssembly:
-    """
-    detailed_health_check 组装层契约测试
-
-    防再漂移：锁住端点消费的全部组件/指标字段结构。
-    """
-
-    @pytest.fixture
-    def mock_db(self) -> AsyncMock:
-        return AsyncMock()
-
-    @pytest.fixture
-    def no_redis(self):
-        with patch("app.api.v1.graph_monitor.cache_service") as mock_cache:
-            mock_cache.redis = None
-            yield mock_cache
-
-    @pytest.fixture
-    def patched_probes(self):
-        """按类打补丁：组装层只关心探针返回值与报告结构"""
-        with (
-            patch.object(GraphKnowledgeService, "check_graph_connection", AsyncMock(return_value=True)) as mock_graph,
-            patch.object(GraphKnowledgeService, "check_vector_connection", AsyncMock(return_value=True)) as mock_vector,
-            patch.object(
-                GraphKnowledgeService, "get_graph_statistics", AsyncMock(return_value=_full_graph_statistics())
-            ) as mock_stats,
-            patch.object(GraphKnowledgeService, "graph_rag_search", AsyncMock(return_value={"context": "ok"})),
-        ):
-            yield {
-                "graph": mock_graph,
-                "vector": mock_vector,
-                "stats": mock_stats,
-            }
-
-    @pytest.mark.asyncio
-    async def test_all_healthy_report_structure(self, mock_db, no_redis, patched_probes):
-        report = await detailed_health_check(db=mock_db)
-
-        # 顶层结构
-        assert report["status"] == "healthy"
-        assert isinstance(report["uptime_ms"], (int, float))
-        assert isinstance(report["alerts"], list)
-        assert isinstance(report["recommendations"], list)
-
-        # 组件结构（graph_db / vector_db / redis）
-        assert report["components"]["graph_db"] == {
-            "status": "connected",
-            "latency_ms": report["components"]["graph_db"]["latency_ms"],
-            "type": "Apache AGE",
-        }
-        assert set(report["components"]["vector_db"]) == {"status", "latency_ms", "type"}
-        assert report["components"]["vector_db"]["type"] == "pgvector"
-        assert report["components"]["redis"]["status"] == "disabled"
-
-        # 数据完整性指标：探针字段契约对齐
-        integrity = report["metrics"]["data_integrity"]
-        assert integrity == {
-            "total_nodes": 12,
-            "total_relations": 7,
-            "node_types": {"KnowledgeNode": 10, "User": 2},
-            "relation_types": {"RELATED": 5, "PREREQUISITE": 2},
-        }
-
-        # 性能与健康评分
-        assert set(report["metrics"]["performance"]) == {"simple", "moderate"}
-        score = report["metrics"]["health_score"]
-        assert set(score) == {"score", "rating", "deductions"}
-        # redis 未配置 → "disabled" 分支扣 5 分，其余组件满健康
-        assert score["score"] == 95
-        assert score["rating"] == "excellent"
-        assert score["deductions"] == ["redis: disabled"]
-
-        # 摘要
-        assert report["summary"]["alert_count"] == 0
-        assert report["summary"]["message"] == "All systems operational"
-
-    @pytest.mark.asyncio
-    async def test_vector_disconnected_yields_degraded(self, mock_db, no_redis, patched_probes):
-        patched_probes["vector"].return_value = False
-
-        report = await detailed_health_check(db=mock_db)
-
-        assert report["status"] == "degraded"
-        assert report["components"]["vector_db"]["status"] == "disconnected"
-        warning_alerts = [a for a in report["alerts"] if a.get("component") == "vector_db"]
-        assert warning_alerts and warning_alerts[0]["severity"] == "warning"
-        # 图侧数据完整性仍然产出
-        assert report["metrics"]["data_integrity"]["total_nodes"] == 12
-
-    @pytest.mark.asyncio
-    async def test_vector_error_yields_degraded_with_error_component(self, mock_db, no_redis, patched_probes):
-        patched_probes["vector"].side_effect = RuntimeError("pgvector boom")
-
-        report = await detailed_health_check(db=mock_db)
-
-        assert report["status"] == "degraded"
-        assert report["components"]["vector_db"]["status"] == "error"
-        assert "pgvector boom" in report["components"]["vector_db"]["error"]
-
-    @pytest.mark.asyncio
-    async def test_graph_unreachable_yields_unhealthy_with_recommendation(self, mock_db, no_redis, patched_probes):
-        patched_probes["graph"].return_value = False
-
-        report = await detailed_health_check(db=mock_db)
-
-        assert report["status"] == "unhealthy"
-        assert report["components"]["graph_db"]["status"] == "disconnected"
-        critical_alerts = [a for a in report["alerts"] if a.get("component") == "graph_db"]
-        assert critical_alerts and critical_alerts[0]["severity"] == "critical"
-        assert any("Apache AGE" in r for r in report["recommendations"])
-        # 图不可达时跳过数据完整性，但报告仍结构完整
-        assert "data_integrity" not in report["metrics"]
-        assert "health_score" in report["metrics"]
-
-    @pytest.mark.asyncio
-    async def test_stats_failure_keeps_structured_report(self, mock_db, no_redis, patched_probes):
-        """统计失败不再导致 500：降级为 warning 告警 + error 指标"""
-        patched_probes["stats"].side_effect = RuntimeError("aggregation failed")
-
-        report = await detailed_health_check(db=mock_db)
-
-        assert report["status"] in ("healthy", "degraded")
-        assert "aggregation failed" in report["metrics"]["data_integrity"]["error"]
-        assert any("Cannot verify data integrity" in a["message"] for a in report["alerts"])

@@ -2,7 +2,12 @@
 
 ## Feature flags
 - `ENABLE_GRAPHRAG_FASTPATH=false` enables parallel GraphRAG retrieval + cache.
-- `ENABLE_GRAPHRAG_MONITOR_API=false` enables `/monitor/graph` and `/graphrag` trace endpoints.
+- `ENABLE_GRAPHRAG_MONITOR_API=false`（V3-FIX-341/wt646 撤面后语义收敛）：只控制
+  `graphrag_trace_store.cache_trace` 是否把 retrieval trace 写入 Redis；
+  `/monitor/graph` 与 `/graphrag` 读侧 API 已删除——旗默认 False，且网关无
+  `/monitor`、`/graphrag` 代理组，翻旗也不可达（假开关），消费面
+  （mobile GraphRAGVisualizer）从未被喂数。重建须三件齐上：网关代理组 +
+  router 模块 + mobile 喂数。
 - `GRAPHRAG_CACHE_TTL_SECONDS=120` GraphRAG cache TTL (seconds).
 - `GRAPHRAG_FASTPATH_TIMEOUT_SECONDS=2.5` GraphRAG fastpath timeout (seconds).
 - `GRAPHRAG_TRACE_TTL_SECONDS=86400` Trace TTL (seconds).
