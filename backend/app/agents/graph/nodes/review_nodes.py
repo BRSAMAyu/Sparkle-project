@@ -177,6 +177,64 @@ def _get_fallback_service(state: SparkleState):
     return None
 
 
+async def _check_and_execute_fallback(
+    state: SparkleState,
+    current_model: str,
+    review_score: float,
+    review_passed: bool,
+    will_regenerate: bool = False,
+) -> str | None:
+    """
+    检查降级条件并产出降级建议（V3-FIX-348 如实化）。
+
+    本函数从不切换模型：建议（suggested_model）由调用方写入审查上下文留痕，
+    全仓无消费方执行切换。用户 delta 按真实后续行为分路：
+    - will_regenerate=True（reflection 紧随其后真实修正）：宣告「自动修正」；
+    - will_regenerate=False（回合直接收尾，无重新生成）：仅告知质量审查未通过。
+    文案一律不得宣称「切换模型/重新生成」——那从未发生过。
+
+    Returns:
+        降级建议的模型名（仅建议，不执行）；未触发降级返回 None
+    """
+    fallback_service = _get_fallback_service(state)
+    if not fallback_service:
+        return None
+
+    try:
+        decision = fallback_service.should_fallback(
+            model_name=current_model,
+            task_type="generation",
+        )
+
+        if decision.should_fallback:
+            logger.warning(
+                f"[ReviewNode] Model fallback suggested (not executed): {current_model} -> "
+                f"{decision.suggested_model} (reason: {decision.reason.value}, {decision.description})"
+            )
+
+            # 检查是否已经在生成过程中
+            context_data = _state_get(state, "context_data", {})
+            if context_data.get("stream_callback"):
+                from app.gen.agent.v1 import agent_service_pb2
+                if will_regenerate:
+                    notice = "\n\n[系统] 检测到持续质量问题，正在尝试自动修正..."
+                else:
+                    notice = "\n\n[系统] 本次回复未通过质量审查，可能存在质量问题。"
+                try:
+                    await context_data["stream_callback"](agent_service_pb2.ChatResponse(
+                        delta=notice
+                    ))
+                except Exception as e:
+                    logger.warning(f"[ReviewNode] Failed to send fallback notification: {e}")
+
+            return cast("str | None", (decision.suggested_model))
+
+    except Exception as e:
+        logger.warning(f"[ReviewNode] Failed to check fallback: {e}")
+
+    return None
+
+
 async def _record_model_performance(
     state: SparkleState,
     model_name: str,
@@ -203,79 +261,6 @@ async def _record_model_performance(
         logger.warning(f"[ReviewNode] Failed to record model performance: {e}")
 
 
-async def _check_and_execute_fallback(
-    state: SparkleState,
-    current_model: str,
-    review_score: float,
-    review_passed: bool,
-) -> str | None:
-    """
-    检查并执行模型降级
-
-    Returns:
-        如果发生降级，返回新的模型名称；否则返回None
-    """
-    fallback_service = _get_fallback_service(state)
-    if not fallback_service:
-        return None
-
-    try:
-        decision = fallback_service.should_fallback(
-            model_name=current_model,
-            task_type="generation",
-        )
-
-        if decision.should_fallback:
-            logger.warning(
-                f"[ReviewNode] Model fallback triggered: {current_model} -> {decision.suggested_model} "
-                f"(reason: {decision.reason.value}, {decision.description})"
-            )
-
-            # 检查是否已经在生成过程中
-            context_data = _state_get(state, "context_data", {})
-            if context_data.get("stream_callback"):
-                from app.gen.agent.v1 import agent_service_pb2
-                try:
-                    await context_data["stream_callback"](agent_service_pb2.ChatResponse(
-                        delta="\n\n[系统] 检测到质量问题，切换到更强大的模型重新生成..."
-                    ))
-                except Exception as e:
-                    logger.warning(f"[ReviewNode] Failed to send fallback notification: {e}")
-
-            return cast("str | None", (decision.suggested_model))
-
-    except Exception as e:
-        logger.warning(f"[ReviewNode] Failed to check fallback: {e}")
-
-    return None
-
-
-def _get_fallback_model(state: SparkleState, current_model: str, retry_count: int) -> str:
-    """
-    获取降级后的模型
-
-    Args:
-        state: 当前状态
-        current_model: 当前模型
-        retry_count: 重试次数
-
-    Returns:
-        模型名称
-    """
-    fallback_service = _get_fallback_service(state)
-    if not fallback_service:
-        return current_model
-
-    try:
-        from app.core.agent_profiles import TaskType
-        return cast("str", (fallback_service.get_model_for_task(
-            task_type=TaskType.STANDARD_RESPONSE,
-            current_model=current_model,
-            retry_count=retry_count,
-        )))
-    except Exception as e:
-        logger.warning(f"[ReviewNode] Failed to get fallback model: {e}")
-        return current_model
 
 
 # ============================================
@@ -673,9 +658,11 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
                 current_model=generation_model,
                 review_score=review_result.overall_score,
                 review_passed=False,
+                will_regenerate=True,
             )
             if fallback_model:
-                # 记录建议的模型切换
+                # 记录降级建议（仅留痕：reflection 紧随其后以自身选型执行，
+                # 不按建议切换模型——V3-FIX-348 如实化）
                 review_context["fallback_model"] = fallback_model
 
             next_step = "reflection"
@@ -692,7 +679,8 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
                     review_passed=False,
                 )
                 if fallback_model:
-                    # 将建议的模型存储在context中，供下次生成使用
+                    # 降级建议仅留痕（V3-FIX-348 如实化：本路径回合直接收尾，
+                    # 无重新生成，也不切换模型；无任何下游消费该键）
                     context_data = _state_get(state, "context_data", {})
                     context_data["suggested_model"] = fallback_model
                     review_context["fallback_model"] = fallback_model

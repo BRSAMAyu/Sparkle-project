@@ -3,11 +3,17 @@ from __future__ import annotations
 """
 Model Fallback Service - Phase 2d
 
-核心功能：
+核心功能（V3-FIX-348 如实化后的真实能力面）：
 1. 追踪模型在审查中的表现
 2. 检测持续审查失败
-3. 触发模型切换
-4. 管理模型降级策略
+3. 产出模型切换建议——只记录与告警，不自动执行切换（建议键
+   review_context.fallback_model / context_data.suggested_model 当前无
+   下游消费方，模型从不被切换；接线须先补 generation 侧真实消费与
+   模型可用性校验）
+4. 维护降级配置（触发阈值/时间窗）
+
+统计口径：进程内单例（重启清零、多 worker 不共享），失败检测仅覆盖
+单进程窗口。
 
 作者: Claude Code (Opus 4.5)
 创建时间: 2026-01-25
@@ -20,9 +26,6 @@ from enum import StrEnum
 from typing import Any
 
 from loguru import logger
-
-from app.core.agent_profiles import AgentRole, TaskType
-from app.core.llm_router import llm_router
 
 # ============================================
 # 数据模型
@@ -40,14 +43,6 @@ class FallbackReason(StrEnum):
     HIGH_ERROR_RATE = "high_error_rate"               # 错误率过高
     USER_COMPLAINT = "user_complaint"                 # 用户投诉
     TIMEOUT = "timeout"                               # 响应超时
-
-
-class ModelTierPreference(StrEnum):
-    """模型层级偏好"""
-    """模型使用策略"""
-    QUALITY_FIRST = "quality_first"     # 质量优先，使用最强模型
-    BALANCED = "balanced"               # 平衡模式
-    SPEED_FIRST = "speed_first"         # 速度优先
 
 
 @dataclass
@@ -89,9 +84,6 @@ class FallbackConfig:
     min_avg_score_threshold: float = 0.5  # 平均分数阈值
     max_reflection_failures: int = 2    # 反思失败次数阈值
 
-    # 模型层级
-    preferred_tier: ModelTierPreference = ModelTierPreference.BALANCED
-
     # 时间窗口（秒）
     failure_time_window: int = 300     # 5分钟内统计失败次数
     performance_window: int = 3600     # 1小时内的性能统计
@@ -117,11 +109,11 @@ class ModelFallbackService:
     """
     模型降级服务
 
-    职责：
+    职责（V3-FIX-348 如实化）：
     1. 追踪模型性能
     2. 检测需要降级的场景
-    3. 推荐替代模型
-    4. 管理模型选择策略
+    3. 推荐替代模型（仅建议，不执行切换）
+    4. 维护降级配置（阈值/时间窗）
     """
 
     # 模型能力映射（用于降级时的替代选择）
@@ -373,57 +365,10 @@ class ModelFallbackService:
         # 默认：返回常用备选
         return "dashscope_chat"
 
-    def get_model_for_task(
-        self,
-        task_type: TaskType,
-        current_model: str | None = None,
-        retry_count: int = 0,
-    ) -> str:
-        """
-        根据任务类型和当前状态选择最佳模型
-
-        Args:
-            task_type: 任务类型
-            current_model: 当前使用的模型
-            retry_count: 重试次数
-
-        Returns:
-            模型名称
-        """
-        # 如果是重试且之前的模型失败过，选择替代模型
-        if retry_count > 0 and current_model:
-            decision = self.should_fallback(current_model, task_type.value)
-            if decision.should_fallback:
-                logger.info(
-                    f"[ModelFallback] Switching from {current_model} "
-                    f"to {decision.suggested_model} "
-                    f"(reason: {decision.reason.value if decision.reason else 'unspecified'})"
-                )
-                return decision.suggested_model
-
-        # 根据配置偏好选择
-        if self._config.preferred_tier == ModelTierPreference.QUALITY_FIRST:
-            return self._get_highest_quality_model(task_type)
-        elif self._config.preferred_tier == ModelTierPreference.SPEED_FIRST:
-            return self._get_fastest_model(task_type)
-        else:  # BALANCED
-            return self._get_balanced_model(task_type)
-
-    def _get_highest_quality_model(self, task_type: TaskType) -> str:
-        """获取最高质量模型"""
-        if task_type == TaskType.REVIEW:
-            return llm_router.select_model(AgentRole.REVIEWER, task_type, reasoning_mode="deep").model_key
-        return llm_router.select_model(AgentRole.GENERATION, task_type, reasoning_mode="deep").model_key
-
-    def _get_balanced_model(self, task_type: TaskType) -> str:
-        """获取平衡模型"""
-        if task_type == TaskType.REVIEW:
-            return llm_router.select_model(AgentRole.REVIEWER, task_type, reasoning_mode="balanced").model_key
-        return llm_router.select_model(AgentRole.GENERATION, task_type, reasoning_mode="balanced").model_key
-
-    def _get_fastest_model(self, task_type: TaskType) -> str:
-        """获取最快模型"""
-        return llm_router.select_model(AgentRole.GENERATION, task_type, reasoning_mode="fast").model_key
+    # V3-FIX-348 如实化：get_model_for_task / _get_highest_quality_model /
+    # _get_balanced_model / _get_fastest_model 已随死助手 _get_fallback_model
+    # 一并退役——全仓零调用方，且其内部日志宣称「Switching」从未发生
+    # （本服务只产出建议，不执行切换）。
 
     # ============================================
     # 性能分析

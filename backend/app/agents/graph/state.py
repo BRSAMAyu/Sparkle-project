@@ -92,7 +92,9 @@ class ReviewContext(TypedDict, total=False):
     reviewer_provider: str                  # reviewer provider 名
     review_profile_id: str                  # 审查画像 ID
     workflow_context: dict[str, Any] | None  # 工作流上下文（review profile 解析用）
-    fallback_model: str | None              # 建议降级的生成模型
+    # V3-FIX-348 如实化：降级建议仅留痕（review_nodes 写入供排查），
+    # 全仓无切换消费方——模型从不被切换，接线须补 generation 侧真实消费
+    fallback_model: str | None
     # 反思产物（reflection_node 构建更新上下文时写入）
     best_review_score: float                # 反思后最优审查分
     best_content: str                       # 反思后最优内容
