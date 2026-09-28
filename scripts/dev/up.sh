@@ -70,7 +70,8 @@ done
 # ── 4. Wait for Redis ──
 log "Waiting for Redis..."
 for i in $(seq 1 15); do
-  if docker exec sparkle-redis redis-cli ping >/dev/null 2>&1; then
+  # P03-R1：容器名修正（原 sparkle-redis 致步骤4恒死）
+  if docker exec sparkle_redis redis-cli ping >/dev/null 2>&1; then
     log "Redis ready."
     break
   fi
