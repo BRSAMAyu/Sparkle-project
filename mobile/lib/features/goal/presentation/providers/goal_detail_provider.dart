@@ -61,14 +61,12 @@ class GoalDetailNotifier extends StateNotifier<AsyncValue<GoalDetailData>> {
     }
     final future = run();
     _inFlightStepWrites[key] = future;
-    unawaited(
-      future.whenComplete(() {
+          future.whenComplete(() {
         if (identical(_inFlightStepWrites[key], future)) {
           // Map.remove 会返回被摘除的 Future，显式 ignore。
           _inFlightStepWrites.remove(key)?.ignore();
         }
-      }),
-    );
+      }).ignore();
     return future;
   }
 

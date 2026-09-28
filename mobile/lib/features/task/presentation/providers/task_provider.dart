@@ -185,15 +185,13 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     }
     final future = run();
     _inFlightWrites[key] = future;
-    unawaited(
-      future.whenComplete(() {
+          future.whenComplete(() {
         // 只摘除自己登记的条目：避免误摘并发注册的新同键写。
         if (identical(_inFlightWrites[key], future)) {
           // Map.remove 会返回被摘除的 Future，显式 ignore。
           _inFlightWrites.remove(key)?.ignore();
         }
-      }),
-    );
+      }).ignore();
     return future;
   }
 
