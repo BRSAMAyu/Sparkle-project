@@ -1,0 +1,107 @@
+{
+  "card": "V4-U02",
+  "title": "卡住→纠正→差异确认垂直交互",
+  "risk": "high",
+  "independent_reviewers_required": 2,
+  "generated_at": "2026-09-29T08:30:00+08:00",
+  "executor": "V4 fleet implementation agent (U02)",
+  "branch": "agent/v4/u02",
+  "worktree": "wtU02",
+  "base_commit": "a592159f371d7da0753c1c15525401a93adf93e8",
+  "dispatch": "协调方卡片直派（卡规格 v4/04_tasks/tasks.json#V4-U02 全文为唯一真源；依赖 F03/I04/I06 已合并于 base）",
+  "source_sha": {
+    "base": "a592159f371d7da0753c1c15525401a93adf93e8",
+    "head": "4d23cb8a（实现 commit；本 evidence commit 在其后）",
+    "main_at_dispatch": "a592159f（f99254c4 的后继 state 心跳；f99254c4 为其祖先）",
+    "implementation_commit": "4d23cb8a"
+  },
+  "environment": {
+    "flutter": "3.41.3 stable（与 U01/U03 同机同版）",
+    "os": "darwin 25.6.0 arm64（macOS 实体机）",
+    "note": "mobile/lib/gen、backend/app/gen、backend/gateway/gen 均为 gitignored 生成物，自主检出复制（未 symlink、未入库）——AQ/BG 守卫在初跑红即因新 worktree 缺生成物，复制后 88 规则全绿，代码零改动"
+  },
+  "commands": [
+    {
+      "purpose": "依赖解析",
+      "command": "flutter pub get --offline",
+      "cwd": "mobile",
+      "exit_code": 0
+    },
+    {
+      "purpose": "l10n 再生成（arb 45 新键纯增量 → 生成 dart ×3）",
+      "command": "flutter gen-l10n",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "note": "运行两次（初始 43 键 + diff 字段用户语言标签增量 2 键），均成功"
+    },
+    {
+      "purpose": "静态分析全量（最终态）",
+      "command": "flutter analyze",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "No issues found!"
+    },
+    {
+      "purpose": "新测试（行为契约 18 + 证据采集 2）",
+      "command": "flutter test test/features/recovery",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+27 全绿（含既有 stuck_journey 3 测 + entry/copy 4 测零回归）"
+    },
+    {
+      "purpose": "受影响面回归（recovery/home/memory/task/action_proposal/chat provider+stream/perf bench）",
+      "command": "flutter test test/features/recovery test/features/home test/features/memory test/features/task test/shared/widgets/action_proposal test/unit/chat_provider_test.dart test/unit/chat_notifier_stream_test.dart test/performance/widget_bench_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+400 全绿"
+    },
+    {
+      "purpose": "全量套件（第 2 次，干净环境）",
+      "command": "flutter test",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "零 [E] 失败（grep 捕获为空；前一次运行 +3064 ~23 -1 唯一失败为 widget_bench 16ms 性能断言在守卫并行占载下超时，隔离复跑 9/9 绿，属机器负载抖动非功能回归）",
+      "note": "首跑 +3060 ~23 -3 同类负载抖动；三次运行失败集合不重合且全部在隔离复跑中通过"
+    },
+    {
+      "purpose": "治理守卫全量",
+      "command": "bash scripts/run_all_rule_guards.sh",
+      "cwd": "仓库根",
+      "exit_code": 0,
+      "result": "all rule guards passed (88 rules)——主检出同命令同结果（基线对齐）"
+    },
+    {
+      "purpose": "证据落盘（截图 + 语义树）",
+      "command": "U02_EVIDENCE_DIR=<abs>/v4/evidence/V4-U02 flutter test test/features/recovery/recovery_calibration_evidence_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "写出 5 态 ×（PNG 720x1600@2x + semantics.txt）共 10 文件"
+    }
+  ],
+  "gates_not_triggered": {
+    "backend_api": "本卡零 backend/app 触碰（git diff base 为空）→ OpenAPI + BA-ROUTES 机械门不触发",
+    "mypy": "零 Python 变更 → mypy 门不触发（≤77 基线无新增途径）",
+    "proto": "零 proto/生成文件手改；mobile l10n 生成物经 flutter gen-l10n 官方通道再生（arb 为源）"
+  },
+  "model_usage": {
+    "implementation_agent": "GLM（ZCode 会话模型）；token 用量 NOT_EXPOSED（平台不向 agent 暴露）",
+    "product_llm_calls": "本卡实现与测试全程零产品级 LLM 调用（纯规则面 UI/状态机/REST 消费；无模型推理路径新增）"
+  },
+  "rf06_conflict_faces": {
+    "dashboard_screen": "零 diff",
+    "compact_status_bar": "零 diff",
+    "task_execution_screen": "零 diff"
+  },
+  "locks": {
+    "ui-recovery": "本卡独占改动面 = features/recovery（sheet + 新校准区/控制器）+ task action_proposal_repository（additive 两方法）+ l10n arb/生成物；无第二权威（X-03/M-08/旅程读面均既有单一真源）"
+  },
+  "artifacts_sha256_note": "v4/evidence/V4-U02/ 内 PNG/semantics 文件以 git 对象哈希入库（本 manifest 与同目录文件同 commit）；审查可用 git rev-parse 复核",
+  "screenshots": [
+    "u02_abstain_360x800.png（+semantics）——系统不提案时纠正输入仍在场",
+    "u02_scope_choice_360x800.png（+semantics）——本次约束/持久偏好分离呈现",
+    "u02_diff_review_360x800.png（+semantics）——服务端权威 diff 可读对照（预计时长（分）：40 → 15）",
+    "u02_committed_360x800.png（+semantics）——回执到场后的唯一成功面孔（PixelSuccessBadge + 回执号）",
+    "u02_conflict_360x800.png（+semantics）——409 冲突恢复面（零成功视觉）"
+  ],
+  "screenshot_note": "测试环境字体下中文渲染为占位方块（Ahem 族）——与 U01/U03 证据同款先例；真实文案以同目录 *_semantics.txt 语义树 dump 为准（逐字可查）"
+}

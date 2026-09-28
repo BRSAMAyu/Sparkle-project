@@ -1,0 +1,82 @@
+{
+  "card": "V4-U02",
+  "generated_at": "2026-09-29T08:30:00+08:00",
+  "new_tests": {
+    "total": 20,
+    "files": {
+      "mobile/test/features/recovery/recovery_calibration_test.dart": 18,
+      "mobile/test/features/recovery/recovery_calibration_evidence_test.dart": 2
+    },
+    "note": "每验收面一正一反；两枚指名反例钉（偏好保存≠改任务、回执前零成功反馈时序钉）在 18 测内"
+  },
+  "acceptance_mapping": [
+    {
+      "acceptance": "三宿主同语义，abstain仍可输入纠正",
+      "positive": [
+        "正：home 宿主渲染同一校准区同一输入语义（同组件/同标题/同输入键）",
+        "正：goal 宿主（无任务锚点）同一校准区在场",
+        "正：action 宿主同一校准区在场",
+        "正：提交纠正原话 → 约束/偏好分离选择（两卡 + 可都不选）",
+        "证据面：abstain（main_intervention=null）渲染断言 + 落盘"
+      ],
+      "negative": [
+        "反例钉：abstain 载荷纠正输入在场（若有人把校准区挂回「有 intervention 才渲染」即红：同测断言无 intervention 文案 findsNothing）",
+        "反例钉：旅程读面错误态下纠正输入同样在场"
+      ]
+    },
+    {
+      "acceptance": "保存偏好≠改任务；取消不改变原行动",
+      "positive": [
+        "正：保存为偏好只写理解纠正面（POST /experience/understanding-snapshot/corrections 恰一次，effect_scope=routing_policy），中性 ack 文案在场",
+        "正：仅本次路径走 X-03 提案（payload 钉：task.update_fields / estimated_minutes / source=recovery_sheet / 幂等键 u02: 前缀），偏好端点零调用",
+        "正：无任务锚点时「仅本次」如实缺席（不出假入口），偏好路径照常可用",
+        "正：取消零写——scopeChoice「先都不用」零端点调用；diffReview「不调了」恰一次 cancel、零 approve、零新增 create、回输入相"
+      ],
+      "negative": [
+        "反例钉（保存偏好 ≠ 改任务）：偏好成功后 proposal repo 的 create/approve/call 全空断言 + PixelSuccessBadge 类型结构性缺席（findsNothing）",
+        "反例钉：偏好成功面孔=中性行——成功徽章类型不得出现（memory 类成功 ≠ 任务成功面孔，F03 纪律）"
+      ]
+    },
+    {
+      "acceptance": "unknown/版本冲突可恢复，回执之后才成功反馈",
+      "positive": [
+        "正：确认后回执到场（COMMITTED + receipt 本体）→ 成功面孔（PixelStateBadge(success) + 回执号行）",
+        "正：unknown → 重看权威投影（GET /action-proposals/{id}）拿到回执 → 补进成功相且零重复 approve（真相赢，不重复写）",
+        "正：409 → 冲突面（PixelStateBadge(conflict)）+ 两条恢复出口；「按最新状态重新调整」= 显式取消过期提案（审计留痕）后回调整相",
+        "正：非冲突网络失败 → 回 diffReview + 如实错误行（幂等键不变，重试安全；不臆断为 unknown）"
+      ],
+      "negative": [
+        "反例钉（时序）：approve 在途（Completer 挂起）→ 成功文案 findsNothing + PixelSuccessBadge findsNothing + SnackBar findsNothing；回执 complete 后成功面孔才出现且仍零 SnackBar——V3 AppFeedback.success 动作驱动 toast 反模式（CH-R1/F03 反面教训）在此终结",
+        "反：状态 COMMITTED 但回执本体缺席 → 诚实 unknown（fail-closed），成功文案/徽章 findsNothing，恢复出口（重新查看）在场",
+        "反：冲突态零成功视觉（成功文案 findsNothing + 成功徽章 findsNothing）",
+        "反：approve 返回畸形载荷（缺 proposal 投影）→ unknown 不给成功"
+      ]
+    }
+  ],
+  "controller_unit": [
+    "分钟步进夹在 [5, 240]（setAdjustedMinutes 仅 adjusting 相生效的守卫一并钉住）"
+  ],
+  "regression": {
+    "affected_bundle": {
+      "command": "flutter test test/features/recovery test/features/home test/features/memory test/features/task test/shared/widgets/action_proposal test/unit/chat_provider_test.dart test/unit/chat_notifier_stream_test.dart test/performance/widget_bench_test.dart",
+      "result": "+400 全绿"
+    },
+    "existing_recovery_suites": {
+      "result": "stuck_journey_sheet/copy/entry 三件 + 既有夹具零回归（ActionProposalRepository 新增两方法对既有两个 implements 夹具补齐 override，行为零变更）"
+    },
+    "full_suite": {
+      "runs": [
+        {"counter": "+3060 ~23 -3", "attribution": "守卫并行占载下性能/流式抖动；失败集与后续两次运行不重合"},
+        {"counter": "+3064 ~23 -1", "attribution": "唯一失败 widget_bench 16ms 断言（机器负载抖动）"},
+        {"counter": "零 [E]（grep 捕获为空）", "attribution": "干净环境整跑"}
+      ],
+      "isolation": "chat_notifier_stream_test（main 检出 8/8 绿）、widget_bench（wtU02 隔离 9/9 绿）——三次全量失败均为负载抖动非功能回归，无基线删改"
+    }
+  },
+  "guards": {
+    "rule_guards": "88/88 PASS（wtU02 与主检出同命令同结果；新 worktree 需复制 gitignored 生成物 backend/app/gen、backend/gateway/gen、mobile/lib/gen——AQ/BG 初跑红为环境缺生成物，非代码）",
+    "l10n_parity": "L10N-REGEN-PARITY OK（arb 45 新键纯增量；zh/en 完整）",
+    "i18n_guard": "PASS",
+    "mypy_openapi_ba_routes": "未触发（零 backend 变更）"
+  }
+}
