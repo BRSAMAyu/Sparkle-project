@@ -195,4 +195,17 @@ void main() {
       expect(find.byType(PixelSuccessBadge), findsNothing);
     });
   });
+  group('R1-C1a 泛化非空守卫｜未来新增流步拼错键不静默逃逸', () {
+    test('全部流步的 F03 冻结 copy 均非空（遍历枚举，不只钉四键字面）', () {
+      for (final step in StylePreviewFlowStep.values) {
+        final frame = StylePreviewFlowFrame.of(step);
+        expect(
+          frame.copy,
+          isNotEmpty,
+          reason: '流步 $step 的冻结 copy 为空——疑似键拼错（?? '' 静默）',
+        );
+      }
+    });
+  });
+
 }

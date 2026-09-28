@@ -91,7 +91,7 @@ Widget buildPreviewHost({
 
 /// 固定时长泵（代替 pumpAndSettle）：preview 面在 runActive 步含真实
 /// 骨架 shimmer（无限动画，产品真实行为），pumpAndSettle 永不落定；
-/// 两拍 700ms 覆盖主题过渡（280ms）与成功徽章单次动效（≤650ms）。
+/// 两拍 700ms 覆盖主题过渡（实测 ≤260ms/200ms——R1-C3a 勘误）与成功徽章单次动效（≤650ms）。
 Future<void> settlePreview(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 200));
   await tester.pump(const Duration(milliseconds: 500));
