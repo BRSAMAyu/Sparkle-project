@@ -1,0 +1,36 @@
+{
+  "card": "V4-I05",
+  "risk": "high",
+  "required_independent_reviewers": 2,
+  "status": "PENDING_REVIEW",
+  "note": "占位文件：本卡作者不自审。两位独立审查会话请在各自审查完成后将 verdict/receipt/head 写入本文件（或落 review_r1.md/review_r2.md 并回填），审点建议见 diff_or_evidence_only.md『审查挑战点预登记』与 limitations.md。",
+  "implementation_head_hint": "agent/v4/i05 分支头（base ff02ec03）",
+  "reviews": [
+    {
+      "reviewer": "wtI05R1",
+      "verdict": "PASS_WITH_CHALLENGES",
+      "receipt_id": "v4/evidence/V4-I05/review_r1.md",
+      "reviewed_head": "4cac07ecaba214f1441b4de009c585487d078e5e",
+      "challenged": [
+        "C1 transition_history reason 措辞失实（规范码 T4.revoked_by_user_correction + revoke_reason 旁列，非 reason 串入 history）",
+        "C2 limitations#5 'D04 PENDING' 前提合并 main 即过时（D04 已 DONE_REVIEWED；零 galaxy 写路径实质声明不变）",
+        "C3 旧行不回溯/legacy id 不折叠并存边界未逐字声明",
+        "C4 live 档用户披露面缺失（运维面日志+指标）；建议列为 live 启用前置",
+        "C5 撤回重放时已 revoke 行入 unaffected_patch_ids 标签语义"
+      ]
+    },
+    {
+      "reviewer": "wtI05R2",
+      "verdict": "PASS_WITH_CHALLENGES",
+      "receipt_id": "v4/evidence/V4-I05/review_r2.md",
+      "reviewed_head": "4cac07ecaba214f1441b4de009c585487d078e5e",
+      "challenged": [
+        "R2-C1 承接一审成立（亲验）：撤回 revoke 的 reason 措辞失实——history 规范码 T4.revoked_by_user_correction + actor=evidence_withdrawal + revoke_reason 旁列，建议合并前改口",
+        "R2-C3+ 承接一审加 sharp：旧行不回溯=存量重复引用行 admit 仍可照 V3 爬档（亲测 tier=repeated→active）；live 补偿控制=观察面去重+收益门，建议 limitations 补句",
+        "R2-C5 一审原判词复判不成立（亲验反转）：重放时 revoked 行被候选集过滤双向均不出现（非入 unaffected）；改登记为重放报告对已失效行静默（可选 already_revoked 分组）",
+        "R2-C4 维持一审：live 用户披露面缺失，列为 EXPERIENCE_STRATEGY_MODE=live 启用前置",
+        "R2-D1 二审新发现（非阻塞、事件接线卡硬性登记义务）：invalidate_on_source_withdrawal 候选集仅 active/evidenced，candidate 态引用已撤源不进 sweep 且 admit 不查撤回台账，人工入口不验证源真已撤回——接线卡必须 sweep 纳 candidate 或 admit 前查台账"
+      ]
+    }
+  ]
+}

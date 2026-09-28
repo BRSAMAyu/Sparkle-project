@@ -810,6 +810,16 @@ AURORA_NO_ACTION_CORRECTION_TOTAL = get_or_create_metric(
     ["surface", "mode"],
 )
 
+# V4-I05 经验策略影子验证与有界启用：策略影子/门出观察计数。stage ∈
+# {admission, decision}（experience_strategy 封闭消费面）；verdict ∈
+# benefit 判定 + 门出理由码（experience_strategy 封闭词表）。
+EXPERIENCE_STRATEGY_SHADOW_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_experience_strategy_shadow_total",
+    "Experience strategy shadow/gate observations (admission benefit verdicts, decision gate outcomes)",
+    ["stage", "verdict"],
+)
+
 RUN_LEDGER_EVENT_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_run_ledger_event_total",

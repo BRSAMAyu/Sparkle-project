@@ -1,0 +1,55 @@
+{
+  "card": "V4-I05",
+  "suite": "V4-I05 自测（实现会话 wtI05；作者自测面，非独立审查）",
+  "env": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// python 3.11.15 pytest 9.0.2",
+  "new_tests": {
+    "tests/unit/test_experience_strategy.py": {
+      "count": 56,
+      "result": "56 passed",
+      "covers": "验收①六面封闭正反×9+序列化/身份×4；验收②折叠×4+censored×4；验收③收益判定参数化×7+撤回×5；模式 fail-closed×8；前置判定×8；影子对照×7"
+    },
+    "tests/services/test_experience_strategy_service.py": {
+      "count": 17,
+      "result": "17 passed",
+      "covers": "折叠真实链路×2；live 收益门+有界窗×5；shadow 零行为红线（加严形态）×1；live 门出/正常应用×2；shadow_report×2；撤回失效×5（含三档参数化+不复活+词表外拒绝）"
+    }
+  },
+  "regression": {
+    "cmd": "pytest <17 files，见 run_manifest.json commands[2]>",
+    "exit_code": 0,
+    "total": 549,
+    "result": "549 passed, 0 failed, 0 errors（格式化前后两轮复跑一致）",
+    "per_file": {
+      "test_experience_strategy.py": 56,
+      "test_experience_strategy_service.py": 17,
+      "test_no_action_supplement.py [I04]": 39,
+      "test_memory_utility_gate.py [I02]": 25,
+      "test_memory_utility_gate_wiring.py [I02]": 9,
+      "test_semantic_selector.py [I03]": 77,
+      "test_policy_patch_service.py [A-05]": 39,
+      "test_friction_chat_wiring.py [I04 wiring]": 76,
+      "test_experience_memory_projector.py [M-06]": 22,
+      "test_attribution.py [D02]": 38,
+      "test_retraction_recompute.py [D03]": 23,
+      "test_retraction_recompute_service.py [D03]": 11,
+      "test_hybrid_policy.py [I07]": 31,
+      "test_context_selection_receipt_sources.py [I06]": 8,
+      "test_context_selection_receipt_wiring.py [I06]": 11,
+      "test_intervention_lifecycle_service.py [D05]": 36,
+      "test_experience_event.py [D01/D02]": 31
+    }
+  },
+  "mutation_reversal": {
+    "red_line": "shadow 零行为（patched_decision_inputs shadow 载荷 ≡ off 逐字节，含门出情境事实在场时）",
+    "mutation": "policy_patch_service.py patched_decision_inputs：shadow 档改为同 live 应用门出集（strategy_mode == STRATEGY_MODE_LIVE → != STRATEGY_MODE_OFF；/tmp 备份恢复，git diff 零残留）",
+    "mutated_result": "1 failed / 16 passed —— FAILED: TestShadowZeroBehaviorRedLine::test_shadow_payload_identical_to_off_byte_for_byte",
+    "restored_result": "17 passed",
+    "conclusion": "红线断言可失败性实证成立（I04 范式同款反转流程）"
+  },
+  "lint_type": {
+    "ruff_changed_files": "All checks passed（0 error；C408/C416 等自动修复后复检）",
+    "black_changed_files": "6 files would be left unchanged",
+    "mypy_ratchet": "59 / baseline 77, exit 0（fresh-cache 对照：main@ff02ec03 同为 59；改动文件直查零错误；唯一 wt/main 差异条目 policy_loader yaml-stub 为 main 陈旧缓存伪影，详见 limitations #10）"
+  },
+  "model_calls": 0
+}

@@ -972,6 +972,16 @@ class Settings(BaseSettings):
     # live = 载荷出面（本卡即 live 裁决语义归属卡；激活时显式 WARN + metric
     # 标识，响应 I03 N-2）。未知值按 off 处理（fail-closed，不猜）。
     NO_ACTION_CORRECTION_MODE: str = "off"
+    # V4-I05：经验策略影子验证与有界启用（core/experience_strategy.py +
+    # policy_patch_service 消费面）——策略候选先影子对照（两臂投影只观察，
+    # 决策路径零变化）再受限 live。shadow（默认）= 指标+结构化日志、行为零
+    # 变化（shadow 返回与 off 逐字节恒等，I04 shadow 红线同律）；live = 有界
+    # 启用（admission 收益门：无收益不静默自动激活，留 evidenced 等显式
+    # confirm；激活缺省补观察窗 EXPERIENCE_STRATEGY_LIVE_WINDOW_HOURS；decision
+    # 面 do_not_apply/precondition 门）。off = 本卡零行为（V3 链路不变）。
+    # 未知值 fail-closed 按 off 处理（不猜；live 需显式开）。
+    EXPERIENCE_STRATEGY_MODE: str = "shadow"
+    EXPERIENCE_STRATEGY_LIVE_WINDOW_HOURS: int = 72
     COMPACTION_RECENT_WINDOW: int = 6
     COMPACTION_KEY_MESSAGE_CAP_TOKENS: int = 220
     # C-06：knowledge JIT（core/knowledge_jit.py）——大知识源只注入
