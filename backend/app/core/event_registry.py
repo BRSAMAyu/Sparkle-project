@@ -462,6 +462,21 @@ EVENT_REGISTRY: dict[str, RegisteredEvent] = {
             producers=("app/services/memory_invalidation_pipeline.py",),
             status="live",
         ),
+        # V4-D03 (2026-09-28): retraction registered. Emitted once per
+        # effective non-memory retraction (result/material/inference) by the
+        # retraction recompute service; carries the post-registration
+        # memory_epoch (the SAME per-user epoch authority, C-07/M-07 — no
+        # second generation counter) so epoch-pinned readers detect staleness.
+        # Payload is content-free by contract (retraction_id/kind/target ids/
+        # epoch only); idempotent replay converges on the content-addressed
+        # retraction_id (duplicate detection → no second event, no second bump).
+        RegisteredEvent(
+            name="retraction.registered",
+            stage=EventStage.STATE_UPDATE,
+            aggregate_type="user_retraction",
+            producers=("app/services/retraction_recompute_service.py",),
+            status="live",
+        ),
         RegisteredEvent(
             name="user.created",
             stage=EventStage.STATE_UPDATE,

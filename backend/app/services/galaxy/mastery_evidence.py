@@ -61,7 +61,12 @@ class MasteryEffectKind(StrEnum):
     - ``set_point``: absolute assign (exam-sprint scores/penalties) → replay
       re-applies the recorded value;
     - ``projection``: shadow/trace rows (spark time path, sprint task
-      completions, client self-report syncs...) → replay skips them.
+      completions, client self-report syncs...) → replay skips them;
+    - ``retracted`` (V4-D03): retraction tombstone — the row's observation
+      never fuses again (no resurrection path; DATA_AND_GRAPH「从仍有效事件
+      按确定顺序重新投影」), but its ``old_mastery`` stays the honest
+      pre-fusion fact and may still freeze the replay anchor when no earlier
+      effective row exists.
 
     Unknown/NULL values fail closed to ``projection`` on the read side
     (宁丢效果不注入数值).
@@ -70,6 +75,7 @@ class MasteryEffectKind(StrEnum):
     EVIDENCE = "evidence"
     SET_POINT = "set_point"
     PROJECTION = "projection"
+    RETRACTED = "retracted"
 
 
 #: Confidence scaling per evidence type. 0 means "does not move the posterior".
@@ -342,14 +348,21 @@ def recompute_evidence_state(
     any other effect row. Entries marked ``projection`` are skipped entirely.
     The function stays a pure function of the ledger, so replay remains
     idempotent for set-point ledgers too.
+
+    V4-D03: entries marked ``retracted`` (retraction tombstone) are skipped
+    exactly like ``projection`` — a retracted observation can never re-enter
+    the fusion, so even a stale/offline replay of the raw ledger cannot
+    resurrect retracted evidence (no inverse math anywhere: the belief is
+    always replayed forward from valid events only).
     """
     belief = fuse_mastery(legacy_mastery, LEGACY_PRIOR_VARIANCE, [])  # empty prior belief
 
+    skip_kinds = frozenset({MasteryEffectKind.PROJECTION.value, MasteryEffectKind.RETRACTED.value})
     real = sorted(
         (
             e
             for e in history
-            if e.evidence_type in REAL_EVIDENCE_TYPES and e.effect_kind != MasteryEffectKind.PROJECTION.value
+            if e.evidence_type in REAL_EVIDENCE_TYPES and e.effect_kind not in skip_kinds
         ),
         key=lambda e: e.observed_at or datetime.min,
     )

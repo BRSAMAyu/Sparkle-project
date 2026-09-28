@@ -1,0 +1,38 @@
+{
+  "card": "V4-D03",
+  "branch": "agent/v4/d03",
+  "status": "PENDING",
+  "reviewers_required": 2,
+  "risk": "high",
+  "generated_at_local": "2026-09-28",
+  "implementation_agent": "wtD03",
+  "implementation_complete": true,
+  "integration_sha_recheck": "PENDING_REVIEWER",
+  "test_counts": {
+    "new_contract_tests": 23,
+    "new_service_tests": 11,
+    "new_total": 34,
+    "regression_services_full": "1047 passed, 10 skipped",
+    "regression_core_full": "387 passed, 1 skipped, 36 errors（bert 环境噪声，主检出逐同）",
+    "regression_targeted_batch": "288 passed（D01/D02/I01/galaxy/epoch）+ 67 passed（event/x08/D-05 lifecycle）"
+  },
+  "review_focus_suggestions": [
+    "锚冻结语义：撤回最早证据行后，重放锚取被撤回行的 old_mastery（诚实前置值）——审查该语义是否优于「回落含撤回效果的存储值」（后者=复活）与「锚点丢失时用 0/地板值」（后者=凭空降级）；尤其关注与 V3-FIX-292 冻结锚纪律的相容性论证是否成立",
+    "发布栅栏 fail-closed 口径：base_epoch/current_epoch 任一侧 None 即丢弃——是否接受「放行需要两侧世代可证相等」为唯一安全口径（vs 旧值放行）",
+    "持久墓碑 vs append-only 账本：effect_kind 原位改写 'evidence'→'retracted' 保留了全部审计列（old/new/reason/request_id/created_at），只改效果参与标记——是否接受为「无迁移约束下唯一持久排除面」；备选（新表/新列）为何被迁移纪律排除",
+    "读门同门两出口：pending_recompute 无条件 stale+suggestions 禁用、世代落后同出口——「UI 标过期」与「工具禁建议」绑死是否有需要解耦的真实场景（当前判定：分裂态=旧建议继续流通的口子，绑死更安全）",
+    "幂等边界：register 重放去重靠 outbox payload LIKE 扫描（紧凑序列化 needle）；并发双登记在无锁目标行时的最坏情形=冗余 epoch bump（无数据损坏、无复活）——是否接受该有界竞态登记进 limitations",
+    "BJ/AT 双豁免 + rule_at_exceptions 登记是否为可接受的待接线状态（消费卡=结果撤回 UI/FSM 入口 + 重算 job 调度 + insight/strategy 执行体）"
+  ],
+  "mutation_demonstrations": {
+    "M1_publish_gate_bypass": "3 failed → sha256 字节级还原",
+    "M2_inverse_subtraction": "1 failed（权威回放精确相等判据）→ 还原 34 passed",
+    "M3_read_gate_bypass": "3 failed → sha256 字节级还原"
+  },
+  "evidence_files": [
+    "v4/evidence/V4-D03/diff_or_evidence_only.md",
+    "v4/evidence/V4-D03/run_manifest.json",
+    "v4/evidence/V4-D03/test_results.json",
+    "v4/evidence/V4-D03/limitations.md"
+  ]
+}

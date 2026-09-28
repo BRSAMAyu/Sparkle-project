@@ -1,0 +1,127 @@
+{
+  "card": "V4-D03",
+  "branch": "agent/v4/d03",
+  "base_sha": "150bc2059ca37e33771852fea83ecb4b3d88dfbc",
+  "generated_at_local": "2026-09-28",
+  "environment": {
+    "python": "3.11.15",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2 (compiled: yes)",
+    "ruff": "0.15.8",
+    "black": "26.3.1 (compiled: yes)",
+    "worktree": "wtD03（bare worktree，无 .env；SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// 全程）"
+  },
+  "results": [
+    {
+      "suite": "D03 契约（tests/core/test_retraction_recompute.py）",
+      "command": "pytest tests/core/test_retraction_recompute.py -q",
+      "exit_code": 0,
+      "passed": 23,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "D03 服务层（tests/services/test_retraction_recompute_service.py，sqlite 隔离）",
+      "command": "pytest tests/services/test_retraction_recompute_service.py -q",
+      "exit_code": 0,
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "受影响面回归批一（D01 experience_event 契约+服务、D02 attribution、I01 resume 服务+跨进程、galaxy 全目录、M-07 epoch 管线）",
+      "command": "pytest tests/core/test_experience_event.py tests/core/test_attribution.py tests/services/test_episode_resume_service.py tests/services/test_experience_event_service.py tests/services/galaxy/ tests/unit/test_memory_invalidation_pipeline.py tests/integration/test_episode_resume_cross_process.py -q",
+      "exit_code": 0,
+      "passed": 288,
+      "failed": 0,
+      "skipped": 0,
+      "note": "改动前基线与改动后复跑同数 288（零回归）；含 mutations 演示前后各一次"
+    },
+    {
+      "suite": "受影响面回归批二（事件幂等隔离、FIX-507 生命周期接线、D-05 生命周期服务、X-08 outcome 捕获）",
+      "command": "pytest tests/services/test_event_idempotency_isolation.py tests/services/test_f507_lifecycle_wiring.py tests/services/test_intervention_lifecycle_service.py tests/unit/test_x08_outcome_capture.py -q",
+      "exit_code": 0,
+      "passed": 67,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "core 全量",
+      "command": "pytest tests/core -q",
+      "exit_code": 0,
+      "passed": 387,
+      "failed": 0,
+      "skipped": 1,
+      "errors": 36,
+      "note": "36 errors 全部 tests/core/test_bert_intent_classifier.py（transformers 环境噪声）；主检出同命令 3 passed 36 errors 逐同（base 既有，非本卡回归；D01/D02 manifest 同族记录）"
+    },
+    {
+      "suite": "services 全量（收口判据）",
+      "command": "pytest tests/services -q",
+      "exit_code": 0,
+      "passed": 1047,
+      "failed": 0,
+      "skipped": 10,
+      "note": "D02 基线 1018 passed；增量 29 = 本卡 11 + main 前进期间已并卡测试（F02 族），零回归"
+    },
+    {
+      "suite": "突变注入 M1（发布栅栏旁路）",
+      "command": "注入 if False and (base_epoch...) → pytest 3 栅栏测 → sha256sum -c 还原",
+      "exit_code": 1,
+      "passed": 0,
+      "failed": 3,
+      "note": "test_stale_job_with_old_epoch_cannot_publish / test_publish_gate_discards_stale_epoch_job / test_publish_gate_fails_closed_on_unpinned_epochs 全红；还原后 sha256 恒等"
+    },
+    {
+      "suite": "突变注入 M2（逆推减分替代回放）",
+      "command": "注入 new_mastery=old-(old-20) → pytest 2 重算测 → 还原",
+      "exit_code": 1,
+      "passed": 1,
+      "failed": 1,
+      "note": "test_recompute_equals_authoritative_replay_of_valid_events 红（权威回放值精确相等判据破）；墓碑直呼测不受该突变影响（不走写回路径）——红数 1 本身无误；还原 34 passed"
+    },
+    {
+      "suite": "突变注入 M3（读门 pending 分支旁路）",
+      "command": "注入 if False and status==pending → pytest 3 读门测 → sha256sum -c 全量还原",
+      "exit_code": 1,
+      "passed": 0,
+      "failed": 3,
+      "note": "test_read_state_pending_marks_stale_and_blocks_suggestions / test_discarded_gate_keeps_pending_stale_state / test_read_gate_pending_recompute_stales_ui_and_tools_together 全红；还原后 BYTE_IDENTICAL_RESTORED"
+    },
+    {
+      "suite": "ruff + black（4 新文件）",
+      "command": "ruff check <4 新文件> && black --check <4 新文件>",
+      "exit_code": 0,
+      "note": "All checks passed / 4 files would be left unchanged"
+    },
+    {
+      "suite": "black V3 两文件（minimal-diff 纪律）",
+      "command": "black --check app/services/galaxy/{stats_service,mastery_evidence}.py + git stash 对照",
+      "exit_code": 1,
+      "note": "2 files would be reformatted——stash 对照（base 同命令）同 2 files：base 既有漂移非本卡引入；本卡新增行经 black --diff 核验零 flag（grep saw_retracted/RETRACTED 空）；曾全文件格式化 76/69 已回退重落 +20/-0 最小增量"
+    },
+    {
+      "suite": "mypy 棘轮",
+      "command": "mypy app --ignore-missing-imports --no-error-summary | grep 'error:' | wc -l",
+      "exit_code": 0,
+      "note": "55 / baseline 77（只降不升满足）；新文件（retraction*）grep 零 error 行；mastery_evidence.py:394 list-item 1 条为主检出既有（:389 同文，55=55），行号位移=本卡 docstring 增行"
+    },
+    {
+      "suite": "治理守卫 BJ/AT（按守卫自身机制收口）",
+      "command": "check_rule_bj_dead_imports.py / check_rule_at_no_orphan.py",
+      "exit_code": 0,
+      "note": "BJ：FAIL→'# rule-bj: exempt'→PASS；AT：FAIL(AT001)→docs/aurora/rule_at_exceptions.md 登记→PASS"
+    },
+    {
+      "suite": "治理守卫全量（worktree）",
+      "command": "bash scripts/run_all_rule_guards.sh",
+      "exit_code": 1,
+      "note": "最终仅 BG FAIL（Go/Dart proto 生成物不在 bare worktree；主检出同 guard BG PASS 逐同验证=环境差异非代码回归）；主检出自身基线 'rule guards failed: BA-ROUTES'（main 前进后 base 既有，与本卡无关）。本卡新增回归=0"
+    }
+  ],
+  "known_failures_disposition": {
+    "bert_36_errors": "base 既有环境噪声（主检出逐同），不属本卡范围",
+    "bg_guard_worktree": "worktree 环境差异（生成物缺席），主检出 PASS 佐证",
+    "ba_routes_main": "main 前进后 base 既有失败，与本卡零交集（本卡未触 gateway/mobile）"
+  }
+}
