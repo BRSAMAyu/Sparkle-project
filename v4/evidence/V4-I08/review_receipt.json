@@ -1,0 +1,23 @@
+{
+  "card": "V4-I08",
+  "status": "PENDING",
+  "risk": "high",
+  "reviewers_required": 2,
+  "reviewers_completed": 0,
+  "verdict": null,
+  "reviewer_worktrees": [],
+  "note": "独立审查尚未发生（无参与实现的会话执行）。本卡 high 风险 = 2 位独立审查在集成 SHA 复验；双审通过前本卡 REVIEW_READY 而非 DONE。自称完成不算完成。",
+  "acceptance_self_check": {
+    "5s内可查看_取消_离开_ack不算有效答案": "test_v4_i08_deep_task_return_control.py::test_view_and_cancel_within_return_deadline（wait_for 5.0s 钉死）+ test_ack_action_cannot_complete_human_step + 词表正反例",
+    "重启断网重试不双写_取消后外部副作用如实对账": "test_inflight_recovery_twice_no_double_write + test_cancel_double_fire_single_transition_single_event + test_cancel_materializes_side_effect_reconciliation（复用 X-09 账本证据，不建第二真源）",
+    "人类步骤等待_不由Agent伪造完成_预算暂停与unknown显式对账": "test_no_path_succeeds_run_over_unanswered_human_step（5 actor×2 target 反例）+ test_user_answer_then_succeed_is_legal + test_budget_pause_materializes_reconciliation + test_sweep_unknown_outcome_materializes_reconciliation"
+  },
+  "review_anchors": [
+    "backend/app/core/run_steps.py（USER_STEP_ANSWER_ACTIONS / ACK_CLASS_ANSWER_MARKERS 词表封闭性——allowlist 方向是否足够，ack 集是否漏语）",
+    "backend/app/services/agent_run_service.py::transition（HumanStepNotCompletedError 守卫：approval 豁免是否成立；守卫是否可能挡住诚实路径——journey confirm_outcome 流）",
+    "backend/app/services/agent_run_service.py::_side_effect_reconciliation（不覆盖既有 result_ref、异常吞并只 WARN 的方向性；与 terminalize_execution_failure 既有物化的分工）",
+    "backend/app/services/agent_run_service.py::complete_user_step（normalize 门在取锁前 fail-fast；InvalidUserStepAnswerError 422 映射）",
+    "acks/延迟钉的可失败性：删守卫/删词表门/放宽常量各对应哪些红测试（test_results.json falsifiability_note）"
+  ],
+  "date_created": "2026-09-28"
+}
