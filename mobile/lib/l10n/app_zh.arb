@@ -14355,6 +14355,25 @@
       }
     }
   },
+  "homeResumeEyebrow": "接着上次",
+  "homeResumeLastStep": "上次：{step}",
+  "@homeResumeLastStep": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "homeResumeNextStep": "下一步：{step}",
+  "@homeResumeNextStep": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "homeResumeStaleLine": "上次的进度信息可能已经过期，进任务重新校准后再继续",
+  "homeResumeContinueCta": "继续这一步",
   "dashboardEstimatedMinutes": "{minutes} 分钟",
   "@dashboardEstimatedMinutes": {
     "placeholders": {

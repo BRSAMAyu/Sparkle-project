@@ -1,0 +1,63 @@
+{
+  "card": "V4-U01",
+  "reviewer": null,
+  "review_round": "pending_r1",
+  "generated_at_local": "2026-09-29",
+  "status": "REVIEW_READY",
+  "implementation_agent": "wtU01（agent/v4/u01 @ 本 worktree）",
+  "independent_reviewer_required": 1,
+  "scope_hint": "mobile 单域：3 新 lib 文件（episode_resume_models/provider/strip）+ cockpit 挂载 + l10n 5 词条 + 4 测试文件；RF-06 三冲突面/五 Tab 路由/classic 通道零 diff 可直接 git diff 核验",
+  "challenge_points_pre_registered": [
+    {
+      "id": "CH-U01-1",
+      "point": "receipt 角色门（selection_role == 'resume_view' 才可作为接续依据）是否过严",
+      "detail": "provider 只认 role=resume_view 的回执；若审查认为 latest receipt 无论角色都该可作 ref，属放松归因——需给出为何 chat_context 回执可作接续依据的契约依据（B05 §2 角色词表语义）。反向挑战（角色门正确但实现漏了某角色）也请核 role 词表四值。",
+      "falsifiable_via": "episode_resume_provider_test.dart 反例2（chat_context → hidden 且零请求）"
+    },
+    {
+      "id": "CH-U01-2",
+      "point": "stale 判定客户端只查 expires_at，不查 memory_epoch",
+      "detail": "I01 resume_view_stale_reason 有两分支，客户端子集只实现 TTL 分支。请审：是否存在用户可感知场景在「epoch 已 bump 但 TTL 未过」窗口内显示过期步骤？（ mitigations：视图 30min TTL 短 + 重算权威在装载时。）若判定需客户端实现 epoch 面，需先落 epoch 读侧真源（本卡范围外）。",
+      "falsifiable_via": "episode_resume_models_test.dart 过期判定两面 + limitations #1"
+    },
+    {
+      "id": "CH-U01-3",
+      "point": "「可调整」未落显式控件",
+      "detail": "验收「回归有真last_step/可调整」的调整路径 = 既有 ghost 次级入口（/tasks），接续条零可点、主 CTA 单一。若审查判定需显式「换个任务」控件，与「无竞争 CTA/首屏唯一 primary」存在张力——请裁决口径；本卡主张：可调整 = 不强制接续（CTA 照旧可达既有任务面），非新增第二行动。",
+      "falsifiable_via": "today_cockpit_resume_integration_test.dart 验收2 反例 + 卡内唯一 primary 断言"
+    },
+    {
+      "id": "CH-U01-4",
+      "point": "D01 mark_seen 不接线的裁决",
+      "detail": "协调线要求「第一主动作的曝光记账接 D01 mark_seen 面」。本卡裁决：不接线（接续条非 intervention record，无 D-05 exposed 回执可指，造 ref 违 I2）。请审该裁决是否符合 D01/D05 契约口径；若首主动作另有权威 intervention 面，请指出（当前 repo 内 home 主行动无 intervention 生命周期挂点）。",
+      "falsifiable_via": "diff_or_evidence_only.md F03/D01 处置节 + limitations #3"
+    },
+    {
+      "id": "CH-U01-5",
+      "point": "harness/a11y/preview 三处零网络桩的 phase 语义",
+      "detail": "桩钉 modeGated（读关闭终态）而非 loading；消费面两者同为 hidden。若后续有测试误以为 harness 默认有接续面，需显式 override——已在桩注释与 limitations #6 声明。请审是否存在应见接续面却用默认桩的测试盲区（本卡新增测试全部显式 override，未依赖默认）。",
+      "falsifiable_via": "dashboard_test_harness.dart 桩注释 + 新增 4 测试文件的 override 清单"
+    },
+    {
+      "id": "CH-U01-6",
+      "point": "退出重进验收的测试等价性",
+      "detail": "验收③以「卸载整树 + 同数据重挂」等价退出/重进（真实 app 退出还有容器销毁）。请审：FutureProvider 容器级缓存（非 autoDispose）在真实重进（容器存活）时返回旧视图——渲染时刻 expires_at 现判即为此窗口兜底（stale 只说明不接续）。若审查要求容器销毁级等价（autoDispose），请给出与 cockpit 现有 provider 生命周期一致性的口径（todayCockpitProvider 同为容器级缓存）。",
+      "falsifiable_via": "today_cockpit_resume_integration_test.dart 验收3 + provider 过期渲染时刻现判"
+    }
+  ],
+  "evidence_index": {
+    "diff_or_evidence_only.md": "差量判定 + 验收逐条对照 + 红线自证",
+    "run_manifest.json": "真实命令/exit code/环境/scope/denominator/artifacts sha256",
+    "test_results.json": "新增 24 测清单 + 回归 + 四棘轮 + analyze",
+    "limitations.md": "6 条限制（含 2 条裁决性）",
+    "u01_resume_ready_360x800.png": "ready 顶层截图（Ahem 字形，文案以语义为准）",
+    "u01_resume_ready_360x800_semantics.txt": "ready 语义 dump（eyebrow/Last time/Next/Continue this step 在案）",
+    "u01_resume_stale_360x800.png": "stale 顶层截图",
+    "u01_resume_stale_360x800_semantics.txt": "stale 语义 dump（out-of-date 单行 + Start Here 照旧，零 Last time/Next）"
+  },
+  "review_entry_points": [
+    "git diff e50107fe..HEAD -- mobile/（全 diff 约 +693/-223，含 l10n 生成物）",
+    "mobile/lib/features/home/presentation/providers/episode_resume_provider.dart（门逻辑核心）",
+    "mobile/test/features/home/presentation/widgets/today_cockpit_resume_integration_test.dart（验收1:1 映射）"
+  ]
+}

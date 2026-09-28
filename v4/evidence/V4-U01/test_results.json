@@ -1,0 +1,108 @@
+{
+  "card": "V4-U01",
+  "generated_at_local": "2026-09-29",
+  "suite_summary": {
+    "command": "flutter test",
+    "cwd": "mobile",
+    "flutter": "3.41.3 stable (48c32af034)",
+    "exit_code": 0,
+    "passed": 2913,
+    "skipped": 23,
+    "failed": 0,
+    "note": "最终全量（含本卡全部改动：strip Expanded 修复 + 证据测试）+2913 ~23 全绿 exit 0，完整日志零 [E]。运行史如实记录：首轮全量（spacing token 修正前）+2911 ~23 全绿；中间一轮（token 修正后）报 3 failed 但日志被 tail 截断未能定位（疑并发负载 flake），随即以完整日志重跑全量 +2913 ~23 全绿零失败——以最终全绿跑为交付基线，中间轮 flake 未归因（已如实披露，未删断言未降阈值）。"
+  },
+  "new_tests": [
+    {
+      "file": "mobile/test/features/home/data/episode_resume_models_test.dart",
+      "count": 6,
+      "cases": [
+        "正：完整合法视图 → 全字段投影（步骤/待办/结果/新鲜度）",
+        "反：schema_version 非当前版本 → null（版本门 fail-closed）",
+        "反：缺 expires_at / freshness 非对象 / ref scheme 越界 → null",
+        "子结构词表越界 → 字段级降级不连坐（truth_class/step scheme/pending 空描述）",
+        "正：expires_at 之前 → null（仍新鲜）",
+        "反：expires_at 当刻/之后 → expires_at_passed（过期只许说明，不接续）"
+      ]
+    },
+    {
+      "file": "mobile/test/features/home/presentation/providers/episode_resume_provider_test.dart",
+      "count": 9,
+      "cases": [
+        "正：ready 回执（role=resume_view）+ 任务 → ready，且请求 I01 端点携带 receipt ref（context_selection://csr_…）",
+        "反：回执角色非 resume_view（chat_context）→ hidden 且零请求（归因错置不做）",
+        "反：回执读面 off（modeGated）→ hidden 且零请求（读未开不造接续）",
+        "反：无 nextAction 任务（新用户/空态）→ hidden 且零请求（零假历史）",
+        "反：端点降级（view=null + reason_code）→ hidden（类型化原因不渲染半真视图）",
+        "反：视图 schema 损坏（版本不符）→ hidden（解析 fail-closed）",
+        "反：端点网络失败（DioException）→ hidden（读面降级是缺席不是错误）",
+        "正：continueStepFor 同任务 + 新鲜 + pending step → 下一步文案",
+        "反：continueStepFor 任务不绑定 / 过期 → null（主行动不得被改写）"
+      ]
+    },
+    {
+      "file": "mobile/test/features/home/presentation/widgets/today_cockpit_resume_integration_test.dart",
+      "count": 7,
+      "cases": [
+        "正：新鲜视图 → 上次/下一步如实可见，主 CTA 收敛「Continue this step」且全卡唯一 primary",
+        "反：stale 视图 → 只出现过期说明，无上次/下一步内容，主 CTA 照旧 Start Here",
+        "正（续）：继续 CTA 点击 → 落在既有任务链路 /tasks/t1（只改标签不改跳转）",
+        "反：回执读面 off → 接续条缺席，零占位历史文案，cockpit 行为照旧",
+        "反：视图端点降级（view=null）→ 同样缺席（不渲染半真视图）",
+        "正：卸载重挂（等价退出重进）→ 零导航、零 Dialog/SnackBar、纯静态复现、transientCallbackCount==0",
+        "正：360×800 整屏装载 → 接续条在场时主 CTA rect.bottom ≤ 800 且 ensureVisible 后仍在首屏"
+      ]
+    },
+    {
+      "file": "mobile/test/features/home/presentation/widgets/today_cockpit_resume_evidence_test.dart",
+      "count": 2,
+      "cases": [
+        "ready 态：接续条 + 收敛主 CTA 如实呈现 + 证据落盘钩子（卡内唯一 primary；首屏 rect 断言）",
+        "stale 态：只说明不确定不接续（过期视图内容零渲染）+ 证据落盘钩子"
+      ]
+    }
+  ],
+  "new_test_total": 24,
+  "existing_tests_touched": [
+    {
+      "file": "mobile/test/features/home/dashboard_test_harness.dart",
+      "change": "contextReceiptProvider 钉 modeGated 确定性默认（回执读面此前在 harness 无桩、本卡消费面引入后必须钉死防真网）——纯新增 override，存量断言零改动"
+    },
+    {
+      "file": "mobile/test/widget/a11y_u08_state_semantics_test.dart",
+      "change": "GJ03 run 条用例补零网络桩（homeGrowthState + contextReceipt）——语义断言原样，断言强度不变"
+    }
+  ],
+  "regression_targets": [
+    {
+      "command": "flutter test test/features/home test/features/memory test/widget/a11y_u08_state_semantics_test.dart test/core/design/style_preview",
+      "result": "+277 passed（溢出修复后重跑）"
+    },
+    {
+      "command": "flutter test test/features/home/data/episode_resume_models_test.dart … today_cockpit_card_test.dart（5 文件）",
+      "result": "+33 passed（新增 24 + 存量 cockpit 9，存量断言零改动）"
+    }
+  ],
+  "ratchet_guards": [
+    {
+      "guard": "check_ui_design_tokens_ratchet.py",
+      "result": "PASS — color=225/275, fontSize=634/727 (184 files)"
+    },
+    {
+      "guard": "check_typography_rhythm_ratchet.py",
+      "result": "PASS — sub12FontSize=232/234, fontWeightW800=0/0, fontWeightW900=6/6 (109 files)"
+    },
+    {
+      "guard": "check_spacing_rhythm_ratchet.py",
+      "result": "PASS — spacingHalfStep=1591/1623 (321 files)；首轮 FAIL（新文件 3 处半步 token）→ 改 4pt 栅格后 PASS，未刷基线"
+    },
+    {
+      "guard": "check_dl_spec_ratchet.py",
+      "result": "PASS — 15 项计数全部不升（218 files）"
+    }
+  ],
+  "analyze": {
+    "command": "flutter analyze",
+    "result": "No issues found!"
+  },
+  "known_failures": []
+}

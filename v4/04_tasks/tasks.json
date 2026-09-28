@@ -1858,9 +1858,9 @@
     "V4-F04",
     "V4-I01"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "PASS_WITH_CHALLENGES",
    "kind": "implementation",
    "required_locks": [
     "ui-home"
@@ -1910,7 +1910,12 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "098dc3d1 PASS_WITH_CHALLENGES（验收三条全亲验：360×800 钉 physicalSize+rect.bottom≤800/零假历史反例×3/卸载重挂容器级重启；CH-1~6 全裁决；全量 2912+1 分母精确吻合+Isar flake 隔离重跑互证；四棘轮数字逐字一致；合并面 merge-tree 双验零产品码冲突）",
+    "remediation": "a59d4954 R1-1/R1-2 勘误（resume_view 生产者缺失披露——live 必要不充分，集成依赖 FIX-567 归 contract-owner；transientCallbackCount 空洞真注记——主防线=结构零动画路径）；零代码改动",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑"
+   }
   },
   {
    "id": "V4-U02",

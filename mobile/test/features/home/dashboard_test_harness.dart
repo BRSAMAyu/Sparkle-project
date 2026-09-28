@@ -32,6 +32,7 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
 import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
+import 'package:sparkle/features/memory/presentation/providers/context_receipt_provider.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
@@ -203,6 +204,13 @@ Widget _buildDashboardProviderHarness({
       ),
       systemUpdatesProvider.overrideWith((ref) async => _sampleSystemUpdates()),
       nightlyReviewProvider.overrideWith((ref) async => null),
+      // V4-U01：回执读面（I06）钉在 modeGated（读关闭）确定性默认——
+      // cockpit 接续条（episodeResumeProvider 消费面）在存量基线里如实
+      // 缺席；回执态用例在各自文件内经 extraOverrides 覆盖（后写胜出），
+      // 绝不让 harness 触真实网络。
+      contextReceiptProvider.overrideWith(
+        (ref) => _GatedContextReceiptNotifier(),
+      ),
       // wt287：追加式覆盖（riverpod 同 provider 后写胜出），供转化卡/
       // 引导卡可见性用例改写 guest 态、引导完成态与目标总览，不影响
       // 存量用例的默认基线。
@@ -299,6 +307,31 @@ class _StaticHomeCloseToUnlockNotifier extends HomeCloseToUnlockNotifier {
 
   @override
   Future<void> fetch({bool forceRefresh = false}) async {}
+}
+
+/// V4-U01：回执读面 harness 默认态（mode=off → modeGated，零网络）。
+/// 继承真实 notifier 只为复用其 state 形状；load/refresh 全部短路。
+class _GatedContextReceiptNotifier extends ContextReceiptNotifier {
+  _GatedContextReceiptNotifier() : super(_UnreachableApiClient()) {
+    // 构造期即钉 modeGated（provider 工厂被覆写后无人调用 load()）。
+    state = const ContextReceiptState(
+      phase: ContextReceiptPhase.modeGated,
+      mode: 'off',
+    );
+  }
+
+  @override
+  Future<void> load() async {}
+
+  @override
+  Future<void> refresh() async {}
+}
+
+/// 永不触网的 ApiClient 桩（任何调用即抛，被上层 catch 为降级）。
+class _UnreachableApiClient implements ApiClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('harness contextReceipt stub must not hit network');
 }
 
 class _StaticDashboardCardConfigNotifier extends DashboardCardConfigNotifier {
