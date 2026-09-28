@@ -1,0 +1,57 @@
+{
+  "task": "V4-I06",
+  "captured_at": "2026-09-28",
+  "denominator": {
+    "new_tests": {
+      "contract": "tests/contract/test_context_selection_receipt_contract.py（48 用例）",
+      "wiring": "tests/unit/test_context_selection_receipt_wiring.py（10 用例：装配归因 4 + I02 门开关 3 + build 接线/mode/红线 3）",
+      "sources": "tests/unit/test_context_selection_receipt_sources.py（8 用例：join/删除/跨用户/反例/落库 fail-closed/读面 mode 门）"
+    },
+    "affected_face": "context pack 9 套 + M-03 预筛 2 套 + C-01 决策面契约 + experience_readouts 组件 = 187 用例",
+    "larger_closure": "tests/contract/ 全套 + tests/api = 813 passed / 5 skipped"
+  },
+  "results": [
+    {
+      "suite": "I06 全量（契约 48 + 接线 10 + 来源验证 8）",
+      "cmd": "pytest tests/contract/test_context_selection_receipt_contract.py tests/unit/test_context_selection_receipt_wiring.py tests/unit/test_context_selection_receipt_sources.py -q",
+      "passed": 66,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0
+    },
+    {
+      "suite": "受影响面回归（15 文件）",
+      "cmd": "pytest <I06 三件套> tests/unit/test_context_pack*.py tests/unit/test_memory_prefilter_integration.py tests/unit/test_memory_retrieval_prefilter.py tests/unit/test_experience_readouts_criterion_label.py tests/contract/test_decision_context_contract.py -q",
+      "passed": 187,
+      "failed": 0,
+      "exit_code": 0
+    },
+    {
+      "suite": "更大闭包（contract 全套 + api）",
+      "cmd": "pytest tests/contract/ tests/unit/test_experience_readouts* tests/api -q",
+      "passed": 813,
+      "failed": 0,
+      "skipped": 5,
+      "exit_code": 0,
+      "note": "5 skipped 为既有 PG 门控用例（无真库环境跳过，非本卡引入；跳过清单与基线一致）"
+    }
+  ],
+  "static_checks": {
+    "ruff": "All checks passed!（14 个改动文件）",
+    "black": "新增文件 8/8 left unchanged（context_pack.py 主仓基线既有漂移未重排，不属本卡）",
+    "mypy": "改动文件 0 error；闭包 30 errors 全部为主仓既有依赖闭包错误（基线对照 context_pack.py 单文件 31 errors），零漂移",
+    "alembic_single_head_guard": "✅ alembic 单头: i06_20260928",
+    "migration_real_pg": "scratch 库 upgrade head → downgrade -1 → upgrade head 全通；表结构/索引核对一致；scratch 库已删、临时口令已复原"
+  },
+  "key_behavioral_assertions": [
+    "mode=off：pack.context_selection_receipt is None 且零落库行（V3 路径零变化）",
+    "mode=shadow：回执在场+契约合法+落库 1 行；receipt_id 幂等重放不重复计数",
+    "to_prompt_context 输出不含候选 ref 与 note（debug-only 红线）",
+    "I02 门 metadata 开：门拒覆盖 utility_gate_rejected、门选中转 selected；门关（缺席/形状不符）：prefilter 既有语义照常出回执",
+    "archived/到期承诺行：候选在册且 rejected（M-03 映射 expired/stale_epoch 家族），活性记忆照常 selected",
+    "删除来源后读时验证 unresolved/deleted；跨用户/不存在统一 unknown；不构造 quote/时间",
+    "契约违例回执不落库（fail-closed）；版本门外版本读侧 None+违例；旧生产者缺 candidates 读侧 unknown 不炸"
+  ],
+  "verdict": "PASS_LOCAL（全部可失败断言在本分支通过；独立审查待跑，见 review_receipt.json）"
+}

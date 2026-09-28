@@ -118,6 +118,7 @@ from app.models.compliance import (
     UserPersonaKey,
 )
 from app.models.context_pack import ContextBudgetProfile, ContextPackFeedback, ContextPackRun
+from app.models.context_selection_receipt import ContextSelectionReceiptRow
 from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
 from app.models.custom_expert import CustomExpertProfile, CustomExpertSource, CustomExpertTeam
 from app.models.decision_record import DecisionRecord
@@ -410,6 +411,8 @@ __all__ = [
     "ContextBudgetProfile",
     "ContextPackFeedback",
     "ContextPackRun",
+    # Context Selection Receipt (V4-I06)
+    "ContextSelectionReceiptRow",
     # Curiosity
     "CuriosityCapsule",
     "DepthLevel",
