@@ -1,0 +1,68 @@
+{
+  "task": "V4-S04",
+  "card": "v4/04_tasks/cards/V4-S04.md",
+  "generated_at_local": "2026-09-28T20:10:00+08:00",
+  "executor": "wtS04 fleet agent (V4-S04, 锁 asset-pipeline)",
+  "worktree": {
+    "path": "/Users/brsama/code/GitHub/wtS04",
+    "branch": "agent/v4/s04",
+    "base_sha": "001561c3f74dc80247534a5e5a5802c322c0183d",
+    "base_subject": "state(v4): I06 销账 DONE_REVIEWED（13/58；C1 合并交互缺陷已修+复验）"
+  },
+  "environment": {
+    "hardware": "Apple Silicon (arm64, darwin 25.6.0)",
+    "python": "Python 3.14.3 (Homebrew)",
+    "flutter": "Flutter 3.41.3 stable",
+    "gitignored_entity_dirs_copied_not_committed": [
+      "backend/app/gen",
+      "backend/gateway/gen",
+      "mobile/lib/gen"
+    ],
+    "env_debt_note": "新 worktree 缺三个 gitignored 实体目录时既有守卫 AQ/BG 假红；复制后 AQ/BG exit=0，属环境债非回归"
+  },
+  "commands_and_exit_codes": [
+    {"cmd": "python3 scripts/guards/check_asset_release_surface.py", "exit": 0, "stdout_tail": "[Rule V4S04-ASSETS] PASS - ledger=49 approved=38 proposed=11 (proposed 全部隔离于发布面)", "log": "final_verification.txt"},
+    {"cmd": "python3 scripts/guards/check_pixel_dpr_policy.py", "exit": 0, "stdout_tail": "[Rule V4S04-DPR] PASS - pixel entries=5 全部声明可验证（多DPR/NN/full-res），占位生成可复现", "log": "final_verification.txt"},
+    {"cmd": "python3 scripts/devtools/generate_asset_ledger.py --verify", "exit": 0, "stdout_tail": "[asset-ledger] PASS - 49 entries verified (hash+size+coverage)"},
+    {"cmd": "python3 scripts/devtools/generate_asset_ledger.py --scaffold (幂等重跑)", "exit": 0, "stdout_tail": "scaffold: +0 new PROPOSED entries, total 49"},
+    {"cmd": "python3 scripts/devtools/generate_placeholder_sprites.py + shasum -c", "exit": 0, "note": "重生成逐字节一致，见 placeholders_sha256.txt"},
+    {"cmd": "cd scripts/tests && python3 -m unittest test_asset_release_guard test_pixel_dpr_policy", "exit": 0, "note": "Ran 14 tests, OK"},
+    {"cmd": "flutter analyze lib/core/assets/asset_catalog.dart test/core/assets/asset_catalog_test.dart", "exit": 0, "note": "No issues found"},
+    {"cmd": "flutter test test/core/assets/asset_catalog_test.dart test/core/services/bgm_service_test.dart test/core/services/bgm_service_p2_10_test.dart test/widget/unified_settings_bgm_test.dart", "exit": 0, "note": "+31: All tests passed（新 5 + 既有 BGM 面 26，证明 catalog 翻转零回归）"},
+    {"cmd": "bash scripts/run_all_rule_guards.sh（LIST_ONLY + RULE_FILTER 两条新规则）", "exit": 0, "note": "manifest 识别 V4S04-ASSETS/V4S04-DPR 并各自 PASS；全量套件汇总中 AQ/BG 失败已归因 worktree 环境债（复制 gen 后直跑 exit=0）"}
+  ],
+  "counterexamples": {
+    "log": "counterexamples.txt",
+    "acceptance_1_license": {
+      "inject": "printf 未知许可字节 > mobile/assets/images/game_icon_rip.png",
+      "guard_result": "L003 打包未入账 ×2, exit=1",
+      "restore_result": "exit=0"
+    },
+    "acceptance_1_bgm_flipback": {
+      "inject": "bgm_catalog.json entries[0].releaseApproved=true",
+      "guard_result": "L002 哈希漂移 + L006 releaseApproved=true 指向未批准资产, exit=1",
+      "restore_result": "exit=0"
+    },
+    "acceptance_2_dpr": {
+      "inject": "2.0x 变体 IHDR 改写 15x20",
+      "guard_result": "P002 非整数倍 + P005 与生成器输出不一致, exit=1",
+      "restore_result": "regenerate 后 exit=0 且逐字节一致"
+    },
+    "acceptance_3_indirection": {
+      "dart_test": "mobile/test/core/assets/asset_catalog_test.dart 第2/3例：PROPOSED 忽略错误 approved 路径强制落占位；替换映射业务 API 零变化",
+      "guard_rule": "L008 拦截 asset_catalog.dart 与账本 consumers 之外的 assets/ 硬编码（scripts/tests/test_asset_release_guard.py test_hardcoded...钉死）"
+    }
+  },
+  "ledger_stats": {
+    "total_entries": 49,
+    "approved": 38,
+    "proposed_blocked_from_release": 11,
+    "proposed_breakdown": {"bgm_track_commercial_recordings": 10, "ai_generated_icon": 1},
+    "stock_files_ledgered": 46,
+    "generated_placeholders": 3,
+    "fonts_on_device": 0,
+    "release_surface_bundle_files_checked": "pubspec 声明目录直接子文件 + 2.0x/3.0x variant 子目录"
+  },
+  "artifacts_sha256": "artifacts_sha256.txt",
+  "llm_usage": "本卡零模型调用（无 LLM 参与生成/决策，占位为确定性程序生成）"
+}

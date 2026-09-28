@@ -167,9 +167,13 @@ flutter:
     - shaders/galaxy_field.frag
     - shaders/particle_burst.frag
   # Assets
+  # 发布面规则（V4-S04 资产账本）：只有账本 APPROVED+ship_in_product 的文件
+  # 允许出现在以下声明目录（非递归）或被已打包 config 引用。
+  # 守卫：scripts/guards/check_asset_release_surface.py
   assets:
     - assets/images/
     - assets/icons/
+    - assets/placeholders/
     - assets/audio/ui/
     - assets/audio/ambient/
     - assets/audio/bgm/

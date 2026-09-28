@@ -22,7 +22,7 @@
       "density": 0.2,
       "baseGain": 0.89,
       "loopable": false,
-      "releaseApproved": true
+      "releaseApproved": false
     },
     {
       "id": "artur_rubinstein_chopin_19_nocturnes_disc_1_1_02_chopin_nocturne_2_in_e_flat_op_9_2_ct_109",
@@ -46,7 +46,7 @@
       "density": 0.14,
       "baseGain": 0.88,
       "loopable": false,
-      "releaseApproved": true
+      "releaseApproved": false
     },
     {
       "id": "artur_rubinstein_chopin_19_nocturnes_disc_1_1_10_chopin_nocturne_10_in_a_flat_op_32_2_ct_117",
@@ -70,7 +70,7 @@
       "density": 0.14,
       "baseGain": 0.88,
       "loopable": false,
-      "releaseApproved": true
+      "releaseApproved": false
     },
     {
       "id": "artur_rubinstein_chopin_19_nocturnes_disc_2_2_03_chopin_nocturne_13_in_c_minor_op_48_1_ct_120",
@@ -96,7 +96,7 @@
       "density": 0.18,
       "baseGain": 0.88,
       "loopable": false,
-      "releaseApproved": true
+      "releaseApproved": false
     },
     {
       "id": "les_introuvables_disc_5_5_01_bach_cello_suite_1_in_g_bwv_1007_praeludium",
@@ -121,7 +121,7 @@
       "density": 0.16,
       "baseGain": 0.84,
       "loopable": false,
-      "releaseApproved": true
+      "releaseApproved": false
     },
     {
       "id": "mozart_complete_works_for_solo_piano_disc_3_3_07_mozart_piano_sonata_11_in_a_k_331_andante_grazioso",
@@ -147,7 +147,7 @@
       "density": 0.16,
       "baseGain": 0.88,
       "loopable": false,
-      "releaseApproved": true
+      "releaseApproved": false
     },
     {
       "id": "the_best_of_cinema_music_01_nausicaa",
@@ -173,7 +173,7 @@
       "density": 0.2,
       "baseGain": 0.88,
       "loopable": false,
-      "releaseApproved": true
+      "releaseApproved": false
     },
     {
       "id": "the_best_of_cinema_music_10_summer",
@@ -199,7 +199,7 @@
       "density": 0.2,
       "baseGain": 0.88,
       "loopable": false,
-      "releaseApproved": true
+      "releaseApproved": false
     },
     {
       "id": "tokyo_quartet_beethoven_9_tokyo_sq_06_3_ii_andante_con_moto_quasi_allegretto",
@@ -222,7 +222,7 @@
       "density": 0.18,
       "baseGain": 0.84,
       "loopable": false,
-      "releaseApproved": true
+      "releaseApproved": false
     },
     {
       "id": "track_05",
@@ -245,7 +245,7 @@
       "density": 0.18,
       "baseGain": 0.86,
       "loopable": false,
-      "releaseApproved": true
+      "releaseApproved": false
     }
   ]
 }

@@ -1,0 +1,24 @@
+== 反例1：未知许可文件塞进发布目录 assets/images/
+[Rule V4S04-ASSETS] FAIL
+  L003 打包未入账: images/game_icon_rip.png
+  L003 栅格未入账: images/game_icon_rip.png
+violations=2
+exit=1
+== 反例1-恢复后
+exit=0
+== 反例2：NN 整数倍变体被破坏（2x 变体改写为非整数倍尺寸）
+[Rule V4S04-DPR] FAIL
+  P002 placeholders/2.0x/placeholder_pixel_block.png 变体 15x20 != 主资产 8x8 × 2.0（NN 整数倍导出被破坏）
+  P005 占位资源与生成器输出不一致（非程序生成或被手改）: mobile/assets/placeholders/2.0x/placeholder_pixel_block.png
+violations=2
+exit=1
+== 反例2-恢复后
+exit=0
+== 反例3：PROPOSED 商业 BGM 翻回 releaseApproved=true
+[Rule V4S04-ASSETS] FAIL
+  L002 哈希漂移: audio/bgm/bgm_catalog.json
+  L006 releaseApproved=true 指向未批准资产: audio/bgm/curated/anatol_ugorski_schumann_davidsbundlertanze_op_6__05_14_zart_und_singend.m4a status=PROPOSED
+violations=2
+exit=1
+== 反例3-恢复后
+exit=0
