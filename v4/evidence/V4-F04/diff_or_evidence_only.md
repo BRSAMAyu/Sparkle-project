@@ -54,7 +54,7 @@
   根、再深链幂等直达。
 - `shell_accessibility_test.dart`（3）— 验收面 3：文本 200% 无越界异常且
   五目的地+错误探针可见；键盘 286dp inset 下置底输入框停在键盘上方
-  （反例钉死 `resizeToAvoidBottomInset` 契约回退即红）、底栏不越界；
+  （反例钉死 inset 消费链回退即红（F04 一审 N1 勘误：外层单点回退不红，双点才红））、底栏不越界；
   分支根 popRoute 不被 shell 误吞。
 - `shell_classic_zero_delta_test.dart`（4）— classic 调用点举证（F02 N2）：
   装饰沿 classic 渲染 shrink 零 CustomPaint、全壳无像素绘制层渗漏、底栏
