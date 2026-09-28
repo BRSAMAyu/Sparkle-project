@@ -1,0 +1,608 @@
+{
+  "task": "V4-Q02",
+  "kind": "VERIFICATION_RESULTS_L1_ZERO_MODEL",
+  "generated_at_utc": "2026-09-29T00:25:00+00:00",
+  "evaluated_source_sha": "a2b17f1cbf1a20e17743f64ff3de13b190a40f21",
+  "counterexample_reproduction": {
+    "verdict": "REPRODUCED",
+    "repo_head": "a2b17f1cbf1a20e17743f64ff3de13b190a40f21",
+    "verify_sha256_ok": true,
+    "recompute_ok": true,
+    "frozen_numbers_dual_path": {
+      "full": {
+        "resolved": 9,
+        "failed": 11,
+        "followed_wrong": 18,
+        "questions": 0,
+        "control_intrusions": 0,
+        "utility": -9.2
+      },
+      "no_memory": {
+        "resolved": 11,
+        "failed": 9,
+        "followed_wrong": 5,
+        "questions": 0,
+        "control_intrusions": 0,
+        "utility": 0.0
+      }
+    },
+    "rerun_direction": {
+      "full_resolved": 9,
+      "no_memory_resolved": 11,
+      "no_memory_beats_full": true,
+      "uplift_no_memory_minus_full_pp": 10.0
+    },
+    "aggregates_match_frozen": true,
+    "normalized_identical": {
+      "full": true,
+      "no_memory": true
+    },
+    "applied_attribution_narrowing": {
+      "full": {
+        "narrowing_only": true,
+        "frozen_only_turns": [
+          21,
+          22,
+          23,
+          29,
+          30,
+          31
+        ],
+        "fresh_only_turns": [],
+        "frozen_turns": 8,
+        "fresh_turns": 2
+      },
+      "no_memory": {
+        "narrowing_only": true,
+        "frozen_only_turns": [
+          18,
+          19,
+          20,
+          26,
+          27,
+          28
+        ],
+        "fresh_only_turns": [],
+        "frozen_turns": 10,
+        "fresh_turns": 4
+      }
+    },
+    "declared_divergence_classes": [
+      "a) friction_diagnosis_version 注记推进（v1_2→v1_3，冻结 SHA 后版本 bump）",
+      "b) 随机 UUID 盐派生身份面（decision_id/patch_id/goal/task id，逐 run 必然不同）",
+      "c) applied_patch_ids 归因收窄（I05 4cac07ec 对齐 FIX-67 scope 谓词；b5e8dedd 上 applied=未过滤全量 effective 集——已修正的归因缺陷；聚合行为面实证全同）"
+    ]
+  },
+  "freeze_manifest": {
+    "frozen_by": "V4-Q02",
+    "frozen_at_utc": "2026-09-28T17:56:49.655179+00:00",
+    "authority": [
+      "v4/06_evaluation/EVALUATION_PROTOCOL.md §四臂效用实验",
+      "v4/evidence/V4-B03/frozen_utility.json（utility_frozen.weights + denominator_policy）"
+    ],
+    "arms": {
+      "A_v3_full": "冻结 V3 当前部署逻辑（A-08 full 臂；I02 gate off / I05 shadow / I04 off——部署默认）",
+      "B_no_optional_history": "无可选历史（A-08 no_memory 臂；mandatory 当前约束各臂共享）",
+      "C_v4_all_legal": "V4 语义控制+所有合法历史（full 臂 + EXPERIENCE_STRATEGY_MODE=live）",
+      "D_v4_utility_filtered": "V4 语义控制+效用筛选历史（C + ENABLE_MEMORY_UTILITY_GATE=True）"
+    },
+    "shared_constraints": "同当前约束（goal/plan 全臂播种）、资料、工具；本层零模型故模型/最大预算恒等成立；token 差异单报（L1=0）",
+    "utility_weights_frozen": {
+      "resolved_episode": 1.0,
+      "unresolved_episode": -1.0,
+      "wrong_followed_decision": -0.4,
+      "question": -0.15,
+      "control_intrusion": -0.6
+    },
+    "spec_version": "aurora_ablation_spec.v1",
+    "metrics_rules_version": "aurora_ablation_metrics.v1",
+    "thresholds_frozen": "无评测阈值调参；效用门权重/TopK 保持 I02 冻结初值（本卡不改被评对象）",
+    "model_frozen": "零 LLM（L1 可控服务模拟）；L2 真模型层另需预算授权（budget.example.json enabled=false）",
+    "episode_shape": "每 episode 最多 3 会话（≤协议 4 决策轮）；EPISODE_SESSION_BUDGET=3",
+    "holdout_plan": "30 profile × 4 episode = 120/臂；seed_main=20260928 seed_sensitivity=20260929；生成规则已随本 runner 提交（seed 显式）",
+    "known_surface_boundary": "I02 门集成面=context_pack（不在 A-08 决策回路）→ L1 面内 D≡C 实证披露；D 差分证据在选择面 Surface-2（真实 ContextPackBuilder + M-03 预筛 + 效用门）"
+  },
+  "dev_invariants": {
+    "issues": [],
+    "ok": true
+  },
+  "four_arm_analysis": {
+    "utility_weights": {
+      "resolved_episode": 1.0,
+      "unresolved_episode": -1.0,
+      "wrong_followed_decision": -0.4,
+      "question": -0.15,
+      "control_intrusion": -0.6
+    },
+    "seeds": {
+      "dev": {
+        "n_profiles": 15,
+        "arm_summaries": {
+          "A_v3_full": {
+            "episodes_resolved": 16,
+            "episodes_total": 30,
+            "stuck_accuracy": 0.5333,
+            "utility": -7.5,
+            "followed_wrong_decisions": 23,
+            "questions_total": 2,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 2,
+            "patch_ids_seen": 2
+          },
+          "B_no_optional_history": {
+            "episodes_resolved": 17,
+            "episodes_total": 30,
+            "stuck_accuracy": 0.5667,
+            "utility": 1.7,
+            "followed_wrong_decisions": 5,
+            "questions_total": 2,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 4,
+            "patch_ids_seen": 3
+          },
+          "C_v4_all_legal": {
+            "episodes_resolved": 16,
+            "episodes_total": 30,
+            "stuck_accuracy": 0.5333,
+            "utility": -7.5,
+            "followed_wrong_decisions": 23,
+            "questions_total": 2,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 2,
+            "patch_ids_seen": 2
+          },
+          "D_v4_utility_filtered": {
+            "episodes_resolved": 16,
+            "episodes_total": 30,
+            "stuck_accuracy": 0.5333,
+            "utility": -7.5,
+            "followed_wrong_decisions": 23,
+            "questions_total": 2,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 2,
+            "patch_ids_seen": 2
+          }
+        },
+        "paired_bootstrap_ci": null,
+        "per_cluster": null,
+        "d_minus_c_identity_note": null
+      },
+      "holdout_s20260928": {
+        "n_profiles": 30,
+        "arm_summaries": {
+          "A_v3_full": {
+            "episodes_resolved": 42,
+            "episodes_total": 120,
+            "stuck_accuracy": 0.35,
+            "utility": -129.2,
+            "followed_wrong_decisions": 212,
+            "questions_total": 56,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 9,
+            "patch_ids_seen": 6
+          },
+          "B_no_optional_history": {
+            "episodes_resolved": 38,
+            "episodes_total": 120,
+            "stuck_accuracy": 0.3167,
+            "utility": -74.7,
+            "followed_wrong_decisions": 55,
+            "questions_total": 58,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 12,
+            "patch_ids_seen": 9
+          },
+          "C_v4_all_legal": {
+            "episodes_resolved": 42,
+            "episodes_total": 120,
+            "stuck_accuracy": 0.35,
+            "utility": -129.2,
+            "followed_wrong_decisions": 212,
+            "questions_total": 56,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 4,
+            "patch_ids_seen": 2
+          },
+          "D_v4_utility_filtered": {
+            "episodes_resolved": 42,
+            "episodes_total": 120,
+            "stuck_accuracy": 0.35,
+            "utility": -129.2,
+            "followed_wrong_decisions": 212,
+            "questions_total": 56,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 4,
+            "patch_ids_seen": 2
+          }
+        },
+        "paired_bootstrap_ci": {
+          "M11_shape_C_minus_A": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "n_profiles": 30
+          },
+          "M11_shape_D_minus_A": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "n_profiles": 30
+          },
+          "M12_shape_C_minus_B": {
+            "mean": 0.033333,
+            "ci95_low": -0.041667,
+            "ci95_high": 0.108333,
+            "n_profiles": 30
+          },
+          "M12_shape_D_minus_B": {
+            "mean": 0.033333,
+            "ci95_low": -0.041667,
+            "ci95_high": 0.116667,
+            "n_profiles": 30
+          },
+          "utility_C_minus_A": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "n_profiles": 30
+          },
+          "utility_D_minus_C": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "n_profiles": 30
+          },
+          "utility_A_minus_B": {
+            "mean": -1.816667,
+            "ci95_low": -2.698333,
+            "ci95_high": -0.841667,
+            "n_profiles": 30
+          }
+        },
+        "per_cluster": {
+          "explicit|active": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.6,
+              "B_no_optional_history": 0.5,
+              "C_v4_all_legal": 0.6,
+              "D_v4_utility_filtered": 0.6
+            }
+          },
+          "explicit|none": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.2,
+              "B_no_optional_history": 0.25,
+              "C_v4_all_legal": 0.2,
+              "D_v4_utility_filtered": 0.2
+            }
+          },
+          "mixed|active": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.45,
+              "B_no_optional_history": 0.15,
+              "C_v4_all_legal": 0.45,
+              "D_v4_utility_filtered": 0.45
+            }
+          },
+          "mixed|none": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.2,
+              "B_no_optional_history": 0.3,
+              "C_v4_all_legal": 0.2,
+              "D_v4_utility_filtered": 0.2
+            }
+          },
+          "vague|active": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.45,
+              "B_no_optional_history": 0.5,
+              "C_v4_all_legal": 0.45,
+              "D_v4_utility_filtered": 0.45
+            }
+          },
+          "vague|none": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.2,
+              "B_no_optional_history": 0.2,
+              "C_v4_all_legal": 0.2,
+              "D_v4_utility_filtered": 0.2
+            }
+          }
+        },
+        "d_minus_c_identity_note": "utility_D_minus_C CI 应为精确零（L1 回路面 D≡C，I02 门不在该面）；非零=未声明行为差"
+      },
+      "holdout_s20260929": {
+        "n_profiles": 30,
+        "arm_summaries": {
+          "A_v3_full": {
+            "episodes_resolved": 56,
+            "episodes_total": 120,
+            "stuck_accuracy": 0.4667,
+            "utility": -91.5,
+            "followed_wrong_decisions": 196,
+            "questions_total": 34,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 13,
+            "patch_ids_seen": 11
+          },
+          "B_no_optional_history": {
+            "episodes_resolved": 49,
+            "episodes_total": 120,
+            "stuck_accuracy": 0.4083,
+            "utility": -53.9,
+            "followed_wrong_decisions": 67,
+            "questions_total": 34,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 17,
+            "patch_ids_seen": 13
+          },
+          "C_v4_all_legal": {
+            "episodes_resolved": 56,
+            "episodes_total": 120,
+            "stuck_accuracy": 0.4667,
+            "utility": -91.5,
+            "followed_wrong_decisions": 196,
+            "questions_total": 34,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 13,
+            "patch_ids_seen": 7
+          },
+          "D_v4_utility_filtered": {
+            "episodes_resolved": 56,
+            "episodes_total": 120,
+            "stuck_accuracy": 0.4667,
+            "utility": -91.5,
+            "followed_wrong_decisions": 196,
+            "questions_total": 34,
+            "control_intrusions": 0,
+            "patch_reordered_turns": 13,
+            "patch_ids_seen": 7
+          }
+        },
+        "paired_bootstrap_ci": {
+          "M11_shape_C_minus_A": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "n_profiles": 30
+          },
+          "M11_shape_D_minus_A": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "n_profiles": 30
+          },
+          "M12_shape_C_minus_B": {
+            "mean": 0.058333,
+            "ci95_low": -0.025,
+            "ci95_high": 0.15,
+            "n_profiles": 30
+          },
+          "M12_shape_D_minus_B": {
+            "mean": 0.058333,
+            "ci95_low": -0.025,
+            "ci95_high": 0.15,
+            "n_profiles": 30
+          },
+          "utility_C_minus_A": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "n_profiles": 30
+          },
+          "utility_D_minus_C": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "n_profiles": 30
+          },
+          "utility_A_minus_B": {
+            "mean": -1.253333,
+            "ci95_low": -2.156667,
+            "ci95_high": -0.333333,
+            "n_profiles": 30
+          }
+        },
+        "per_cluster": {
+          "explicit|active": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.65,
+              "B_no_optional_history": 0.75,
+              "C_v4_all_legal": 0.65,
+              "D_v4_utility_filtered": 0.65
+            }
+          },
+          "explicit|none": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.45,
+              "B_no_optional_history": 0.45,
+              "C_v4_all_legal": 0.45,
+              "D_v4_utility_filtered": 0.45
+            }
+          },
+          "mixed|active": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.65,
+              "B_no_optional_history": 0.35,
+              "C_v4_all_legal": 0.65,
+              "D_v4_utility_filtered": 0.65
+            }
+          },
+          "mixed|none": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.35,
+              "B_no_optional_history": 0.45,
+              "C_v4_all_legal": 0.35,
+              "D_v4_utility_filtered": 0.35
+            }
+          },
+          "vague|active": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.65,
+              "B_no_optional_history": 0.35,
+              "C_v4_all_legal": 0.65,
+              "D_v4_utility_filtered": 0.65
+            }
+          },
+          "vague|none": {
+            "n_profiles": 5,
+            "resolve_rate": {
+              "A_v3_full": 0.05,
+              "B_no_optional_history": 0.1,
+              "C_v4_all_legal": 0.05,
+              "D_v4_utility_filtered": 0.05
+            }
+          }
+        },
+        "d_minus_c_identity_note": "utility_D_minus_C CI 应为精确零（L1 回路面 D≡C，I02 门不在该面）；非零=未声明行为差"
+      }
+    }
+  },
+  "surface2_selection_eval": {
+    "all_ok": true,
+    "surface": "ContextPackBuilder.build（M-03 预筛 + I02 效用门；D 臂唯一集成面）",
+    "oracle_frozen": "不合法引用=0；必要记忆不可全部拒用；selected⊆input（B03 配对集 CTX 族）",
+    "scenarios": [
+      {
+        "scenario": "ctx01_time_budget",
+        "ctx_ref": "CTX-01",
+        "oracle_ok": true,
+        "notes": [
+          "all oracle checks passed"
+        ],
+        "gate_on_verdict": "selected",
+        "gate_on_bypassed": null,
+        "gate_on_precision": 1.0,
+        "goal_present_all_modes": true
+      },
+      {
+        "scenario": "ctx02_same_project_example",
+        "ctx_ref": "CTX-02",
+        "oracle_ok": true,
+        "notes": [
+          "all oracle checks passed"
+        ],
+        "gate_on_verdict": "selected",
+        "gate_on_bypassed": null,
+        "gate_on_precision": 1.0,
+        "goal_present_all_modes": true
+      },
+      {
+        "scenario": "ctx03_cross_course_failure",
+        "ctx_ref": "CTX-03",
+        "oracle_ok": true,
+        "notes": [
+          "all oracle checks passed"
+        ],
+        "gate_on_verdict": "all_rejected",
+        "gate_on_bypassed": null,
+        "gate_on_precision": null,
+        "goal_present_all_modes": true
+      },
+      {
+        "scenario": "ctx04_denied_old_profile",
+        "ctx_ref": "CTX-04",
+        "oracle_ok": true,
+        "notes": [
+          "all oracle checks passed"
+        ],
+        "gate_on_verdict": "selected",
+        "gate_on_bypassed": null,
+        "gate_on_precision": 1.0,
+        "goal_present_all_modes": true
+      },
+      {
+        "scenario": "ctx05_expired_constraint",
+        "ctx_ref": "CTX-05",
+        "oracle_ok": true,
+        "notes": [
+          "all oracle checks passed"
+        ],
+        "gate_on_verdict": "selected",
+        "gate_on_bypassed": null,
+        "gate_on_precision": 0.5,
+        "goal_present_all_modes": true
+      },
+      {
+        "scenario": "ctx06_external_pseudo_preference",
+        "ctx_ref": "CTX-06",
+        "oracle_ok": true,
+        "notes": [
+          "all oracle checks passed"
+        ],
+        "gate_on_verdict": "selected",
+        "gate_on_bypassed": null,
+        "gate_on_precision": 1.0,
+        "goal_present_all_modes": true
+      },
+      {
+        "scenario": "ctx07_missing_source",
+        "ctx_ref": "CTX-07",
+        "oracle_ok": true,
+        "notes": [
+          "all oracle checks passed"
+        ],
+        "gate_on_verdict": "selected",
+        "gate_on_bypassed": null,
+        "gate_on_precision": 1.0,
+        "goal_present_all_modes": true
+      },
+      {
+        "scenario": "ctx08_all_optional_rejected_mandatory_kept",
+        "ctx_ref": "CTX-08",
+        "oracle_ok": true,
+        "notes": [
+          "all oracle checks passed"
+        ],
+        "gate_on_verdict": "required_memory_recall_miss_bypass",
+        "gate_on_bypassed": true,
+        "gate_on_precision": null,
+        "goal_present_all_modes": true
+      },
+      {
+        "scenario": "ctx08_good_required_memory_recall",
+        "ctx_ref": "CTX-08+",
+        "oracle_ok": true,
+        "notes": [
+          "all oracle checks passed"
+        ],
+        "gate_on_verdict": "selected",
+        "gate_on_bypassed": null,
+        "gate_on_precision": 1.0,
+        "goal_present_all_modes": true
+      }
+    ]
+  },
+  "engineering_gates": {
+    "pytest_affected": {
+      "commands": 2,
+      "passed": 180,
+      "failed": 0
+    },
+    "mypy": {
+      "count": 59,
+      "baseline": 77,
+      "new_in_app_scope": 0
+    },
+    "ruff_new_files": "0 violations",
+    "black_new_files": "formatted"
+  },
+  "value_verdict": {
+    "implementation": "COMPLETE（评测基础设施+复现+四臂 L1 运行+选择面）",
+    "l1_effect_gate": "FAIL——M11 形状（V4−V3 ≥ +10pp 且簇 CI 下界>0）实测点估计=精确 0（结构性恒等，见 limitations）；M12 形状（V4−B ≥ 0）双 seed 点估计 +3.3/+5.8pp 但 95% CI 均跨 0，未建立；冻结 utility 下 A−B 两 seed 均显著为负（坏经验污染模式在 L1 持续）",
+    "l2_live_gate": "NOT_RUN（BLOCKED_EXPLICIT——批量收费模型预算未授权）",
+    "product_value": "NOT_PASS——原反例在当前 SHA 的 L1 面仍未翻案：记忆面净贡献未证明为正；V4 门/策略层在本 L1 回路差分=0（面边界如实披露），选择面 oracle 全绿但那是合规面不是收益面",
+    "anti_gaming_notes": "不丢失败（未解决计入）；不加 n（profile 簇配对）；全拒不通过（Surface-2 ctx08 bypass 实证，precision=None=N/A）；合成结果不宣称真人留存（本报告全部结论限定 L1 合成用户模拟，NOT_MEASURED_HUMAN）"
+  }
+}
