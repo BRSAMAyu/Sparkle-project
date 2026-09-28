@@ -2,7 +2,7 @@
 
 - 卡：V4-B05（design · risk high · 独立审查 2 位）
 - 状态：DESIGN_PROPOSAL（本文件是契约设计，不是实现声明；未改任何产品码）
-- 修订记录：2026-09-28 按一审 `review_r1.md`（wtB05R，APPROVE-with-conditions @ `83b363e`）落 C1–C5 条件修订，修订处标注「R1-Cn 修订 2026-09-28」；待二审对修订 diff 点验
+- 修订记录：2026-09-28 按一审 `review_r1.md`（wtB05R，APPROVE-with-conditions @ `83b3633e`）落 C1–C5 条件修订，修订处标注「R1-Cn 修订 2026-09-28」；待二审对修订 diff 点验
 - 契约版本：`context_selection_receipt.v1` / `experience_event.v1` / `episode_resume_view.v1` / `action_plan.v1.1`（增量字段位）
 - 基线 SHA：见 `run_manifest.json`（worktree wtB05 @ agent/v4/b05）
 - 纪律：与 C-01 `decision_context.v1`、X-01 `action_plan.v1`、X-03 `action_command.v1` 同款——封闭词表 + 冻结结构 + 测试钉死；词表扩展 = 契约变更，需 bump 版本过 reviewer。
