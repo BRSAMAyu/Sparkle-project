@@ -1,11 +1,12 @@
 {
   "card": "V4-B02",
   "required_independent_reviewers": 1,
-  "status": "PENDING_REVIEW",
-  "note": "按验收模型（普通任务 DONE = 独立未参与会话审查 + 当前集成 SHA 可失败测试），本卡由实现会话产出证据后待独立审查。自称完成不算完成：本文件留待审查会话填写，实现会话不代填结论。",
-  "reviewer": null,
-  "reviewer_session": null,
-  "reviewed_sha": "3c4618cc1d23b79792e330f87114484434a410ed",
+  "status": "REVIEWED_CHALLENGES_PENDING",
+  "note": "按验收模型（普通任务 DONE = 独立未参与会话审查 + 当前集成 SHA 可失败测试），本卡由实现会话产出证据后待独立审查。自称完成不算完成：本文件留待审查会话填写，实现会话不代填结论。一审裁决 PASS_WITH_CHALLENGES：卡面三验收通过，C1-C4 勘误后可 DONE（详见 review_r1.md）。",
+  "reviewer": "wtB02R",
+  "reviewer_session": "wtB02R（独立审查，未参与 wtB02 实现）",
+  "reviewed_sha": "235fd0fe50ccb0290e0fc688e65692f48acf995c",
+  "reviewed_source_sha": "3c4618cc1d23b79792e330f87114484434a410ed",
   "evidence_bundle": [
     "v4/evidence/V4-B02/mapping.csv",
     "v4/evidence/V4-B02/route_inventory.csv",
@@ -22,6 +23,20 @@
     "复核 DF-08/DF-09 深链 id-less 歧义（deep_link_service.dart:82-109 + galaxy_routes.dart:18）",
     "确认产品代码零 diff（git show --stat 本卡 commit 应仅含 v4/evidence 与 tasks.json）"
   ],
-  "verdict": null,
-  "reviewed_at": null
+  "verdict": "PASS_WITH_CHALLENGES",
+  "challenged": [
+    "C1: DF-09 错误——sparkle://node id-less 有 null 守卫（deep_link_service.dart:97-98），静默 no-op，不发生导航亦无 404 兜底",
+    "C2: 深链闭合小结错误——sparkle://report（universal_share_service.dart:67）不在 _routeMapping，7 种分享深链闭合实为 6/7",
+    "C3: /documents 分类错误——定义即 redirect→/library（documents_routes.dart:21-22），按自有口径应归 legacy_redirect（5/9 而非 4/10）",
+    "C4(轻微): 重分类计数 6(report §4) vs 3(test_results) 矛盾，verification_note 仅可追溯 4-5 处"
+  ],
+  "verified_clean": [
+    "43 目录 == 43 映射行，双向 exact match；136 路由全唯一且分类加总一致",
+    "9 行映射抽验（4 类全覆盖）file:line 锚点全部精确命中",
+    "漂移抽验 5/10：DF-01/05/06/08 属实，DF-10 部分属实（见 C3）",
+    "产品码零 diff（commit 仅 v4/evidence + tasks.json 状态元数据）",
+    "run_manifest 8 artifact sha256 复算全一致；review_receipt 未被实现会话代填"
+  ],
+  "review_receipt": "v4/evidence/V4-B02/review_r1.md",
+  "reviewed_at": "2026-09-28"
 }
