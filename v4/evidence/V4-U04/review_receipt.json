@@ -1,0 +1,70 @@
+{
+  "card": "V4-U04",
+  "state": "PENDING_REVIEW",
+  "risk": "high",
+  "independent_reviewers_required": 2,
+  "reviewer_1": {
+    "reviewer": "wtU04R1",
+    "verdict": "PASS_WITH_CHALLENGES",
+    "receipt": "v4/evidence/V4-U04/review_r1.md",
+    "receipt_commit": "40bd1821",
+    "date": "2026-09-29",
+    "conditions": [
+      "C-1 test/widget 整屏挂载断言（整改已落：task_execution_hybrid_entry_mount_test 2 面）",
+      "C-2 entry fake 全仓库方法记账 + 零审批写断言（整改已落：mutation ② 双注入点必红）"
+    ],
+    "follow_ups": [
+      "F-1 R-2 onRefresh 接线修正（整改已落，含挂载门根因修正）",
+      "F-2 R-4/R-5 文档数字修正（整改已落，二审逐项复现命中）",
+      "F-3 F-B workbenchUri task_id 死参数取舍（整改已落：取消费侧+wiring 深链面）",
+      "F-4 CH-2 auto 锚点后续改进（非本卡，维持跟进）"
+    ],
+    "note": "本条目由 wtU04R2 按 r1 receipt 事实代回填（一审时 reviewer_1 误留 null，二审 N-1）"
+  },
+  "reviewer_2": {
+    "reviewer": "wtU04R2",
+    "verdict": "APPROVE",
+    "receipt": "v4/evidence/V4-U04/review_r2.md",
+    "date": "2026-09-29",
+    "rectification_recheck": "C-1/C-2/R-2+F-1/F-B+F-3/R-4+R-5+F-2 全落且亲验：mutation ②（await 前/后两注入点）均 2 面红、C-1 挂载行 mutation 2 面红、「await 后注入曾漏抓→补 pop」披露经 _openSheet 时序结构与亲放双方核实；文档数字逐项复现命中（+2782/-5、mobile +2380/-2、total 224、journey 33、task/shared/smoke 124）",
+    "full_rerun": "journey 33 + task/shared/smoke 124 + deep link 4 + 既有整屏 15（合计 19）+ test/widget 全目录 467+4skip + analyze 零 + backend 零 diff，全部亲跑命中",
+    "spot_recheck": "CH-1（cancel optional key + 状态机 no-op 主保证）与 CH-4（route authed + get_run user-scoped）代码级抽验维持解决",
+    "merge_conditions": [
+      "M-1 tasks.json 并集解：U04 状态块（+6/-3）重放到 main 64fc2f4d 重构版（main 侧 +3734/-3705 全文件重写，不可自动合并）",
+      "M-2 合并后 flutter gen-l10n 再生成（l10n 5 文件双侧改动可自动合并）+ journey 套件复跑"
+    ],
+    "merge_risk": "mobile lib 代码零重叠（main 改 chat/home/galaxy/design 族），tasks.json 外行级冲突风险低",
+    "new_findings": "N-1 reviewer_1 记账缺口（已代补）；O-1 expired 步态 run 级/步级状态文案双投影张力（服务端语义域，登记知悉）；O-2 journey expired 态 resume 入口无专测（sheet 既有面+后端投影钉住，可接受）"
+  },
+  "branch": "agent/v4/u04",
+  "base_sha": "30b94d427422144f91983c312f52d0d31e08426d",
+  "commit": "（见分支 tip；feat(v4): U04 Hybrid 入口接线与运行工作台）",
+  "review_inputs": [
+    "v4/evidence/V4-U04/diff_or_evidence_only.md（验收三面对照 + 变更清单 + 复用声明）",
+    "v4/evidence/V4-U04/run_manifest.json（真实命令/exit code/RED-GREEN/产物 sha256）",
+    "v4/evidence/V4-U04/test_results.json（11 套件计数）",
+    "v4/evidence/V4-U04/limitations.md（8 条限制 + 审查挑战预登记）",
+    "UI 证据：u04_workbench_top.png / u04_workbench_resume_sheet.png / u04_workbench_cancel_confirm.png / u04_workbench_semantics.txt"
+  ],
+  "challenge_pre_registration": [
+    "CH-1 幂等键推导双轨：工作台 cancel 键在「无 awaiting step」时回退 stepId='run'（x07:<runId>:run:cancel），与 AwaitingStepResumeCard 卡内推导（恒用 awaiting stepId）同形不同源——审查请核两键在 awaiting 态恒等、非 awaiting 态（RUNNING 中取消）客户端键是否与后端 cancel 幂等语义冲突（后端 cancel 幂等为 optional key，需确认无键冲突面）",
+    "CH-2 'j06:start:auto' 键桶：无 taskId 的 workbench 启动走固定键，同用户多在飞任务时第二次启动会幂等回放第一次的 run（同 run 保证，但锚点可能漂移到最近触碰任务）——审查请裁决这是否本卡可接受的「同 run 不重复工件」语义边界（已在 limitations #2 登记）",
+    "CH-3 task_execution_screen 挂载面回归广度：该屏仅跑了 test/features/task/ 122 面，未整屏 pump；入口区块在其 build 内为条件渲染段，审查请评估是否需整屏冒烟补强",
+    "CH-4 workbench 深链 run_id 无鉴权外露面评估：run_id 经 query param 传递，读取全部经认证 API（GET /runs、/journey/hybrid/* 均带 current_user 归属校验），跨用户 run 404——审查请复核无越权读面",
+    "CH-5 step_replay 消费面：workbench 用 Snackbar 式 Pill（workbench_replay_notice）呈现幂等回放，清除时机是下次列表重建——审查请核「不呈现为错误/不伪装首次成功」是否满足 X-07 挂载要求原文"
+  ],
+  "integration_reverify_plan": "合并后复跑：flutter test test/features/journey/ test/features/learning/（预期 33+31，一审整改后 journey 33）+ pytest tests/unit/test_hybrid_policy.py tests/unit/test_v4_i08_deep_task_return_control.py（预期 31+24）+ test_j06_hybrid_journey.py（5）",
+  "remediation": {
+    "round": "review_1（PASS_WITH_CHALLENGES）",
+    "commit": "be3d8c6a（fix(v4): U04 一审 C-1/C-2+新发现两处+文档勘误）",
+    "covers": [
+      "C-1 整屏 pump 挂载断言固化（task_execution_hybrid_entry_mount_test 2 面）",
+      "C-2 入口零审批写钉：fake 全四方法+命令面记账、白名单=导航与启动/续跑；mutation ②（_openSheet 注入 confirmOutcome）复核 2 面红、复原复绿",
+      "R-2/F-1 workbench onRefresh 改接读面重查（根因补充：卡挂载门 isAwaiting→awaiting != null，expired/cancelled 刷新面自此可达且不误触取消）",
+      "F-B/F-3 workbenchUri task_id 取消费侧：路由 initialTaskId 传入，深链带 task_id 锚定 j06:start:<taskId>（wiring 深链面断言）",
+      "R-4/R-5/F-2 数字口径勘误：test_results total 228→224；diff 头部改可复现口径（全 commit +2782/-5、mobile +2380/-2）；run_manifest arb +39/-1"
+    ],
+    "verification": "journey 33 + task/shared/smoke 124 + deep link 4 + 既有整屏 15 全绿；analyze 归零基线零新增；l10n 零新键；backend 零 diff（详见 run_manifest.json/test_results.json remediation 节）",
+    "date": "2026-09-29"
+  }
+}

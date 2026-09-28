@@ -35043,4 +35043,106 @@ class AppLocalizationsEn extends AppLocalizations {
   String learningSourceCompactLabel(Object version) {
     return 'Source version $version';
   }
+
+  @override
+  String get workbenchTitle => 'Run Workbench';
+
+  @override
+  String get workbenchActiveRunsHeader => 'Active runs';
+
+  @override
+  String workbenchRunCount(int count) {
+    return '$count runs in progress';
+  }
+
+  @override
+  String get workbenchEmptyHint =>
+      'No active runs. Start from a task, or come back here after confirming a proposal.';
+
+  @override
+  String get workbenchStartJourney => 'Start together';
+
+  @override
+  String get workbenchStartJourneyHint =>
+      'Sparkle prepares → you decide → confirm delivery together. Leave any time; the same run is here when you return.';
+
+  @override
+  String get workbenchResumeJourney => 'Continue journey';
+
+  @override
+  String get workbenchCancelRun => 'Cancel run';
+
+  @override
+  String get workbenchCancelConfirmTitle => 'Cancel this run?';
+
+  @override
+  String get workbenchCancelConfirmBody =>
+      'Cancelling moves this run to a terminal state: what is already done stays, nothing pretends to be finished.';
+
+  @override
+  String get workbenchCancelConfirmYes => 'Cancel run';
+
+  @override
+  String get workbenchOwnershipHuman => 'I do it';
+
+  @override
+  String get workbenchOwnershipHybrid => 'Do it with me';
+
+  @override
+  String get workbenchOwnershipAgent => 'Hand to Sparkle';
+
+  @override
+  String get workbenchStepAwaiting => 'Your turn';
+
+  @override
+  String get workbenchStepDone => 'Done';
+
+  @override
+  String get workbenchStepWaiting => 'Waiting';
+
+  @override
+  String get workbenchReplayNotice =>
+      'This step was already confirmed (idempotent replay); it was not advanced twice.';
+
+  @override
+  String get workbenchLoadFailed =>
+      'Cannot reach the server right now, try again later';
+
+  @override
+  String get workbenchRetry => 'Retry';
+
+  @override
+  String get workbenchStatusQueued => 'Queued';
+
+  @override
+  String get workbenchStatusRunning => 'Running';
+
+  @override
+  String get workbenchStatusAwaitingUser => 'Waiting for you';
+
+  @override
+  String get workbenchStatusSucceeded => 'Completed';
+
+  @override
+  String get workbenchStatusFailed => 'Not completed';
+
+  @override
+  String get workbenchStatusCancelled => 'Cancelled';
+
+  @override
+  String get openclawHubButtonWorkbench => 'Run Workbench';
+
+  @override
+  String get journeyEntryResumeLabel => 'Continue together';
+
+  @override
+  String get journeyEntryStartLabel => 'Do it with Sparkle';
+
+  @override
+  String get journeyEntryHint =>
+      'Prepare · you decide · confirm delivery together; every step says who does it.';
+
+  @override
+  String get journeyEntryFailed =>
+      'Cannot reach the server right now, try again later';
 }

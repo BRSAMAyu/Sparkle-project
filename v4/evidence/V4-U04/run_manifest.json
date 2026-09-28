@@ -1,0 +1,202 @@
+{
+  "card": "V4-U04",
+  "task": "Hybrid 入口接线与运行工作台（FIX535 孤儿入口挂到合法提案/运行面；human 步只能用户推进；中断/跨端恢复同 run）",
+  "agent": "wtU04",
+  "branch": "agent/v4/u04",
+  "base_sha": "30b94d427422144f91983c312f52d0d31e08426d",
+  "generated_at_local": "2026-09-29",
+  "kind": "implementation",
+  "risk": "high",
+  "independent_reviewers_required": 2,
+  "product_code_changed": true,
+  "environment": {
+    "worktree": "wtU04（git worktree add ../wtU04 -b agent/v4/u04 main；backend 无 .env，pytest 落 sqlite 口径，不触演示库）",
+    "python": "3.11.15（venv 共享主检出 /Users/brsama/code/GitHub/Sparkle-project/backend/.venv）",
+    "pytest": "9.0.2",
+    "flutter": "3.41.3 stable（48c32af034）",
+    "generated_artifacts": "backend/app/gen、mobile/lib/gen 由主检出 cp -R 实体目录复制（非 symlink）；git check-ignore 确认忽略，永不提交；backend/.env 试拷后已删除（演示库守卫拒连，改用无 .env sqlite 口径）"
+  },
+  "no_llm_used": true,
+  "commands": [
+    {
+      "purpose": "建立 worktree",
+      "cmd": "git worktree add ../wtU04 -b agent/v4/u04 main",
+      "exit_code": 0
+    },
+    {
+      "purpose": "flutter analyze（全部改动后终态）",
+      "cmd": "flutter analyze --no-pub",
+      "exit_code": 0,
+      "result": "No issues found!（棘轮基线为全量归零，本卡零新增；新增文件 dart fix --apply 后归零）"
+    },
+    {
+      "purpose": "mobile 设计系统 lint（新文件零违规核对）",
+      "cmd": "dart lib/core/design/validation/design_system_linter.dart lib",
+      "exit_code": 0,
+      "result": "报告 3131 处为既有存量；grep 本卡新增/触碰文件（hybrid_workbench_screen/hybrid_journey_entry_section/journey_routes/agent_run_read_service/openclaw_hub_screen/task_execution_screen）零命中；中间报告已删不入库"
+    },
+    {
+      "purpose": "journey 套件（本卡新测 + 既有回归）",
+      "cmd": "flutter test test/features/journey/",
+      "exit_code": 0,
+      "result": "31 passed（新测 14：workbench 8 + entry 4 + wiring 1 + copy 扩展 1；既有 17 全绿：sheet 3 + copy 2 + first_action 11 + evidence_capture 1）"
+    },
+    {
+      "purpose": "U10 受影响面回归（mobile learning）",
+      "cmd": "flutter test test/features/learning/",
+      "exit_code": 0,
+      "result": "31 passed"
+    },
+    {
+      "purpose": "受影响面回归（task 面 + shared 组件 + 真实 router smoke）",
+      "cmd": "flutter test test/features/task/ test/shared/widgets/ test/app/router_smoke_test.dart",
+      "exit_code": 0,
+      "result": "122 passed"
+    },
+    {
+      "purpose": "受影响面回归（router deep link——routes.dart 被触碰）",
+      "cmd": "flutter test test/app/router_deep_link_test.dart",
+      "exit_code": 0,
+      "result": "4 passed"
+    },
+    {
+      "purpose": "受影响面回归（OpenClaw 三件——hub 入口按钮所在面）",
+      "cmd": "flutter test test/core/services/openclaw_connection_service_test.dart test/core/services/openclaw_automation_service_test.dart test/widget/openclaw_module_state_test.dart",
+      "exit_code": 0,
+      "result": "10 passed"
+    },
+    {
+      "purpose": "受影响面回归（X-07 awaiting-step 卡——工作台消费组件）",
+      "cmd": "flutter test test/shared/widgets/action_proposal/",
+      "exit_code": 0,
+      "result": "26 passed"
+    },
+    {
+      "purpose": "I07 回归（必跑）",
+      "cmd": "pytest tests/unit/test_hybrid_policy.py -q（SECRET_KEY=<一次性生成>，wtU04/backend）",
+      "exit_code": 0,
+      "result": "31 passed"
+    },
+    {
+      "purpose": "I08 回归（必跑）",
+      "cmd": "pytest tests/unit/test_v4_i08_deep_task_return_control.py -q（同上环境）",
+      "exit_code": 0,
+      "result": "24 passed"
+    },
+    {
+      "purpose": "U10 回归（必跑；19+11+4）",
+      "cmd": "pytest tests/core/test_learning_journey.py tests/services/test_learning_journey_service.py tests/api/test_learning_journey_api.py -q（同上环境）",
+      "exit_code": 0,
+      "result": "34 passed"
+    },
+    {
+      "purpose": "本卡消费的后端契约回归（J-06 hybrid journey 契约）",
+      "cmd": "pytest tests/unit/test_j06_hybrid_journey.py -q（同上环境）",
+      "exit_code": 0,
+      "result": "5 passed"
+    },
+    {
+      "purpose": "backend 零 diff 证明",
+      "cmd": "git diff --stat 30b94d42 -- backend/ 与 git status --short backend/",
+      "exit_code": 0,
+      "result": "均为空——ruff/black/mypy/棘轮对本卡零新增（无输入）；注意 git diff vs main 不适用（main 在本会话期间前移至 f5ef5872，以分支 base 为对照）"
+    },
+    {
+      "purpose": "UI 证据采集（真实渲染 + 真实操作，U10 同款）",
+      "cmd": "SPARKLE_U04_EVIDENCE_DIR=/tmp/u04_evidence flutter test test/features/journey/hybrid_workbench_evidence_capture_test.dart",
+      "exit_code": 0,
+      "result": "1 passed；真实操作序列：恢复旅程 run（fetchState=[run-demo-j1]、start=0）→ 取消对话框拦截（未确认零 cancel 命令）；产物复制进本目录"
+    }
+  ],
+  "red_green": [
+    {
+      "name": "接线级 RED（入口真实可达的可失败证明）",
+      "red": "git stash push -- mobile/lib/app/routes.dart && flutter test test/features/journey/hybrid_workbench_wiring_test.dart → Expected: exactly one matching candidate; Actual: Found 0 widgets with key [<'hybrid_workbench_screen'>]（1 failed）",
+      "green": "git stash pop（恢复注册）复跑 → All tests passed",
+      "note": "证明 /journey/workbench 注册在真实 app router 上，不是注释声明"
+    },
+    {
+      "name": "新测自身正反两面（摘录）",
+      "positive": "run 卡 ownership 词表可见；继续旅程 fetchState 同 run + start 零调用；confirm 幂等键 x07:<run>:<step>:confirm 确定性推导；重建后同键；深链 run_id 直达同 run",
+      "negative": "空态不自动发起（start=0）；读面失败诚实错误面（不伪造列表）；非本任务 run 不冒充继续入口；读取中不渲染区块；取消未确认零命令；step_replay 呈现已确认过而非报错"
+    }
+  ],
+  "files_changed": {
+    "added": [
+      "mobile/lib/features/journey/journey_routes.dart",
+      "mobile/lib/features/journey/presentation/screens/hybrid_workbench_screen.dart",
+      "mobile/lib/features/journey/presentation/widgets/hybrid_journey_entry_section.dart",
+      "mobile/test/features/journey/hybrid_workbench_screen_test.dart",
+      "mobile/test/features/journey/hybrid_journey_entry_section_test.dart",
+      "mobile/test/features/journey/hybrid_workbench_wiring_test.dart",
+      "mobile/test/features/journey/hybrid_workbench_evidence_capture_test.dart"
+    ],
+    "modified_additive": [
+      "mobile/lib/app/routes.dart (+4)",
+      "mobile/lib/core/services/agent_run_read_service.dart (+8)",
+      "mobile/lib/features/home/presentation/screens/openclaw_hub_screen.dart (+11)",
+      "mobile/lib/features/journey/data/models/hybrid_journey_models.dart (+7)",
+      "mobile/lib/features/task/presentation/screens/task_execution_screen.dart (+6)",
+      "mobile/lib/l10n/app_zh.arb (+39/-1)、mobile/lib/l10n/app_en.arb (+39/-1) 及 gen-l10n 再生产物（一审 R-5 勘误：原记 +40/-1）",
+      "mobile/test/features/journey/hybrid_journey_copy_test.dart (+81)"
+    ]
+  },
+  "artifacts_sha256": {
+    "u04_workbench_top.png": "a65036d8157e43d6edac021558fd01d45314ba237fbb182db445ba3d72df5bae",
+    "u04_workbench_resume_sheet.png": "947a1fdbfc64590b76a37e6d541b0c790d5d30eed5b56410ae967cc887a38e6e",
+    "u04_workbench_cancel_confirm.png": "7b0bc5710526c25e2aa886605c5da139ea4076338312234225058e374d7a0bf2",
+    "u04_workbench_semantics.txt": "见证据目录内文件（采集于恢复/取消操作后；语义根不可用时为渲染可读面枚举）"
+  },
+  "ui_evidence": {
+    "screenshots": [
+      "u04_workbench_top.png —— 工作台顶层：2 段运行卡、逐步骤 ownership（交给 Sparkle·已完成 / 我来做·已完成 / 带我做·轮到你）、旅程「继续旅程」入口、generic human 步 X-07 统一确认卡（确认，继续）、显式「取消运行」",
+      "u04_workbench_resume_sheet.png —— 点「继续旅程」后同一 HybridJourneySheet 幂等回放（同 run；判断段「这一步需要你决定」why-human + 空选择结构性禁用提交键）",
+      "u04_workbench_cancel_confirm.png —— 取消显式确认对话框（终态如实告知，未确认零命令）"
+    ],
+    "semantics": "u04_workbench_semantics.txt —— 读屏可读面枚举（全部 Text + 按钮 label）：ownership 词表、awaiting 提示、取消确认对话框全文可得；无仅靠图形/长按才能完成的操作",
+    "capture": "flutter test 真实渲染（U02TestFonts 宿主字体 + RepaintBoundary 全屏边界，含 overlay 内 sheet/dialog）；真实操作由测试断言背书（非摆拍）"
+  },
+  "model_usage": "零模型调用（纯接线与读面；journey 起草 LLM 属后端既有路径，本卡未触发）",
+  "remediation": {
+    "round": "review_1（PASS_WITH_CHALLENGES）",
+    "note": "一审整改 commit（SHA 注记见 review_receipt.json remediation.commit）；聚焦整改 commit 复跑口径如下，原上表为实现 commit（a4fd656d）口径，不相互覆盖",
+    "commands": [
+      {
+        "purpose": "journey 套件（整改后）",
+        "cmd": "flutter test test/features/journey/",
+        "exit_code": 0,
+        "result": "33 passed（31→33：workbench expired 刷新面 + wiring task_id 深链面；entry 4 面断言强化不加数）"
+      },
+      {
+        "purpose": "task/shared/smoke 套件（整改后）",
+        "cmd": "flutter test test/features/task/ test/shared/widgets/ test/app/router_smoke_test.dart",
+        "exit_code": 0,
+        "result": "124 passed（122→124：C-1 整屏挂载断言 2 面）"
+      },
+      {
+        "purpose": "router deep link 回归（整改后）",
+        "cmd": "flutter test test/app/router_deep_link_test.dart",
+        "exit_code": 0,
+        "result": "4 passed"
+      },
+      {
+        "purpose": "既有整屏回归（一审 CH-3 口径）",
+        "cmd": "flutter test test/widget/exam_sprint_closed_loop_test.dart test/widget/task/test_task_execution_ux.dart",
+        "exit_code": 0,
+        "result": "15 passed"
+      },
+      {
+        "purpose": "flutter analyze（整改后终态）",
+        "cmd": "flutter analyze --no-pub",
+        "exit_code": 0,
+        "result": "No issues found（归零基线零新增；新增测试文件 dart fix --apply 后归零）"
+      },
+      {
+        "purpose": "mutation ② 复核（一审 C-2 验收）",
+        "cmd": "向 hybrid_journey_entry_section._openSheet 注入 repository.confirmOutcome 审批写 → flutter test test/features/journey/hybrid_journey_entry_section_test.dart（用后即复原）",
+        "exit_code": 1,
+        "result": "2 failed（①②交互面红——fake 全四方法+命令面记账，且测试关闭 sheet 使 _openSheet 关闭后段同在观察面内）；复原后 4 面复绿。一审同名 mutation 4 面全绿的缺口已钉死"
+      }
+    ]
+  }
+}

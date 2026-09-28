@@ -2057,9 +2057,9 @@
     "V4-I07",
     "V4-I08"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "PASS_WITH_CHALLENGES_CLOSED",
    "kind": "implementation",
    "required_locks": [
     "ui-hybrid"
@@ -2108,7 +2108,13 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "40bd1821 PASS_WITH_CHALLENGES（CH-1~5 全解决：深链三读路径 user-scoped/幂等键双轨恒同键/auto 锚点漂移=回放旧 run；条件 C-1 整屏 pump 缺失/C-2 入口零审批写未钉住——mutation② 注入 4 面仍绿；新发现 R-2 onRefresh 死接线/F-B task_id 死参数）",
+    "remediation": "be3d8c6a C-1 挂载断言固化+C-2 黑名单机制+mutation② 必红（披露 await 后注入时序坑补 pop）；根因超一审：挂载门 awaiting.isAwaiting→awaiting!=null 使 expired/cancelled 如实呈现无确认入口；F-B 消费侧深链 j06:start:<task_id> 缓解 CH-2；文档勘误含纠正一审建议数字之误",
+    "r2": "ab80352e APPROVE（整改全落亲验：C-1 mutation 亲放红/C-2 await 前后双变体均 2 面红/时序披露经结构+实测双核实；expired 面断言强度高；F-B 深链端到端钉住；数字逐项复现；全量复跑 journey 33+smoke 124+widget 467+analyze 零+backend 零 diff）",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑（R2 M-2：l10n 合并后 gen-l10n 再生+journey 复跑）"
+   }
   },
   {
    "id": "V4-U05",

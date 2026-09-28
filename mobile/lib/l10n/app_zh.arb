@@ -16163,5 +16163,43 @@
   "learningContinueActionSemantics": "继续当前动作：{label}",
   "learningSourceBadgeLabel": "来源 {id} 版本 {version}",
   "learningSourceTapSemantics": "查看来源片段 {label}",
-  "learningSourceCompactLabel": "来源 · 版本 {version}"
+  "learningSourceCompactLabel": "来源 · 版本 {version}",
+  "workbenchTitle": "运行工作台",
+  "workbenchActiveRunsHeader": "进行中的运行",
+  "workbenchRunCount": "{count} 段运行进行中",
+  "@workbenchRunCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workbenchEmptyHint": "没有进行中的运行。从任务页发起，或确认提案后回到这里继续。",
+  "workbenchStartJourney": "开始一起推进",
+  "workbenchStartJourneyHint": "Sparkle 备料 → 你研判 → 一起确认交付。开始后可以随时离开，回来还在同一段运行里。",
+  "workbenchResumeJourney": "继续旅程",
+  "workbenchCancelRun": "取消运行",
+  "workbenchCancelConfirmTitle": "取消这段运行？",
+  "workbenchCancelConfirmBody": "取消后这段运行进入终态：已完成的内容保留，不会假装完成。",
+  "workbenchCancelConfirmYes": "确认取消",
+  "workbenchOwnershipHuman": "我来做",
+  "workbenchOwnershipHybrid": "带我做",
+  "workbenchOwnershipAgent": "交给 Sparkle",
+  "workbenchStepAwaiting": "轮到你",
+  "workbenchStepDone": "已完成",
+  "workbenchStepWaiting": "等待中",
+  "workbenchReplayNotice": "这一步此前已确认过（幂等回放），未重复推进。",
+  "workbenchLoadFailed": "暂时连不上，稍后再试",
+  "workbenchRetry": "重试",
+  "workbenchStatusQueued": "排队中",
+  "workbenchStatusRunning": "进行中",
+  "workbenchStatusAwaitingUser": "等你操作",
+  "workbenchStatusSucceeded": "已完成",
+  "workbenchStatusFailed": "未完成",
+  "workbenchStatusCancelled": "已取消",
+  "openclawHubButtonWorkbench": "运行工作台",
+  "journeyEntryResumeLabel": "继续一起推进",
+  "journeyEntryStartLabel": "和 Sparkle 一起推进",
+  "journeyEntryHint": "备料 · 你研判 · 一起确认交付；每一步由谁做都写清楚。",
+  "journeyEntryFailed": "暂时连不上，稍后再试"
 }

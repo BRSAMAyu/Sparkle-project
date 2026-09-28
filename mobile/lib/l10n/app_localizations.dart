@@ -61021,6 +61021,192 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'来源 · 版本 {version}'**
   String learningSourceCompactLabel(Object version);
+
+  /// No description provided for @workbenchTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'运行工作台'**
+  String get workbenchTitle;
+
+  /// No description provided for @workbenchActiveRunsHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中的运行'**
+  String get workbenchActiveRunsHeader;
+
+  /// No description provided for @workbenchRunCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 段运行进行中'**
+  String workbenchRunCount(int count);
+
+  /// No description provided for @workbenchEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有进行中的运行。从任务页发起，或确认提案后回到这里继续。'**
+  String get workbenchEmptyHint;
+
+  /// No description provided for @workbenchStartJourney.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始一起推进'**
+  String get workbenchStartJourney;
+
+  /// No description provided for @workbenchStartJourneyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 备料 → 你研判 → 一起确认交付。开始后可以随时离开，回来还在同一段运行里。'**
+  String get workbenchStartJourneyHint;
+
+  /// No description provided for @workbenchResumeJourney.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续旅程'**
+  String get workbenchResumeJourney;
+
+  /// No description provided for @workbenchCancelRun.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消运行'**
+  String get workbenchCancelRun;
+
+  /// No description provided for @workbenchCancelConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消这段运行？'**
+  String get workbenchCancelConfirmTitle;
+
+  /// No description provided for @workbenchCancelConfirmBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消后这段运行进入终态：已完成的内容保留，不会假装完成。'**
+  String get workbenchCancelConfirmBody;
+
+  /// No description provided for @workbenchCancelConfirmYes.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认取消'**
+  String get workbenchCancelConfirmYes;
+
+  /// No description provided for @workbenchOwnershipHuman.
+  ///
+  /// In zh, this message translates to:
+  /// **'我来做'**
+  String get workbenchOwnershipHuman;
+
+  /// No description provided for @workbenchOwnershipHybrid.
+  ///
+  /// In zh, this message translates to:
+  /// **'带我做'**
+  String get workbenchOwnershipHybrid;
+
+  /// No description provided for @workbenchOwnershipAgent.
+  ///
+  /// In zh, this message translates to:
+  /// **'交给 Sparkle'**
+  String get workbenchOwnershipAgent;
+
+  /// No description provided for @workbenchStepAwaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'轮到你'**
+  String get workbenchStepAwaiting;
+
+  /// No description provided for @workbenchStepDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get workbenchStepDone;
+
+  /// No description provided for @workbenchStepWaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待中'**
+  String get workbenchStepWaiting;
+
+  /// No description provided for @workbenchReplayNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一步此前已确认过（幂等回放），未重复推进。'**
+  String get workbenchReplayNotice;
+
+  /// No description provided for @workbenchLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时连不上，稍后再试'**
+  String get workbenchLoadFailed;
+
+  /// No description provided for @workbenchRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get workbenchRetry;
+
+  /// No description provided for @workbenchStatusQueued.
+  ///
+  /// In zh, this message translates to:
+  /// **'排队中'**
+  String get workbenchStatusQueued;
+
+  /// No description provided for @workbenchStatusRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get workbenchStatusRunning;
+
+  /// No description provided for @workbenchStatusAwaitingUser.
+  ///
+  /// In zh, this message translates to:
+  /// **'等你操作'**
+  String get workbenchStatusAwaitingUser;
+
+  /// No description provided for @workbenchStatusSucceeded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get workbenchStatusSucceeded;
+
+  /// No description provided for @workbenchStatusFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'未完成'**
+  String get workbenchStatusFailed;
+
+  /// No description provided for @workbenchStatusCancelled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消'**
+  String get workbenchStatusCancelled;
+
+  /// No description provided for @openclawHubButtonWorkbench.
+  ///
+  /// In zh, this message translates to:
+  /// **'运行工作台'**
+  String get openclawHubButtonWorkbench;
+
+  /// No description provided for @journeyEntryResumeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续一起推进'**
+  String get journeyEntryResumeLabel;
+
+  /// No description provided for @journeyEntryStartLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'和 Sparkle 一起推进'**
+  String get journeyEntryStartLabel;
+
+  /// No description provided for @journeyEntryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'备料 · 你研判 · 一起确认交付；每一步由谁做都写清楚。'**
+  String get journeyEntryHint;
+
+  /// No description provided for @journeyEntryFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时连不上，稍后再试'**
+  String get journeyEntryFailed;
 }
 
 class _AppLocalizationsDelegate

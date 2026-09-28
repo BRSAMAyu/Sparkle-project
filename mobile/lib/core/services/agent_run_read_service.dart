@@ -128,6 +128,7 @@ class AgentRunView {
     required this.isTerminal,
     required this.objective,
     this.kind,
+    this.traceId,
     this.taskId,
     this.intentId,
     this.waitKind,
@@ -150,6 +151,8 @@ class AgentRunView {
       isTerminal: json['is_terminal'] as bool? ?? false,
       objective: json['objective'] as String? ?? '',
       kind: json['kind'] as String?,
+      // V4-U04（additive）：trace_id 链路面标记（hybrid journey 识别面）。
+      traceId: json['trace_id']?.toString(),
       taskId: json['task_id'] as String?,
       intentId: json['intent_id'] as String?,
       waitKind: json['wait_kind'] as String?,
@@ -178,6 +181,11 @@ class AgentRunView {
   /// UI 阶段呈现（AGENT_RUNTIME.md §8：显示阶段而非 chain-of-thought）。
   final String objective;
   final String? kind;
+
+  /// V4-U04 · 链路面标记（`trace_id`，additive 只读）：`hybrid_journey` 的
+  /// run 由工作台路由回旅程 sheet 继续同一段 run；其余 run 走通用 awaiting
+  /// step 面。仅识别用，行为权威仍在各链路端点。
+  final String? traceId;
   final String? taskId;
   final String? intentId;
   final String? waitKind;
