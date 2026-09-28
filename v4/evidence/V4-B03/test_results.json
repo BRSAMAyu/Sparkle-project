@@ -1,0 +1,199 @@
+{
+  "task": "V4-B03",
+  "kind": "RECOMPUTE_ONLY_ZERO_MODEL_CALLS",
+  "generated_at_utc": "2026-09-28T09:20:44.544694+00:00",
+  "repo_head": "3c4618cc1d23b79792e330f87114484434a410ed",
+  "source_pins_sha256": {
+    "v3-output/WT412-FRICTION-FIXES/a08-post-fix/summary.json": "e5908bc08af3a8547ad0db6d2f51a1e327093f1f89662e07b3024ebbb3d33d39",
+    "v3-output/WT393-A08-ABLATION/summary.json": "d57e9f3a2050550dc3b8e8f7d1e637e9f47f9c2c2efbe90595b49985f143355b",
+    "v3-output/WT801-E08FINAL/raw-e08final.jsonl": "0b6b0b5cb2454cc66d79ac8d9b375451abad86f92b1f4c0d248eb6ccfa32b20c",
+    "v3-output/WT404-Q04-REDTEAM/dashboard.json": "7f7ad43918977bcb25c69e403492735d94b38ac698e97782da43a38912ac0860"
+  },
+  "probes": [
+    {
+      "probe": "a08_postfix",
+      "ok": true,
+      "evidence_layer": "L1_CONTROLLABLE_SERVICE_SIMULATION (RECOMPUTE, 非live)",
+      "boundary": "sqlite 隔离+fakeredis+可控时钟服务模拟的既有 raw 复算；零真实 LLM、零新运行",
+      "arms": [
+        {
+          "arm": "full",
+          "recomputed": "9/20",
+          "expected": "9/20",
+          "stuck_accuracy_recomputed": 0.45,
+          "stuck_accuracy_summary": 0.45,
+          "matches_expect": true,
+          "matches_summary": true
+        },
+        {
+          "arm": "no_memory",
+          "recomputed": "11/20",
+          "expected": "11/20",
+          "stuck_accuracy_recomputed": 0.55,
+          "stuck_accuracy_summary": 0.55,
+          "matches_expect": true,
+          "matches_summary": true
+        },
+        {
+          "arm": "no_experience",
+          "recomputed": "9/20",
+          "expected": "9/20",
+          "stuck_accuracy_recomputed": 0.45,
+          "stuck_accuracy_summary": 0.45,
+          "matches_expect": true,
+          "matches_summary": true
+        },
+        {
+          "arm": "fixed_policy",
+          "recomputed": "6/20",
+          "expected": "6/20",
+          "stuck_accuracy_recomputed": 0.3,
+          "stuck_accuracy_summary": 0.3,
+          "matches_expect": true,
+          "matches_summary": true
+        }
+      ],
+      "negative_direction": {
+        "full": "9/20",
+        "no_memory": "11/20",
+        "no_memory_beats_full": true,
+        "note": "验收第1条：重算 9/20 与 11/20 一致；模拟非live边界已记录"
+      }
+    },
+    {
+      "probe": "a08_prefix_historical",
+      "ok": true,
+      "evidence_layer": "L1_CONTROLLABLE_SERVICE_SIMULATION (RECOMPUTE, 非live)",
+      "frozen": {
+        "full": [
+          13,
+          20,
+          0.65
+        ],
+        "no_memory": [
+          11,
+          20,
+          0.55
+        ]
+      },
+      "guard": {
+        "pre_fix_differs_from_postfix_full": true,
+        "rule": "修前 0.65 仅作历史锚点；最新基线=修后 9/20（frozen_utility.json baseline_rule）"
+      }
+    },
+    {
+      "probe": "fix545_metering_blindspot",
+      "ok": true,
+      "evidence_layer": "LIVE_STACK_REAL_MODEL_RAW_RECOMPUTE (RECOMPUTE, 零调用)",
+      "recomputed": {
+        "no_generation_model_rows": 18,
+        "with_tokens_rows": 7,
+        "with_tokens_qids": [
+          "L3-06",
+          "L3-08",
+          "L3-15",
+          "L3-18",
+          "L3-21",
+          "L3-23",
+          "L3-26"
+        ],
+        "zero_token_rows": 11
+      },
+      "frozen_qids": [
+        "L3-06",
+        "L3-08",
+        "L3-15",
+        "L3-18",
+        "L3-21",
+        "L3-23",
+        "L3-26"
+      ],
+      "note": "7 条带 token 错挂=成本低估实锤；修后 harness 须检出 no_generation_model-with-tokens（新跑样本缺陷计数归零方可销账）"
+    },
+    {
+      "probe": "e08_slo_2f",
+      "ok": true,
+      "evidence_layer": "LIVE_STACK_REAL_MODEL (RECOMPUTE of wt801 run cdc547be, 零新调用)",
+      "recomputed": {
+        "n_pass": 4,
+        "n_fail": 2,
+        "slo": [
+          {
+            "slo": "L0 no-model TTFT p95<=500ms",
+            "value_s": 1.7812,
+            "pass": false,
+            "expected": "FAIL"
+          },
+          {
+            "slo": "L1 TTFT p50<=2.5s",
+            "value_s": 1.6565,
+            "pass": true,
+            "expected": "PASS"
+          },
+          {
+            "slo": "L1 TTFT p95<=5s",
+            "value_s": 2.5962,
+            "pass": true,
+            "expected": "PASS"
+          },
+          {
+            "slo": "L2 free 首事件 p95<=500ms",
+            "value_s": 0.0418,
+            "pass": true,
+            "expected": "PASS"
+          },
+          {
+            "slo": "L2 total p95<=15s",
+            "value_s": 65.3564,
+            "pass": false,
+            "expected": "FAIL"
+          },
+          {
+            "slo": "L3 ACK p95<=1s",
+            "value_s": 0.0541,
+            "pass": true,
+            "expected": "PASS"
+          }
+        ],
+        "intake_ack_le_500ms": "104/104",
+        "intake_ack_p50_s": 0.0289,
+        "intake_ack_p95_s": 0.0461
+      },
+      "note": "2 FAIL 持续：L0 直答缺位（1781ms）、L2 total（65.4s，较修前 49.5s 上行=tier 分层恢复的真实 trade-off）"
+    },
+    {
+      "probe": "q04_dashboard_not_remeasured",
+      "ok": true,
+      "evidence_layer": "L1_CONTROLLABLE_SERVICE_SIMULATION (RECOMPUTE of run 46762b31, 零模型 judge)",
+      "recomputed": {
+        "precision": 0.0,
+        "personalized_uses": 10,
+        "invalid_total": 10,
+        "invalid_kinds": [
+          "patch_attribution_cross_scope"
+        ],
+        "overpersonalization": "50/120",
+        "overpersonalization_rate": 0.4167,
+        "uplift_pp_mean": 0.0,
+        "blind_pairs": 20,
+        "acceptance": "FAIL",
+        "failed_cases_preserved": true,
+        "gates": {
+          "precision_met": false,
+          "invalid_zero": false,
+          "overpersonalization_met": false,
+          "uplift_met": false
+        }
+      },
+      "status_at_freeze": "NOT_REMEASURED（FIX-67/68/69/70 修后未全量重跑；重跑驱动在库 scripts/devtools/q04_run_personalization_redteam.py）"
+    },
+    {
+      "probe": "utility_freeze",
+      "ok": true,
+      "weights_match_a08_frozen": true,
+      "zero_denominator_is_na": true,
+      "unresolved_counted": false
+    }
+  ],
+  "all_ok": true
+}

@@ -1,0 +1,59 @@
+{
+  "task": "V4-B03",
+  "title": "冻结负结果与配对评测基线",
+  "implementation_session": "wtB03",
+  "date": "2026-09-28",
+  "source_sha": "3c4618cc",
+  "source_branch": "agent/v4/b03",
+  "worktree": "/Users/brsama/code/GitHub/wtB03",
+  "build_id": "N/A_NO_BUILD（纯 fixtures/文档变更，无代码构建产物）",
+  "zero_model_call_attestation": {
+    "model_calls": 0,
+    "llm_key_usage": "无",
+    "scope": "本卡全部产出为对既有 raw 产物的确定性本地复算与 fixtures 编纂；未启动引擎/网关/模拟器，未发任何模型或网络请求",
+    "note": "负结果本身所含的历史调用（如 wt801 的 145 次真模型）是 V3 已在案证据，非本卡支出"
+  },
+  "commands": [
+    {
+      "command": "git worktree add ../wtB03 -b agent/v4/b03",
+      "exit_code": 0,
+      "purpose": "建立独立 worktree（不 push）"
+    },
+    {
+      "command": "python3 v4/evidence/V4-B03/recompute_baselines.py --write",
+      "exit_code": 0,
+      "purpose": "六探针确定性复算：A-08 修后 9/20 与 11/20 一致（验收1）、修前 0.65 历史锚点防混用、FIX-545 七 qid 实锤、E-08 SLO 4P/2F、Q-04 四统计量 FAIL+未复跑、utility 冻结权重一致",
+      "outputs": "v4/evidence/V4-B03/test_results.json"
+    },
+    {
+      "command": "shasum -a 256 <17 个源产物>",
+      "exit_code": 0,
+      "purpose": "源产物 sha256 钉扎（见 negative_results.jsonl source_sha256 与本文件 artifacts）"
+    }
+  ],
+  "artifacts": [
+    {"path": "v4/evidence/V4-B03/negative_results.jsonl", "purpose": "冻结负结果台账（5 行，含可证伪判据与源钉扎）"},
+    {"path": "v4/evidence/V4-B03/paired_baseline.jsonl", "purpose": "配对集（20 对=16 配对核心+4 计量负例对照，逐对可运行性标注）"},
+    {"path": "v4/evidence/V4-B03/frozen_utility.json", "purpose": "冻结 utility 权重/范围/分母政策/基线规则"},
+    {"path": "v4/evidence/V4-B03/dev_holdout_template.json", "purpose": "开发/独立 holdout 模板（TEMPLATE_ONLY，未生成数据，含防泄漏规则）"},
+    {"path": "v4/evidence/V4-B03/recompute_baselines.py", "purpose": "可证伪探针（可重复执行的审查工具，纯 stdlib）"},
+    {"path": "v4/evidence/V4-B03/test_results.json", "purpose": "六探针复算结果（all_ok=true，exit 0）"},
+    {"path": "v4/evidence/V4-B03/diff_or_evidence_only.md", "purpose": "差量举证说明"},
+    {"path": "v4/evidence/V4-B03/limitations.md", "purpose": "边界与限制"},
+    {"path": "v4/evidence/V4-B03/review_receipt.json", "purpose": "独立审查回执占位（NOT_SIGNED——审查未发生，不伪造）"}
+  ],
+  "inputs_read_only": [
+    "v4/06_evaluation/scenarios.jsonl (4bf2ae4c…)",
+    "v4/06_evaluation/EVALUATION_PROTOCOL.md (369ee58e…)",
+    "v4/06_evaluation/CLAIMS_LEDGER.md",
+    "v4/06_evaluation/METRICS.json",
+    "v3-output/WT393-A08-ABLATION/（A-08 修前）",
+    "v3-output/WT412-FRICTION-FIXES/a08-post-fix/（A-08 修后）",
+    "v3-output/WT404-Q04-REDTEAM/（Q-04 首轮）",
+    "v3-output/WT801-E08FINAL/（E-08 修后复测）",
+    "v3-output/WT803-E08REV/receipt.md（FIX-545 独立审查）",
+    "v3/06_agent_fleet/DYNAMIC_ISSUES.md（V3-FIX-545/67/68/69/70 台账）"
+  ],
+  "product_code_changed": false,
+  "locks": {"required": "v4-eval-fixtures", "acquired": "本 worktree 分支内变更即持有（无跨卡写冲突；B04 绑定 runner 时应以本目录为只读输入）"}
+}

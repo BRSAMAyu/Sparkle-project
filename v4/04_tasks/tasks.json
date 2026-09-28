@@ -128,9 +128,23 @@
       "id": "V4-B03",
       "title": "冻结负结果与配对评测基线",
       "depends_on": [],
-      "status": "READY",
-      "implementation_state": "NOT_STARTED",
+      "status": "IN_PROGRESS",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
+      "evidence_paths": [
+        "v4/evidence/V4-B03/diff_or_evidence_only.md",
+        "v4/evidence/V4-B03/run_manifest.json",
+        "v4/evidence/V4-B03/test_results.json",
+        "v4/evidence/V4-B03/negative_results.jsonl",
+        "v4/evidence/V4-B03/paired_baseline.jsonl",
+        "v4/evidence/V4-B03/frozen_utility.json",
+        "v4/evidence/V4-B03/dev_holdout_template.json",
+        "v4/evidence/V4-B03/limitations.md",
+        "v4/evidence/V4-B03/review_receipt.json"
+      ],
+      "implementation_session": "wtB03",
+      "review_status": "PENDING_INDEPENDENT_REVIEW",
+      "progress_note": "2026-09-28 wtB03：负结果冻结（5 行台账+六探针复算 exit0，9/20 与 11/20 一致）+配对集 20 对（16 核心+4 计量负例，全部 NOT_RUN 如实标注）；零模型调用、产品码零改动。DONE 仍需独立审查+集成 SHA 复验（review_receipt.json NOT_SIGNED）。",
       "kind": "verification",
       "required_locks": [
         "v4-eval-fixtures"

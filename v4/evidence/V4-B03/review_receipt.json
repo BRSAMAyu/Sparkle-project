@@ -1,0 +1,28 @@
+{
+  "task": "V4-B03",
+  "verdict": "NOT_SIGNED",
+  "status": "PENDING_INDEPENDENT_REVIEW",
+  "note": "本回执由实现会话 wtB03 预置为未签署状态。独立审查尚未发生；在审查会话填写 verdict=APPROVE 并附 session/source_sha 之前，本卡不满足 DONE 条件（普通任务=独立未参与会话审查+当前集成 SHA 可失败测试）。本文件不伪造任何审查事实。",
+  "implementation_session": "wtB03",
+  "source_sha": "以集成时点为准（本分支 HEAD，见 git log agent/v4/b03）",
+  "required_reviewers": 1,
+  "reviewer_instructions": [
+    "运行 python3 v4/evidence/V4-B03/recompute_baselines.py（仓库根）——预期 exit 0 且 all_ok=true；任一探针失败即审查不通过",
+    "核对 negative_results.jsonl 各行 source_sha256 与现库文件一致（shasum -a 256）",
+    "核对 paired_baseline.jsonl 的 case 数据与 v4/06_evaluation/scenarios.jsonl 原文逐字一致，且全部 execution_status=NOT_RUN（不得有执行通过宣称）",
+    "核对 frozen_utility.json 权重与 v3-output/WT393-A08-ABLATION/EVAL_RESULTS.md 头部权重一致；denominator_policy 含 0分母=N/A 与未解决计入",
+    "确认产品代码零改动（git diff --stat 本分支 vs main 应只含 v4/ 与 tasks.json）",
+    "确认零模型调用主张合理（纯本地文件复算，无网络依赖）",
+    "审查通过后填写 reviews[].session/verdict/source_sha 并按 v4/tools/packlib.py check_receipt 口径自检"
+  ],
+  "reviews": [],
+  "runs": [
+    {
+      "command": "python3 v4/evidence/V4-B03/recompute_baselines.py --write",
+      "exit_code": 0,
+      "failed": 0,
+      "skipped": 0,
+      "by": "wtB03（实现会话自测；独立审查须复跑留痕）"
+    }
+  ]
+}

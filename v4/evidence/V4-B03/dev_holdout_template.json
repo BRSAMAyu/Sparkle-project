@@ -1,0 +1,30 @@
+{
+  "frozen_by": "V4-B03",
+  "freeze_date": "2026-09-28",
+  "authority": "v4/06_evaluation/EVALUATION_PROTOCOL.md §四臂效用实验；本文件是模板（schema 与隔离规则），不是已执行的数据",
+  "status": "TEMPLATE_ONLY_NOT_GENERATED",
+  "dev_phase": {
+    "episodes": "30（先用于找协议错误）",
+    "purpose": "修协议错误→冻结 schema/阈值/prompt/model 后才准生成 holdout",
+    "seed_sources": "v4/06_evaluation/scenarios.jsonl 配对集（v4/evidence/V4-B03/paired_baseline.jsonl）+ A-08 persona 库（tests/aurora_ablation/persona.py 10 persona×2 episode 形态先例）",
+    "allowed_visibility": "开发集可被实现 Agent 读（协议允许：先用30开发episode找协议错误）"
+  },
+  "holdout_phase": {
+    "size": "≥30 profile × 4 episode = ≥120 holdout episode，每臂相同生命周期",
+    "generation": "独立生成，冻结 schema/阈值/prompt/model 之后；两次 seed 检查敏感性",
+    "bootstrap": "按 profile 簇 bootstrap 置信区间（对齐 METRICS.json M11『≥30profile/120episodes』）",
+    "isolation_rule": "holdout 不泄漏给实现 Agent（V4-B03 验收第2条）；测试生成者与实现者隔离；测试 operator 可读隐藏真值，但 AUT 只收真实用户会说的话与已授权历史",
+    "blind_review": "LLM judge 若使用：匿名打乱臂顺序、冻结 rubric、核对引用；分歧样本保留；同一实现 Agent 自夸不作终审（WT404 blind/{pairs,blind_key} seeded-RNG 去标识模式为先例）"
+  },
+  "episode_record_schema": {
+    "required_fields": ["episode_id", "arm", "pair_id", "profile_cluster", "seed", "spec_version", "result_rules_version", "started_at", "ended_at", "clock_kind(real|controlled)", "decision_rounds", "resolved", "missing_or_unresolved", "utility_breakdown", "token_usage", "denominator_notes"],
+    "denominator_rules": "0 分母记 N/A；未解决/缺失样本计入不得排除（对齐 frozen_utility.json denominator_policy）",
+    "provenance": "每 run 记代码 SHA、栈 SHA、build、迁移头、config flags、模型 requested/actual、root_request/attempt、开始结束与时区、失败与重试（协议§原始证据）"
+  },
+  "split_assignment_rule": "dev/holdout 按 profile 簇分层切分；同一 profile 的 episode 不得跨集；holdout 集在冻结前不得存在（防提前调参）",
+  "anti_leakage_checks": [
+    "holdout 生成脚本与实现 worktree 隔离（生成会话不读实现分支工作区）",
+    "臂标签不出现在 AUT 输入（用户模拟器不读 AUT 策略名）",
+    "盲评映射（arm→candidate）独立落 key 文件，评审完成前不同房"
+  ]
+}

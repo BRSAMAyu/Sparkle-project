@@ -1,0 +1,41 @@
+{
+  "frozen_by": "V4-B03",
+  "freeze_date": "2026-09-28",
+  "freeze_source_sha": "3c4618cc",
+  "authority": "v4/06_evaluation/EVALUATION_PROTOCOL.md（协议权威）；本文件冻结其数值口径供 B/C/D 卡与四臂实现引用，不是第二权威",
+  "utility_frozen": {
+    "name": "原冻结utility（协议，不是心理学效用）",
+    "weights": {
+      "resolved_episode": 1.0,
+      "unresolved_episode": -1.0,
+      "wrong_followed_decision": -0.4,
+      "question": -0.15,
+      "control_intrusion": -0.6
+    },
+    "provenance": "与 A-08 aurora_ablation_metrics.v1 权重逐项一致（v3-output/WT393-A08-ABLATION/EVAL_RESULTS.md 头部），亦为 EVALUATION_PROTOCOL 推荐同时报告口径",
+    "anti_gaming_rule": "不能通过乱问或无限输出行动刷成功；不能只与比自身更弱的 fixed_policy 比较即宣称优势"
+  },
+  "scope_frozen": {
+    "arms": {
+      "A": "冻结 V3 当前部署逻辑（A-08 修后形态；仅剔除已知不合法安全输入，不人为削弱）",
+      "B": "无可选历史",
+      "C": "V4 语义控制 + 所有合法历史",
+      "D": "V4 语义控制 + 效用筛选历史（V4-I02）"
+    },
+    "shared_constraints": "四臂相同当前约束、资料、工具、模型和最大预算；token 实际差异单报；不能给 D 更多历史后称算法更好",
+    "distinguishability_criterion": "无记忆(B)/V3(A)/V4(C,D) 各臂在冻结 utility 与 M08-M14 联合判定下必须可区分；配对集与臂标签见 paired_baseline.jsonl",
+    "episode_shape": "每 episode 最多 4 个决策轮；必要时 3 seed 仅限离线轻量回放，禁止未经授权放大 live 成本"
+  },
+  "denominator_policy": {
+    "zero_denominator": "N/A（不是 0%，更不是 100%）——对齐 METRICS.json M08 caveat『0引用分母N/A，不是100%』",
+    "unresolved_or_missing_samples": "计入失败，不得排除；失败与取消计入对应分母（对齐 M06 caveat）",
+    "budget_shortfall": "记 BLOCKED_BUDGET/NOT_RUN，保留全部已完成样本，不得换简单样本"
+  },
+  "baseline_rule": {
+    "latest_baseline": "A-08 修后（WT412 a08-post-fix）：full 9/20=0.45 / no_memory 11/20=0.55，utility full=-9.2 / no_memory=0.0",
+    "forbidden": "禁止拿 A-08 修前 pre-fix 0.65（13/20）作最新基线（CLAIMS_LEDGER『自适应优于不用记忆』行）；Q-04 首轮数字不得被当作修后状态（NOT_REMEASURED）",
+    "recompute_vs_run": "重算（对既有 raw 的确定性复算）与运行（新预算执行）分开记账；B03 交付仅含重算，零运行"
+  },
+  "metrics_joint_gate": ["M08", "M09", "M10", "M11", "M12", "M13", "M14"],
+  "report_also": ["M22（费用可审计，含 no_gen-with-token 类 attempt）"]
+}
