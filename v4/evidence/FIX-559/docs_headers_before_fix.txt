@@ -1,0 +1,13 @@
+HTTP/1.1 200 OK
+date: Mon, 28 Sep 2026 10:57:30 GMT
+server: uvicorn
+content-length: 1006
+content-type: text/html; charset=utf-8
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-xss-protection: 1; mode=block
+strict-transport-security: max-age=31536000; includeSubDomains
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';
+x-request-id: 9abd8d03-2a7f-4916-abe8-23b9256317dc
+x-trace-id: 425ff365c5ad4601b4c72bd8c03a650c
+

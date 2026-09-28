@@ -1,0 +1,30 @@
+== FIX-559 guest-view verification (no CSP bypass), 2026-09-28 19:15:12 +0800 ==
+-- server: {"app":"Sparkle","version":"1.0.0","status":"running"}
+
+-- [1] /docs headers:
+HTTP/1.1 200 OK
+x-frame-options: DENY
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';
+-- [2] /docs asset refs (must be same-origin only):
+href="/static/docs/favicon.png"
+href="/static/docs/swagger-ui.css"
+src="/static/docs/swagger-init.js"
+src="/static/docs/swagger-ui-bundle.js"
+external http(s) refs: 0
+executable inline scripts: 0
+-- [3] /redoc asset refs:
+href="/static/docs/favicon.png"
+src="/static/docs/redoc.standalone.js"
+-- [4] asset reachability:
+  /static/docs/swagger-ui.css                200
+  /static/docs/swagger-ui-bundle.js          200
+  /static/docs/swagger-init.js               200
+  /static/docs/redoc.standalone.js           200
+  /static/docs/favicon.png                   200
+  /openapi.json                              200
+  /redoc                                     200
+  /docs/oauth2-redirect                      200
+-- [5] served asset sha256 (B04 byte anchors):
+1ac324f7dcd27e4b9386b4bd6421271ec147e922a22c05ba24b11515e9aa6321  swagger-ui.css(served)
+62df541529080464a7660adc793eab7128c6193ce3be24ddc1e0e0a4a63edc2f  swagger-ui-bundle.js(served)
+dcaf76612bc4a3fbcc923a8966dee2f6146a5f32e5ce1b6f02dd60cbbf89500b  redoc.standalone.js(served)

@@ -1,0 +1,19 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="/static/docs/swagger-ui.css">
+    <link rel="shortcut icon" href="/static/docs/favicon.png">
+    <title>Sparkle - Swagger UI</title>
+    </head>
+    <body>
+    <div id="swagger-ui">
+    </div>
+    <script src="/static/docs/swagger-ui-bundle.js"></script>
+    <!-- FIX-559: 初始化参数经 JSON 数据块传入，执行逻辑在外置 swagger-init.js -->
+    <script id="swagger-init-config" type="application/json">{"url": "/openapi.json", "dom_id": "#swagger-ui", "layout": "BaseLayout", "deepLinking": true, "showExtensions": true, "showCommonExtensions": true, "oauth2RedirectPath": "/docs/oauth2-redirect"}</script>
+    <script src="/static/docs/swagger-init.js"></script>
+    </body>
+    </html>
+    
