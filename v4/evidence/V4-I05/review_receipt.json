@@ -20,10 +20,17 @@
       ]
     },
     {
-      "reviewer": "PENDING_R2",
-      "verdict": "PENDING",
-      "receipt_id": null,
-      "reviewed_head": null
+      "reviewer": "wtI05R2",
+      "verdict": "PASS_WITH_CHALLENGES",
+      "receipt_id": "v4/evidence/V4-I05/review_r2.md",
+      "reviewed_head": "4cac07ecaba214f1441b4de009c585487d078e5e",
+      "challenged": [
+        "R2-C1 承接一审成立（亲验）：撤回 revoke 的 reason 措辞失实——history 规范码 T4.revoked_by_user_correction + actor=evidence_withdrawal + revoke_reason 旁列，建议合并前改口",
+        "R2-C3+ 承接一审加 sharp：旧行不回溯=存量重复引用行 admit 仍可照 V3 爬档（亲测 tier=repeated→active）；live 补偿控制=观察面去重+收益门，建议 limitations 补句",
+        "R2-C5 一审原判词复判不成立（亲验反转）：重放时 revoked 行被候选集过滤双向均不出现（非入 unaffected）；改登记为重放报告对已失效行静默（可选 already_revoked 分组）",
+        "R2-C4 维持一审：live 用户披露面缺失，列为 EXPERIENCE_STRATEGY_MODE=live 启用前置",
+        "R2-D1 二审新发现（非阻塞、事件接线卡硬性登记义务）：invalidate_on_source_withdrawal 候选集仅 active/evidenced，candidate 态引用已撤源不进 sweep 且 admit 不查撤回台账，人工入口不验证源真已撤回——接线卡必须 sweep 纳 candidate 或 admit 前查台账"
+      ]
     }
   ]
 }
