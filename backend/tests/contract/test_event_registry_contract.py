@@ -65,7 +65,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 #   Goal outcome evidence 的集成通知，durable truth 在 community_outcome_evidence
 #   表，producer = app/services/community_feedback_service.py)。→ 40 names；
 #   hash 显式 re-freeze（S-04 交付，待 Leader 复核后归档）。
-_FROZEN_VOCABULARY_SHA256 = "3444257e9ffb1f4b26f2a5a02047b59575b381af15b048926dd70f994cd2e0a0"
+_FROZEN_VOCABULARY_SHA256 = "644fb106c5695d8e7c7f94ffedc0fee8dfae205e7c7fea1452c711b63d79cab3"  # 41 names：V4-D03 有意新增 retraction.registered（CI39 定位）
 
 # Observed distinct event_type values in the live dev DB event_outbox
 # (sparkle_readonly, 2026-09-19; 106 rows). run.* / task.status_changed are
