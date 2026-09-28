@@ -1,0 +1,60 @@
+{
+  "V4-B01_backup_before_edit_20260928": {
+    "id": "V4-B01",
+    "title": "继承当前HEAD与最新修复，不重开V3",
+    "depends_on": [],
+    "status": "READY",
+    "implementation_state": "NOT_STARTED",
+    "evidence_verdict": "NOT_RUN",
+    "kind": "verification",
+    "required_locks": [
+      "v4-baseline"
+    ],
+    "heavy_token_required": false,
+    "risk": "normal",
+    "independent_reviewers": 1,
+    "specs": [
+      "MASTER_DESIGN.md",
+      "00_context/READING_AND_CONFLICTS.md",
+      "V4_DONE.md"
+    ],
+    "modules": [],
+    "source_anchors": [
+      "S01",
+      "S07",
+      "S08"
+    ],
+    "objective": "读取当前任务/修复台账与本包冲突表，绑定真源路径，记录源码SHA与运行栈SHA；核实FIX507/539/540/543较新成果，继承O-01/Q-07/Q-08原义务。",
+    "work": "读取当前任务/修复台账与本包冲突表，绑定真源路径，记录源码SHA与运行栈SHA；核实FIX507/539/540/543较新成果，继承O-01/Q-07/Q-08原义务。不得借换版删除负结果。",
+    "acceptance": [
+      "104/107仅作快照，给出现仓库差量及证据链接",
+      "已修事项不生成重复修复卡；未知状态明确unknown",
+      "发布已有root AGENTS优先，V4规范以增量合并不覆盖"
+    ],
+    "outputs": [
+      "diff_or_evidence_only.md",
+      "run_manifest.json",
+      "test_results.json",
+      "review_receipt.json",
+      "limitations.md"
+    ],
+    "evidence_required": {
+      "source_sha": true,
+      "build_id": true,
+      "commands_and_exit_codes": true,
+      "scope_and_denominator": true,
+      "artifacts_sha256": true,
+      "actual_model_and_usage_if_llm": true,
+      "screenshots_video_and_semantics_if_ui": true,
+      "physical_device_scope_if_sensory": true
+    },
+    "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+    "stop_conditions": [
+      "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+      "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+      "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+    ],
+    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+    "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+  }
+}

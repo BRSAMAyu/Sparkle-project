@@ -1,0 +1,172 @@
+{
+  "task": "V4-B01",
+  "session": "wtB01",
+  "branch": "agent/v4/b01",
+  "base_sha": "3c4618cc",
+  "baseline_heads": {
+    "sparkle_project_main_at_start": "3c4618cc",
+    "v3_final_integration_point": "8be9831c",
+    "commits_after_8be9831c": [
+      "35f0d62f",
+      "b0f07eb3",
+      "c8e9ac14",
+      "3c4618cc"
+    ],
+    "sparkle_cosmos_local_head_readonly": "aa02635 (branch agent/node-b/T36/1)",
+    "rf06_remote_ref": {
+      "ref": "refs/heads/agent/rf06-full-ui",
+      "sha": "92203d5ce64288297fca209ffddf1ebf5765c329",
+      "remote": "https://github.com/thequipster/sparkle-cosmos.git",
+      "subject": "docs(rf06): document frontend design and reproducible handoff",
+      "parent": "04214f44",
+      "date": "2026-09-28T07:23:23Z",
+      "local_presence": "NOT_PRESENT_LOCAL"
+    },
+    "rf06_handover_doc_shas": {
+      "doc_snapshot_head": "04214f44",
+      "product_behavior_apk": "8c6b8c17",
+      "latest_code_candidate": "af0ff8fa",
+      "nonvisual_baseline": "e3f85eb3"
+    }
+  },
+  "commands": [
+    {
+      "id": 1,
+      "command": "git log --oneline -5  # in /Users/brsama/code/GitHub/Sparkle-project",
+      "exit_code": 0,
+      "result": "HEAD=3c4618cc"
+    },
+    {
+      "id": 2,
+      "command": "git worktree add ../wtB01 -b agent/v4/b01  # in Sparkle-project",
+      "exit_code": 0,
+      "result": "worktree created at 3c4618cc"
+    },
+    {
+      "id": 3,
+      "command": "python3 -c 'count statuses of v3/07_tasks/tasks.json'",
+      "exit_code": 0,
+      "result": "total=107, done=104, TODO=[O-01,Q-07,Q-08]"
+    },
+    {
+      "id": 4,
+      "command": "python3 final-status recompute over v3/06_agent_fleet/DYNAMIC_ISSUES.md (FIXED/CLOSED/WONTFIX row supersedes OPEN row per id)",
+      "exit_code": 0,
+      "result": "388 ids, 319 resolved, 46 final OPEN, 23 non-standard/unknown rows"
+    },
+    {
+      "id": 5,
+      "command": "grep V3-FIX-507/539/540/543 status anchors",
+      "exit_code": 0,
+      "result": "507=FIXED@8e503cd8, 539=FIXED@583e0c8a, 540=FIXED@b87f5f13, 543=FIXED@697e34bf"
+    },
+    {
+      "id": 6,
+      "command": "test -r /Users/brsama/Downloads/前端设计与迭代交接.md && wc -l",
+      "exit_code": 0,
+      "result": "288 lines, readable"
+    },
+    {
+      "id": 7,
+      "command": "git log agent/rf06-full-ui --oneline -15  # in local sparkle-cosmos (read-only)",
+      "exit_code": 128,
+      "result": "NOT_PRESENT_LOCAL (fallback origin ref also absent)"
+    },
+    {
+      "id": 8,
+      "command": "git ls-remote origin refs/heads/agent/rf06*  # in local sparkle-cosmos (read-only network read)",
+      "exit_code": 0,
+      "result": "92203d5ce64288297fca209ffddf1ebf5765c329 refs/heads/agent/rf06-full-ui"
+    },
+    {
+      "id": 9,
+      "command": "git cat-file -t {3c4618cc, 92203d5ce, 8c6b8c17}  # in local sparkle-cosmos",
+      "exit_code": 0,
+      "result": "all absent -> objects not present locally; cross-repo histories unrelated (roots b3908b0 vs 1722e6dc)"
+    },
+    {
+      "id": 10,
+      "command": "gh api repos/thequipster/sparkle-cosmos/commits/92203d5ce...",
+      "exit_code": 0,
+      "result": "commit metadata: docs(rf06) handoff, parent 04214f44, 2026-09-28T07:23Z"
+    },
+    {
+      "id": 11,
+      "command": "gh api repos/thequipster/sparkle-cosmos/compare/e3f85eb3...92203d5ce",
+      "exit_code": 0,
+      "result": "ahead_by=18 behind_by=0, 18 files, additions=1121 deletions=408; mobile/ 10 files ~+635/-649"
+    },
+    {
+      "id": 12,
+      "command": "git log --since=2026-09-24 -- mobile/  # in wtB01 (Sparkle-project)",
+      "exit_code": 0,
+      "result": "163 commits, 690 unique mobile/ files"
+    },
+    {
+      "id": 13,
+      "command": "per-file overlap check: RF-06 touched files vs git log --since=2026-09-24 per path in wtB01",
+      "exit_code": 0,
+      "result": "high-overlap: dashboard_screen.dart(8), compact_status_bar.dart(2), task_execution_screen.dart(5), dashboard_screen_structure_test.dart(2); task_focus_entry_card.dart + task_completion_criteria.dart ABSENT in SP main"
+    },
+    {
+      "id": 14,
+      "command": "python3 tools/validate_pack.py  # in v4/, baseline before tasks.json edit",
+      "exit_code": 0,
+      "result": "pass=true, tasks=58, initial_ready=[V4-B01..B06], errors=[]"
+    },
+    {
+      "id": 15,
+      "command": "python3 -m unittest discover -s tests -v  # in v4/, baseline",
+      "exit_code": 0,
+      "result": "Ran 43 tests, OK"
+    },
+    {
+      "id": 16,
+      "command": "python3 tools/validate_pack.py  # after tasks.json status edit",
+      "exit_code": 0,
+      "result": "see test_results.json run#3"
+    },
+    {
+      "id": 17,
+      "command": "python3 -m unittest discover -s tests  # after tasks.json status edit",
+      "exit_code": 0,
+      "result": "see test_results.json run#4"
+    }
+  ],
+  "model_usage": {
+    "llm_calls": 0,
+    "note": "verification/doc card; no LLM inference invoked; no HEAVY run"
+  },
+  "readonly_guarantee": {
+    "sparkle_cosmos_repo": "read-only honored: only log/branch/remote -v/ls-remote/cat-file/for-each-ref executed; no fetch/checkout/add/commit; working tree untouched",
+    "v3_directory": "zero writes",
+    "root_AGENTS_md": "untouched"
+  },
+  "artifacts_note": "evidence files sha256 recorded in review_receipt.json after independent review; self-hash list in limitations.md",
+  "artifacts": [
+    {
+      "path": "v4/evidence/V4-B01/diff_or_evidence_only.md",
+      "sha256": "14b65b29ac35aee71c2361f3271dacb5b75d942658927a18db4607c3ecb2f7c0"
+    },
+    {
+      "path": "v4/evidence/V4-B01/limitations.md",
+      "sha256": "9bba7af1d46c740370e390bba33ed16382f9bd16f0fa3bdf35b74f641f266b2a"
+    },
+    {
+      "path": "v4/evidence/V4-B01/review_receipt.json",
+      "sha256": "15354b5acdc3e7471da2d3c2eb917b7bb58ba4d81492f89d423b3a5330479ebc"
+    },
+    {
+      "path": "v4/evidence/V4-B01/run_manifest.json",
+      "sha256": "SELF_EXCLUDED(自引用)"
+    },
+    {
+      "path": "v4/evidence/V4-B01/tasks_json_V4-B01_field_backup.json",
+      "sha256": "12a548c576ac458fd185a78e10f61be4730083e85f565e6a7315844760101a8b"
+    },
+    {
+      "path": "v4/evidence/V4-B01/test_results.json",
+      "sha256": "efba6d794d09bf9fb7b9f0ccfc6ebf7ade234aa90e60c45e3246406f9f61da98"
+    }
+  ]
+}

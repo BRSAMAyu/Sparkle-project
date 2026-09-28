@@ -1,0 +1,46 @@
+{
+  "task": "V4-B01",
+  "runs": [
+    {
+      "id": "pack_validation_baseline",
+      "command": "python3 tools/validate_pack.py  # cwd=v4/, before tasks.json edit",
+      "exit_code": 0,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "result_summary": "scope=PACKAGE_ONLY_NOT_PRODUCT, tasks=58, modules=43, scenario_specs=72, initial_ready=[V4-B01,V4-B02,V4-B03,V4-B04,V4-B05,V4-B06], errors=[], pass=true"
+    },
+    {
+      "id": "pack_unit_tests_baseline",
+      "command": "python3 -m unittest discover -s tests -v  # cwd=v4/, before tasks.json edit",
+      "exit_code": 0,
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0,
+      "result_summary": "Ran 43 tests in 0.003s, OK"
+    },
+    {
+      "id": "pack_validation_post_edit",
+      "command": "python3 tools/validate_pack.py  # cwd=v4/, after V4-B01 status/evidence edit",
+      "exit_code": 0,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "result_summary": "pass=true, errors=[] — tasks.json edit did not break DAG/cards/specs/initial-ready invariants"
+    },
+    {
+      "id": "pack_unit_tests_post_edit",
+      "command": "python3 -m unittest discover -s tests  # cwd=v4/, after edit",
+      "exit_code": 0,
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0,
+      "result_summary": "OK"
+    }
+  ],
+  "product_tests": {
+    "run": false,
+    "reason": "卡面 kind=verification，范围=台账/状态/规范绑定核验，无产品代码变更；按 AGENTS.md「纯文档/目录变更不因此重跑全产品测试」。sparkle-cosmos 仓只读、不跑 HEAVY 红线均遵守。"
+  },
+  "notes": "exit_code=0 且 failed=0 仅证明包自检通过；不证明本卡验收已签收——独立审查见 review_receipt.json（PENDING）。"
+}

@@ -13,8 +13,8 @@
       "id": "V4-B01",
       "title": "继承当前HEAD与最新修复，不重开V3",
       "depends_on": [],
-      "status": "READY",
-      "implementation_state": "NOT_STARTED",
+      "status": "DONE",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
       "kind": "verification",
       "required_locks": [
@@ -65,7 +65,8 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "evidence": "v4/evidence/V4-B01/"
     },
     {
       "id": "V4-B02",

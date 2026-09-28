@@ -1,0 +1,20 @@
+{
+  "task": "V4-B01",
+  "status": "PENDING_INDEPENDENT_REVIEW",
+  "verdict": "NOT_RUN",
+  "implementation_session": "wtB01",
+  "source_sha_pending_review": null,
+  "note": "独立审查由未参与实现的会话执行后方能签收；本文件如实登记 PENDING，不以实现自证代替审查。审查通过后由审查会话回填 source_sha/reviews/artifacts sha256。",
+  "review_contract": {
+    "required_reviewers": 1,
+    "reviewer_must_verify": [
+      "v3/07_tasks/tasks.json 实况 104 done / 3 TODO（O-01,Q-07,Q-08）可复现（cmd：python3 统计 status 字段）",
+      "DYNAMIC_ISSUES.md 最终 OPEN=46 的重算口径（同号多行时 FIXED/CLOSED/WONTFIX/产品拍板行优先）可复现",
+      "FIX-507/539/540/543 状态锚与台账行一致",
+      "agent/rf06-full-ui 本机 NOT_PRESENT_LOCAL、远端 @92203d5ce 可复现（git ls-remote / gh api 只读）",
+      "compare e3f85eb3...92203d5ce 文件清单与 +1121/−408 可复现",
+      "sparkle-cosmos 仓零写操作（reflog/工作树未动）"
+    ]
+  },
+  "self_check_only": "本卡仅完成实现侧自测（validate_pack + 43 unittest 全绿）；作者不能自审（packlib.check_receipt: author cannot self-review）"
+}
