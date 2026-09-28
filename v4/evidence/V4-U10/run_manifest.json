@@ -74,7 +74,7 @@
       "purpose": "移动端受影响面回归（路由 smoke/deep-link + Shell + 错题档案）",
       "cmd": "flutter test test/app/router_smoke_test.dart test/app/router_deep_link_test.dart test/core/navigation/shell/ test/features/error_book/",
       "exit_code": 0,
-      "evidence": "18 + 57 passed（零回归）"
+      "evidence": "71 passed（零回归）。R1 F-2 勘误：本条原记录「18 + 57 passed」计数失实——57 对（shell 29 + error_book 28），18 实为 14（router smoke 10 + deep-link 4），合计实测 71 = 10+4+29+28"
     },
     {
       "purpose": "静态检查（新文件零问题；mypy 新文件零错误，跨文件既有噪声与主检出逐同）",
@@ -102,5 +102,48 @@
     ],
     "semantics": "v4/evidence/V4-U10/learning_journey_semantics.txt",
     "note": "截图为 flutter test 真实渲染顶层画面（dpr=2，宿主 Hiragino 字体），非栈底 RepaintBoundary 复用；语义为 widget 树 Semantics/Tooltip 枚举（真值）。"
+  },
+  "r1_remediation": {
+    "date": "2026-09-28",
+    "review": "v4/evidence/V4-U10/review_r1.md（APPROVE_WITH_CONDITIONS）",
+    "environment_note": "与原实现同口径：SECRET_KEY=ci-test-key DATABASE_URL=sqlite://（worktree 无 .env，sqlite，不触 dev DB）",
+    "commands": [
+      {
+        "purpose": "R1 F-1 整改后本卡后端套件（core 19 + service 11 + api 4；+5 新测全一正一反：词表冻结钉死 / GET 读模型位置门 / 判分位置门 / 缺权威 reason / REST 契约面）",
+        "cmd": "pytest tests/core/test_learning_journey.py tests/services/test_learning_journey_service.py tests/api/test_learning_journey_api.py -q",
+        "exit_code": 0,
+        "evidence": "34 passed"
+      },
+      {
+        "purpose": "R1 F-1 整改后合并回归（34 新 + I07 hybrid 31 + I08 24 + D02 38）",
+        "cmd": "pytest tests/core/test_learning_journey.py tests/services/test_learning_journey_service.py tests/api/test_learning_journey_api.py tests/unit/test_v4_i08_deep_task_return_control.py tests/unit/test_hybrid_policy.py tests/core/test_attribution.py -q",
+        "exit_code": 0,
+        "evidence": "127 passed in 73.61s（零回归）"
+      },
+      {
+        "purpose": "网关复跑（LearningJourney 2 测 + 全量）",
+        "cmd": "cd backend/gateway && go test ./internal/handler/ -run LearningJourney -count=1 && go test ./... && gofmt -l internal/handler/proxy_routes.go（空输出）",
+        "exit_code": 0,
+        "evidence": "ok + 全包 ok + gofmt 干净"
+      },
+      {
+        "purpose": "移动端复跑（本卡 31 + 受影响面回归 71）",
+        "cmd": "flutter test test/features/learning && flutter test test/app/router_smoke_test.dart test/app/router_deep_link_test.dart test/core/navigation/shell/ test/features/error_book/",
+        "exit_code": 0,
+        "evidence": "31 passed + 71 passed（71 = smoke 10 + deep-link 4 + shell 29 + error_book 28，R1 F-2 修正口径）"
+      },
+      {
+        "purpose": "静态检查复跑",
+        "cmd": "ruff check <本卡后端 7 文件> && black --check <同上>；SECRET_KEY=ci-test-key mypy app/core/learning_journey.py app/services/learning_journey_service.py app/api/v1/learning_journey.py；flutter analyze lib/features/learning test/features/learning lib/app/routes.dart lib/features/goal/presentation/screens/goal_detail_screen.dart",
+        "exit_code": 0,
+        "evidence": "ruff All checks passed / black 通过（tests/api 测试文件一并格式化；router.py 既有非本卡行偏差与 b5e04e57 相同，未新增未触碰）/ mypy 本卡 3 生产文件 0 error（跨文件既有噪声与基线逐同）/ flutter analyze No issues found"
+      },
+      {
+        "purpose": "治理守卫全量复跑",
+        "cmd": "bash scripts/run_all_rule_guards.sh",
+        "exit_code": 0,
+        "evidence": "all rule guards passed (88 rules)"
+      }
+    ]
   }
 }

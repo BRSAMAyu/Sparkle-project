@@ -1222,7 +1222,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered episode-resume proxy routes")
 
-	// ==================== Learning Journey Routes (V4-U10 learning_journey.v1 资料→错题→练习→检验旅程) ====================
+	// ==================== Learning Journey Routes (V4-U10 learning_journey.v2 资料→错题→练习→检验旅程) ====================
 	// route-tier: authed
 	learningJourney := api.Group("/learning-journey")
 	learningJourney.Use(authMiddleware)

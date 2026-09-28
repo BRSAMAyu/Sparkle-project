@@ -10,6 +10,9 @@
 - 数据源只接既有权威（tasks.guide_json 策略块 / task_documents→stored_files /
   error_records）；判分权威 = 策略块 ``independent_check`` 子结构（服务端持有，
   任何响应不回显答案）。
+- 出题证据门覆盖三个面（R1 F-1）：enter 写路径（显式选择 + 证据支持才推进）、
+  GET 读模型（未到检验段 ``view.check`` 不携带题面）、判分面（未到检验段
+  提交一律 ``HOLD.scaffold_not_at_check``，无 correct 裁决）。
 - 降级语义（封闭 reason）：对象不存在/已删/跨用户 → 404（不泄露存在性）；
   策略块缺失/脏块 → 200 + ``warnings``（老目标不硬推检验）。
 """

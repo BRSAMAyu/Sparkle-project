@@ -171,7 +171,7 @@ void main() {
   group('旅程视图装配', () {
     test('正：materials/errors/scaffold/check 全量解析', () {
       final view = LearningJourneyView.fromJson(<Object?, Object?>{
-        'schema_version': 'learning_journey.v1',
+        'schema_version': 'learning_journey.v2',
         'goal': <Object?, Object?>{'task_id': 't1', 'title': '力学单元巩固'},
         'scaffold': <Object?, Object?>{
           'stage': 'attempt',

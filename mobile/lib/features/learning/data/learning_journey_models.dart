@@ -1,6 +1,6 @@
 /// V4-U10 · 资料→错题→练习→检验旅程的客户端载荷模型。
 ///
-/// 契约真源 = `backend/app/core/learning_journey.py`（`learning_journey.v1`）。
+/// 契约真源 = `backend/app/core/learning_journey.py`（`learning_journey.v2`）。
 /// 本文件只做**消费侧解析**，三条构造期红线（与服务端同构，缺一即断言失败）：
 ///
 /// 1. **解析诚实**：[JourneyParseStatus.failed]/[unsupported] 一律不携带文本
@@ -65,7 +65,7 @@ class JourneySourceRef {
     final version = json['source_version'] as String? ?? '';
     assert(
       id.isNotEmpty && version.isNotEmpty,
-      '来源引用必须携带 id 与版本（learning_journey.v1 契约）',
+      '来源引用必须携带 id 与版本（learning_journey.v2 契约）',
     );
     return JourneySourceRef(
       sourceId: id,
@@ -96,12 +96,12 @@ class JourneyMaterialParse {
       // 解析诚实红线：失败/不支持的面不带文本、必须挂手输替代。
       !((status == JourneyParseStatus.failed || status == JourneyParseStatus.unsupported) &&
           !manualRequired),
-      'failed/unsupported 解析面必须要求手输替代（learning_journey.v1）',
+      'failed/unsupported 解析面必须要求手输替代（learning_journey.v2）',
     );
     assert(
       // 面上根本没有 text 键可携带——若出现即契约违约。
       !json.containsKey('text'),
-      '材料状态面不得携带文本载荷（learning_journey.v1）',
+      '材料状态面不得携带文本载荷（learning_journey.v2）',
     );
     return JourneyMaterialParse._(
       status: status,
@@ -288,8 +288,14 @@ class LearningCheckQuestion {
   }
 }
 
-/// 判分面允许的契约字段（learning_journey.v1；`correct` = bool 裁决字段，
+/// 判分面允许的契约字段（learning_journey.v2；`correct` = bool 裁决字段，
 /// 与 I07 答案键集同名不同面——嵌套面另过红化门探针）。
+///
+/// 口径如实（R1 N-6）：下方允许表 / `correct is bool` 校验均为 `assert`——
+/// debug/test 生效、**release 跳过**。release 下的真实防线 = 服务端出口探针
+/// （权威门）+ 本类运行时兜底（`correct is bool ? correct : null` 三元；
+/// 契约外键无任何渲染路径）；[LearningCheckQuestion.sanitize] 是运行时红化
+/// 逻辑，不受 assert 影响。
 const Set<String> _allowedVerdictKeys = <String>{
   'schema_version',
   'graded',
@@ -310,13 +316,14 @@ class LearningCheckVerdict {
   static LearningCheckVerdict fromJson(Map<Object?, Object?> json) {
     assert(
       // 允许表校验（比键黑名单更严）：判分面只允许契约字段出现——任何额外键
-      // （如 `answer`）即契约违约拒显。嵌套标记节点另过红化门探针。
+      // （如 `answer`）即契约违约。assert 仅 debug/test 生效（R1 N-6）；
+      // release 由运行时兜底 + 服务端出口探针承担。嵌套标记节点另过红化门探针。
       json.keys.every(_allowedVerdictKeys.contains),
-      '检验判分面携带契约外字段（learning_journey.v1 契约违约）',
+      '检验判分面携带契约外字段（learning_journey.v2 契约违约）',
     );
     assert(
       !containsIndependentCheckAnswer(json),
-      '检验判分面泄漏答案材料（learning_journey.v1 契约违约）',
+      '检验判分面泄漏答案材料（learning_journey.v2 契约违约）',
     );
     final correct = json['correct'];
     assert(

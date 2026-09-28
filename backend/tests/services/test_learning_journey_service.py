@@ -2,7 +2,9 @@
 
 覆盖验收项（卡 V4-U10，每条一正一反可失败）：
 1. **不会从目标跳入无上下文的工具空页**：装配视图自带目标上下文 + 检验入口
-   证据门（无复习证据 → HOLD + 脚手架不推进；有证据 → 放行出题面）；
+   证据门（无复习证据 → HOLD + 脚手架不推进；有证据 → 放行出题面）；出题
+   证据门同时覆盖 GET 读模型与判分面（未到检验段 → check 面不出、提交不判
+   分——R1 F-1 收口）；
 2. **答案不泄漏到检验用户可读状态**：判分响应零答案材料（答案留在服务端
    guide_json）；跨用户 404 不泄露存在性；
 3. **真实文件/图片失败无伪造解析，来源版本正确**：materials 面的解析状态从
@@ -155,6 +157,35 @@ async def test_build_journey_cross_user_is_typed_404_not_leaked(db_session):
     assert result.reason_code == "cross_object_access"
 
 
+async def test_get_journey_check_face_gated_by_scaffold_position(db_session):
+    # 反（可失败面，R1 F-1 读模型面）：stage=example + 判分权威齐备 → GET
+    # 视图不出题面（题面预告只经 enter_check 证据门放行）。
+    user = await _make_user(db_session)
+    task = await _make_task(db_session, user, guide_json=_guide_with_check(stage="example"))
+    result = await LearningJourneyService(db_session).build_goal_journey(user_id=user.id, task_id=task.id)
+    assert result.view is not None
+    assert result.view["check"] is None
+    assert result.view["scaffold"]["stage"] == "example"
+    # 权威在、只是未到检验段——不误报权威/题面缺失警示。
+    assert "check_authority_missing" not in result.warnings
+    assert "check_question_missing" not in result.warnings
+
+    # 正：脚手架推进到检验段后（enter_check 同款权威位写回），GET 读模型照常带题面。
+    reached = await _make_task(db_session, user, guide_json=_guide_with_check(stage="independent_check"))
+    result_ok = await LearningJourneyService(db_session).build_goal_journey(user_id=user.id, task_id=reached.id)
+    assert result_ok.view is not None
+    assert result_ok.view["check"] == {"question": _CHECK_QUESTION}
+
+    # 到段但题面缺失 → 诚实降级警示照常（check None + check_question_missing）。
+    guide = _guide_with_check(stage="independent_check")
+    del guide[GOAL_PURPOSE_BLOCK_KEY]["independent_check"]["question"]
+    no_question = await _make_task(db_session, user, guide_json=guide)
+    result_warn = await LearningJourneyService(db_session).build_goal_journey(user_id=user.id, task_id=no_question.id)
+    assert result_warn.view is not None
+    assert result_warn.view["check"] is None
+    assert "check_question_missing" in result_warn.warnings
+
+
 async def test_enter_check_without_evidence_holds_and_persists_nothing(db_session):
     user = await _make_user(db_session)
     node_id = uuid4()
@@ -223,9 +254,44 @@ async def test_submit_check_correct_and_without_authority_holds(db_session):
     payload, _ = await LearningJourneyService(db_session).grade_check(
         user_id=user.id, task_id=legacy.id, submitted=_CHECK_ANSWER
     )
-    # 反（可失败面）：无判分权威 → 类型化 HOLD，不猜不伪造判分。
+    # 反（可失败面）：legacy 目标回 example 保守态 → 判分面位置门（R1 F-1）
+    # HOLD.scaffold_not_at_check，不猜不伪造判分。
     assert payload is not None and payload["graded"] is False
+    assert payload["correct"] is None
     assert payload["reason"] == "HOLD.scaffold_not_at_check"
+
+
+async def test_submit_check_before_check_stage_rejected_without_verdict(db_session):
+    # 反（可失败面，R1 F-1 判分面）：从未 enter（stage=example）+ 判分权威齐备
+    # → 提交不判分：无 correct 裁决（correct=true 不可能绕过证据门拿到）。
+    user = await _make_user(db_session)
+    task = await _make_task(db_session, user, guide_json=_guide_with_check(stage="example"))
+    payload, reason = await LearningJourneyService(db_session).grade_check(
+        user_id=user.id, task_id=task.id, submitted=_CHECK_ANSWER
+    )
+    assert reason == "ok"
+    assert payload is not None
+    assert payload["graded"] is False
+    assert payload["correct"] is None
+    assert payload["reason"] == "HOLD.scaffold_not_at_check"
+    assert "answer" not in payload
+    assert _CHECK_ANSWER not in str(payload)
+
+
+async def test_submit_check_missing_authority_at_check_stage_uses_authority_reason(db_session):
+    # 反（可失败面，R1 N-5b）：已到检验段但判分权威子结构缺失 → 词表内专属
+    # HOLD.check_authority_missing（缺权威 ≠ 位置不对，不再借用位置 reason）。
+    user = await _make_user(db_session)
+    guide = _guide_with_check(stage="independent_check")
+    del guide[GOAL_PURPOSE_BLOCK_KEY]["independent_check"]
+    task = await _make_task(db_session, user, guide_json=guide)
+    payload, _ = await LearningJourneyService(db_session).grade_check(
+        user_id=user.id, task_id=task.id, submitted=_CHECK_ANSWER
+    )
+    assert payload is not None
+    assert payload["graded"] is False
+    assert payload["correct"] is None
+    assert payload["reason"] == "HOLD.check_authority_missing"
 
 
 # ---------------------------------------------------------------------------

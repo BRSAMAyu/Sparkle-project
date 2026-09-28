@@ -13,8 +13,8 @@
     "new_gateway_tests": 2,
     "new_mobile_tests": 31,
     "new_total": 62,
-    "regression_backend": "122 passed（29 新 + I07 hybrid 31 + I08 深任务返回控制 24 + D02 归因 38，单命令口径）",
-    "regression_mobile": "75 passed（路由 smoke+deep-link 18 + shell+error_book 57）",
+    "regression_backend": "127 passed（34 新 + I07 hybrid 31 + I08 深任务返回控制 24 + D02 归因 38，单命令口径；R1 整改 +5 新测后复跑）",
+    "regression_mobile": "71 passed（router smoke 10 + deep-link 4 + shell 29 + error_book 28；R1 F-2 勘误：原记录 75=18+57 失实，18 实为 14）",
     "guards": "all rule guards passed (88 rules)；BA-ROUTES ledger +1 行（learning-journey bare-group，episode-resume 先例）"
   },
   "review_focus_suggestions": [
@@ -34,5 +34,12 @@
     "v4/evidence/V4-U10/run_manifest.json",
     "v4/evidence/V4-U10/test_results.json",
     "v4/evidence/V4-U10/limitations.md"
-  ]
+  ],
+  "r1_remediation": {
+    "review_receipt_ref": "v4/evidence/V4-U10/review_r1.md",
+    "verdict": "APPROVE_WITH_CONDITIONS",
+    "dispositions": "F-1 采 a 案（check_view 位置门 + grade_check stage 校验 + 正反钉死）；F-2/F-3 数字勘误落三处证据；F-4 docstring 修正；N-5 词表收口（+HOLD.check_authority_missing +HOLD.check_ungradeable，schema bump v1→v2 走冻结集更新流程）；N-6 措辞如实化；N-7 记录备查",
+    "detail": "v4/evidence/V4-U10/diff_or_evidence_only.md §7 + test_results.json r1_remediation",
+    "awaiting": "R1 复核（F-1 修正 delta 属高风险卡面改动）+ 第二独立审查"
+  }
 }

@@ -35,7 +35,10 @@ reviewer）：
   / ``manual``（手输替代）。
 - 检验裁决 reason :data:`CHECK_VERDICT_REASONS`：``OK.check_graded_correct``
   / ``OK.check_graded_incorrect`` / ``HOLD.evidence_not_supported`` /
-  ``HOLD.scaffold_not_at_check``。
+  ``HOLD.scaffold_not_at_check`` / ``HOLD.check_authority_missing`` /
+  ``HOLD.check_ungradeable``。（v2 bump：一审 R1 N-5 词表收口——
+  ``check_authority_missing`` 原为服务层词表外字面量、ungradeable 原误落
+  ``OK.check_graded_incorrect``，一并归拢入封闭集。）
 
 数据面 unknown 语义（I07/B05 同款纪律）：块缺失/脏值 → 解析降级 + 原因，
 不臆测回填；判分只做确定性归一比对（strip/casefold/空白折叠），无模型调用
@@ -61,7 +64,9 @@ from app.core.hybrid_policy import (
     redact_independent_check,
 )
 
-LEARNING_JOURNEY_SCHEMA_VERSION = "learning_journey.v1"
+#: v2（2026-09-28 一审 R1 N-5 词表收口：+``HOLD.check_authority_missing`` /
+#: +``HOLD.check_ungradeable``；v1 首发未外发，bump 随本卡整改走冻结集更新流程）。
+LEARNING_JOURNEY_SCHEMA_VERSION = "learning_journey.v2"
 
 # ---------------------------------------------------------------------------
 # 封闭词表（冻结；扩展 = bump 版本并过 reviewer）
@@ -87,13 +92,15 @@ PARSE_MANUAL = "manual"
 #: 解析失败需手输替代的状态集（failed/unsupported 共享同一替代语义）。
 PARSE_MANUAL_INPUT_REQUIRED: frozenset[str] = frozenset({PARSE_FAILED, PARSE_UNSUPPORTED})
 
-#: 检验裁决 reason（封闭集；扩展 = bump）。
+#: 检验裁决 reason（封闭集；扩展 = bump 版本并过 reviewer）。
 CHECK_VERDICT_REASONS: frozenset[str] = frozenset(
     {
         "OK.check_graded_correct",
         "OK.check_graded_incorrect",
         "HOLD.evidence_not_supported",
         "HOLD.scaffold_not_at_check",
+        "HOLD.check_authority_missing",
+        "HOLD.check_ungradeable",
     }
 )
 
@@ -101,6 +108,8 @@ CHECK_REASON_CORRECT = "OK.check_graded_correct"
 CHECK_REASON_INCORRECT = "OK.check_graded_incorrect"
 CHECK_REASON_HOLD_EVIDENCE = "HOLD.evidence_not_supported"
 CHECK_REASON_HOLD_NOT_AT_CHECK = "HOLD.scaffold_not_at_check"
+CHECK_REASON_HOLD_AUTHORITY_MISSING = "HOLD.check_authority_missing"
+CHECK_REASON_UNGRADEABLE = "HOLD.check_ungradeable"
 
 _SCAFFOLD_TO_SEGMENT: dict[str, str] = {
     SCAFFOLD_STAGE_EXAMPLE: SEGMENT_PRACTICE,
@@ -339,11 +348,13 @@ def grade_independent_check(
 ) -> CheckGradingResult:
     """对一次检验提交做确定性判分（零模型）。
 
-    - 判分权威 = 服务端策略块 ``independent_check`` 子结构的 ``answer`` /
-      ``accepted_answers``（本卡不动其存储位置）；
-    - 归一比对（strip/casefold/空白折叠）；命中任一等价答案 → 正确；
-    - 判分权威不完整（无任何预期答案）→ ``graded=False, correct=None``
-      （不猜不伪造判分）；
+    - 判分权威 = 服务端策略块 ``independent_check`` 子结构的 ``answer``
+      单键（I07 冻结答案键集成员，红化门覆盖；``accepted_answers`` 属 V3
+      exam_sprint 域（``schemas/exam_sprint.py``），不在 I07 契约与本卡
+      判分权威内——R1 F-4 勘误：本 docstring 原误称权威含该键）；
+    - 归一比对（strip/casefold/空白折叠）；命中预期答案 → 正确；
+    - 判分权威不完整（无 ``answer``）→ ``graded=False, correct=None`` +
+      ``HOLD.check_ungradeable``（不猜不伪造判分）；
     - 返回结果**不携带**预期答案/解析/解释；``to_client_payload()`` 出口有
       泄漏探针（答案键或 independent_check 节点出现在载荷即 raise）。
     """
@@ -351,7 +362,7 @@ def grade_independent_check(
         raise ValueError("independent_check authority must be a dict")
     expected = _extract_expected_answers(independent_check)
     if not expected:
-        return CheckGradingResult(False, None, CHECK_REASON_INCORRECT, _FEEDBACK_UNGRADEABLE)
+        return CheckGradingResult(False, None, CHECK_REASON_UNGRADEABLE, _FEEDBACK_UNGRADEABLE)
     submitted_norm = _normalize_answer(submitted)
     correct = any(_normalize_answer(item) == submitted_norm for item in expected)
     return CheckGradingResult(
@@ -379,9 +390,11 @@ def redact_for_client(payload: Any) -> tuple[Any, tuple[str, ...]]:
 
 __all__ = [
     "CHECK_REASON_CORRECT",
+    "CHECK_REASON_HOLD_AUTHORITY_MISSING",
     "CHECK_REASON_HOLD_EVIDENCE",
     "CHECK_REASON_HOLD_NOT_AT_CHECK",
     "CHECK_REASON_INCORRECT",
+    "CHECK_REASON_UNGRADEABLE",
     "CHECK_VERDICT_REASONS",
     "JOURNEY_SEGMENTS",
     "CheckGradingResult",

@@ -27,6 +27,8 @@ from app.core.hybrid_policy import (
 from app.core.learning_journey import (
     CHECK_REASON_CORRECT,
     CHECK_REASON_HOLD_EVIDENCE,
+    CHECK_REASON_UNGRADEABLE,
+    CHECK_VERDICT_REASONS,
     LEARNING_JOURNEY_SCHEMA_VERSION,
     PARSE_FAILED,
     PARSE_PARSED,
@@ -159,10 +161,31 @@ def test_policy_block_check_authority_redacted_via_kind_marker():
 
 
 def test_grade_ungradeable_when_authority_incomplete():
-    # 判分权威不完整（无任何预期答案）→ 不猜不伪造判分。
+    # 判分权威不完整（无任何预期答案）→ 不猜不伪造判分；reason 落词表内
+    # HOLD.check_ungradeable（R1 N-5c：不误挂 OK.* 判分语义）。
     result = grade_independent_check({"question": "Q?"}, "任意答案")
     assert result.graded is False
     assert result.correct is None
+    assert result.reason == CHECK_REASON_UNGRADEABLE
+    payload = result.to_client_payload()
+    assert payload["reason"] == CHECK_REASON_UNGRADEABLE
+    assert "answer" not in payload
+
+
+def test_check_verdict_reasons_vocabulary_frozen():
+    # 词表冻结钉死（R1 N-5 收口后 v2 口径）：六个成员、HOLD/OK 前缀语义分明——
+    # HOLD.* 一律不承载判分裁决，OK.* 只在 graded=True 时出现。扩展必须走
+    # 冻结集更新流程（bump LEARNING_JOURNEY_SCHEMA_VERSION + reviewer）。
+    assert set(CHECK_VERDICT_REASONS) == {
+        "OK.check_graded_correct",
+        "OK.check_graded_incorrect",
+        "HOLD.evidence_not_supported",
+        "HOLD.scaffold_not_at_check",
+        "HOLD.check_authority_missing",
+        "HOLD.check_ungradeable",
+    }
+    assert all(r.startswith(("OK.", "HOLD.")) for r in CHECK_VERDICT_REASONS)
+    assert LEARNING_JOURNEY_SCHEMA_VERSION == "learning_journey.v2"
 
 
 # ---------------------------------------------------------------------------

@@ -71,7 +71,7 @@ from app.api.v1 import (
     inventory,
     journey,  # J-04 First Meaningful Action 链路入口面（/journey/first-action）
     leaderboards,
-    learning_journey,  # V4-U10 资料→错题→练习→检验旅程（learning_journey.v1 REST 入口）
+    learning_journey,  # V4-U10 资料→错题→练习→检验旅程（learning_journey.v2 REST 入口）
     learning_paths,
     learning_reports,
     llm_health_admin,

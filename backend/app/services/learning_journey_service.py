@@ -20,6 +20,12 @@
 ``guide_json["v4_hybrid_policy"]["scaffold"]``（I07 权威位的版本化子键，零迁移）。
 判分零写（检验是链终点，通过/失败归既有判分与 SM-2 面）。
 
+出题证据门覆盖三个面（R1 F-1）：enter 写路径（用户显式选择 + 证据支持才推进）；
+GET 读模型（``view.check`` 只在脚手架已到检验段时携带题面）；判分面（未到
+检验段的提交一律 ``HOLD.scaffold_not_at_check``，不产出 correct 裁决）。
+reason 全部落在 :data:`~app.core.learning_journey.CHECK_VERDICT_REASONS`
+封闭集内（R1 N-5 收口）。
+
 跨用户语义沿用 house 先例（episode_resume_service/runs.py）：对象不存在/已删/
 跨用户一律 404 语义 reason（``object_not_found``/``cross_object_access``），
 不泄露存在性。
@@ -43,6 +49,8 @@ from app.core.hybrid_policy import (
     parse_policy_block,
 )
 from app.core.learning_journey import (
+    CHECK_REASON_HOLD_AUTHORITY_MISSING,
+    CHECK_REASON_HOLD_NOT_AT_CHECK,
     LEARNING_JOURNEY_SCHEMA_VERSION,
     PARSE_FAILED,
     PARSE_PARSED,
@@ -180,7 +188,10 @@ class LearningJourneyService:
         check_view: dict[str, Any] | None = None
         if check_authority is None:
             warnings.append("check_authority_missing")
-        else:
+        elif scaffold.stage == SCAFFOLD_STAGE_INDEPENDENT_CHECK:
+            # 出题证据门（R1 F-1 读模型面）：GET 视图只在脚手架已到检验段时携带
+            # 题面——题面预告只经 enter_check（用户显式选择 + 证据门）放行，
+            # 未到检验段不出题（与「才放行出题」声明一致）。
             question = check_authority.get("question")
             if not isinstance(question, str) or not question.strip():
                 warnings.append("check_question_missing")
@@ -300,7 +311,8 @@ class LearningJourneyService:
                     view={
                         "schema_version": LEARNING_JOURNEY_SCHEMA_VERSION,
                         "check_available": False,
-                        "hold_reason": "HOLD.check_authority_missing",
+                        # R1 N-5a：缺判分权威归词表内 reason（原为词表外字面量）。
+                        "hold_reason": CHECK_REASON_HOLD_AUTHORITY_MISSING,
                     },
                     scaffold_persisted=False,
                 ),
@@ -347,13 +359,26 @@ class LearningJourneyService:
         task, reason = await self._load_task(user_id=user_id, task_id=task_id)
         if task is None:
             return None, reason
-        _scaffold, _warn, check_authority = self._resolve_scaffold(task)
-        if check_authority is None:
+        scaffold, _warn, check_authority = self._resolve_scaffold(task)
+        if scaffold.stage != SCAFFOLD_STAGE_INDEPENDENT_CHECK:
+            # 出题证据门（R1 F-1 判分面）：未到检验段的提交不判分——
+            # correct=true 不可能绕过 enter_check 的显式选择 + 证据门拿到。
             payload = {
                 "schema_version": LEARNING_JOURNEY_SCHEMA_VERSION,
                 "graded": False,
                 "correct": None,
-                "reason": "HOLD.scaffold_not_at_check",
+                "reason": CHECK_REASON_HOLD_NOT_AT_CHECK,
+            }
+            assert_client_payload_clean(payload)
+            return payload, "ok"
+        if check_authority is None:
+            # R1 N-5b：缺判分权威 ≠ 位置不对——归词表内专属 reason，不借用
+            # ``HOLD.scaffold_not_at_check``。
+            payload = {
+                "schema_version": LEARNING_JOURNEY_SCHEMA_VERSION,
+                "graded": False,
+                "correct": None,
+                "reason": CHECK_REASON_HOLD_AUTHORITY_MISSING,
             }
             assert_client_payload_clean(payload)
             return payload, "ok"

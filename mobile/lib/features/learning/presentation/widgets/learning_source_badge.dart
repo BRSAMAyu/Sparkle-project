@@ -4,7 +4,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/learning/data/learning_journey_models.dart';
 
 /// 来源badge（SCREEN_FAMILIES「来源badge能跳原文片段」）：材料/错题的来源
-/// 身份 + 版本 + 片段锚。版本从真实行读出（learning_journey.v1），不臆测。
+/// 身份 + 版本 + 片段锚。版本从真实行读出（learning_journey.v2），不臆测。
 class LearningSourceBadge extends StatelessWidget {
   const LearningSourceBadge({
     required this.source,
