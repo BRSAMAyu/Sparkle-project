@@ -205,9 +205,9 @@
       "id": "V4-B04",
       "title": "原生视觉与资源基线，不把参考图当V3截图",
       "depends_on": [],
-      "status": "READY",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED_PARTIAL",
+      "evidence_verdict": "ACCEPT_AS_PARTIAL",
       "kind": "verification",
       "required_locks": [
         "v4-visual-harness"
@@ -259,7 +259,8 @@
       "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
       "evidence_pointer": "v4/evidence/V4-B04/（run_manifest.json / test_results.json / screenshots/ / build_logs/）",
       "evidence_note": "执行侧证据已交付：活栈 web-admin 渠道 5 截图 + 展开/折叠对照 + 资源盘点；Flutter Web 全模式构建 FAIL（既有生成文件债务，三日志在案）→ 产品 UI 顶层截图 NOT_RUN；独立审查 pending（review_receipt.json）",
-      "assigned_session": "wtB04"
+      "assigned_session": "wtB04",
+      "review": "R1 ACCEPT_AS_PARTIAL@aa147b9f（降级合法；dialog/sheet 顶层待 FIX-558 后补采）"
     },
     {
       "id": "V4-B05",
