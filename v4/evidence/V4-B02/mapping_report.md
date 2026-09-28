@@ -15,7 +15,7 @@
 
 ## 2. 覆盖率（一行）
 
-**43/43 特征（100%）完成"真实入口路由×可达性×深链×数据 provider 锚点"映射；136 条注册路由全部分类：5 tab_shell + 116 active_entry + 4 legacy_redirect + 1 deep_link_only + 10 registered_no_ui_entry；32/32 路由组均挂载、0 孤儿路由文件；11 个无路由特征全部取得数据层/嵌入面消费证据。**
+**43/43 特征（100%）完成"真实入口路由×可达性×深链×数据 provider 锚点"映射；136 条注册路由全部分类：5 tab_shell + 116 active_entry + 4 legacy_redirect + 1 deep_link_only + 9 registered_no_ui_entry（/documents 实为定义即 redirect→/library，归 legacy_redirect——R1-C3 勘误后分布 5/9）【原计 4/10】；32/32 路由组均挂载、0 孤儿路由文件；11 个无路由特征全部取得数据层/嵌入面消费证据。**
 
 ## 3. 交付物
 
