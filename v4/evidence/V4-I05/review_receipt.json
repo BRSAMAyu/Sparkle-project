@@ -7,10 +7,17 @@
   "implementation_head_hint": "agent/v4/i05 分支头（base ff02ec03）",
   "reviews": [
     {
-      "reviewer": "PENDING_R1",
-      "verdict": "PENDING",
-      "receipt_id": null,
-      "reviewed_head": null
+      "reviewer": "wtI05R1",
+      "verdict": "PASS_WITH_CHALLENGES",
+      "receipt_id": "v4/evidence/V4-I05/review_r1.md",
+      "reviewed_head": "4cac07ecaba214f1441b4de009c585487d078e5e",
+      "challenged": [
+        "C1 transition_history reason 措辞失实（规范码 T4.revoked_by_user_correction + revoke_reason 旁列，非 reason 串入 history）",
+        "C2 limitations#5 'D04 PENDING' 前提合并 main 即过时（D04 已 DONE_REVIEWED；零 galaxy 写路径实质声明不变）",
+        "C3 旧行不回溯/legacy id 不折叠并存边界未逐字声明",
+        "C4 live 档用户披露面缺失（运维面日志+指标）；建议列为 live 启用前置",
+        "C5 撤回重放时已 revoke 行入 unaffected_patch_ids 标签语义"
+      ]
     },
     {
       "reviewer": "PENDING_R2",
