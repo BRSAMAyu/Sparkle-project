@@ -19,3 +19,8 @@
 9. **无 UI 截图面**：视觉/数据双区分落在类型化字段（`capability_channel`/`projection_version`/状态封顶判定+测试），Flutter 消费与呈现文案归 F 线卡；本卡无模型调用（零 LLM），无费用面。
 
 10. **main 前进与集成复验**：执行期间 main 前进至 8458d3c7（F03/F04/I07 销账+FIX-560），`git diff --name-only 7fd77b6d..main -- backend/app` 与本卡变更文件零交集；合并时按流程做集成 SHA 复验+全批重跑。
+
+## 一审补充披露（F-1/F-2）
+
+- **F-1（潜在，无生产消费点）**：节点级读门世代源当前用全局记忆 epoch 计数器——纯记忆域 bump（零撤回）会误判节点 stale=True（用户级门正确 fresh）。消费卡接线节点级读门前必须切 `_last_retraction_epoch`（撤回域专用世代）。
+- **F-2（V3 既有，非本卡回归）**：`POST /nodes/{node_id}/spark` 接受客户端自报 outcome（quiz/value/confidence）绕过通道分类直接融合并可达成就光子。按 D04 词表客户端自报=SELF_REPORTED 不应融合——独立小卡收口（FIX-562），本卡不越权代改 V3 既有路由。
