@@ -1,0 +1,45 @@
+{
+  "card": "V4-U10",
+  "branch": "agent/v4/u10",
+  "status": "PENDING",
+  "reviewers_required": 2,
+  "risk": "high",
+  "generated_at_local": "2026-09-28",
+  "implementation_agent": "wtU10",
+  "implementation_complete": true,
+  "integration_sha_recheck": "PENDING_REVIEWER",
+  "test_counts": {
+    "new_backend_tests": 29,
+    "new_gateway_tests": 2,
+    "new_mobile_tests": 31,
+    "new_total": 62,
+    "regression_backend": "127 passed（34 新 + I07 hybrid 31 + I08 深任务返回控制 24 + D02 归因 38，单命令口径；R1 整改 +5 新测后复跑）",
+    "regression_mobile": "71 passed（router smoke 10 + deep-link 4 + shell 29 + error_book 28；R1 F-2 勘误：原记录 75=18+57 失实，18 实为 14）",
+    "guards": "all rule guards passed (88 rules)；BA-ROUTES ledger +1 行（learning-journey bare-group，episode-resume 先例）"
+  },
+  "review_focus_suggestions": [
+    "判分权威单键口径：grade_independent_check 只认 I07 键集覆盖的 answer 单键、拒绝发明 accepted_answers 变体键——请审查「不发明键」与「教学上需要等价答案变体」的张力是否接受为 limitations#1（变体键必须与 I07 键集扩展同一契约变更走审）",
+    "判分面顶层 correct 与 I07 答案键同名不同面：bool 裁决字段复用了答案键的名字——移动端以「允许表 + correct 必须 bool + 嵌套面红化探针」三重收口，请审查该收口是否足够、以及 I07 键集未来 bump 时此命名碰撞是否需要契约改名（limitations#8）",
+    "检验推进证据口径 = 关联错题 review_count>0：最小诚实实现（确定性可审计）但未接步级/投入证据——请审查是否接受为 MVP 口径、以及「练一次即可推进检验」是否会放水（对比 I07「只在用户选择且证据支持时推进」的立法本意）",
+    "解析诚实红线放的位置：failed/unsupported 在数据构造层拒绝携带文本（core MaterialParseOutcome ValueError + 服务面结构无 text 键 + 移动端断言三道），而非渲染层隐藏——请审查是否有「失败但确有部分文本可用」的真实场景被该红线挡住（当前裁决：部分文本=伪造解析的最常见来源，宁严勿假）",
+    "跨用户/所有权语义复用 episode_resume house 先例（404 不泄露存在性）+ TaskService 既有归属校验未动——请复验 service._load_task 与 api 层 404 面是否与先例逐点一致",
+    "移动端红化门为 I07 键集的 Dart 消费侧镜像（键集钉死测试锚定）：双语言镜像天然有漂移风险——请审查钉死测试是否足以作为漂移报警器，或是否需要跨语言 parity 守卫（scripts/guards 有 enum-parity 先例可挂）",
+    "BA-ROUTES GATEWAY_ONLY ledger +1 行是否为可接受的 bare-group 登记口径（episode-resume 同款）；以及 enter_check 的唯一写路径（guide_json 策略块脚手架子键，零迁移）是否满足「回滚=独立 commit+既有开关」的卡面回滚要求"
+  ],
+  "acceptance_negative_screenshots": {
+    "note": "验收的反例面以可失败测试钉死（见 test_results.json acceptance_mapping），非截图面：空上下文起飞守卫（ArgumentError）、泄漏降级拒显、伪造解析构造拒绝均可由测试重放"
+  },
+  "evidence_files": [
+    "v4/evidence/V4-U10/diff_or_evidence_only.md",
+    "v4/evidence/V4-U10/run_manifest.json",
+    "v4/evidence/V4-U10/test_results.json",
+    "v4/evidence/V4-U10/limitations.md"
+  ],
+  "r1_remediation": {
+    "review_receipt_ref": "v4/evidence/V4-U10/review_r1.md",
+    "verdict": "APPROVE_WITH_CONDITIONS",
+    "dispositions": "F-1 采 a 案（check_view 位置门 + grade_check stage 校验 + 正反钉死）；F-2/F-3 数字勘误落三处证据；F-4 docstring 修正；N-5 词表收口（+HOLD.check_authority_missing +HOLD.check_ungradeable，schema bump v1→v2 走冻结集更新流程）；N-6 措辞如实化；N-7 记录备查",
+    "detail": "v4/evidence/V4-U10/diff_or_evidence_only.md §7 + test_results.json r1_remediation",
+    "awaiting": "R1 复核（F-1 修正 delta 属高风险卡面改动）+ 第二独立审查"
+  }
+}

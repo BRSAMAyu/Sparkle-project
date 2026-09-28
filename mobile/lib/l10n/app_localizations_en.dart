@@ -34790,4 +34790,121 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get personaQuickAccessThisTimeUnderstanding =>
       'This session\'s understanding';
+
+  @override
+  String get learningJourneyTitle => 'Learning Journey';
+
+  @override
+  String get learningJourneyLoadFailed => 'Couldn\'t load the journey';
+
+  @override
+  String get learningJourneyRetry => 'Retry';
+
+  @override
+  String get learningSegmentMaterials => 'Materials';
+
+  @override
+  String get learningSegmentErrors => 'Error Book';
+
+  @override
+  String get learningSegmentPractice => 'Practice';
+
+  @override
+  String get learningSegmentCheck => 'Independent Check';
+
+  @override
+  String get learningContinuePractice =>
+      'Continue current action: practice first';
+
+  @override
+  String get learningContinueCheck =>
+      'Continue current action: take the independent check';
+
+  @override
+  String get learningMaterialsEmpty => 'No materials attached to this goal yet';
+
+  @override
+  String get learningErrorsEmpty => 'No goal-linked errors yet';
+
+  @override
+  String get learningManualInputHint =>
+      'OCR can\'t read this one — type the text instead';
+
+  @override
+  String get learningManualInputSave => 'Save text';
+
+  @override
+  String get learningManualInputSaved =>
+      'Manual text saved (no auto parse claimed)';
+
+  @override
+  String get learningParseParsed => 'Parsed';
+
+  @override
+  String get learningParsePending => 'Processing';
+
+  @override
+  String get learningParseFailed => 'Parse failed';
+
+  @override
+  String get learningParseUnsupported => 'Not supported';
+
+  @override
+  String get learningParseManual => 'Manual text';
+
+  @override
+  String learningReviewCount(Object count) {
+    return 'Reviewed ${count}x';
+  }
+
+  @override
+  String get learningCheckEnterHint =>
+      'You can take the independent check once evidence supports it';
+
+  @override
+  String get learningCheckHoldHint =>
+      'Do one practice round first — the check will wait for you';
+
+  @override
+  String get learningCheckDegraded =>
+      'Check content failed the safety gate and was withheld';
+
+  @override
+  String get learningCheckAnswerHint => 'Answer in your own words';
+
+  @override
+  String get learningCheckSubmit => 'Submit answer';
+
+  @override
+  String get learningCheckPassed =>
+      'Check passed: you completed this step independently.';
+
+  @override
+  String get learningCheckFailedHint =>
+      'Not this time: go back to practice — the check will wait.';
+
+  @override
+  String learningContextGoalSemantics(Object title) {
+    return 'Current goal: $title';
+  }
+
+  @override
+  String learningContinueActionSemantics(Object label) {
+    return 'Continue current action: $label';
+  }
+
+  @override
+  String learningSourceBadgeLabel(Object id, Object version) {
+    return 'Source $id version $version';
+  }
+
+  @override
+  String learningSourceTapSemantics(Object label) {
+    return 'View source fragment $label';
+  }
+
+  @override
+  String learningSourceCompactLabel(Object version) {
+    return 'Source version $version';
+  }
 }

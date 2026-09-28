@@ -27,6 +27,7 @@ import 'package:sparkle/features/home/home.dart';
 import 'package:sparkle/features/insights/insights.dart';
 // 自我锚视图是 D-COMM-1 裁决唯一路由产品面，非全站榜
 import 'package:sparkle/features/leaderboard/leaderboard_routes.dart'; // rule-comm-lb: ignore D-COMM-1 自我锚=唯一裁决路由面，非全站榜
+import 'package:sparkle/features/learning/learning.dart'; // V4-U10 资料→错题→练习→检验旅程（只增路由）
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/openclaw/openclaw.dart';
@@ -433,6 +434,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...ToolsRoutes.routes,
       ...VisualElementsRoutes.routes,
       ...ShopRoutes.routes,
+      // V4-U10：学习旅程（只增；不触碰五 Tab 合同与既有路由）
+      ...LearningJourneyRoutes.routes,
     ],
   );
 });

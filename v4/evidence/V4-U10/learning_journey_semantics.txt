@@ -1,0 +1,43 @@
+(渲染语义根不可用；widget 树 Semantics 枚举)
+                                                                                          - Semantics label="null" button=null onTap=false
+                                                                                                                              - Semantics label="当前目标：力学单元巩固" button=null onTap=false
+                                                                                                                                    - Semantics label="null" button=null onTap=false
+                                                                                                                                  - Semantics label="null" button=true onTap=false
+                                                                                                                                                                                        - Semantics label="null" button=null onTap=false
+                                                                                                                                                                                                - Semantics label="null" button=null onTap=true
+                                                                                                                      - Semantics label="null" button=null onTap=false
+                                                                                                                                            - Semantics label="null" button=null onTap=false
+                                                                                                                                                    - Tooltip message="来源 file-abc 版本 2026-09-28T10:00:00"
+                                                                                                                                                            - Semantics label="null" button=null onTap=false
+                                                                                                                                                                  - Semantics label="null" button=null onTap=false
+                                                                                                                                                                                - Semantics label="null" button=null onTap=false
+                                                                                                                      - Semantics label="null" button=null onTap=false
+                                                                                                                                            - Semantics label="null" button=null onTap=false
+                                                                                                                                                    - Tooltip message="来源 file-img 版本 2026-09-28T09:00:00"
+                                                                                                                                                            - Semantics label="null" button=null onTap=false
+                                                                                                                                                                  - Semantics label="null" button=null onTap=false
+                                                                                                                                                                                - Semantics label="null" button=null onTap=false
+                                                                                                                                                                - Semantics label="null" button=null onTap=true
+                                                                                                                                                                                                                      - Semantics label="null" button=null onTap=false
+                                                                                                                                                                                                                            - Semantics label="null" button=null onTap=false
+                                                                                                                                                      - Semantics label="null" button=true onTap=false
+                                                                                                                                                                                                            - Semantics label="null" button=null onTap=false
+                                                                                                                                                                                                                    - Semantics label="null" button=null onTap=true
+                                                                                                                      - Semantics label="null" button=null onTap=false
+                                                                                                                                            - Semantics label="null" button=null onTap=false
+                                                                                                                                                    - Tooltip message="来源 error-1 版本 2026-09-28T08:00:00"
+                                                                                                                                                            - Semantics label="null" button=null onTap=false
+                                                                                                                                                                  - Semantics label="null" button=null onTap=false
+                                                                                                                                                                                - Semantics label="null" button=null onTap=false
+                                                                                                                      - Semantics label="null" button=null onTap=false
+                                                                                                                                            - Semantics label="null" button=null onTap=false
+                                                                                                                                                      - Semantics label="null" button=null onTap=false
+                                                                                                                                                            - Semantics label="null" button=null onTap=true
+                                                                                                                                                                                                                  - Semantics label="null" button=null onTap=false
+                                                                                                                                                                                                                        - Semantics label="null" button=null onTap=false
+                                                                                                                                                    - Semantics label="null" button=true onTap=false
+                                                                                                                                                                                                          - Semantics label="null" button=null onTap=false
+                                                                                                                                                                                                                  - Semantics label="null" button=null onTap=true
+                                                  - Semantics label="null" button=null onTap=false
+                                                                    - Semantics label="null" button=null onTap=false
+                                                                                                    - Semantics label="null" button=null onTap=false

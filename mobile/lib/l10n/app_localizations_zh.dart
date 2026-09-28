@@ -33316,4 +33316,112 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get personaQuickAccessThisTimeUnderstanding => '这次的理解';
+
+  @override
+  String get learningJourneyTitle => '学习旅程';
+
+  @override
+  String get learningJourneyLoadFailed => '旅程加载失败';
+
+  @override
+  String get learningJourneyRetry => '重试';
+
+  @override
+  String get learningSegmentMaterials => '资料';
+
+  @override
+  String get learningSegmentErrors => '错题';
+
+  @override
+  String get learningSegmentPractice => '练习';
+
+  @override
+  String get learningSegmentCheck => '独立检验';
+
+  @override
+  String get learningContinuePractice => '继续当前动作：先练习';
+
+  @override
+  String get learningContinueCheck => '继续当前动作：完成独立检验';
+
+  @override
+  String get learningMaterialsEmpty => '该目标还没有关联资料';
+
+  @override
+  String get learningErrorsEmpty => '该目标还没有关联错题';
+
+  @override
+  String get learningManualInputHint => 'OCR 无法识别这一份——请直接输入文本替代';
+
+  @override
+  String get learningManualInputSave => '保存文本';
+
+  @override
+  String get learningManualInputSaved => '已保存手输文本（不声称自动识别）';
+
+  @override
+  String get learningParseParsed => '已解析';
+
+  @override
+  String get learningParsePending => '解析中';
+
+  @override
+  String get learningParseFailed => '解析失败';
+
+  @override
+  String get learningParseUnsupported => '不支持';
+
+  @override
+  String get learningParseManual => '手输文本';
+
+  @override
+  String learningReviewCount(Object count) {
+    return '已复习 $count 次';
+  }
+
+  @override
+  String get learningCheckEnterHint => '证据支持后即可进行独立检验';
+
+  @override
+  String get learningCheckHoldHint => '先完成一轮练习——检验会等你';
+
+  @override
+  String get learningCheckDegraded => '检验内容未通过安全门，已拒显';
+
+  @override
+  String get learningCheckAnswerHint => '用自己的话作答';
+
+  @override
+  String get learningCheckSubmit => '提交答案';
+
+  @override
+  String get learningCheckPassed => '检验通过：这一步由你独立完成。';
+
+  @override
+  String get learningCheckFailedHint => '这次未通过：回到练习段再试一次，检验会保留。';
+
+  @override
+  String learningContextGoalSemantics(Object title) {
+    return '当前目标：$title';
+  }
+
+  @override
+  String learningContinueActionSemantics(Object label) {
+    return '继续当前动作：$label';
+  }
+
+  @override
+  String learningSourceBadgeLabel(Object id, Object version) {
+    return '来源 $id 版本 $version';
+  }
+
+  @override
+  String learningSourceTapSemantics(Object label) {
+    return '查看来源片段 $label';
+  }
+
+  @override
+  String learningSourceCompactLabel(Object version) {
+    return '来源 · 版本 $version';
+  }
 }
