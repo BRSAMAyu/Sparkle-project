@@ -13,6 +13,41 @@
     "remediation_receipt": "v4/evidence/V4-Q03/remediation_r1.md（含 mutation 自证、测试计数 U10 34→39 / I07 31 / 基线 10 文件 174→176、回归面、OpenAPI 零漂移、行为变更声明与移动端兜底文案登记项）",
     "note": "终门条件 2（F2 wrinkle 知悉义务）不在本整改面，归 U04/j06；review_r1.md 与验收五件套原文未动（run_manifest.json 仅按一审授权做 N-r1-1/N-r1-2 记录面勘误，r1_errata 节）"
   },
-  "reviews": []
+  "reviews": [
+    {
+      "round": "R1",
+      "reviewer_session": "wtQ03R1",
+      "date": "2026-09-29",
+      "commit": "94909b7c",
+      "verdict": "APPROVE_WITH_CONDITIONS",
+      "receipt": "v4/evidence/V4-Q03/review_r1.md",
+      "conditions": [
+        "F1 须在 U10 责任面修复（request_independent_check 中间推进返回 None hold 或 enter_check 持久化门改判 OK.*），修复后复验 S1④b",
+        "F2 修复前真模型（L2+）复跑 j06 旅程的卡须知悉重放重起草风险（归 U04/j06）"
+      ],
+      "note": "回填于 R2 会话（wtQ03R2）：R1 会话仅落盘 review_r1.md，未回填本数组；本条为指针性登记，内容以 review_r1.md 原文为权威"
+    },
+    {
+      "round": "R2",
+      "reviewer_session": "wtQ03R2",
+      "date": "2026-09-29",
+      "commit": "487b2019",
+      "verdict": "APPROVE",
+      "receipt": "v4/evidence/V4-Q03/review_r2.md",
+      "f1_remediation_verdict": "有效关闭（处方 A 语义正确 + reason 枚举对可达集完备 + S1④b 全链亲放 7 记录逐字段复现 + 原 S1 探针翻红于 :318 缺陷存在性断言本体）",
+      "verified": [
+        "I07 红线零放松：中间推进后 submit 仍 HOLD.scaffold_not_at_check + answer 原地保留（新用例亲跑 2 passed）；hybrid_policy+其测试自 a8f46650 零 diff；test_hybrid_policy 31 亲跑绿",
+        "护栏抽验：S2 亲跑 1 passed；M1 mutation 复放（task_service.py:826 → S2 红 → 还原绿，零残留）",
+        "数字：U10 39 / I07 31 / 基线 10 文件 176 亲跑全绿；10 件封存 sha256 逐件 MATCH（两轮复验）；ruff/black/OpenAPI 零漂移复验 PASS",
+        "移动端 provider:99 兜底定性 cosmetic（UI 只渲染通用 l10n 提示，字面量不外显；伪造 reason 仅存客户端状态），归属 U10 移动面后续项恰当",
+        "合并落差：merge-tree vs main c859df37（含 f5ed0fcf）零冲突；双侧交集仅 tasks.json 干净解"
+      ],
+      "carry_forward": [
+        "O-r2-1（观察项）：request_independent_check 分支二 OK.* 前缀信任 + 分支三兜底，封闭集扩展（bump）时须同步复核三分支映射",
+        "条件 2 维持：真模型（L2+）复跑 j06 的卡按 review_r1 条件 2 知悉重放重起草风险"
+      ],
+      "note": "二审为终审：双审齐全（R1 条件关闭 → R2 APPROVE），可进入终门裁决"
+    }
+  ]
 }
 
