@@ -119,26 +119,47 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     );
 
     if ((confirmed ?? false) && mounted) {
-      // Update the task with new due date
-      final taskUpdate = TaskUpdate(dueDate: newDueDate);
-      await ref.read(taskListProvider.notifier).updateTask(task.id, taskUpdate);
-
-      // Refresh task summaries for the current month
-      await ref.read(taskCalendarProvider.notifier).loadTasksForMonth(
-            _focusedDay,
-            force: true,
-          );
-      await ref
-          .read(unifiedCalendarProvider.notifier)
-          .refreshMonth(_focusedDay);
-      if (mounted) {
-        AppFeedback.success(
-          context,
-          context.l10n
-              .calTaskRescheduled(task.title, _formatMonthDay(newDueDate)),
-        );
-      }
+      await _rescheduleTask(task, newDueDate);
     }
+  }
+
+  /// V4-U08 统一行动语义 · 改期唯一写入链：拖拽确认与键盘/按钮改期都走
+  /// 本方法 → taskListProvider.rescheduleTaskDueDate（在飞合流，一次写
+  /// 入），随后同源刷新月聚合面。不另造第二写入权威。
+  Future<void> _rescheduleTask(TaskModel task, DateTime newDueDate) async {
+    await ref
+        .read(taskListProvider.notifier)
+        .rescheduleTaskDueDate(task.id, newDueDate);
+
+    // Refresh task summaries for the current month
+    await ref
+        .read(taskCalendarProvider.notifier)
+        .loadTasksForMonth(_focusedDay, force: true);
+    await ref.read(unifiedCalendarProvider.notifier).refreshMonth(_focusedDay);
+    if (mounted) {
+      AppFeedback.success(
+        context,
+        context.l10n.calTaskRescheduled(
+          task.title,
+          _formatMonthDay(newDueDate),
+        ),
+      );
+    }
+  }
+
+  /// V4-U08：改日程的键盘/按钮路径（SCREEN_FAMILIES：拖动必须有键盘/
+  /// 按钮替代）。日期选择器为标准控件——焦点可达、键盘可操作，不依赖
+  /// 拖拽。终态任务（完成/放弃）不提供改期。
+  Future<void> _showReschedulePicker(TaskModel task) async {
+    final target = _selectedDay ?? _focusedDay;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: task.dueDate ?? target,
+      firstDate: DateTime(target.year - 1),
+      lastDate: DateTime(target.year + 2),
+    );
+    if (picked == null || !mounted) return;
+    await _rescheduleTask(task, picked);
   }
 
   CalendarFormat get _tableCalendarFormat {
@@ -1170,6 +1191,11 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       TaskStatus.abandoned => DS.textSecondary,
     };
 
+    // V4-U08：终态任务（完成/放弃）不可改期——改期只对未完成任务开放。
+    final isTerminal = task.status == TaskStatus.completed ||
+        task.status == TaskStatus.abandoned;
+    final rescheduleKey = ValueKey('calendar-reschedule-${task.id}');
+
     return Container(
       margin: const EdgeInsets.only(bottom: DS.spacing8),
       child: ListTile(
@@ -1206,9 +1232,23 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               dueLabel,),
           style: TextStyle(color: DS.textSecondary),
         ),
-        trailing: Icon(
-          Icons.chevron_right_rounded,
-          color: DS.textSecondary,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!isTerminal)
+              // 键盘/按钮改期路径（拖拽的替代入口，语义同一条写入链）。
+              SparkleIconButton(
+                key: rescheduleKey,
+                icon: const Icon(Icons.edit_calendar_outlined),
+                semanticLabel: context.l10n.calRescheduleAction,
+                onPressed: () => unawaited(_showReschedulePicker(task)),
+                variant: ButtonVariant.ghost,
+              ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: DS.textSecondary,
+            ),
+          ],
         ),
       ),
     );

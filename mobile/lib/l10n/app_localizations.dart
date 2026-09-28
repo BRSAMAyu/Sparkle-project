@@ -47812,6 +47812,12 @@ abstract class AppLocalizations {
   /// **'未安排时间'**
   String get calNoTimeSet;
 
+  /// No description provided for @calRescheduleAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'改期'**
+  String get calRescheduleAction;
+
   /// No description provided for @calHeatView.
   ///
   /// In zh, this message translates to:

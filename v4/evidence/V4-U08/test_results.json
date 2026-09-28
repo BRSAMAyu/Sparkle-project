@@ -1,0 +1,105 @@
+{
+  "card": "V4-U08",
+  "generated_at": "2026-09-29T05:20:00+08:00",
+  "acceptance_mapping": [
+    {
+      "acceptance": "四页面看到同task/version；重复点击一次写入",
+      "positive": [
+        {
+          "test": "unified_action_semantics_test › 在飞完成写：并发双击合流为一次服务端写入，两次调用返回同一结果",
+          "file": "mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart",
+          "proves": "完成写在飞时，任意入口（列表滑动/详情/日历/工作台）的重复触发合流为一次服务端写入；合流点=TaskListNotifier（task/plan/calendar/home 共用权威），goal 页走自有链同制守卫"
+        },
+        {
+          "test": "unified_action_semantics_test › 目标页完成写在飞：并发双击合流为一次 POST /complete",
+          "file": "mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart",
+          "proves": "GoalDetailNotifier.completeNextStep 在飞合流，庆祝载荷只发一次"
+        },
+        {
+          "test": "unified_action_semantics_test › rescheduleTaskDueDate：经 updateTask 一次写入，读模型 dueDate 同步可见",
+          "file": "mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart",
+          "proves": "同任务写入后，task/plan/calendar/home 共享的 taskListProvider 读模型同步看到同一版本（四页面同 task/version）"
+        }
+      ],
+      "negative": [
+        {
+          "test": "unified_action_semantics_test › 反面：守卫只按「任务+操作」合流——不同任务的并发完成各自写入，在飞结束后再次点击也照常发起新写入",
+          "file": "mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart",
+          "proves": "守卫不吞掉合法写入：不同任务互不合流；在飞结束后同任务新写入照常发起（幂等窗不等于永久封写）"
+        }
+      ]
+    },
+    {
+      "acceptance": "改日程有键盘/按钮路径，不仅拖动",
+      "positive": [
+        {
+          "test": "unified_action_semantics_test › rescheduleTaskDueDate：经 updateTask 一次写入，读模型 dueDate 同步可见",
+          "file": "mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart",
+          "proves": "拖拽确认与按钮路径同走 rescheduleTaskDueDate 唯一写入口（calendar_stats_screen._rescheduleTask 单点收敛）；在飞合流一次写入"
+        },
+        {
+          "test": "u08_evidence_test › 日历 agenda：待办带「改期」键盘/按钮入口，终态任务不带",
+          "file": "mobile/test/features/calendar/presentation/screens/u08_evidence_test.dart",
+          "proves": "真实渲染面：待办 agenda 卡有「改期」SparkleIconButton（语义名显式、48 触控档、焦点可达），点击打开标准 showDatePicker（键盘可导航控件）完成改期闭环——拖拽之外的完整路径存在"
+        }
+      ],
+      "negative": [
+        {
+          "test": "u08_evidence_test › 同测反面断言：calendar-reschedule-task-done findsNothing",
+          "file": "mobile/test/features/calendar/presentation/screens/u08_evidence_test.dart",
+          "proves": "终态任务（完成/放弃）不开放改期动作——改期只对未完成任务有意义，防终态漂移"
+        }
+      ]
+    },
+    {
+      "acceptance": "计划时长不作为完成证据，删除/放弃不同语义",
+      "positive": [
+        {
+          "test": "unified_action_semantics_test › 日历聚合专注时长只认实测：actualMinutes 计入",
+          "file": "mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart",
+          "proves": "实测分钟（计时器/服务端真实起止推算落库）是唯一专注证据来源"
+        },
+        {
+          "test": "unified_action_semantics_test › 放弃 ≠ 删除：放弃保留任务记录仅置终态",
+          "file": "mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart",
+          "proves": "abandon 保留记录（星图/日历历史可见），不触发删除"
+        }
+      ],
+      "negative": [
+        {
+          "test": "unified_action_semantics_test › 反面：无实测不造专注——估时 30 分钟不得顶替 actualMinutes 进聚合",
+          "file": "mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart",
+          "proves": "estimatedMinutes（计划意图）不进 focusMinutes（无数据不造进度）；进行中任务的估时同样不计",
+          "mutation_replay": "把 unified_calendar_provider.dart 的 `task.actualMinutes ?? 0` 改回 `?? task.estimatedMinutes` → 本测必红（本卡已亲验 +8 -1）"
+        },
+        {
+          "test": "unified_action_semantics_test › 删除 ≠ 放弃：删除把条目从读模型移除（可撤销删除是另一条路径）",
+          "file": "mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart",
+          "proves": "delete 移除条目+清日历联动事件，不降级为 abandon——两条路径两种结局"
+        }
+      ],
+      "additional_fix": {
+        "file": "mobile/lib/features/task/presentation/screens/task_detail_screen.dart",
+        "change": "分享卡 metadata 'duration' 只在 actualMinutes 存在时携带（估时不冒充完成证据；海报端 null 指标整体缺席，share_poster_service._durationMinutes null 即跳过，无海报改动）"
+      }
+    }
+  ],
+  "suites": [
+    {"command": "flutter test test/features/task/presentation/providers/unified_action_semantics_test.dart", "result": "+9 All tests passed!"},
+    {"command": "flutter test test/features/calendar/presentation/screens/u08_evidence_test.dart", "result": "+1 All tests passed!（U08_EVIDENCE_DIR 落盘 2 文件）"},
+    {"command": "flutter test test/features/task/ test/features/calendar/ test/features/goal/", "result": "+119 All tests passed!"},
+    {"command": "flutter test test/widget/", "result": "+467 ~4 All tests passed!（~4 既有 skip，与 U05 基线一致）"},
+    {"command": "flutter test test/features/home/ test/features/plan/ test/features/task/data/repositories/task_offline_wiring_test.dart test/features/task/presentation/providers/task_offline_queued_test.dart test/widget/h9_ui_sync_test.dart", "result": "+198 All tests passed!"},
+    {"command": "flutter test test/app/", "result": "+39 All tests passed!"},
+    {"command": "flutter test test/goldens/p2_07_i18n_switch_golden_test.dart", "result": "+1 All tests passed!"},
+    {"command": "flutter analyze --no-pub lib test", "result": "No issues found!"}
+  ],
+  "static_guards": [
+    {"guard": "L10N-REGEN-PARITY", "result": "OK: 10180 template keys == abstract members"},
+    {"guard": "i18n-coverage", "result": "PASS"},
+    {"guard": "ui-tokens-ratchet", "result": "PASS（零新增硬编码）"},
+    {"guard": "spacing-rhythm-ratchet", "result": "PASS（零新增债务）"},
+    {"guard": "Rule AU mobile parity", "result": "PASS（black-hole rate=0.000%）"}
+  ],
+  "environment_notes": "测试环境 CJK 字形为 Ahem 方块（F04/U01/U05 同先例），真实文案由语义 dump 承载（u08_calendar_reschedule_button_semantics.txt 含「改期」SemanticsData 节点与 agenda 原文）"
+}

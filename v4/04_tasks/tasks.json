@@ -2328,9 +2328,10 @@
     "V4-F04",
     "V4-F03"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
+   "status": "in_progress",
+   "implementation_state": "REVIEW_READY",
    "evidence_verdict": "NOT_RUN",
+   "evidence_summary": "统一行动语义按保守侧落地为「同一动作同一条写入链+在飞一次写入」：TaskListNotifier 新增 _inFlightWrites 合流表（键=操作:taskId；complete/abandon/delete/reschedule 四写在飞时重复点击返回同一次写入，identical 防误摘并发新写，在飞结束即恢复），新增 rescheduleTaskDueDate 改期唯一写入口（内部复用既有 updateTask 全链——提醒重排/日历联动/读模型刷新零重复实现，拖拽确认与按钮路径同点收敛）；GoalDetailNotifier 三步进（start/undo/complete）同制合流（J-08 自有链保持，不造合一第二真源）；日历 agenda 任务卡新增「改期」SparkleIconButton（calRescheduleAction 语义名，48 触控档）→ 标准 showDatePicker 键盘/按钮路径，SCREEN_FAMILIES 拖动必须有键盘/按钮替代落地（拖拽保留）；专注证据只认实测：unified 月聚合 focusMinutes 砍掉 `?? estimatedMinutes` 顶替（改 `?? 0`，X-04 读取侧延伸），分享卡 duration 只在实测存在时携带——估时回归计划意图，无实测不造专注；删除/放弃语义以测试钉死互不降级（放弃保留记录置终态、删除移除条目清日历联动）。l10n 双语 +1 键（calRescheduleAction）gen-l10n 再生零既有键改动。新增 10 测（验收语义 9 + widget 证据 1，每验收面一正一反+突变自证：恢复 `?? estimatedMinutes` 旧实现 +8 -1 必红已亲验）；回归 task/calendar/goal +119、widget +467~4、home/plan/offline/h9 +198、路由冒烟 +39、金标 +1 全绿；analyze 零 issue；L10N-REGEN-PARITY/i18n-coverage/ui-tokens/spacing/AU 五守卫 PASS 零新增。RF-06 三冲突面/五 Tab 路由/classic/backend/proto/迁移零 diff；零模型调用。source_sha=a8f46650（base）；待 1 位独立审查（normal），review_receipt.json PENDING 挑战点预登记 5 条（CH-1 双写残面/CH-2 专注数值走低口径/CH-3 goal 第二入口/CH-4 终态拖拽封禁/CH-5 证据 harness 强度）",
    "kind": "implementation",
    "required_locks": [
     "ui-plan-task"

@@ -26220,6 +26220,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calNoTimeSet => '未安排时间';
 
   @override
+  String get calRescheduleAction => '改期';
+
+  @override
   String get calHeatView => '热力';
 
   @override

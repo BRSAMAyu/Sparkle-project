@@ -1,0 +1,164 @@
+{
+  "card": "V4-U08",
+  "title": "任务计划日历统一行动语义",
+  "generated_at": "2026-09-29T05:20:00+08:00",
+  "executor": "V4 fleet implementation agent (U08)",
+  "branch": "agent/v4/u08",
+  "worktree": "wtU08",
+  "base_commit": "a8f466508c70eaae04a07e0924e3a27766620df5",
+  "design_approval": "卡面 + SCREEN_FAMILIES 首页/目标/任务/日历家族（拖动必须有键盘/按钮替代；完成按钮明确提交语义）+ V4_DONE 同状态跨模块同义——无视觉新审批面（标准 DS 组件，无 pixel 主题新增，不造第二权威）",
+  "environment": {
+    "flutter": "3.41.3 stable (revision 48c32af034)",
+    "os": "darwin 25.6.0 arm64",
+    "note": "macOS 实体机；mobile/lib/gen 与 lib/l10n dart 为 gitignored 生成物，自主检出复制/gen-l10n 再生（未 symlink、未入库、未手改）"
+  },
+  "commands": [
+    {
+      "purpose": "worktree 建立与基线",
+      "command": "git worktree add ../wtU08 -b agent/v4/u08 main",
+      "cwd": "/Users/brsama/code/GitHub/Sparkle-project",
+      "exit_code": 0,
+      "note": "基线=main@a8f46650（含 U04 收口，比派卡时 98bc0bcd 更新，含全部前置 U05/U01/U07/Q02/F 线/I05）"
+    },
+    {
+      "purpose": "依赖解析",
+      "command": "flutter pub get",
+      "cwd": "mobile",
+      "exit_code": 0
+    },
+    {
+      "purpose": "l10n 再生成（arb 双语 +1 键 calRescheduleAction → 生成 dart ×3）",
+      "command": "flutter gen-l10n",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "note": "仅追加本卡新键，零既有键改动；L10N-REGEN-PARITY 守卫 PASS（10180 键）"
+    },
+    {
+      "purpose": "静态分析全量（lib+test）",
+      "command": "flutter analyze --no-pub lib test",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "No issues found!"
+    },
+    {
+      "purpose": "新增验收测试（每验收面一正一反）",
+      "command": "flutter test test/features/task/presentation/providers/unified_action_semantics_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+9 All tests passed!"
+    },
+    {
+      "purpose": "突变自证（可失败性）：focusMinutes 恢复 `?? estimatedMinutes` 旧实现",
+      "command": "flutter test test/features/task/presentation/providers/unified_action_semantics_test.dart",
+      "cwd": "mobile",
+      "exit_code": 1,
+      "result": "+8 -1（估时不顶替反例变红）；还原后 +9 全绿",
+      "note": "证明测试钉得住实现，非恒绿"
+    },
+    {
+      "purpose": "证据采集（截图+语义 dump 落盘）",
+      "command": "U08_EVIDENCE_DIR=../v4/evidence/V4-U08/screenshots flutter test test/features/calendar/presentation/screens/u08_evidence_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+1 All tests passed!（2 文件落盘，sha256 见 artifacts）"
+    },
+    {
+      "purpose": "task/calendar/goal 三 feature 回归",
+      "command": "flutter test test/features/task/ test/features/calendar/ test/features/goal/",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+119 All tests passed!（含既有 task_complete_sync/offline_queued/task_provider 全绿）"
+    },
+    {
+      "purpose": "顶层 widget 全套回归",
+      "command": "flutter test test/widget/",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+467 ~4 All tests passed!（~4 为既有 skip，与 U05 基线一致）"
+    },
+    {
+      "purpose": "home/plan/offline-wiring/h9 受影响面回归",
+      "command": "flutter test test/features/home/ test/features/plan/ test/features/task/data/repositories/task_offline_wiring_test.dart test/features/task/presentation/providers/task_offline_queued_test.dart test/widget/h9_ui_sync_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+198 All tests passed!"
+    },
+    {
+      "purpose": "路由冒烟（CalendarStatsScreen/TaskListScreen 挂载面）",
+      "command": "flutter test test/app/",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+39 All tests passed!"
+    },
+    {
+      "purpose": "i18n 金标（calendar summary zh/en 切换）",
+      "command": "flutter test test/goldens/p2_07_i18n_switch_golden_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+1 All tests passed!"
+    },
+    {
+      "purpose": "l10n 再生一致守卫",
+      "command": "python3 scripts/guards/check_l10n_regen_parity.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "result": "OK: 10180 template keys == abstract members"
+    },
+    {
+      "purpose": "i18n 覆盖守卫",
+      "command": "python3 scripts/guards/check_i18n_coverage.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "purpose": "UI tokens 棘轮守卫",
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "result": "PASS（color=225/275, fontSize=634/727，零新增硬编码）"
+    },
+    {
+      "purpose": "spacing 节奏棘轮守卫",
+      "command": "python3 scripts/guards/check_spacing_rhythm_ratchet.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "result": "PASS（spacingHalfStep=1592/1623，零新增债务）"
+    },
+    {
+      "purpose": "AU 移动对齐守卫",
+      "command": "python3 scripts/guards/check_rule_au_mobile_parity.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "result": "PASS（black-hole rate=0.000%）"
+    }
+  ],
+  "scope_and_denominator": {
+    "changed_files": [
+      "mobile/lib/features/task/presentation/providers/task_provider.dart",
+      "mobile/lib/features/goal/presentation/providers/goal_detail_provider.dart",
+      "mobile/lib/features/calendar/presentation/screens/calendar_stats_screen.dart",
+      "mobile/lib/features/calendar/presentation/providers/unified_calendar_provider.dart",
+      "mobile/lib/features/task/presentation/screens/task_detail_screen.dart",
+      "mobile/lib/l10n/app_zh.arb",
+      "mobile/lib/l10n/app_en.arb",
+      "mobile/lib/l10n/app_localizations{,_zh,_en}.dart（gen-l10n 再生产物）",
+      "mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart（新增）",
+      "mobile/test/features/calendar/presentation/screens/u08_evidence_test.dart（新增）"
+    ],
+    "untouched_by_contract": [
+      "RF-06 三冲突面 dashboard_screen/compact_status_bar/task_execution_screen 零 diff",
+      "backend/proto/迁移/路由 零触碰（无 OpenAPI/BA-ROUTES 门、无 make sync-db 义务）",
+      "既有测试零改动（新测试全部为新文件）"
+    ]
+  },
+  "artifacts_sha256": {
+    "v4/evidence/V4-U08/screenshots/u08_calendar_reschedule_button.png": "f52373ac76ad7d3ab440586ed317dd8673e81b1c3fbc8ce185177fca9d0bd2f0",
+    "v4/evidence/V4-U08/screenshots/u08_calendar_reschedule_button_semantics.txt": "12560daade624c6d74c7a83ee806acb3065339aa07cd8ea274eefdb253e41497"
+  },
+  "actual_model_and_usage": {
+    "llm_calls": 0,
+    "note": "本卡为纯移动端语义/UI 工程变更，全程零模型调用、零 token 消耗"
+  },
+  "physical_device_scope": "未涉 sensory（音/触/触觉）新增；SparkleIconButton 沿既有组件语义（touch target 48 档由组件强制）。真实设备面不在本卡范围（无实体 iOS/Android 派发）。"
+}

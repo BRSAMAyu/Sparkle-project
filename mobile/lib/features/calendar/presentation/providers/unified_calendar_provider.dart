@@ -150,7 +150,11 @@ class UnifiedCalendarNotifier extends StateNotifier<UnifiedCalendarState> {
         for (final task in dayTasks) {
           if (task.status == TaskStatus.completed) {
             completedCount++;
-            focusMinutes += task.actualMinutes ?? task.estimatedMinutes;
+            // V4-U08 统一行动语义：专注时长只认实测（计时器实测或服务端
+            // 按真实起止推算后的落库值）。估时（estimatedMinutes）是计划
+            // 意图不是完成证据——无实测不造专注时长（X-04 红线在读取侧
+            // 的延伸），缺失按 0 计，热力/概要不因计划数字虚高。
+            focusMinutes += task.actualMinutes ?? 0;
           }
         }
 

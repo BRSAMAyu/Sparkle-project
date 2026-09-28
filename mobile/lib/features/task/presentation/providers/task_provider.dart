@@ -171,6 +171,30 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   final TaskNotificationScheduler _notificationScheduler;
   final Ref _ref;
 
+  /// V4-U08 统一行动语义 · 一次写入：同一任务的同一终态写在飞时，重复
+  /// 触发（列表滑动/详情按钮/日历/工作台卡片并发）合流到同一次服务端写
+  /// 入——所有页面都经本 provider 写入，这里就是唯一合流点，不另造第二
+  /// 权威。键含操作名与任务 id；在飞结束即摘除，随后的合法重试照常发起
+  /// （守卫不吞掉真实的第二次写入意图）。
+  final Map<String, Future<Object?>> _inFlightWrites = {};
+
+  Future<T> _coalesceWrite<T>(String key, Future<T> Function() run) {
+    final existing = _inFlightWrites[key];
+    if (existing != null) {
+      return existing as Future<T>;
+    }
+    final future = run();
+    _inFlightWrites[key] = future;
+          future.whenComplete(() {
+        // 只摘除自己登记的条目：避免误摘并发注册的新同键写。
+        if (identical(_inFlightWrites[key], future)) {
+          // Map.remove 会返回被摘除的 Future，显式 ignore。
+          _inFlightWrites.remove(key)?.ignore();
+        }
+      }).ignore();
+    return future;
+  }
+
   Future<void> _runWithErrorHandling(Future<void> Function() action) async {
     if (!mounted) return;
     state = state.copyWith(isLoading: true, clearError: true);
@@ -401,32 +425,36 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     }
   }
 
-  Future<void> deleteTask(String id) async {
-    await _runWithErrorHandling(() async {
-      final existingTask = state.tasks.cast<TaskModel?>().firstWhere(
-            (task) => task?.id == id,
-            orElse: () => null,
-          );
-      // Cancel reminders before deleting
-      try {
-        await _notificationScheduler.cancelTaskReminders(id);
-      } catch (e) {
-        // Ignore errors
-      }
+  Future<void> deleteTask(String id) =>
+      // V4-U08：重复点击一次写入——删除在飞时重复触发合流为同一次删除。
+      _coalesceWrite<void>('delete:$id', () async {
+        await _runWithErrorHandling(() async {
+          final existingTask = state.tasks.cast<TaskModel?>().firstWhere(
+                (task) => task?.id == id,
+                orElse: () => null,
+              );
+          // Cancel reminders before deleting
+          try {
+            await _notificationScheduler.cancelTaskReminders(id);
+          } catch (e) {
+            // Ignore errors
+          }
 
-      await _taskRepository.deleteTask(id);
-      await _ref.read(calendarRepositoryProvider).removeTaskLinkedEvent(id);
-      if (existingTask != null) {
-        state = state.copyWith(recentlyDeletedTask: existingTask);
-      }
-      if (existingTask?.dueDate != null) {
-        await _refreshCalendarSurfacesForDate(existingTask!.dueDate!);
-      } else {
-        unawaited(_ref.read(calendarProvider.notifier).loadEvents());
-      }
-      await refreshTasks();
-    });
-  }
+          await _taskRepository.deleteTask(id);
+          await _ref
+              .read(calendarRepositoryProvider)
+              .removeTaskLinkedEvent(id);
+          if (existingTask != null) {
+            state = state.copyWith(recentlyDeletedTask: existingTask);
+          }
+          if (existingTask?.dueDate != null) {
+            await _refreshCalendarSurfacesForDate(existingTask!.dueDate!);
+          } else {
+            unawaited(_ref.read(calendarProvider.notifier).loadEvents());
+          }
+          await refreshTasks();
+        });
+      });
 
   Future<void> restoreDeletedTask() async {
     final deleted = state.recentlyDeletedTask;
@@ -558,71 +586,75 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   /// 完成任务 - 乐观更新（v2.1 增强 / X-04）
   /// [minutes] 只接受**实测**分钟（计时器）；null = 无实测值，服务端按真实
   /// 起止推算——调用方不得以 estimatedMinutes 顶替（X-04 红线）。
+  ///
+  /// V4-U08 统一行动语义 · 一次写入：完成写在飞时，任意页面（列表/详情/
+  /// 日历/工作台/目标入口）的重复触发合流为同一次服务端写入，杜绝双击双写。
   Future<TaskCompletionResult?> completeTask(
     String id,
     int? minutes,
     String? note,
-  ) async {
-    // 1. 乐观更新 UI
-    _updateTask(
-      id,
-      (task) => task.copyWith(
-        status: TaskStatus.completed,
-        completedAt: DateTime.now(),
-        actualMinutes: minutes,
-        userNote: note,
-        syncStatus: TaskSyncStatus.pending, // 🆕 标记为同步中
-      ),
-    );
+  ) =>
+      _coalesceWrite<TaskCompletionResult?>('complete:$id', () async {
+        // 1. 乐观更新 UI
+        _updateTask(
+          id,
+          (task) => task.copyWith(
+            status: TaskStatus.completed,
+            completedAt: DateTime.now(),
+            actualMinutes: minutes,
+            userNote: note,
+            syncStatus: TaskSyncStatus.pending, // 🆕 标记为同步中
+          ),
+        );
 
-    // 2. 后台发送
-    try {
-      final result = await _taskRepository.completeTask(id, minutes, note);
-      final updatedTask = TaskModel.fromJson(result.task);
+        // 2. 后台发送
+        try {
+          final result = await _taskRepository.completeTask(id, minutes, note);
+          final updatedTask = TaskModel.fromJson(result.task);
 
-      // 3. 成功：更新为已同步
-      _updateTask(
-        id,
-        (task) => updatedTask.copyWith(
-          syncStatus: TaskSyncStatus.synced,
-          // retryToken: updatedTask.retryToken, // Repo needs to return this or we assume updatedTask has it
-        ),
-      );
+          // 3. 成功：更新为已同步
+          _updateTask(
+            id,
+            (task) => updatedTask.copyWith(
+              syncStatus: TaskSyncStatus.synced,
+              // retryToken: updatedTask.retryToken, // Repo needs to return this or we assume updatedTask has it
+            ),
+          );
 
-      // 4. 服务端已完成：后续本地步骤（归因/埋点/跨模块刷新）失败不得
-      //    覆盖成功状态，单独 catch 记日志即可，否则重试入口会触发服务端
-      //    二次完成。
-      await _runPostCompletionSteps(
-        result: result,
-        updatedTask: updatedTask,
-        taskId: id,
-        minutes: minutes,
-        note: note,
-      );
+          // 4. 服务端已完成：后续本地步骤（归因/埋点/跨模块刷新）失败不得
+          //    覆盖成功状态，单独 catch 记日志即可，否则重试入口会触发服务端
+          //    二次完成。
+          await _runPostCompletionSteps(
+            result: result,
+            updatedTask: updatedTask,
+            taskId: id,
+            minutes: minutes,
+            note: note,
+          );
 
-      return result;
-    } on OfflineEnqueuedException {
-      // N35：离线完成已入队（outbox 回放端按 completion 体重放）——
-      // 步骤 1 的乐观置位（completed + pending）即最终呈现，绝不标失败。
-      _markTaskOfflineQueued(id, TaskStatus.completed, 'complete');
-      return null;
-    } catch (e) {
-      // 5. 🆕 失败：标记为失败状态（不直接回滚）
-      var errorMsg = S.taskOpFailed;
-      if (e is DioException) {
-        errorMsg = e.message ?? S.taskNetworkError;
-      }
+          return result;
+        } on OfflineEnqueuedException {
+          // N35：离线完成已入队（outbox 回放端按 completion 体重放）——
+          // 步骤 1 的乐观置位（completed + pending）即最终呈现，绝不标失败。
+          _markTaskOfflineQueued(id, TaskStatus.completed, 'complete');
+          return null;
+        } catch (e) {
+          // 5. 🆕 失败：标记为失败状态（不直接回滚）
+          var errorMsg = S.taskOpFailed;
+          if (e is DioException) {
+            errorMsg = e.message ?? S.taskNetworkError;
+          }
 
-      _updateTask(
-        id,
-        (task) => task.copyWith(
-          syncStatus: TaskSyncStatus.failed,
-          syncError: errorMsg,
-        ),
-      );
-      return null;
-    }
-  }
+          _updateTask(
+            id,
+            (task) => task.copyWith(
+              syncStatus: TaskSyncStatus.failed,
+              syncError: errorMsg,
+            ),
+          );
+          return null;
+        }
+      });
 
   /// 服务端确认完成之后的本地后置步骤：归因消费、执行埋点与跨模块刷新。
   /// 失败仅记日志——任务在服务端已是完成态，任何后置异常都不能把本地
@@ -795,23 +827,34 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     unawaited(loadTodayTasks());
   }
 
-  Future<void> abandonTask(String id) async {
-    await _runWithErrorHandling(() async {
-      try {
-        final updatedTask = await _taskRepository.abandonTask(id);
-        _updateTaskInState(updatedTask);
-        state = state.copyWith(isLoading: false);
-      } on OfflineEnqueuedException {
-        // N35（死代码接线令）：abandon 离线入队 → 乐观置位 + 待同步标记。
-        _markTaskOfflineQueued(id, TaskStatus.abandoned, 'abandon');
-      }
-      _ref
-        ..invalidate(learningPortfolioProvider)
-        ..invalidate(achievementProvider)
-        ..invalidate(weeklyGrowthNarrativeProvider)
-        ..invalidate(dashboardProvider);
-    });
-  }
+  /// 放弃任务（与删除不同语义：放弃保留任务记录仅置终态，删除移除条目）。
+  ///
+  /// V4-U08：放弃写在飞时重复触发合流为同一次服务端写入。
+  Future<void> abandonTask(String id) =>
+      _coalesceWrite<void>('abandon:$id', () async {
+        await _runWithErrorHandling(() async {
+          try {
+            final updatedTask = await _taskRepository.abandonTask(id);
+            _updateTaskInState(updatedTask);
+            state = state.copyWith(isLoading: false);
+          } on OfflineEnqueuedException {
+            // N35（死代码接线令）：abandon 离线入队 → 乐观置位 + 待同步标记。
+            _markTaskOfflineQueued(id, TaskStatus.abandoned, 'abandon');
+          }
+          _ref
+            ..invalidate(learningPortfolioProvider)
+            ..invalidate(achievementProvider)
+            ..invalidate(weeklyGrowthNarrativeProvider)
+            ..invalidate(dashboardProvider);
+        });
+      });
+
+  /// V4-U08 统一行动语义 · 改期唯一写入口：日历拖拽确认与键盘/按钮改期
+  /// 都走本方法（同一动作同一语义同一写入），在飞时重复触发合流为一次。
+  Future<void> rescheduleTaskDueDate(String id, DateTime dueDate) =>
+      _coalesceWrite<void>('reschedule:$id', () async {
+        await updateTask(id, TaskUpdate(dueDate: dueDate));
+      });
 
   Future<TaskQuickActionResult> snoozeTask(String id) async {
     final previousTask = _findTaskInState(id);

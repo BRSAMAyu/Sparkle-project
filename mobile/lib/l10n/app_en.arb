@@ -11971,6 +11971,7 @@
     }
   },
   "calNoTimeSet": "No time set",
+  "calRescheduleAction": "Reschedule",
   "calHeatView": "Heat",
   "calNoHeatData": "No heat data available",
   "calStreakDetail": "Keep your achievement rhythm",
