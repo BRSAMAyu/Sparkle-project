@@ -36,7 +36,7 @@
    - 正：`正：新鲜视图 → 上次/下一步如实可见`（视图原文渲染，`Last time: 读完第三章前两节`）；「可调整」路径 = 既有 ghost 次级入口（/tasks 换任务）原样保留，接续不强制。
    - 反 ×3：回执 off（modeGated）→ 条缺席 + 零占位文案；无 nextAction 任务 → 零请求零渲染（provider 层）；视图降级 view=null → 缺席（不渲染半真视图）。
 3. **「退出/重进不强制自动播放或重播成就」**
-   - 正：`正：卸载重挂（等价退出重进）`——零导航、零 Dialog/SnackBar、内容纯静态复现、transientCallbackCount == 0（无 auto-play 遗留帧）。
+   - 正：`正：卸载重挂（等价退出重进）`——零导航、零 Dialog/SnackBar、内容纯静态复现、transientCallbackCount == 0（注：harness TickerMode(enabled:false) 冻结一切 ticker，该断言对 ticker 类动画是空洞真——一审 R1-2 勘误；零自动播放的主防线是结构零动画路径（代码级亲读成立），非该断言）。
    - 反（结构性）：接续条为纯静态文本（无 tap/无 timer/无动画状态机），代码面不存在自动播放路径；provider 全门均被动读面。
 
 ## 红线自证（diff 逐面）

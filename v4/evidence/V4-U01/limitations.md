@@ -2,7 +2,7 @@
 
 1. **memory_epoch 陈旧判定客户端不判**：`resume_view_stale_reason` 的 `memory_epoch_changed` 分支需要当前 epoch 权威，移动端读侧无此真源（epoch 由会话/删除/纠正写侧 bump）。客户端只判 `expires_at`；epoch 漂移的权威出口是 I01 按需重算（视图每次装载重算、TTL 30min），消费面下次取数即自愈。已在新文件 docstring 与 limitations 双登记。
 
-2. **回执读面 off/shadow（默认档）下接续面完全缺席**：I06 `context_selection_receipt.v1` 写先行读未开（mode=off/shadow → receipt=null）时，本卡全部增量（上次/下一步/继续收敛）不呈现——这是契约性缺席（无 receipt 不出视图，B05 §2），不是功能缺失；mode=live 后自动生效。当前演示/提审环境若 receipt mode 非 live，验收①的接续增量需以证据测试（桩 live 回执）举证，真实环境行为以读面开关为准。
+2. **回执读面 off/shadow（默认档）下接续面完全缺席**：I06 `context_selection_receipt.v1` 写先行读未开（mode=off/shadow → receipt=null）时，本卡全部增量（上次/下一步/继续收敛）不呈现——这是契约性缺席（无 receipt 不出视图，B05 §2），不是功能缺失；mode=live **且后端存在 `resume_view` 角色回执生产者**后可见（一审 R1-1 勘误：当前后端唯一回执生产链 context_pack.py:2159 硬编码 chat_context，无 resume_view 生产者——live 开启是必要不充分条件；集成依赖已登记 FIX-567，归 contract-owner 卡承接）。当前演示/提审环境若 receipt mode 非 live，验收①的接续增量需以证据测试（桩 live 回执）举证，真实环境行为以读面开关为准。
 
 3. **D01 mark_seen 曝光面未接线（裁决性限制）**：第一主动作的曝光记账要求 `receipt_ref` 必指 D-05 权威 exposed 回执（I2 双门）；首页接续条不是 intervention record，无权威回执可指——接线即需造 ref（违 I2，假曝光）。F03 消费面已就绪（`resume_available` kind 在封闭词表、replay 抑制就位），待 experience_event WS 帧下发面（contract-owner 单独合并，D01 limitations #1）后由既有 adapter 消费，本卡无需再改。
 
