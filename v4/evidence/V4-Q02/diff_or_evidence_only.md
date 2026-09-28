@@ -44,7 +44,7 @@
 
 配对 profile 簇 bootstrap 95% CI（30 profile/seed）：
 
-- **M11 形状（C−A、D−A）= 精确 0，CI [0,0]**——两 seed 一致。这是**结构性恒等**而非效果为零的空样本：A-08 决策回路不经过 I02 门集成面（context_pack），且 harness 的 patch 载荷（`{intervention, direction: prefer}`）不携带 do_not_apply/precondition 键、auto 激活的 patch 均带 observed benefit——I05 live 门与 I02 门在该回路无可触发条件（逐记录恒等实证，非假设）。**不能据此宣称 V4 机制无效**；只能说本 harness 激励分布下无差分（limitations #2/#3）。
+- **M11 形状（C−A、D−A）= 精确 0，CI [0,0]**——两 seed 一致。这是**结构性恒等**而非效果为零的空样本：A-08 决策回路不经过 I02 门集成面（context_pack），且 harness 的 patch 载荷（`{intervention, direction: prefer}`）不携带 do_not_apply/precondition 键、auto 激活的 patch 均带 observed benefit——I02 门在该回路无可触发条件；I05 live 门中 decision 门出无可触发条件，admission 收益门与 72h 有界窗真实触发过但差分被 confirm-backstop 吸收（结局级恒等实证：两 seed 120/120 episode 结局逐一相同，非记录级）。**不能据此宣称 V4 机制无效**；只能说本 harness 激励分布下无差分（limitations #2/#3）。
 - **M12 形状（C−B、D−B）**：s1 +3.3pp CI[-4.2,+10.8]；s2 +5.8pp CI[-2.5,+15.0]——点估计为正但 **CI 均跨 0，未建立**（M12 目标 ≥0 的判定在 L1 不可达（live 层缺席），不得宣称）。
 - **冻结 utility（A−B）**：s1 -1.82 CI[-2.73,-0.83]；s2 -1.25 CI[-2.16,-0.34]——**两 seed 稳定为负**：记忆臂跟错更多（wrong 196/67），B03 指认的坏经验污染模式在 L1 持续。
 - **双 seed 敏感性**：A−B resolve-rate 符号在 dev（−3.3pp）与两个 holdout seed（+3.3/+5.8pp）间不稳定，效应量落在噪声域；utility 符号稳定为负。任何「记忆净收益已转正」的表述都不被本数据支持。

@@ -6,7 +6,7 @@
 
 ## 2. C/D 臂在 L1 决策回路面结构性恒等（本卡最重要的面边界）
 
-I02 效用门的唯一集成面是 `context_pack.build`（chat 编排装配面）；A-08 harness 的决策回路（StuckJourneyService + FrictionChatWiringService + D-05/A-05 回路）**不经过该面**。同时 harness 的 patch 载荷为 `{intervention, direction: prefer}`（无 do_not_apply/precondition 键），I05 live 的 decision 门出无可触发条件；admission 收益门在本 harness 的 auto 激活记录上未出现「无收益却会自动激活」的形态。因此 **A≡C≡D 逐记录恒等是本 harness 激励分布下的结构性结果**：
+I02 效用门的唯一集成面是 `context_pack.build`（chat 编排装配面）；A-08 harness 的决策回路（StuckJourneyService + FrictionChatWiringService + D-05/A-05 回路）**不经过该面**。同时 harness 的 patch 载荷为 `{intervention, direction: prefer}`（无 do_not_apply/precondition 键），I05 live 门中 decision 门出无可触发条件（wiring 不传 decision_context、patch 载荷无 do_not_apply/precondition 键）；但 admission 收益门与 72h 有界窗**真实触发过**（一审逐记录探针实证：s1 拦截 1 次自动激活 active×4→×3、两 seed 窗过期收窄 active 集），差分被 confirm-backstop 吸收、未翻转任何结局。因此 **A≡C≡D 恒等是结局级的（两 seed 120/120 episode 结局逐数相同；C≡D 记录级恒等成立，holdout A vs C 在 patch 归因/重排面逐记录不同）**——是本 harness 激励分布下的结构性结果：
 
 - 这**不是**「V4 机制无效」的证据——I05 live 门行为差分由其自身服务面测试承载（107 测绿，含收益门三档对照/有界窗/门出），I02 门差分由 Surface-2 选择面实证；
 - 但它**是**「当前 L1 harness 无法对四臂 C/D 产生决策级激励差分」的证据。四臂协议若要在 L1 层产生 C/D 差分，需要 harness 世界产生「无收益 patch 会自动激活」或「context_pack 进入决策回路」的形态——前者属注入不利刺激（有合成针对性强加给被评对象之嫌，本卡不做），后者属 harness 结构扩展（超出本验证卡差量）。
