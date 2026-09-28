@@ -3506,9 +3506,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardSelfAnchorEmptyTitle => 'No records in this window yet';
 
   @override
-  String leaderboardSelfAnchorLoadFailed(Object error) {
-    return 'Failed to load self anchor: $error';
-  }
+  String get leaderboardSelfAnchorLoadFailed =>
+      'Could not load your self anchor. Your data is safe — please try again later.';
 
   @override
   String leaderboardSelfAnchorMasteryGained(Object delta) {

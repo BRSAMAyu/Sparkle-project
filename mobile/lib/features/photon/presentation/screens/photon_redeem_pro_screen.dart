@@ -33,7 +33,25 @@ class _PhotonRedeemProScreenState extends ConsumerState<PhotonRedeemProScreen> {
   PhotonRedeemProResult? _lastResult;
   bool _redeeming = false;
 
+  /// V4-U12 幂等重入守卫：动作入口同步置位（确认对话框弹出前），取消/终态
+  /// 释放。同一逻辑动作全程至多一次网络兑换——双击/双对话框/重放不会产生
+  /// 第二次 POST（服务端月顶屏障之上的客户端第一道闸，不替代服务端判定）。
+  bool _actionInFlight = false;
+
   Future<void> _redeem() async {
+    // 幂等重入：已在飞行中的动作直接忽略后续触发（同步检查，无 await 缝隙）。
+    if (_actionInFlight) {
+      return;
+    }
+    _actionInFlight = true;
+    try {
+      await _runRedeemFlow();
+    } finally {
+      _actionInFlight = false;
+    }
+  }
+
+  Future<void> _runRedeemFlow() async {
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,

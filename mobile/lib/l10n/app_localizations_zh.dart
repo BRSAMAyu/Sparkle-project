@@ -3354,9 +3354,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardSelfAnchorEmptyTitle => '这几天还没有记录';
 
   @override
-  String leaderboardSelfAnchorLoadFailed(Object error) {
-    return '自我锚加载失败：$error';
-  }
+  String get leaderboardSelfAnchorLoadFailed => '自我锚加载失败。你的数据没有丢，稍后再试一次。';
 
   @override
   String leaderboardSelfAnchorMasteryGained(Object delta) {
