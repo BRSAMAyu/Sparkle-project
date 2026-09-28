@@ -26,12 +26,16 @@
 ///
 /// 视觉路径唯一：状态徽章一律经 F02 [PixelStateBadge] 族渲染（success 由
 /// [PixelSuccessBadge] 单独承载——F02 红线：非成功树中不得出现该类型）；
-/// 声/触经既有 [SensoryFeedbackService]（无第二发声/震动路径）。
+/// 声经既有 [SensoryFeedbackService]（S02 音频策略面，`enableHaptic: false`
+/// 关其触觉侧——不双出口）；触经 V4-S03 [SemanticHapticDispatcher]
+/// （haptic-policy 锁面唯一权威：偏好/能力/相位/重播/双震/去重门控后一次
+/// 系统语义触觉；F03 原「触经既有服务」路径由本出口升格接管）。
 library;
 
 import 'package:flutter/foundation.dart';
 
 import 'package:sparkle/core/design/pixel/pixel_state.dart';
+import 'package:sparkle/core/design/semantic_haptics.dart';
 import 'package:sparkle/core/experience/experience_event.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
@@ -132,18 +136,59 @@ abstract class ExperienceSensorySink {
   Future<void> warning();
 }
 
-/// 默认出口：委托既有 SensoryFeedbackService（统一感官服务，无第二路径）。
+/// 默认出口：声侧委托既有 SensoryFeedbackService（S02 音频策略面，触觉侧关
+/// ——避免同一出口双震动路径）；触侧经 V4-S03 haptic-policy 锁面
+/// [SemanticHapticDispatcher]（偏好/能力/相位/重播/双震/去重门控后一次系统
+/// 语义触觉）。本类不是第二发声/震动路径——声、触各只有一条物理出口。
 class SensoryFeedbackSink implements ExperienceSensorySink {
   const SensoryFeedbackSink();
 
   @override
-  Future<void> success() => SensoryFeedbackService.emit(SensoryFeedbackEvent.success);
+  Future<void> success() async {
+    // 声：既有统一感官服务（S02 策略面）；enableHaptic:false = 触觉不在此发。
+    await SensoryFeedbackService.emit(
+      SensoryFeedbackEvent.success,
+      enableHaptic: false,
+    );
+    // 触：S03 锁面——成功槽恒 terminalSuccess（有 committed 回执的终态；
+    // pending/unknown 在门内被拒，success pattern 不可误用）。
+    await SemanticHapticDispatcher.instance.dispatch(
+      const SparkleSemanticHapticRequest(
+        slot: SparkleSemanticHapticSlot.success,
+        phase: SparkleHapticPhase.terminalSuccess,
+      ),
+    );
+  }
 
   @override
-  Future<void> selection() => SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+  Future<void> selection() async {
+    await SensoryFeedbackService.emit(
+      SensoryFeedbackEvent.selection,
+      enableHaptic: false,
+    );
+    // 触：选择槽（用户主动操作相；普通滚动不得调用本出口——乐谱按压行）。
+    await SemanticHapticDispatcher.instance.dispatch(
+      const SparkleSemanticHapticRequest(
+        slot: SparkleSemanticHapticSlot.selection,
+        phase: SparkleHapticPhase.userInitiated,
+      ),
+    );
+  }
 
   @override
-  Future<void> warning() => SensoryFeedbackService.emit(SensoryFeedbackEvent.warning);
+  Future<void> warning() async {
+    await SensoryFeedbackService.emit(
+      SensoryFeedbackEvent.warning,
+      enableHaptic: false,
+    );
+    // 触：警示槽恒 terminalFailure（明确操作失败一次；无连锁蜂鸣）。
+    await SemanticHapticDispatcher.instance.dispatch(
+      const SparkleSemanticHapticRequest(
+        slot: SparkleSemanticHapticSlot.warning,
+        phase: SparkleHapticPhase.terminalFailure,
+      ),
+    );
+  }
 }
 
 /// 统一反馈呈现适配器：experience_event.v1 → 视觉/声/触决策（唯一事件入口）。
