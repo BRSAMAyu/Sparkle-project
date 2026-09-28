@@ -760,6 +760,13 @@ _RULE_DECISION_TO_INTERVENTIONS: dict[RuleArmDecisionKind, frozenset[str]] = {
     RuleArmDecisionKind.NO_COMPLEX_EXPRESSION: frozenset(),
 }
 
+# V4-I04 移交闭合（I03 O-2）：映射值全部落契约词表的 import 期不变式——
+# 字面量漂移（改名/删词）在 import 时即失败，不再等影子 agreement 指标偏斜。
+for _names in _RULE_DECISION_TO_INTERVENTIONS.values():
+    assert (
+        _names <= AURORA_INTERVENTION_TYPES
+    ), f"_RULE_DECISION_TO_INTERVENTIONS out of AURORA_INTERVENTION_TYPES: {sorted(_names - AURORA_INTERVENTION_TYPES)}"
+
 COMPARISON_AGREEMENTS: frozenset[str] = frozenset({"agree", "disagree", "not_comparable"})
 
 

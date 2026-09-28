@@ -1,0 +1,11 @@
+# V4-I04｜limitations
+
+1. **合法经验的「写入面」未接线（本卡边界内决定）**：补充产生的经验是**契约记录**（封闭词表 + 既有 scheme 证据引用 + 会话作用域 + 可撤回 + `write_surfaces=[]` + `downstream_legality: memory_gate` 标注），本卡零持久化写路径——写入 self_model/experience_memory 并过 I02 效用门属记忆 owner 卡面。卡面「形成合法经验」在本卡的交付口径是「纠正产物成为结构合法、可审计、可撤回、显式不可写永久偏好的记录」，不是「已入长期记忆」。若审查判定此口径不满足卡面最低要求，缺的是一个独立的记忆接线卡（非本卡补丁）。
+2. **V4 自动澄清预算 ≤1 的作用域是「一次问对闭环内」**：压制的是同一 pending 问句回答后的**连环第二问**（最常见追问形态，wiring 面实测路径）。跨轮新摩擦事件（pending 消费后的新自报词牌轮、FIX-49 门过、日预算 5 内）仍可发起新的自动澄清——本卡未把「每会话自动澄清 ≤1」做成全局硬闸。选择依据：AURORA_SEMANTIC_POLICY 的判据句是「问一个真正会改变决策的问题」+「用户主动补充不算系统追问」，全局硬闸会挡住有证据的新事件澄清（与「降噪不关死」的 FIX-49 同律）；已预登记审查挑战 R3。
+3. **「今天口径」时间预算模式是保守结构面**：只认（今日词+上限词+数量词+分钟/min 单位）的连续结构；「小时」单位、「就剩一下午」、「只有俩小时」（「俩」不在数量词表）等变体 fail-closed 返 None——后果是少记一条会话作用域约束（保守向，不产生错误归因）。开发中实际修掉一个真 bug：`_UNIT` 交替未分组导致「我每周只有15分钟」假阳命中（测试 `test_non_today_horizon_fail_closed` 钉死）。
+4. **跳过/暂停词表是子串匹配 + 否定前缀守卫（一审 F-3/R2 收紧后）**：一审整改新增 `MARKER_NEGATION_PREFIXES`——命中点紧邻 1-2 字否定词（「别停一下」/「不想跳过这题」/「不是不想回答」）时该命中作废，按「宁漏报」fail-closed（误清 pending/误静默比漏识别代价高，用户再点选或改述即恢复）。**残余边界如实登记**：①英文否定（don't skip）不在守卫域（测试 `test_marker_negation_prefixes_frozen_closed_set` 钉为已知边界）；②更长窗口的复合否定（如否定词与 marker 间隔 >2 字）不识别；③漏报后果 = 该轮回答未被解析、pending 保持（保守向，可恢复）。后续词表/守卫变更仍过 reviewer（词表冻结纪律不变）。
+5. **补充入口目前只在 chat 面（FrictionChatWiringService）接线**：旅程面（StuckJourneyService）与 dashboard 面的 no_action 出口未挂入口——契约函数是纯函数可直接消费，但 UI 接线归前端/旅程卡。当前生产消费面 = chat。
+6. **纠正追踪的持久化是 checkpoint 附带收益而非独立账本**：追踪随 `context_data["friction_decision"]` 进 Redis checkpoint（I03 N-3 同面，单键覆写不累积）；无独立表、无迁移、无查询面。「重开可见」的交付口径 = 恢复会话后 `friction_decision` 内可见；跨会话账本/审计查询不在本卡。
+7. **I03 移交项裁决**：O-1（语料快照重算 diff）✅ 本卡闭合（测试直读快照重算 23 条零 mismatch）；O-2（干预名 import 不变式）✅ 本卡闭合（semantic_selector.py import 期断言 + 测试复核）；N-2（live 消费侧显式标识）✅ 本卡面闭合（live 首激显式 WARN 一次性 + metric mode 维度；**I03 选择器自身的 SEMANTIC_SELECTOR_MODE=live 仍与 shadow 同义，其消费侧标识归 V4-I07**）；O-3（钩子键集冻结断言）与 N-1（跨子句缓解边界）/N-3（影子记录随 checkpoint 持久，本卡设计已知悉并利用）→ **再移交 V4-I07**：本卡未消费 `semantic_selector` 两 context 键，键集断言应在真正挂消费时落地。
+8. **off 档的 V3 第二问链是本卡明确保留的行为**：`NO_ACTION_CORRECTION_MODE=off`（默认）下，一次问对闭环允许引擎第二问（会话预算 2）——这是 V3 现行为，本卡不默认改变生产路径；启用 ≤1 需显式开 live（灰度决定归协调方）。engine 预算常量 2/5 属 A-03 冻结面（sha256 双钉），本卡零改动。
+9. **mypy 全仓计数 55 与 I03 记录的 71 存在平台/时点差**：本机（darwin/arm64，mypy 1.20.2）全仓 55 errors ≤ 棘轮基线 77，与派发纪律「棘轮 55/77」一致；改动三文件自身零错误。

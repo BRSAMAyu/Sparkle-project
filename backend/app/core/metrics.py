@@ -789,6 +789,16 @@ SEMANTIC_SELECTOR_REFUSAL_TOTAL = get_or_create_metric(
     ["refusal_code"],
 )
 
+# V4-I04 无动作可纠正与一次决策性澄清：stuck-policy 消费面计数。surface ∈
+# {supplement_entry, free_supplement, exit_ramp, skip, pause, trace}
+# （no_action_supplement 封闭词表）；mode ∈ {off, shadow, live}。
+AURORA_NO_ACTION_CORRECTION_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_aurora_no_action_correction_total",
+    "No-action correction surfaces (FIX97 supplement entry / clarification exit ramp) by surface and mode",
+    ["surface", "mode"],
+)
+
 RUN_LEDGER_EVENT_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_run_ledger_event_total",
