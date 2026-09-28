@@ -1,0 +1,24 @@
+{
+  "task": "V4-I06",
+  "state": "PENDING",
+  "independent_reviewers_required": 1,
+  "note": "本文件是实现会话（wtI06）自证包；按验收模型，普通任务 DONE = 独立未参与会话审查 + 当前集成 SHA 可失败测试。自称完成不算完成。",
+  "review_anchor": {
+    "branch": "agent/v4/i06",
+    "commit": "见本分支 HEAD（feat(v4): I06 Context使用回执与来源验证）；审查请锚定该 SHA 复跑 run_manifest.json commands",
+    "base_commit": "a616f27f"
+  },
+  "suggested_review_checks": [
+    "复跑 pytest 三件套（66 用例）与受影响面 187 用例；核对 mode=off 零行为、幂等落库、to_prompt_context 无回执内容三条红线",
+    "对照 v4/evidence/V4-B05/contract_receipt_min.md §2 字段表与 examples/counterexamples.json：词表集合相等、反例三件（fabricated_ref_scheme / empty_candidates / why_now_without_basis）断言在场",
+    "reason_code 映射表判定序与 fallback（out_of_scope_memory）是否接受；unattributed_downstream 缺口兜底是否可接受",
+    "budget.selected_max=实际选中数（token 预算裁剪面无整数上限）的诚实读数口径是否接受（limitations 已登记）",
+    "迁移 i06_20260928：单头守卫 + scratch 库 upgrade/downgrade 复验",
+    "零 HEAVY / 零模型调用核对（run_manifest.model_budget）"
+  ],
+  "self_declared_risk_points": [
+    "I02 接口为鸭子类型消费（UtilityGateResult.to_metric_payload 冻结形状）——I02 分支未合，合入后若形状漂移需同步（tests 已钉形状）",
+    "selector_version 常量 context_pack.v4-i06.v1 为首版锚；装配点未来扩展（context_builder stage34 独立出回执）时需 bump",
+    "experience_memories（M-06）ref 未纳入本面 chat_context 回执（M-06 装配在 context_builder 另一面）——limitations 登记"
+  ]
+}

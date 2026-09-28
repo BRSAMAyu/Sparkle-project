@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.aurora.runtime_v1.self_model import SparkleSelfModelService
+from app.config import settings
 from app.core import time_utils
 from app.core.cache import cache_service
 from app.models.achievement import UserStreakStats
@@ -481,6 +482,56 @@ async def correct_understanding_snapshot(
         "correction_id": correction_id,
         "effect_on_policy": effect["affected_state_keys"],
         "message": "已更新 Sparkle 对你的理解。",
+    }
+
+
+# route-tier: authed
+@router.get("/context-receipts/latest")
+async def get_latest_context_receipt(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """V4-I06 · 最近一次 context 组装的 ``context_selection_receipt.v1`` 读面。
+
+    供 U03「我的理解」与移动端理解条目消费（合同 §7：呈现的每条理解必须可溯源
+    到 selected ref）。三态语义（B05 §8「shadow 写先行、默认读关闭」）：
+    - off/shadow → ``{"mode": <mode>, "receipt": None}``（写面先行，读不暴露）；
+    - live → 最近回执 + **来源验证**：每个 selected/basis ref 现场 join 真实存储
+      （E4 双重校验：scheme 封闭集 + 存储行属主），被删/纠正/不可定位 →
+      ``resolution=unresolved``，**明确 unknown，不编时间/quote**。删除后旧
+      receipt 经读时验证如实反映（卡验收「删除后旧receipt更新」的读侧语义）。
+    """
+    from app.core.context_selection_receipt import CONTEXT_SELECTION_RECEIPT_SCHEMA_VERSION
+    from app.core.kill_switch import normalize_mode
+    from app.services.context_selection_receipt_service import (
+        latest_receipt as latest_receipt_row,
+    )
+    from app.services.context_selection_receipt_service import verify_receipt_sources
+
+    mode = normalize_mode(getattr(settings, "CONTEXT_SELECTION_RECEIPT_MODE", "shadow"))
+    if mode != "live":
+        return {"mode": mode, "schema_version": CONTEXT_SELECTION_RECEIPT_SCHEMA_VERSION, "receipt": None}
+    receipt, row_meta = await latest_receipt_row(db, current_user.id)
+    if receipt is None:
+        return {
+            "mode": mode,
+            "schema_version": CONTEXT_SELECTION_RECEIPT_SCHEMA_VERSION,
+            "receipt": None,
+            "violations": list((row_meta or {}).get("violations") or []),
+        }
+    verification = await verify_receipt_sources(db, current_user.id, receipt)
+    return {
+        "mode": mode,
+        "schema_version": CONTEXT_SELECTION_RECEIPT_SCHEMA_VERSION,
+        "receipt": receipt.to_payload(),
+        "source_verification": verification,
+        "row": (row_meta or {}).get("row"),
+        # 消费纪律（合同 §7.1）：呈现层只可引用 resolution=resolved 的 selected ref。
+        "resolved_selected_count": sum(
+            1
+            for entry in verification
+            if entry.get("resolution") == "resolved" and entry.get("ref") in receipt.selected_refs
+        ),
     }
 
 

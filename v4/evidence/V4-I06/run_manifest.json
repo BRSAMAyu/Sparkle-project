@@ -1,0 +1,105 @@
+{
+  "task": "V4-I06",
+  "title": "Context使用回执与来源验证（context_selection_receipt.v1）",
+  "branch": "agent/v4/i06",
+  "worktree": "wtI06",
+  "base_commit": "a616f27f",
+  "captured_at": "2026-09-28",
+  "environment": {
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.11.15",
+    "pytest": "8.x (asyncio_mode=auto, sqlite in-memory db_session)",
+    "black": "26.3.1",
+    "ruff": "0.15.8",
+    "mypy": "1.x (pyproject [tool.mypy] py311)",
+    "note": "backend/.venv 与 backend/app/gen 为 gitignore 产物：gen 从主仓整目录拷贝（非 symlink、未入库，I09 整合事故教训遵守）；SECRET_KEY 为本地单测引导用非生产值"
+  },
+  "required_env_for_local_test_run": {
+    "SECRET_KEY": "test-secret-key-for-wtI06-0123456789abcdef（非生产密钥，仅引导 Settings）",
+    "REDIS_URL": "redis://localhost:6379/0（conftest 归一化）"
+  },
+  "prior_state_check": [
+    {
+      "purpose": "no_duplicate_rule 差量举证：仓库此前无本契约任何符号",
+      "cmd": "grep -rn \"context_selection_receipt\\|ContextSelectionReceipt\\|selection_receipt\" --include=\"*.py\" backend/",
+      "exit_code": 1,
+      "summary": "零命中（grep exit 1 = 无匹配）→ 本卡为 context_selection_receipt.v1 首个实现，非重写"
+    }
+  ],
+  "commands": [
+    {
+      "purpose": "I06 契约+装配+来源验证全量（66 用例）",
+      "cmd": "pytest tests/contract/test_context_selection_receipt_contract.py tests/unit/test_context_selection_receipt_wiring.py tests/unit/test_context_selection_receipt_sources.py -q",
+      "exit_code": 0,
+      "summary": "66 passed in 5.65s（48 契约冻结 + 10 装配/build 接线 + 8 来源验证）"
+    },
+    {
+      "purpose": "受影响面回归（context pack 全家 + M-03 预筛 + C-01 决策面 + 读面组件）",
+      "cmd": "pytest tests/contract/test_context_selection_receipt_contract.py tests/unit/test_context_selection_receipt_wiring.py tests/unit/test_context_selection_receipt_sources.py tests/unit/test_context_pack.py tests/unit/test_context_pack_conflicts.py tests/unit/test_context_pack_feedback.py tests/unit/test_context_pack_personalized_ranking.py tests/unit/test_context_pack_ranking.py tests/unit/test_context_pack_rollout.py tests/unit/test_context_pack_sources.py tests/unit/test_context_pack_surface_observability.py tests/unit/test_memory_prefilter_integration.py tests/unit/test_memory_retrieval_prefilter.py tests/unit/test_experience_readouts_criterion_label.py tests/contract/test_decision_context_contract.py -q",
+      "exit_code": 0,
+      "summary": "187 passed in 19.87s"
+    },
+    {
+      "purpose": "更大闭包（tests/contract 全套 + tests/api + 读面）后台全跑",
+      "cmd": "pytest tests/contract/ tests/unit/test_experience_readouts* tests/api -q",
+      "exit_code": 0,
+      "summary": "813 passed, 5 skipped in 353.02s"
+    },
+    {
+      "purpose": "ruff（全部改动文件，含 conftest 触发的既有 I001 顺带修复）",
+      "cmd": "ruff check app/core/context_selection_receipt.py app/orchestration/context_receipt_assembly.py app/services/context_selection_receipt_service.py app/models/context_selection_receipt.py app/core/context_pack.py app/api/v1/experience_readouts.py app/config/settings.py app/models/__init__.py alembic/versions/i06_20260928_add_context_selection_receipts.py tests/contract/test_context_selection_receipt_contract.py tests/unit/test_context_selection_receipt_wiring.py tests/unit/test_context_selection_receipt_sources.py tests/conftest.py",
+      "exit_code": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "purpose": "black（新增文件 + 本卡新增代码行；context_pack.py 主仓基线本身不过 black，不重排既有代码）",
+      "cmd": "black --check --line-length 120 <新增文件集> app/api/v1/experience_readouts.py",
+      "exit_code": 0,
+      "summary": "8 files would be left unchanged（新文件全部 black 清）"
+    },
+    {
+      "purpose": "mypy 改动文件 + import 闭包",
+      "cmd": "mypy app/core/context_selection_receipt.py app/orchestration/context_receipt_assembly.py app/services/context_selection_receipt_service.py app/models/context_selection_receipt.py app/core/context_pack.py app/api/v1/experience_readouts.py app/config/settings.py",
+      "exit_code": 0,
+      "summary": "Found 30 errors in 30 files —— 逐条对照主仓基线（context_pack.py 单文件基线即 31 errors，为既有依赖闭包错误）：本卡改动文件（context_selection_receipt*.py / context_receipt_assembly.py / experience_readouts.py / settings.py / models __init__）零 error，零漂移（净 -1：conftest 既有 I001 顺带修复不含 mypy 面）"
+    },
+    {
+      "purpose": "治理守卫：alembic 单头",
+      "cmd": "PYTHONPATH=<repo>/backend python scripts/guards/check_alembic_single_head.py",
+      "exit_code": 0,
+      "summary": "✅ alembic 单头: i06_20260928"
+    },
+    {
+      "purpose": "迁移真库验证（scratch 库 sparkle_i06_migcheck，验证后已删除并复原口令）",
+      "cmd": "alembic upgrade head && alembic downgrade -1 && alembic upgrade head（DATABASE_URL 指向 scratch 库）",
+      "exit_code": 0,
+      "summary": "全链 upgrade 至 i06_20260928 ✅；downgrade 回 wt598_20260927 ✅；再 upgrade ✅；\\d context_selection_receipts 结构/5 索引（uq receipt_id + idx user_created/user_id/role）核对一致"
+    }
+  ],
+  "model_budget": {
+    "real_model_calls": 0,
+    "note": "红线遵守：零模型调用、零上游请求。全部测试为 sqlite/mock/纯规则确定性面；读面端点直调函数不 经 LLM。"
+  },
+  "diff_summary": {
+    "new_files": [
+      "backend/app/core/context_selection_receipt.py",
+      "backend/app/orchestration/context_receipt_assembly.py",
+      "backend/app/services/context_selection_receipt_service.py",
+      "backend/app/models/context_selection_receipt.py",
+      "backend/alembic/versions/i06_20260928_add_context_selection_receipts.py",
+      "backend/tests/contract/test_context_selection_receipt_contract.py",
+      "backend/tests/unit/test_context_selection_receipt_wiring.py",
+      "backend/tests/unit/test_context_selection_receipt_sources.py"
+    ],
+    "modified_files": [
+      "backend/app/core/context_pack.py",
+      "backend/app/api/v1/experience_readouts.py",
+      "backend/app/config/settings.py",
+      "backend/app/models/__init__.py",
+      "backend/tests/conftest.py",
+      "v4/04_tasks/tasks.json"
+    ],
+    "stat": "13 code/test files + evidence；新文件约 2,300 行（含 3 个测试文件 1,050 行）"
+  },
+  "artifacts_sha256_note": "本文件与同目录 4 个交付物在最终 commit 固化；review 复验以 commit SHA 为锚（见 review_receipt.json PENDING）"
+}

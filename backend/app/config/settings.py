@@ -919,6 +919,11 @@ class Settings(BaseSettings):
     # off is an explicit ops action (passthrough + no metadata) — wiring
     # guards turn removal of any final-gate call red.
     ENABLE_MEMORY_USE_SELFCHECK: bool = True
+    # V4-I06 (B05 合同 §8)：context_selection_receipt.v1 三态开关——shadow 写先行、
+    # 默认读关闭。off=不产生不落库（V3 路径零变化）；shadow=产生+落库+进程内挂
+    # ContextPack，读 API 不暴露；live=读面（/experience/context-receipts/latest）
+    # 可消费。词表/结构冻结见 app/core/context_selection_receipt.py。
+    CONTEXT_SELECTION_RECEIPT_MODE: str = "shadow"  # off | shadow | live
     ENABLE_CONTEXT_BRIEFING: bool = True
     ENABLE_CONTEXT_FOCUS_METADATA: bool = True
     ENABLE_FOCUS_DOCUMENT_CONTEXT: bool = True

@@ -37,6 +37,7 @@ from app.core.citation_markers import (
 )
 from app.core.context_budget import ContextBudgetScheduler
 from app.core.context_ranker import RankedItem, rank_items
+from app.core.context_selection_receipt import ContextSelectionReceipt
 from app.core.decision_context import (
     DEFAULT_DECISION_SIGNAL_FIELDS,
     ContextItemDescriptor,
@@ -47,6 +48,7 @@ from app.core.decision_context import (
     plan_ref,
     state_signal_from_envelope,
 )
+from app.core.kill_switch import normalize_mode
 from app.core.plan_context import PlanContextBuilder
 from app.orchestration.context_focus import (
     ContextFocusResolver,
@@ -1262,6 +1264,11 @@ class ContextPack:
     # + ask-if-material + resolution refs。digest 有界注入（防冲突原文全量进
     # prompt），经 to_prompt_context 供模型/下游理解「选了哪条、为什么」。
     conflict_resolution: dict[str, Any] | None = None
+    # V4-I06（B05 合同 §2）：context_selection_receipt.v1 —— 本次装配的权威回执
+    # （候选集/选中集/拒用原因码/版本位）。只读语义：不授予任何权限、不构成任何
+    # 业务事实；**刻意不进 to_prompt_context()**（note 是 debug-only，不进模型
+    # 输入/用户正文；呈现走读面投影）。mode=off 时为 None（V3 路径零变化）。
+    context_selection_receipt: ContextSelectionReceipt | None = None
 
     def to_prompt_context(self) -> dict[str, Any]:
         result = {
@@ -1411,6 +1418,18 @@ class ContextPackBuilder:
         pref_history: list[Any] = []
         if conflict_enabled:
             pref_history = await self.memory_service.list_preference_history(user_id)
+
+        # V4-I06（B05 合同 §2 产生时机）：回执在 Context Compiler 完成选择时产生。
+        # mode=off 时零开销零产出（V3 路径零变化）；shadow/live 才捕获被扫描全集
+        # （prefilter 重绑之前），供 assemble_pack_receipt 做逐条归因。
+        receipt_mode = normalize_mode(getattr(settings, "CONTEXT_SELECTION_RECEIPT_MODE", "off"))
+        receipt_input_records: dict[str, list[Any]] | None = None
+        if receipt_mode in {"shadow", "live"}:
+            receipt_input_records = {
+                "preferences": list(preference_records),
+                "goals": list(goals),
+                "episodic": list(episodic),
+            }
 
         # M-03 deterministic L0 prefilter: illegal candidates (wrong user /
         # non-active status incl. superseded versions / expired commitments /
@@ -2066,6 +2085,66 @@ class ContextPackBuilder:
             overrides=len(sources_manifest.get("overrides") or []),
         )
 
+        # V4-I06：context_selection_receipt.v1 产生 + 落库（shadow/live；合同 §2
+        # 产生时机=Context Compiler 完成选择时）。观测输入全部来自本 build 已有
+        # 面（M-03 PrefilterResult / surfaced 集 / M-05 internal_only / 冲突
+        # suppressed / deny-quiet / I02 门 metadata 若开），装配失败只降级，
+        # 绝不阻断 pack 主链路。why_now/decision_id：chat 装配面无 Aurora 决策
+        # 参与 → None（合同 null 语义）。
+        context_receipt: ContextSelectionReceipt | None = None
+        if receipt_mode in {"shadow", "live"} and receipt_input_records is not None:
+            try:
+                from app.orchestration.context_receipt_assembly import assemble_pack_receipt
+                from app.services.context_selection_receipt_service import record_receipt
+
+                raw_selfcheck = metadata.get("memory_selfcheck")
+                selfcheck_meta: dict[str, Any] = raw_selfcheck if isinstance(raw_selfcheck, dict) else {}
+                raw_deny = metadata.get("preference_deny_quiet")
+                deny_meta: dict[str, Any] = raw_deny if isinstance(raw_deny, dict) else {}
+                raw_gate = metadata.get("memory_utility_gate")
+                gate_payload: dict[str, Any] | None = raw_gate if isinstance(raw_gate, dict) else None
+                try:
+                    receipt_epoch: int | None = int(await self.memory_service.get_memory_epoch(user_id))
+                except Exception:  # noqa: BLE001 - 读失败=null（该权威未读取），不冒充 0
+                    receipt_epoch = None
+                context_receipt = assemble_pack_receipt(
+                    user_id=user_id,
+                    selection_role="chat_context",
+                    decision_id=None,
+                    prefilter_results={
+                        "preferences": pref_prefilter,
+                        "goals": goal_prefilter,
+                        "episodic": episodic_prefilter,
+                    },
+                    input_records=receipt_input_records,
+                    surfaced_pref_keys=set(trimmed_preferences.keys()),
+                    surfaced_goal_ids={str(payload.get("id")) for payload in trimmed_goals},
+                    surfaced_episodic_ids={str(payload.get("id")) for payload in trimmed_episodic},
+                    ranked_pref_keys=[entry.item.pref_key for entry in ranked_preferences],
+                    ranked_goal_ids=[str(payload.get("id")) for payload in goal_payloads],
+                    ranked_episodic_ids=[str(payload.get("id")) for payload in episodic_payloads],
+                    selfcheck_internal=list(selfcheck_meta.get("internal_only") or []),
+                    conflicts=list(conflicts or []),
+                    deny_quieted_keys=list(deny_meta.get("quieted_keys") or []),
+                    memory_epoch=receipt_epoch,
+                    # I02 接口点：效用门开时其接线把 to_metric_payload() 放进
+                    # metadata["memory_utility_gate"]（门关/分支未合 → 键缺席，
+                    # 回执照常产生，原因码=prefilter 面既有语义）。
+                    gate_payload=gate_payload,
+                )
+                await record_receipt(
+                    self.db,
+                    user_id=user_id,
+                    receipt=context_receipt,
+                    pack_run_id=pack_id,
+                    request_id=request_id,
+                    trace_id=trace_id,
+                )
+                logger.info("I06 context selection receipt {}", context_receipt.to_log_line())
+            except Exception as exc:  # noqa: BLE001 - 回执失败只降级
+                logger.warning(f"I06 context selection receipt failed: {exc}")
+                context_receipt = None
+
         return ContextPack(
             user_id=user_id,
             intent=intent,
@@ -2082,6 +2161,7 @@ class ContextPackBuilder:
             context_briefing_note=context_briefing_note or None,
             decision_context=decision_ctx,
             conflict_resolution=conflict_resolution_payload,
+            context_selection_receipt=context_receipt,
         )
 
     async def _build_conflict_resolution_payload(
