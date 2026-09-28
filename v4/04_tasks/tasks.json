@@ -3101,14 +3101,15 @@
     "V4-D02",
     "V4-I04"
    ],
-   "status": "in_progress",
-   "implementation_state": "REVIEW_READY",
-   "evidence_verdict": "PASS_LOCAL",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "APPROVE_WITH_CONDITIONS_CLOSED",
    "branch": "agent/v4/p01",
    "head_sha": "d0bd8d45",
    "review": {
-    "evidence": "v4/evidence/V4-P01/ 五件套（run_manifest 含 source_sha/commands/exit codes/artifacts_sha256/模型用量=0；test_results 含三突变可失败性演示）",
-    "challenges": "CH-1..CH-5 预登记 review_receipt.json（跨渠道 subject 缺口边界/过期计划单侧读法/24h 去重窗对 spine 的收紧/muted 升级并存语义/突变复原完整性）"
+    "r1": "71b81d9f APPROVE_WITH_CONDITIONS（亲证全过：sha256/M1 复放/1219 重跑/mypy 对照/三声明逐行核；F1=spine→nudge 跨渠道抑制结构性失效（data 形状缺 subject 键+证据测试合成载荷跳过 API→提取→写库链）；C-2a rollback=全关紧急开关；C-2b 基线 1202 非 242）",
+    "remediation": "4d80c4c5 C-1 双半场修复（celery_tasks 生产者 subject 键三处同源落 data+unified_budget 提取面信封兜底）+零合成载荷 e2e 双矩阵（方向一 spine mute→同 plan nudge 拦/方向二 nudge ignore→同 subject spine 拦）+mutation 摘修复 3 红（KeyError plan_id 复现失效本体）；1221 零回归；C-2a 五处口径+C-2b 数字订正；CH-1 scan 缺口维持如实登记",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑"
    },
    "kind": "implementation",
    "required_locks": [
