@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/style_preview/style_preview_page.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
@@ -770,6 +771,10 @@ class ProfileScreen extends ConsumerWidget {
                     ref.invalidate(profileContextProvider);
                   },
                 ),
+                // V4-F05：像素候选主题 preview 入口——flag 默认关（发布面
+                // 零节点零差量）；gate/tile 本体在 core/design/style_preview/，
+                // 这里只消费组件（锁 style-preview 归 F05）。
+                const StylePreviewEntry(),
               ],
             ),
           ),

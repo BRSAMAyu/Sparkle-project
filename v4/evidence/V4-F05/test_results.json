@@ -1,0 +1,83 @@
+{
+  "task": "V4-F05",
+  "date": "2026-09-28",
+  "scope": "mobile/lib/core/design/style_preview/（新 3 文件：page/faces/seed）+ app_constants.dart（+5 行 flag，默认 false）+ profile_screen.dart（+5 行入口消费）+ 新测试 5 文件（harness/switching/faces/evidence + gate 内嵌于 switching）",
+  "suites": [
+    {
+      "path": "mobile/test/core/design/style_preview/",
+      "tests": 40,
+      "passed": 40,
+      "failed": 0,
+      "note": "本卡新测试：style_preview_switching_test 7（classic_gate 3 + switching 7 合并计 10？否——switching 文件含 gate 组 3 用例 + switching 组 6 用例）/ faces 3 / evidence 27（常规跑只断言真实渲染）；每验收面一正一反"
+    },
+    {
+      "path": "mobile/test/core/design/",
+      "tests": 200,
+      "passed": 200,
+      "failed": 0,
+      "note": "F01 令牌 + F02 像素组件族 + F03 适配器测试 + 既有设计面全量回归（含本卡 40）"
+    },
+    {
+      "path": "mobile/test/core/navigation/ + test/widget/nav_decontextualization_contract_test.dart",
+      "tests": 42,
+      "passed": 42,
+      "failed": 0,
+      "note": "五 Tab 路由合同（U-07 铁律计数恒 5）+ shell 全域回归——preview 入口不进合同的回归面"
+    }
+  ],
+  "total": {
+    "tests": 242,
+    "passed": 242,
+    "failed": 0,
+    "denominator_note": "受影响模块全量：style_preview 新域 + design 域 + 导航域 + U-07 契约钉；非全仓 test（全仓口径以夜间基线为准）"
+  },
+  "analyze": {
+    "command": "flutter analyze --no-pub",
+    "issues": 1,
+    "note": "唯一 1 条 info 为 pre-existing（test/core/experience/experience_feedback_adapter_test.dart:315 require_trailing_commas，F03 遗留；git stash -u 干净基线复跑同现，非本卡引入）；本卡新增/修改文件零 issue"
+  },
+  "guards": [
+    {"name": "UI-TOKENS", "result": "PASS", "detail": "color=225/275 fontSize=634/727（新文件零新增计数）"},
+    {"name": "SPACING-RHYTHM", "result": "PASS", "detail": "spacingHalfStep=1591/1623（过程中新文件 1 处半步档被守卫拦截，改 DS.spacing4 后归零——真实拦截修正，非豁免）"},
+    {"name": "TYPO-RHYTHM", "result": "PASS", "detail": "sub12=232/234 w800=0/0 w900=6/6"},
+    {"name": "DL-SPEC", "result": "PASS", "detail": "15 维棘轮全降不升"},
+    {"name": "I18N-COVERAGE", "result": "PASS", "detail": "含中文串的 presentation 文件均接 i18n 基建"},
+    {"name": "N18-BILINGUAL", "result": "PASS", "detail": "inline 双语三元 69/118 棘轮不升"}
+  ],
+  "acceptance_faces": [
+    {
+      "face": "设计未批准时稳定主题仍可用，preview不隐性全量上线",
+      "tests": [
+        "enableStylePreview 默认 false（反例：flag 关时入口零节点）",
+        "flag 开→入口可进 preview 页（正例）",
+        "classic 下页面真实渲染且无 PixelProfileTheme 扩展（稳定主题可用）"
+      ],
+      "result": "PASS"
+    },
+    {
+      "face": "切主题不重启run/清数据/改token用量",
+      "tests": [
+        "四档 live 切换逐槽换装（正例）",
+        "回退 classic 逐槽复原（反例：任何槽残留/扩展未卸载即红）",
+        "State 探针 + 页面流步跨三档存活（重挂=重启 run 即红）",
+        "外源 prefs 键零触碰（清数据即红），仅 pixel 通道键更新",
+        "持久化复原（initialize 重读）",
+        "切档纯本地（无第二持久化面，无网络残留）"
+      ],
+      "result": "PASS"
+    },
+    {
+      "face": "五面状态截图附相同build与数据seed",
+      "tests": [
+        "五面真实表面组件逐面就位 + seed 文案断言",
+        "同一状态流四步推进全面同源换态（success 徽章仅在 committed 步，反例：其余步出现即红；memory 高亮不拿成功面孔）",
+        "卡住 sheet 以真实 showModalBottomSheet 打开/关闭",
+        "证据采集 28 张截图（同 worktree/同 Flutter/同 seed-2026-09-28-v1）"
+      ],
+      "artifacts": ["preview_page_*.png", "preview_face_*.png", "preview_sheet_*.png", "*_semantics.txt"],
+      "result": "PASS"
+    }
+  ],
+  "verdict": "IMPLEMENTATION_SELF_CHECK_PASS",
+  "note": "自报完成不算完成——独立审查（1 位，normal 风险）落账前本卡 REVIEW_READY，非 DONE。"
+}

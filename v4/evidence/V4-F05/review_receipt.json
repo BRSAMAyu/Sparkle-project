@@ -1,0 +1,13 @@
+{
+  "task": "V4-F05",
+  "status": "PENDING",
+  "independent_reviewers_required": 1,
+  "note": "实现自证完成（40 新测试 + 200/200 design 域 + 42/42 导航域与 U-07 契约钉 + 六守卫 PASS + analyze 本卡零 issue + 五面×四档/整页×四档/sheet×四档共 28 张截图与语义 dump 落盘），等待独立未参与会话审查；审查挑战点预登记见 limitations.md 末节（C1 冻结表键静默空白 / C2 面内重挂 vs run 存活语义 / C3 固定拍长泵 / C4 语义恒等主张的口径 / C5 push 路由 vs 命名路由）。自报完成不算完成——本 receipt 在审查落账前恒为 PENDING。",
+  "reviewer": null,
+  "verdict": null,
+  "challenges": [],
+  "evidence_dir": "v4/evidence/V4-F05/",
+  "base_sha": "8458d3c7b474d7e2a4099f50bbbe01e8cf0b399d",
+  "branch": "agent/v4/f05",
+  "date_created": "2026-09-28"
+}

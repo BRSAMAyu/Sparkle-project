@@ -37,6 +37,11 @@ class AppFeatureFlags {
   static bool enableUserMemoryControls = true;
   static bool enableWorkingMemoryDrawer = true;
   static bool enableTaskGuidanceV2 = false;
+
+  /// V4-F05：像素候选主题 preview 通道入口（「我的」页开发者入口）。
+  /// 设计未批准（TOKENS.proposal.json status=PROPOSED_NOT_APPROVED），
+  /// 默认关闭——preview 不隐性全量上线；批准转正时随决策改开。
+  static bool enableStylePreview = false;
   static bool enableStage35ProfileCards = const bool.fromEnvironment(
     'mobile.stage35_cards_enabled',
     defaultValue: true,
