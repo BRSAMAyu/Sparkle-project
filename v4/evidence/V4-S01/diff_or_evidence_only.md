@@ -100,3 +100,9 @@
 `flutter test test/core/design/` 237/237；消费面 5 套 56/56；
 `flutter test test/performance/` 19/19（首试 1 败为墙钟 bench 环境抖动，
 复跑全绿，bench 面不含本卡文件）；home 域 106/106。
+
+
+## 一审勘误（R1-1/R1-2，receipt 55131e85）
+- R1-1：交付 PNG「同 sha256」系同一 buffer 双路径写出的 artifact（测试 L188-192），非独立证据；真等价证据=测试 L154-164 两次独立采集的 RGBA 逐字节断言（恒执行，一审亲验通过+审查独立重采探针 3132 字节 0 diff）。等价结论不变。
+- R1-2：验收③「CPU 代理对照 PASS」的 H+ 60 帧均值含 ~47 空闲帧稀释——证明的是「有界+基线真静止」，非每动画帧成本；真机 profile 仍 NOT_RUN。
+- 移交：U15 repeat 清点以复跑数 49 为准（自述 48 少记 1）；三 implicit 组件接线归属登记 FIX-569（F03 集成链或新小卡，V4 收口前不得无主）。
