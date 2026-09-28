@@ -2891,6 +2891,63 @@ def scan_aurora_scheduled_wakes(self, limit: int = 200):
         raise self.retry(exc=exc, countdown=120) from exc
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.associate_intervention_lifecycle_outcomes")
+def associate_intervention_lifecycle_outcomes(self, limit: int = 500):
+    """V3-FIX-507 写面 3 · D-02 ledger 增量扫描：白名单 outcome → 近期 exposure 关联。
+
+    选近期（最大观察窗 30d + 7d 宽限，真源 = D-05 ``_ASSOCIATION_SCAN_HORIZON``）
+    有 exposure 的 distinct 用户，逐用户跑 ``associate_pending_outcomes``（幂等可
+    重跑，重复扫描零成本）。单用户失败只留痕继续，不拖垮整轮扫描。
+    """
+    from sqlalchemy import select
+
+    from app.core.intervention_lifecycle import LifecycleEventType
+    from app.db.session import AsyncSessionLocal
+    from app.models.intervention_lifecycle import InterventionLifecycleEvent
+    from app.services.intervention_lifecycle_service import (
+        _ASSOCIATION_SCAN_HORIZON,
+        InterventionLifecycleService,
+    )
+
+    async def _run():
+        now = datetime.utcnow()
+        since = now - _ASSOCIATION_SCAN_HORIZON
+        async with AsyncSessionLocal() as session:
+            rows = await session.execute(
+                select(InterventionLifecycleEvent.user_id)
+                .where(
+                    InterventionLifecycleEvent.event_type == LifecycleEventType.EXPOSED.value,
+                    InterventionLifecycleEvent.occurred_at >= since,
+                    InterventionLifecycleEvent.not_deleted_filter(),
+                )
+                .distinct()
+                .limit(limit)
+            )
+            user_ids = [row[0] for row in rows.all()]
+            scanned = 0
+            new_links = 0
+            for user_id in user_ids:
+                try:
+                    new_links += await InterventionLifecycleService(session).associate_pending_outcomes(
+                        user_id=user_id, now=now
+                    )
+                    scanned += 1
+                except Exception as exc:  # noqa: BLE001 — 单用户失败不拖垮整轮
+                    logger.warning("lifecycle association scan failed for user {}: {}", user_id, exc)
+            logger.info(
+                "D-05 lifecycle association scan: {} users scanned, {} new outcome links",
+                scanned,
+                new_links,
+            )
+            return {"users_scanned": scanned, "new_links": new_links}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("associate_intervention_lifecycle_outcomes failed: {}", exc)
+        raise self.retry(exc=exc, countdown=300) from exc
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.recall_notification_task")
 def recall_notification_task(self, user_id: str, trigger_type: str, context: str = "{}"):
     """

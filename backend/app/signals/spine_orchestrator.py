@@ -1546,6 +1546,16 @@ class SpineOrchestrator:
         # Overlay ExamSprintPolicy constraints if user is in exam_rescue mode
         directive = await self._apply_exam_sprint_overlay(user_id, directive)
 
+        # V3-FIX-507 写面 2：intervention 动作实际下发即暴露（D-05 lifecycle
+        # record_exposure——同一 directive 实例内容寻址幂等）。hook 自带韧性壳，
+        # 这里再包一层主管道防御：lifecycle 失败绝不影响既有下发链路。
+        try:
+            await self._record_intervention_lifecycle_exposure(
+                user_id=user_id, signal=signal, decision=decision, directive=directive
+            )
+        except Exception:
+            logger.opt(exception=True).warning("D-05 lifecycle exposure hook failed for user={}", user_id)
+
         # P1-17: Low-yield gentle block — redirect low-yield activities under deadline pressure
         # P4-9: Personalized yield scores via user_id-based learning_style adjustment
         try:
@@ -2574,6 +2584,33 @@ class SpineOrchestrator:
         except Exception as exc:
             logger.warning("L2 escalation check failed for user={}: {}", user_id, exc)
             return None
+
+    async def _record_intervention_lifecycle_exposure(
+        self,
+        *,
+        user_id: str,
+        signal: Any,
+        decision: Any,
+        directive: Any,
+    ) -> None:
+        """V3-FIX-507 写面 2：directive 定稿下发 → D-05 lifecycle record_exposure。
+
+        契约构造与韧性壳都在 ``intervention_lifecycle_wiring``（inert/未映射
+        strategy 短路、user_id 非 UUID 跳过、任何异常只留痕）；本方法只负责
+        会话生命周期与结构化日志，永不 raise。
+        """
+        from app.services.intervention_lifecycle_wiring import record_directive_exposure_for_user
+
+        decision_id = await record_directive_exposure_for_user(
+            user_id=user_id, signal=signal, decision=decision, directive=directive
+        )
+        if decision_id:
+            logger.info(
+                "D-05 lifecycle exposure recorded: user={} decision={} strategy={}",
+                user_id,
+                decision_id,
+                getattr(decision, "primary_strategy", "-"),
+            )
 
     async def _run_l2_joint_decision(
         self,

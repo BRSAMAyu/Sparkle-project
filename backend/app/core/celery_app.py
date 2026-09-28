@@ -191,6 +191,8 @@ celery_app.conf.update(
         "tasks.checkpoint_nudge.run_due_checkpoint_wakes": {"queue": "default"},
         "verify_intervention_outcomes_engaged": {"queue": "low_priority"},
         "verify_intervention_outcomes_full": {"queue": "low_priority"},
+        # V3-FIX-507: D-05 lifecycle 关联扫描归 low_priority 车道（幂等批扫，可延迟）
+        "app.core.celery_tasks.associate_intervention_lifecycle_outcomes": {"queue": "low_priority"},
         "app.core.celery_tasks.generate_weekly_growth_digests": {"queue": "default"},
         "app.core.celery_tasks.deliver_weekly_growth_digests": {"queue": "default"},
         "app.core.celery_tasks.pack_quality_analysis_task": {"queue": "low_priority"},

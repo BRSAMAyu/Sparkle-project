@@ -153,3 +153,14 @@ def setup_periodic_tasks(sender, **kwargs):
         run_weekly_benchmark.s('full'),
         name='run-weekly-sparkle-goal-bench'
     )
+
+    # V3-FIX-507 · D-05 lifecycle outcome 关联扫描（写面 3）——D-02 ledger 增量
+    # pass：白名单 outcome 关联到近期 exposure（幂等可重跑）。每 6 小时一次，
+    # 纯读聚合+幂等小写入，走 low_priority 车道；与 intervention-outcomes-full
+    # （02:00）、routing-outcome-evaluation（30min）既有邻居错峰不敏感（幂等）。
+    from app.core.celery_tasks import associate_intervention_lifecycle_outcomes
+    sender.add_periodic_task(
+        21600.0,
+        associate_intervention_lifecycle_outcomes.s(),
+        name='associate-intervention-lifecycle-outcomes-every-6h'
+    )

@@ -130,9 +130,16 @@ class InterventionRecordService:
     # ------------------------------------------------------------------
 
     async def mark_delivered(self, record_id: uuid.UUID) -> InterventionRecord | None:
-        return await self._transition_acceptance(
+        record = await self._transition_acceptance(
             record_id, InterventionAcceptanceStatus.DELIVERED
         )
+        # V3-FIX-507 写面 1a：交付即暴露（消费者交付与反馈路径 CREATED→DELIVERED
+        # 的唯一收敛点）。韧性壳在接线侧，失败只留痕、不影响交付转场。
+        if record is not None:
+            from app.services.intervention_lifecycle_wiring import record_delivery_exposure
+
+            await record_delivery_exposure(self.db, record)
+        return record
 
     async def mark_seen(self, record_id: uuid.UUID) -> InterventionRecord | None:
         return await self._transition_acceptance(
@@ -140,9 +147,16 @@ class InterventionRecordService:
         )
 
     async def mark_dismissed(self, record_id: uuid.UUID) -> InterventionRecord | None:
-        return await self._transition_acceptance(
+        record = await self._transition_acceptance(
             record_id, InterventionAcceptanceStatus.DISMISSED
         )
+        # V3-FIX-507 写面 1b：用户拒绝（D-05 rejected）。韧性壳在接线侧。
+        if record is not None:
+            from app.core.intervention_lifecycle import LifecycleEventType
+            from app.services.intervention_lifecycle_wiring import record_record_response
+
+            await record_record_response(self.db, record, LifecycleEventType.REJECTED)
+        return record
 
     async def mark_snoozed(
         self, record_id: uuid.UUID, *, snooze_hours: int = 24
@@ -164,9 +178,16 @@ class InterventionRecordService:
         return record
 
     async def mark_accepted(self, record_id: uuid.UUID) -> InterventionRecord | None:
-        return await self._transition_acceptance(
+        record = await self._transition_acceptance(
             record_id, InterventionAcceptanceStatus.ACCEPTED
         )
+        # V3-FIX-507 写面 1b：用户接受（D-05 accepted）。韧性壳在接线侧。
+        if record is not None:
+            from app.core.intervention_lifecycle import LifecycleEventType
+            from app.services.intervention_lifecycle_wiring import record_record_response
+
+            await record_record_response(self.db, record, LifecycleEventType.ACCEPTED)
+        return record
 
     async def mark_acted(
         self,
@@ -186,6 +207,12 @@ class InterventionRecordService:
             "acted_at": datetime.utcnow().isoformat(),
         }
         await self.db.flush()
+
+        # V3-FIX-507 写面 1b：用户开始按干预行动（D-05 started）。韧性壳在接线侧。
+        from app.core.intervention_lifecycle import LifecycleEventType
+        from app.services.intervention_lifecycle_wiring import record_record_response
+
+        await record_record_response(self.db, record, LifecycleEventType.STARTED)
 
         await self._publish_status_change(record, old_acceptance=old_acceptance)
         return record
