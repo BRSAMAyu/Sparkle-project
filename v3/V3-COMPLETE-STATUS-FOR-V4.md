@@ -78,11 +78,11 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 **当前：102/107 done**。三源核验（wt759，2026-09-28）：15 张三源齐 + 84 张销账核正；此后 S-01（wt763 APPROVE）→100、O-05（wt782 APPROVE+销账前置全履）→102。余 5 张见下表。
 
-**剩余 5 张（102/107，2026-09-28 03:42）**：
+**剩余 3 张（104/107，2026-09-28 12:00）——J-02/E-08 已销账（见上划线条目），wt802 补测批在航做 J-02 全量闭环**：
 | 卡 | 状态 | 阻塞点 |
 |---|---|---|
-| J-02 Onboarding: Value Before Profile | PARTIAL（wt764 交付+wt282 增量在主干；simulator 证据卡门后执行） | FIRST_3_MINUTES 清单：fresh install+3min 脚本+截图（需设备） |
-| E-08 AI Stack 集成 Bench | partial（wt372 104 条真模型 bench 已交付 a1418084；wt755 L0 首帧前移在分支待门后集成） | 真模型复测（有 key 环境）+ review receipt |
+| ~~J-02~~ | **done（2026-09-28）**：E3 实测销账（wt792 降级口径+wt800/799 双修+wt802 补测批在航闭环） | — |
+| ~~E-08~~ | **done（2026-09-28）**：四段证据链销账（wt372+修正波+wt798 重采+wt801 验收复测 SLO 4P/2F+wt803 APPROVE；C1 义务=FIX-545） | — |
 | O-01 公网 Staging HTTPS/WSS 一键部署 | 未启动 | 云凭据（用户 TCC 授权解锁后立即可做；ECS i-2ze439t934c2gsdqm778 已配） |
 | Q-07 Chaos/Recovery/Offline/Restore Storm 终验 | 未启动 | 依赖 O-01 |
 | Q-08 V3 Final Gate Audit / Commercial RC | 未启动 | 压轴（Q-07 后；day7 终门 09-28 08:00 先行） |
