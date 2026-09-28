@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -770,6 +771,10 @@ class _PresenceRow extends StatelessWidget {
 /// 错题分享段（D-COMM-5 列表面）：白名单投影如实渲染——题目/知识点/
 /// 掌握度快照；**无答案字段可渲染**（契约即不含答案，绝不造占位）。
 /// 分享动作入口在错题本详情（只传 error_id）。
+///
+/// V4-U11（分享/撤回可达）：本人分享行内联「撤回」动作（软删；确认后
+/// 走 DELETE，成功即刷新，失败诚实报错且行不消失）；他人分享零撤回
+/// 入口（撤回授权 = 分享者本人，UI 不出现，服务端 404 兜底）。
 class _SharedErrorsSection extends ConsumerWidget {
   const _SharedErrorsSection({required this.groupId});
 
@@ -778,6 +783,9 @@ class _SharedErrorsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sharedAsync = ref.watch(squadSharedErrorsProvider(groupId));
+    // 「我在哪」公约同榜段：端上比对既有 Riverpod auth 当前 userId，
+    // 仅本人分享行出撤回入口；未登录/无 id 不误出。
+    final currentUserId = ref.watch(currentUserProvider)?.id ?? '';
     final colors = context.colors;
     final typo = context.typo;
 
@@ -835,7 +843,11 @@ class _SharedErrorsSection extends ConsumerWidget {
                 for (var i = 0; i < list.items.length; i++)
                   _SharedErrorCard(
                     entry: list.items[i],
+                    groupId: groupId,
                     isLast: i == list.items.length - 1,
+                    isMine:
+                        currentUserId.isNotEmpty &&
+                            list.items[i].sharerId == currentUserId,
                   ),
               ],
             );
@@ -846,14 +858,69 @@ class _SharedErrorsSection extends ConsumerWidget {
   }
 }
 
-class _SharedErrorCard extends StatelessWidget {
-  const _SharedErrorCard({required this.entry, required this.isLast});
+class _SharedErrorCard extends ConsumerWidget {
+  const _SharedErrorCard({
+    required this.entry,
+    required this.groupId,
+    required this.isLast,
+    this.isMine = false,
+  });
 
   final SharedErrorEntry entry;
+  final String groupId;
   final bool isLast;
+  final bool isMine;
+
+  /// 撤回自己的分享（软删）：确认 → DELETE → 刷新列表 + 成功回执；
+  /// 失败诚实报错、行保留（不假撤回、不乐观删行）。
+  Future<void> _retract(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showSensoryDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.l10n.squadSharedErrorRetractConfirmTitle),
+        content: Text(context.l10n.squadSharedErrorRetractConfirmBody),
+        actions: [
+          SparkleButton.ghost(
+            label: context.l10n.cancel,
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          SparkleButton(
+            key: const ValueKey('squad-shared-error-retract-confirm'),
+            variant: ButtonVariant.destructive,
+            label: context.l10n.squadSharedErrorRetractAction,
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+    try {
+      await ref
+          .read(squadRepositoryProvider)
+          .retractSharedError(groupId, entry.shareId);
+      ref.invalidate(squadSharedErrorsProvider(groupId));
+      if (context.mounted) {
+        AppFeedback.success(
+          context,
+          context.l10n.squadSharedErrorRetractSuccess,
+        );
+      }
+    } catch (error) {
+      // N9/N15：技术细节不直达用户面——固定人话文案，原始异常只进日志。
+      debugPrint('[SquadDetail] retract shared error failed: $error');
+      if (context.mounted) {
+        AppFeedback.error(
+          context,
+          context.l10n.squadSharedErrorRetractFailed,
+        );
+      }
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final typo = context.typo;
     final sharer = entry.sharerName;
@@ -876,6 +943,20 @@ class _SharedErrorCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            // 本人分享：行内撤回入口（软删语义，确认后执行）；
+            // 他人分享零入口（授权面 = 分享者本人，服务端 404 兜底）。
+            if (isMine)
+              SparkleIconButton(
+                key: ValueKey('squad-shared-error-retract-${entry.shareId}'),
+                variant: ButtonVariant.ghost,
+                semanticLabel: context.l10n.squadSharedErrorRetractAction,
+                icon: Icon(
+                  Icons.undo_outlined,
+                  size: typo.labelLarge.fontSize ?? 14,
+                  color: colors.textSecondary,
+                ),
+                onPressed: () => unawaited(_retract(context, ref)),
+              ),
             Text(
               context.l10n
                   .squadCompletionPercent((entry.masteryLevel * 100).round()),

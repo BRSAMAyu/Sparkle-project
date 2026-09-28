@@ -2,18 +2,24 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
+/// 群火堆（S-03/D-COMM 语义：Flame 只表达群活跃度，由打卡/协作喂养，
+/// 不作权益/付费信号；读屏语义由使用方 [Semantics] 承载）。
+///
+/// V4-U11（统一火堆呈现）：
+/// - 等级徽标走 l10n（`bonfireLevelBadge`），不再硬编码「Lv.」；
+/// - 移除原「Crackle/Silent」假开关——它只翻图标、从不播放任何声音
+///   （假 affordance 即假成功家族，诚实红线不保留；真实背景声/提示音
+///   偏好归设置域统一开关，不在装饰组件内私设入口）。
 class BonfireWidget extends StatefulWidget {
   const BonfireWidget({
     required this.level,
     super.key,
     this.size = 120,
-    this.showCrackleToggle = false,
   });
   final int level; // 1-5
   final double size;
-  final bool showCrackleToggle;
 
   @override
   State<BonfireWidget> createState() => _BonfireWidgetState();
@@ -22,7 +28,6 @@ class BonfireWidget extends StatefulWidget {
 class _BonfireWidgetState extends State<BonfireWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  var _crackleEnabled = false;
 
   @override
   void initState() {
@@ -102,9 +107,6 @@ class _BonfireWidgetState extends State<BonfireWidget>
             ),
           ),
 
-          // Main Icon with shake effect (optional, maybe just scale)
-          // Let's use a Stack of icons to create depth
-
           // Background flame (darker)
           Positioned(
             bottom: widget.size * 0.1,
@@ -128,7 +130,7 @@ class _BonfireWidgetState extends State<BonfireWidget>
             ),
           ),
 
-          // Level Badge
+          // Level Badge（l10n：徽标文案随语言，不硬编码）
           Positioned(
             bottom: 0,
             child: Container(
@@ -145,74 +147,18 @@ class _BonfireWidgetState extends State<BonfireWidget>
                   Icon(Icons.bolt, size: 14, color: baseColor),
                   const SizedBox(width: DS.xs),
                   Text(
-                    'Lv.${widget.level}',
+                    context.l10n.bonfireLevelBadge(widget.level),
+                    key: const ValueKey('bonfire-level-badge'),
                     style: TextStyle(
                       color: baseColor,
                       fontWeight: DS.fontWeightBold,
-                      fontSize: 12,
+                      fontSize: DS.fontSizeXs,
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          if (widget.showCrackleToggle)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: DS.surfaceOverlay.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: (_crackleEnabled ? baseColor : DS.borderSubtle)
-                        .withValues(alpha: 0.35),
-                  ),
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(999),
-                  onTap: () {
-                    setState(() {
-                      _crackleEnabled = !_crackleEnabled;
-                    });
-                    unawaited(
-                      SensoryFeedbackService.emit(
-                        _crackleEnabled
-                            ? SensoryFeedbackEvent.selection
-                            : SensoryFeedbackEvent.tap,
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing8,
-                      vertical: DS.spacing6,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _crackleEnabled
-                              ? Icons.graphic_eq_rounded
-                              : Icons.volume_mute_outlined,
-                          size: 14,
-                          color: baseColor,
-                        ),
-                        const SizedBox(width: DS.spacing4),
-                        Text(
-                          _crackleEnabled ? 'Crackle' : 'Silent',
-                          style: TextStyle(
-                            color: baseColor,
-                            fontSize: 11,
-                            fontWeight: DS.fontWeightSemibold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
         ],
         ),
       ),

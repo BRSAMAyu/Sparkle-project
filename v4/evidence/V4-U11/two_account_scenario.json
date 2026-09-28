@@ -1,0 +1,219 @@
+{
+  "task": "V4-U11",
+  "scenario": "two-account share/retract/reconnect + solo actions + single/multi-instance realtime boundary",
+  "engine_base": "http://127.0.0.1:8211",
+  "engine_base2": "http://127.0.0.1:8212",
+  "accounts": {
+    "a": "u11_a_20260928210149_c9e00ff7",
+    "b": "u11_b_20260928210149_3feb3298",
+    "real_registered": true
+  },
+  "squad_id": "45e4d098-2e23-4d87-ba4a-bad61befc8a3",
+  "share_ids": {
+    "first": "27f6c106-dfe0-483c-bdf6-32b56229ec9f",
+    "after_reshare": "91ef29e0-2e53-426e-ae24-66ed2cc80bad"
+  },
+  "steps": [
+    {
+      "id": "S01",
+      "name": "注册/登录账号A",
+      "verdict": "PASS",
+      "detail": {
+        "username": "u11_a_20260928210149_c9e00ff7",
+        "register_status": 200,
+        "login_status": 200
+      }
+    },
+    {
+      "id": "S02",
+      "name": "注册/登录账号B",
+      "verdict": "PASS",
+      "detail": {
+        "username": "u11_b_20260928210149_3feb3298",
+        "register_status": 200,
+        "login_status": 200
+      }
+    },
+    {
+      "id": "S03",
+      "name": "A 创建冲刺小队",
+      "verdict": "PASS",
+      "detail": {
+        "status": 201,
+        "squad_id": "45e4d098-2e23-4d87-ba4a-bad61befc8a3",
+        "member_count": 1,
+        "my_role": "owner"
+      }
+    },
+    {
+      "id": "S04",
+      "name": "单人行动：1/8 成员即完整小队（owner 角色可达）",
+      "verdict": "PASS",
+      "detail": {
+        "status": 200,
+        "member_count": 1,
+        "my_role": "owner"
+      }
+    },
+    {
+      "id": "S05",
+      "name": "单人行动：自习室进入/心跳/在场/退出全链可达",
+      "verdict": "PASS",
+      "detail": {
+        "enter": 200,
+        "heartbeat": 200,
+        "presence": 200,
+        "exit": 200
+      }
+    },
+    {
+      "id": "S06",
+      "name": "单人行动：<3 人榜诚实降级 self_view_only",
+      "verdict": "PASS",
+      "detail": {
+        "status": 200,
+        "self_view_only": true,
+        "board_valid": false,
+        "member_count": 1
+      }
+    },
+    {
+      "id": "S07",
+      "name": "B 凭邀请加入小队（真实第二账号）",
+      "verdict": "PASS",
+      "detail": {
+        "status": 200,
+        "member_count_after": 2,
+        "board_valid": false
+      }
+    },
+    {
+      "id": "S08",
+      "name": "A 创建真实错题记录",
+      "verdict": "PASS",
+      "detail": {
+        "status": 201,
+        "error_id": "b5c9342d-3110-46a7-bedd-38c82edd9db9"
+      }
+    },
+    {
+      "id": "S09",
+      "name": "A 分享错题到小队（只传 error_id）",
+      "verdict": "PASS",
+      "detail": {
+        "status": 201,
+        "share_id": "27f6c106-dfe0-483c-bdf6-32b56229ec9f",
+        "has_answer_field": false
+      }
+    },
+    {
+      "id": "S10",
+      "name": "B（第二账号）列表可见该分享；白名单投影零答案字段",
+      "verdict": "PASS",
+      "detail": {
+        "status": 200,
+        "b_total": 1,
+        "b_sees": true,
+        "no_answer_fields": true
+      }
+    },
+    {
+      "id": "S11",
+      "name": "单实例：A、B 双账号群 WS 建连",
+      "verdict": "PASS",
+      "detail": {
+        "a": "connected",
+        "b": "connected"
+      }
+    },
+    {
+      "id": "S12",
+      "name": "单实例：A 打卡广播 → A/B 双端实时可达",
+      "verdict": "PASS",
+      "detail": {
+        "checkin": 200,
+        "a_got_member_checkin": true,
+        "b_got_member_checkin": true
+      }
+    },
+    {
+      "id": "S13",
+      "name": "重连：B 断连→重连（重新鉴权）→ 群广播恢复可达",
+      "verdict": "PASS",
+      "detail": {
+        "reconnected_state": "OPEN",
+        "b_after_reconnect_got_typing": true
+      }
+    },
+    {
+      "id": "S14",
+      "name": "撤回：A 撤回自己的分享（软删诚实回执）",
+      "verdict": "PASS",
+      "detail": {
+        "status": 200,
+        "retracted": true,
+        "already_retracted": false
+      }
+    },
+    {
+      "id": "S15",
+      "name": "撤回传播：B 列表即时不可见撤回条目",
+      "verdict": "PASS",
+      "detail": {
+        "status": 200,
+        "b_total": 0,
+        "b_still_sees": false
+      }
+    },
+    {
+      "id": "S16",
+      "name": "撤回授权：非分享者撤回 → 404（不泄露存在性）",
+      "verdict": "PASS",
+      "detail": {
+        "status": 404
+      }
+    },
+    {
+      "id": "S17",
+      "name": "撤回后再分享可达（新 share_id，非复活旧行）",
+      "verdict": "PASS",
+      "detail": {
+        "status": 201,
+        "new_share_id": "91ef29e0-2e53-426e-ae24-66ed2cc80bad",
+        "old_share_id": "27f6c106-dfe0-483c-bdf6-32b56229ec9f"
+      }
+    },
+    {
+      "id": "S18",
+      "name": "多实例前置：第二引擎进程健康（同 PostgreSQL/Redis 数据面）",
+      "verdict": "PASS",
+      "detail": {
+        "base2": "http://127.0.0.1:8212",
+        "health": "healthy"
+      }
+    },
+    {
+      "id": "S19",
+      "name": "多实例：B 经实例2 打卡 → 实例1 上的 A 经 Redis pub/sub 实时收到",
+      "verdict": "PASS",
+      "detail": {
+        "checkin_via_instance2": 200,
+        "a_on_instance1_got": true,
+        "b_on_instance2_got": true
+      }
+    },
+    {
+      "id": "S20",
+      "name": "多实例（反向）：A 经实例1 WS 广播 → 实例2 上的 B 经 pub/sub 收到",
+      "verdict": "PASS",
+      "detail": {
+        "b_on_instance2_got_typing": true
+      }
+    }
+  ],
+  "summary": {
+    "passed": 20,
+    "failed": 0,
+    "elapsed_seconds": 18.57
+  }
+}

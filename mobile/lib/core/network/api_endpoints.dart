@@ -444,6 +444,10 @@ class ApiEndpoints {
       '/community/squads/$groupId/study-room/presence';
   static String squadSharedErrors(String groupId) =>
       '/community/squads/$groupId/shared-errors';
+  /// 撤回一条错题分享（软删；后端 DELETE /squads/{id}/shared-errors/{shareId}，
+  /// V4-U11 接线：分享/撤回/重连可达的「撤回」腿）。
+  static String squadSharedErrorRetract(String groupId, String shareId) =>
+      '/community/squads/$groupId/shared-errors/$shareId';
 
   // Community - Groups
   static const String groups = '/community/groups';

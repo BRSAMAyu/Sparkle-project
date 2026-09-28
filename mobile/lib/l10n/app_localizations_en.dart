@@ -3760,6 +3760,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get squadShareSuccess => 'Shared to squad';
 
   @override
+  String get squadSharedErrorRetractAction => 'Retract';
+
+  @override
+  String get squadSharedErrorRetractConfirmTitle =>
+      'Retract this shared error?';
+
+  @override
+  String get squadSharedErrorRetractConfirmBody =>
+      'Squad members will no longer see this error card. You can share it again from the error book later.';
+
+  @override
+  String get squadSharedErrorRetractSuccess => 'Shared error retracted';
+
+  @override
+  String get squadSharedErrorRetractFailed =>
+      'Retract failed. Please try again.';
+
+  @override
+  String bonfireLevelBadge(int level) {
+    return 'Bonfire Lv.$level';
+  }
+
+  @override
   String get squadTitle => 'Sprint squad';
 
   @override

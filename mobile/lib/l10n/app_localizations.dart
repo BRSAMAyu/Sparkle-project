@@ -6716,6 +6716,42 @@ abstract class AppLocalizations {
   /// **'已分享到小队'**
   String get squadShareSuccess;
 
+  /// No description provided for @squadSharedErrorRetractAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回'**
+  String get squadSharedErrorRetractAction;
+
+  /// No description provided for @squadSharedErrorRetractConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回这张错题分享？'**
+  String get squadSharedErrorRetractConfirmTitle;
+
+  /// No description provided for @squadSharedErrorRetractConfirmBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回后小队成员将不再看到这张错题卡。之后你可以在错题本重新分享。'**
+  String get squadSharedErrorRetractConfirmBody;
+
+  /// No description provided for @squadSharedErrorRetractSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已撤回错题分享'**
+  String get squadSharedErrorRetractSuccess;
+
+  /// No description provided for @squadSharedErrorRetractFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回失败，请稍后重试'**
+  String get squadSharedErrorRetractFailed;
+
+  /// No description provided for @bonfireLevelBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'火堆等级 {level}'**
+  String bonfireLevelBadge(int level);
+
   /// No description provided for @squadTitle.
   ///
   /// In zh, this message translates to:

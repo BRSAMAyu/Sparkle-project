@@ -7,6 +7,7 @@
 | `setup_env.sh` | 一键安装本地开发环境依赖（支持 `--skip-flutter`） |
 | `start_celery.sh` | 快速拉起 Celery 服务组（worker/beat/flower） |
 | `create_test_user.py` | 创建测试用户（真机联调用，见 `backend/docs/REAL_DEVICE_INTEGRATION_TEST.md`） |
+| `v4_u11_two_account_scenario.py` | V4-U11：双真实账号场景驱动（分享/撤回/重连 + 单人完整行动 + 单/多实例实时边界，对真实引擎进程跑 HTTP+WS；结果 JSON → `--out`；证据副本见 `v4/evidence/V4-U11/two_account_scenario.json`） |
 | `check_settings.py` | 检查 backend 配置项完整性 |
 | `force_sync_db.py` | 强制全量同步数据库（导入所有模型后重建 schema，谨慎使用） |
 | `orm_migration_audit.py` | ORM ↔ Alembic 迁移链 ↔ 实库 三方列集审计（scratch 库真重放迁移链；exit 非零=白名单外漂移；见 round2 schema-consistency-audit 报告） |
