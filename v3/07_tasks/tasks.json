@@ -3607,7 +3607,7 @@
       "resource_class": "HEAVY",
       "reviewers_required": 1,
       "gate": "V3-7",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -3619,7 +3619,10 @@
         "targeted tests",
         "integration/simulator evidence",
         "review receipt"
-      ]
+      ],
+      "completion": {
+        "evidence": "四段证据链：wt372 原始 104 bench（修前 SLO 2P/4F）+修正波（tier 塌缩/计量盲区/L3-ACK）+wt798 重采（36/36 keyless ≤100ms+机理运行级证实）+wt801 验收复测（四臂同语料：ack 104/104≤500ms、SLO 4P/2F、145/150 预算留痕）+wt803 独立审查 APPROVE-closure（raw 全量程序化复算逐数吻合+两可证伪探针零反例，receipt v3-output/WT803-E08REV/receipt.md）；**C1 追踪义务显式落账：①FALLBACK 计量错挂（7 qid 多代理流错挂 no_generation_model、成本低估、harness 判据失明）=FIX-545 OPEN 转动态追踪——8→3 的差 1 项系换标签非解决②L0 直答 1.781s+L2 total 65.4s（深档真实 trade-off 成本 $0.0117→$0.1269）=V4 优化输入**；2026-09-28"
+      }
     },
     {
       "id": "P-01",
