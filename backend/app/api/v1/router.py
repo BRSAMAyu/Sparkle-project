@@ -48,6 +48,7 @@ from app.api.v1 import (
     devices,
     dlq_admin,
     documents,
+    episode_resume,  # V4-I01 目标Episode接续读模型（episode_resume_view.v1 REST 入口）
     error_book,
     event_bus_health,
     events,
@@ -238,6 +239,7 @@ api_router.include_router(experience.router)
 _include_experience_routers()
 api_router.include_router(exam_sprint.router, prefix="/exam-sprint", tags=["exam-sprint"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(episode_resume.router)  # V4-I01：/episode-resume 前缀（目标 Episode 接续读模型，只读）
 api_router.include_router(background_tasks.router, prefix="/background-tasks", tags=["background_tasks"])
 api_router.include_router(simulation.router)
 api_router.include_router(theater.router)

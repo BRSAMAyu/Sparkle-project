@@ -1,0 +1,17 @@
+{
+  "card": "V4-I01",
+  "status": "PENDING",
+  "reviewers_required": 1,
+  "reviewers_completed": 0,
+  "verdict": null,
+  "reviewer_worktrees": [],
+  "note": "独立审查尚未发生（无参与实现的会话执行）。本卡不自称已审——自称完成不算完成。审查范围建议：diff_or_evidence_only.md §2-§4、limitations.md 7 项、契约冻结测试（tests/unit/test_episode_resume_view_contract.py）与验收对照的可失败性；集成 SHA 复验待合并后由审查会话执行。",
+  "acceptance_self_check": {
+    "跨会话_进程重开恢复同一对象_已删对象不复活": "test_episode_resume_cross_process.py 4 tests",
+    "目标改变或版本过期退回明确校准_旧计划不强推": "goal 终态×3 + source_refs 绑定不一致 + expires_at/epoch stale 判定",
+    "无历史时不造连续学习_理解分数": "无历史三 null + 冻结键集（无 progress/mastery/minutes 字段位）",
+    "why_now_null_语义_v1行": "v1 行 null 不臆测回填 + v1 路径逐键不变 + 字段级降级不影响其余字段",
+    "非第二任务真值": "零新表（DB 表集合==ORM metadata 断言）+ 零写路径（服务唯一公开方法 build_resume_view）+ 数据源全为既有权威"
+  },
+  "date_created": "2026-09-28"
+}

@@ -1,0 +1,65 @@
+{
+  "card": "V4-I01",
+  "suite": "episode_resume_view.v1 read model",
+  "date": "2026-09-28",
+  "command": "pytest tests/unit/test_episode_resume_view_contract.py tests/services/test_episode_resume_service.py tests/integration/test_episode_resume_cross_process.py tests/api/test_episode_resume_api.py -q --no-header -p no:cacheprovider",
+  "exit_code": 0,
+  "summary": {"total": 56, "passed": 56, "failed": 0, "skipped": 0},
+  "files": {
+    "tests/unit/test_episode_resume_view_contract.py": {
+      "count": 30,
+      "covers": [
+        "冻结字段集 == B05 §5 全字段 + why_now 字段位（10 键）",
+        "装配值逐键断言（goal/task/run/outcome/step/pending/expires_at/freshness）",
+        "truth_class 与 D-02 全 5 值 1:1（demo 透传不排除；词表外 fail-loud）",
+        "step_ref 封闭 scheme（task|subtask）+ 空 id 拒；context_receipt_ref scheme 门",
+        "why_now v1 行 null 语义 + v1 路径行为逐键不变（§8 双读）",
+        "why_now v1.1 形状 round-trip；8 类字段级降级原因（§4.1）；过期不当作当前原因（§4）",
+        "why_now 降级不影响视图其余字段（逐键相等断言）",
+        "过期/epoch 陈旧可判定（含 garbled 视图 fail-closed）",
+        "降级词表封闭；装配输入 fail-loud（空 id/负 epoch/expires<=computed）"
+      ]
+    },
+    "tests/services/test_episode_resume_service.py": {
+      "count": 17,
+      "covers": [
+        "组成：goal/task/run/outcome/subtask/plan → 视图字段逐位接线（含 version_token=X-03 口径）",
+        "ledger actual（focus 覆盖）与 self_reported（诚实降级）双分档",
+        "无历史 → 三 null + 冻结键集（无 progress/mastery/minutes 字段位）",
+        "软删 task/goal → object_not_found（不复活）；跨用户 → cross_object_access",
+        "goal 终态 ×3 与 source_refs goal:// 绑定不一致 → goal_changed_requires_calibration",
+        "goal 活跃态 ×3 → 视图正常出",
+        "终态 run 不进 run_ref；ABANDONED 任务 pending=null",
+        "receipt 缺失/scheme 不符 → context_receipt_missing（×3 形态）",
+        "过期判定 + epoch bump 判 stale + 同权威重算确定性（逐键相等）",
+        "ttl 参数校验（0/超上限 → ValueError）"
+      ]
+    },
+    "tests/integration/test_episode_resume_cross_process.py": {
+      "count": 4,
+      "covers": [
+        "双引擎文件级 sqlite 模拟双进程：重开恢复同一对象（视图逐键相等）",
+        "另一进程软删 task → 重开 object_not_found（已删对象不复活）",
+        "另一进程 epoch bump → 重算视图钉新 epoch + 旧视图判 stale",
+        "聚合零写行：DB 表集合 == ORM metadata（零第二真值表）"
+      ]
+    },
+    "tests/api/test_episode_resume_api.py": {
+      "count": 5,
+      "covers": [
+        "GET /episode-resume/tasks/{task_id} 200 + view 直通",
+        "不存在/跨用户 → 404（不泄露存在性，runs.py house 先例）",
+        "无 receipt → 200 + context_receipt_missing（不造伪 receipt）",
+        "goal 终态 → 200 + goal_changed_requires_calibration",
+        "服务类只读面锚（唯一公开方法 build_resume_view，无写方法名）"
+      ]
+    }
+  },
+  "regression": {
+    "neighboring_authority_modules": "141 passed (action_plan/outcome_ledger/run_steps)",
+    "gateway_handler": "go test ./internal/handler/ ok",
+    "mypy": "55 == 改前基线 55（零漂移，episode_resume 相关 0）",
+    "ruff": "app/ All checks passed",
+    "rule_guards": "all rule guards passed (86 rules)"
+  }
+}
