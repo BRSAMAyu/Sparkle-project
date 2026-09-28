@@ -53,3 +53,9 @@
 - 不动 tokens_v2/theme 通道、不改发布默认主题、不动 F05 preview flag 默认值。
 - 不改既有认证/授权检查；不动 backend API 面（零 `backend/app/api/` 触碰 → 无 OpenAPI/BA-ROUTES 同步义务）。
 - 不重写 F05/F06 已交付行为（见 §1 举证）。
+
+
+## 一审勘误与登记（receipt 5cab258e）
+- 数字订正：新测实数 **21**（9+3+2+5+2）非自述 19——实现方自列 breakdown 求和即 21，少报非夸大，以 receipt 为准。
+- CH-3：limitations 引用的 manifest sha256 未随 L9 提交刷新（时点核对一致，锚失同步）——本勘误节即补注。
+- CH-1（路由接线无测试钉）/CH-2（playAmbient 门拒后 _currentScene 残留，基线同构 release-only）→FIX-570 后续卡承接。
