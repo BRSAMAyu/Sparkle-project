@@ -10,3 +10,9 @@
 8. **lane 标记的下游消费未实现**：`chat_lane` 终帧 metadata 键为新增，移动端/网关当前无消费方（不做 UI 承诺）；观测面当前以引擎 metric `sparkle_chat_deterministic_lane_total` + 结构化日志为准。网关整链指标分层（B06 limitation #9）未在本卡扩展。
 9. **模板文案未经产品/文案评审**：四条 v1 模板对齐 B06 t3 真模型问候输出形态，为工程占位级；开旗启用前应过产品语调评审（Aurora 语言原则）。
 10. **独立审查未发生**：review_receipt.json 如实标 PENDING；按舰队验收模型由未参与会话在集成 SHA 复验（本卡 normal 风险 = 1 位独立审查）。
+
+
+## R1 处置追记（2026-09-28）
+- R1-C1（采纳·措辞+挂点）：graph 顺序 context_builder→retrieval→router 下，快路轮 retrieval 先于 router 执行——embedding 供应商已配置时 hybrid_search 仍可能发起一次上游 embedding 调用；token 记账=0 成立但「零上游」应读作「零生成模型调用」。后续卡挂点：把 lane 分流提前到 retrieval 之前可彻底归零（登记待派，非本卡边界）。
+- R1-C2（已修）：_SUBSTANTIVE_RE 补全角数字区间，「好的１２３」实测回落慢路（新增断言见测试）。
+- R1-C3（info·不改）：致谢+告别复合句归 acknowledgment 属装饰性错位，语义无害，留词表精化时处理。

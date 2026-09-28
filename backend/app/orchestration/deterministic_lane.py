@@ -172,7 +172,7 @@ _FILLER_CHARS = frozenset(
     "呀啊哟哦噢喔哈嘿啦咯呗嘞哒滴咩哇咯唷"
 )
 
-_SUBSTANTIVE_RE = re.compile(r"[0-9a-zA-Z\u4e00-\u9fff]")
+_SUBSTANTIVE_RE = re.compile(r"[0-9a-zA-Z\u4e00-\u9fff\uff10-\uff19]")  # R1-C2: 全角数字０-９
 
 # 上下文守卫复用 capability_lane 的 deliberate 触发面（单一权威）。
 _FAST_CHAT_MODES = {"standard", "chat"}

@@ -64,6 +64,7 @@ def _state(message: str, context_data: dict | None = None) -> WorkflowState:
         ("晚安", DeterministicLaneKind.FAREWELL),
     ],
 )
+
 def test_deterministic_shapes_hit(message, expected_kind):
     decision = resolve_deterministic_lane(message, {"chat_mode": "standard"})
     assert decision is not None
@@ -496,3 +497,11 @@ def test_secure_messages_keeps_lowercase_roles():
         ]
     )
     assert [m["role"] for m in secured] == ["system", "user"]
+
+
+def test_fullwidth_digits_fall_to_slow_lane_r1c2():
+    """R1-C2 回归：全角数字残留视为实质内容，回落慢路（一审探针形态）。"""
+    from app.orchestration.deterministic_lane import resolve_deterministic_lane
+    r = resolve_deterministic_lane("好的１２３", {})
+    assert r is None  # 剥词后全角数字=实质残留 → 慢路
+
