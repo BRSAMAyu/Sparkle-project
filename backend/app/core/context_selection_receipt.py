@@ -466,8 +466,14 @@ def apply_utility_gate_metadata(
     门元数据缺失/形状不符 = 门关语义 → 原候选原样返回（卡要点 3：门关时回执仍
     产生，原因码 = prefilter 面既有语义）。鸭子类型消费——本分支无 I02 代码，
     门合入后零改动。
+    bypass 语义（I06 一审 C1）：``bypassed=True`` 的门载荷 = 生产面 recall-miss
+    回退——门决策已被回滚（候选回到预筛后 surfaced 全量），其 decisions **没有
+    发生**。回执是「确实发生了什么」的权威面，故 bypassed 载荷整体作废，候选
+    保持 prefilter 语义（不得翻成 utility_gate_rejected）。
     """
     if not isinstance(gate_payload, dict):
+        return candidates
+    if bool(gate_payload.get("bypassed")):
         return candidates
     decisions = gate_payload.get("decisions")
     if not isinstance(decisions, list):

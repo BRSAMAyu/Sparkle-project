@@ -149,6 +149,12 @@ def test_assemble_deny_quiet_maps_permission_denied():
 
 
 def test_gate_on_metadata_overrides_candidates():
+    """装配层合同（非 bypass 载荷）：门决策覆盖候选状态。
+
+    生产正常路径下门拒条目已被移出 surfaced 集，本组合（surfaced 且门拒）
+    经生产调用点不可达；此处钉的是装配层「真实（非 bypass）门载荷到达即
+    覆盖」的合同本身。bypass 生产语义见下一测试（I06 一审 C1 回归）。
+    """
     records = [_Record(id="m1"), _Record(id="m2")]
     result = PrefilterResult(allowed=list(records), rejections=[], input_count=2, dimension_counts={}, reason_counts={})
     gate_payload = {
@@ -176,6 +182,40 @@ def test_gate_on_metadata_overrides_candidates():
         and "outcome:unresolved_episode" in by_ref["memory://episodic/m1"].note
     )
     # 门选中 → selected
+    assert by_ref["memory://episodic/m2"].status == "selected"
+    assert by_ref["memory://episodic/m2"].reason_code is None
+    assert receipt.validate_contract() == []
+
+
+def test_gate_bypassed_payload_voided_surfaced_candidates_keep_prefilter_semantics():
+    """I06 一审 C1 回归：bypassed=True 门载荷（required-memory recall-miss 回退）
+    = 门决策已回滚、没有发生——实际进 pack 的候选（surfaced 全量回退）不得被
+    回执翻成 rejected/utility_gate_rejected。回执是「确实发生了什么」的权威面。
+    """
+    records = [_Record(id="m1"), _Record(id="m2")]
+    result = PrefilterResult(allowed=list(records), rejections=[], input_count=2, dimension_counts={}, reason_counts={})
+    gate_payload = {
+        "version": "memory-v4.i02.v1",
+        "bypassed": True,
+        "verdict": "required_memory_recall_miss_bypass",
+        "decisions": [
+            {"item_id": "m1", "selected": False, "score": -1.0, "reasons": ["outcome:unresolved_episode"]},
+            {"item_id": "m2", "selected": False, "score": -0.5, "reasons": ["outcome:unresolved_episode"]},
+        ],
+        "required_memory_detected": True,
+        "passed": False,
+    }
+    receipt = assemble_pack_receipt(
+        user_id=uuid4(),
+        prefilter_results={"episodic": result},
+        input_records={"episodic": records},
+        surfaced_episodic_ids=["m1", "m2"],  # bypass：回退到预筛后全量 surfaced
+        gate_payload=gate_payload,
+    )
+    by_ref = {c.ref: c for c in receipt.candidates}
+    assert by_ref["memory://episodic/m1"].status == "selected"
+    assert by_ref["memory://episodic/m1"].reason_code is None
+    assert by_ref["memory://episodic/m1"].note is None
     assert by_ref["memory://episodic/m2"].status == "selected"
     assert by_ref["memory://episodic/m2"].reason_code is None
     assert receipt.validate_contract() == []
