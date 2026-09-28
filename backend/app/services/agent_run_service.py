@@ -68,6 +68,7 @@ from app.core.run_steps import (
     first_incomplete_step,
     normalize_artifact_refs,
     normalize_run_steps,
+    normalize_user_step_action,
     reconcile_step_counters,
     step_completion_stamped,
 )
@@ -370,6 +371,26 @@ class MissingIdempotencyKeyError(RunStateError):
     依据；API 层 422，resume/cancel 白名单拒绝同族）。"""
 
 
+class InvalidUserStepAnswerError(RunStateError):
+    """用户步答案动作不合法（V4-I08：ack 类自动回应永不算人类有效答案；
+    封闭词表 ``USER_STEP_ANSWER_ACTIONS`` 之外/ack 标记一律拒绝；API 层 422）。"""
+
+
+class HumanStepNotCompletedError(RunStateError):
+    """人类步骤未完成时禁止把 run 落成成功类终态（V4-I08：任何 Agent/自动
+    路径不得伪造人类步骤完成——awaiting user step 无完成戳时 SUCCEEDED/PARTIAL
+    不可达；先经 :meth:`complete_user_step` 显式作答，或走取消/过期等诚实终态）。"""
+
+
+#: V4-I08 · 深任务返回控制 deadline（秒）。深任务运行中，查看当前阶段产物
+#: （GET /runs/{id}：current_stage + steps wire + awaiting prompt/artifacts）、
+#: 取消（POST /runs/{id}/cancel）、离开（无需交互，恢复经 run 持久态 +
+#: episode_resume_view）三条路径的界面响应上限（LATENCY_COST_RUNTIME「深任务」
+#: 节：run 卡 5s 内应可查看真实范围、取消、离开）。查询/取消路径的延迟断言
+#: 以本上限钉死（测试 wait_for 超时面）——超时即测试失败，不是软目标。
+DEEP_TASK_RETURN_DEADLINE_SECONDS: float = 5.0
+
+
 @dataclass(frozen=True)
 class UserStepResult:
     """一次用户步骤完成（confirm/edit）的结果.
@@ -647,6 +668,25 @@ class AgentRunService:
 
         assert_transition_legal(current, target)
 
+        # V4-I08 · 人类步骤伪造守卫（验收 3 反例面）：run 在等待用户步骤且该步
+        # 无完成戳时，任何 actor（worker/system/recovery/projection——含直接调
+        # transition 的编排路径）都不得把 run 落成 SUCCEEDED/PARTIAL。合法完成
+        # 只有一条路：用户经 :meth:`complete_user_step` 显式作答（完成戳 + resume
+        # 同事务）之后再终态化（hybrid journey confirm_outcome 先例）；取消/
+        # 过期/超限等诚实终态不受影响。图零改动——SUCCEEDED/PARTIAL 出边仍在
+        # 封闭图内，本守卫在服务层把「未作答的人步」钉成不可越过。
+        if (
+            current in (RunStatus.AWAITING_USER, RunStatus.AWAITING_APPROVAL)
+            and run.wait_kind == RunWaitKind.USER_STEP.value
+            and target in (RunStatus.SUCCEEDED, RunStatus.PARTIAL)
+            and first_incomplete_step(run.steps or []) is not None
+        ):
+            raise HumanStepNotCompletedError(
+                f"run {run_id} is {current.value} waiting for a user step with no completion stamp; "
+                f"{target.value} is unreachable until the human step is answered via complete_user_step "
+                "(agent/auto paths must not forge human-step completion)"
+            )
+
         now = _utcnow()
         terminal = is_terminal_run_status(target)
         if terminal and reason is not None:
@@ -796,6 +836,12 @@ class AgentRunService:
             "usage": evaluation.usage,
             "elapsed_seconds": evaluation.elapsed_seconds,
         }
+        # V4-I08（验收 3）：预算暂停的显式对账语义——超限终态化前物化已发生的
+        # 外部副作用（succeeded 写效果/补偿提示/interrupted unknown）入 result_ref：
+        # 预算暂停不是「无事发生」，已花钱和已写外部都如实可见。
+        reconciliation = await self._side_effect_reconciliation(run)
+        if reconciliation:
+            details["side_effect_reconciliation"] = True
         try:
             await self.transition(
                 run.id,
@@ -805,6 +851,7 @@ class AgentRunService:
                 reason="budget_exceeded",
                 error_category="budget_exceeded",
                 error_message=f"run budget exceeded: {', '.join(evaluation.exceeded)}",
+                result_ref=reconciliation,
                 details=details,
                 source=EventSource.WORKER,
             )
@@ -872,9 +919,7 @@ class AgentRunService:
 
         try:
             row = (
-                await self.db.execute(
-                    select(User.entitlement, User.entitlement_expires_at).where(User.id == user_id)
-                )
+                await self.db.execute(select(User.entitlement, User.entitlement_expires_at).where(User.id == user_id))
             ).one_or_none()
             entitlement = ENTITLEMENT_FREE if row is None else entitlement_effective(row[0], row[1])
         except Exception as exc:  # noqa: BLE001 — 判级读失败 → free（宁降不升）
@@ -943,6 +988,7 @@ class AgentRunService:
     ) -> RunMutationResult:
         """resume 闸门的超限落终态（迁移 + 审计 + 事件同构）后抛 BudgetExceededError。"""
         try:
+            reconciliation = await self._side_effect_reconciliation(await self.get_run(run_id, user_id=user_id))
             result = await self.transition(
                 run_id,
                 RunStatus.BUDGET_EXCEEDED,
@@ -951,12 +997,14 @@ class AgentRunService:
                 reason="budget_exceeded",
                 error_category="budget_exceeded",
                 error_message=f"run budget exceeded: {', '.join(evaluation.exceeded)}",
+                result_ref=reconciliation,
                 details={
                     "budget_exceeded": evaluation.exceeded,
                     "limits": evaluation.limits,
                     "usage": evaluation.usage,
                     "elapsed_seconds": evaluation.elapsed_seconds,
                     "via": "resume_gate",
+                    **({"side_effect_reconciliation": True} if reconciliation else {}),
                 },
                 source=EventSource.SERVER_SERVICE,
             )
@@ -973,6 +1021,33 @@ class AgentRunService:
         logger.info("resume budget gate → BUDGET_EXCEEDED run_id={} applied={}", run_id, result.applied)
         raise BudgetExceededError(f"run {run_id} budget exceeded: {', '.join(evaluation.exceeded)}") from None
 
+    async def _side_effect_reconciliation(self, run: AgentRun) -> dict[str, Any] | None:
+        """物化已发生外部副作用的对账证据（V4-I08 验收 2/3：取消/预算暂停/
+        unknown 终态的显式对账语义）.
+
+        复用 X-09 既有账本证据机制（``ToolCallLedgerService.partial_completion_evidence``
+        ——不建第二真源）：succeeded 写效果 + compensation hints + interrupted
+        （outcome unknown）如实入 ``run.result_ref``（GET /runs 可见）。语义：
+        **不假装回滚**（已发出的外部请求照实记录 + 不可逆警示）、**不丢账**
+        （账本行永不删除，result_ref 是 run 面的物化投影）。
+
+        - 账本无任何行 → ``None``（无事可对账，不造空证据）；
+        - run 已有 ``result_ref``（如 journey 产物引用）→ ``None``（不覆盖既有
+          引用；账本仍可经 GET /runs/{id}/tool-calls 审计）。
+        """
+        from app.services.tool_call_ledger_service import ToolCallLedgerService
+
+        if run.result_ref:
+            return None
+        try:
+            evidence = await ToolCallLedgerService(self.db).partial_completion_evidence(run.id)
+        except Exception as exc:  # noqa: BLE001 — 对账物化失败不阻塞终态化本身
+            logger.warning("side-effect reconciliation evidence unavailable run_id={} error={!r}", run.id, exc)
+            return None
+        if not (evidence.succeeded or evidence.failed or evidence.interrupted):
+            return None
+        return evidence.to_result_ref()
+
     async def cancel(
         self,
         run_id: UUID | str,
@@ -987,6 +1062,10 @@ class AgentRunService:
         ``user_cancelled``（:data:`CLIENT_CANCEL_REASON_WHITELIST`，
         terminal_reason_vocabulary 的用户语义子集）——词表内其余终态归因是
         系统侧判定词，任意串一律 ``InvalidCancelReasonError``（API 层 422）。
+
+        V4-I08（验收 2）：取消发出 ≠ 外部副作用已撤销——终态化前物化已发生的
+        外部副作用对账证据入 ``result_ref``（succeeded 写效果 + 补偿提示 +
+        interrupted unknown），不假装回滚、不丢账（幂等重放/已终态不重算）。
         """
         reason = str(reason)
         if reason not in CLIENT_CANCEL_REASON_WHITELIST:
@@ -997,6 +1076,8 @@ class AgentRunService:
         run = await self.get_run(run_id, user_id=user_id)
         if RunStatus(run.status) is RunStatus.CANCELLED:
             return RunMutationResult(run=run, applied=False, created=False, event_name=None, event_written=False)
+        # V4-I08：首次取消才物化对账证据（幂等重放/已终态不重算、不覆盖既有引用）。
+        reconciliation = await self._side_effect_reconciliation(run)
         return await self.transition(
             run_id,
             RunStatus.CANCELLED,
@@ -1004,6 +1085,8 @@ class AgentRunService:
             actor=TransitionActor.USER,
             reason=reason,
             idempotency_key=idempotency_key,
+            result_ref=reconciliation,
+            details={"side_effect_reconciliation": bool(reconciliation)} if reconciliation else None,
             source=EventSource.SERVER_SERVICE,
         )
 
@@ -1329,6 +1412,15 @@ class AgentRunService:
         if not key:
             raise MissingIdempotencyKeyError("complete_user_step requires an idempotency_key")
 
+        # V4-I08（验收 1）：「ack 不算有效答案」的服务端门——答案动作封闭词表
+        # （confirm/edit/decide）在取行锁之前 fail-fast 校验；ack 类自动回应
+        # （传输/通知层确认标记）显式拒绝，不静默转写、不记账（完成戳必须携带
+        # 显式人类答案动作）。
+        try:
+            answer_action = normalize_user_step_action(action)
+        except ValueError as exc:
+            raise InvalidUserStepAnswerError(str(exc)) from None
+
         stmt = select(AgentRun).where(AgentRun.id == UUID(str(run_id)), AgentRun.deleted_at.is_(None)).with_for_update()
         if user_id is not None:
             stmt = stmt.where(AgentRun.user_id == UUID(str(user_id)))
@@ -1378,7 +1470,7 @@ class AgentRunService:
             step_id=step["step_id"],
             completed_by="user",
             idempotency_key=key,
-            action=action,
+            action=answer_action,
             artifact_refs=normalized_refs or None,
             note=note,
             completed_at=now.isoformat(timespec="milliseconds"),
@@ -1714,11 +1806,15 @@ class AgentRunService:
                         )
                         actions.append(self._action(run, result, "wait_expired_timed_out"))
                     elif run.heartbeat_at and run.heartbeat_at < cutoff:
+                        # V4-I08：unknown 终态的显式对账——先物化已发生副作用。
+                        reconciliation = await self._side_effect_reconciliation(run)
                         result = await self.transition(
                             run.id,
                             RunStatus.UNKNOWN_OUTCOME,
                             actor=TransitionActor.RECOVERY,
                             reason="worker_restart_orphan",
+                            result_ref=reconciliation,
+                            details={"side_effect_reconciliation": bool(reconciliation)} if reconciliation else None,
                             source=EventSource.WORKER,
                         )
                         actions.append(self._action(run, result, "orphan_unknown_outcome"))
@@ -1737,11 +1833,17 @@ class AgentRunService:
                             )
                             actions.append(self._action(run, result, "drift_repaired"))
                         else:
+                            # V4-I08：unknown 终态的显式对账——先物化已发生副作用。
+                            reconciliation = await self._side_effect_reconciliation(run)
                             result = await self.transition(
                                 run.id,
                                 RunStatus.UNKNOWN_OUTCOME,
                                 actor=TransitionActor.RECOVERY,
                                 reason="worker_restart_orphan",
+                                result_ref=reconciliation,
+                                details=(
+                                    {"side_effect_reconciliation": bool(reconciliation)} if reconciliation else None
+                                ),
                                 source=EventSource.WORKER,
                             )
                             actions.append(self._action(run, result, "orphan_unknown_outcome"))
@@ -1884,8 +1986,9 @@ class AgentRunService:
                     reason="worker_restart_orphan",
                     error_category="unknown_outcome",
                     error_message="in-flight side-effecting tool call interrupted by process restart; outcome unverifiable",
-                    source=EventSource.WORKER,
+                    result_ref=await self._side_effect_reconciliation(run),
                     details={"inflight_recovery": True, "ledger_reconciled": ledger_result.reconciled},
+                    source=EventSource.WORKER,
                 )
                 decisions.append(
                     {

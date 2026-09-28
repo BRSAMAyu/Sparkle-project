@@ -54,6 +54,7 @@ from app.services.agent_run_service import (
     AgentRunService,
     BudgetExceededError,
     InvalidCancelReasonError,
+    InvalidUserStepAnswerError,
     MissingIdempotencyKeyError,
     RunNotAwaitingUserStepError,
     RunNotFoundError,
@@ -573,6 +574,10 @@ async def complete_run_user_step(
     except UnknownRunStepError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except MissingIdempotencyKeyError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidUserStepAnswerError as exc:
+        # V4-I08：ack 类自动回应/词表外动作不是人类有效答案——显式 422
+        # （步骤保持未完成、run 保持等待态，可重新作答）。
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidResumeTargetError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
