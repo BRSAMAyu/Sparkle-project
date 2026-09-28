@@ -586,6 +586,14 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
 
     try {
       final response = await _repository.getMySubscriptions();
+      // V4-FIX-547：本 notifier 由 subscriptionsProvider 构建时 unawaited
+      // 触发（sendMessage 续延读该 provider 亦会触发），网络写回落定晚于
+      // 容器 dispose 时曾在已 dispose 的 notifier 上写 state，以未处理异步
+      // 错误泄漏（CI 29 job 108772804580「failed after test completion」
+      // 实录：Bad state: Tried to use SubscriptionsNotifier after dispose）。
+      // 照 GuestConversionController.recordValueSignal 既有形制加 mounted
+      // 门：dispose 后迟写回 = 无观众，静默放弃。
+      if (!mounted) return;
 
       // Load library details for each subscription
       final subscriptionsWithLibraries = await Future.wait(
@@ -598,6 +606,7 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
           }
         }),
       );
+      if (!mounted) return;
 
       state = state.copyWith(
         subscriptions: subscriptionsWithLibraries,
@@ -605,6 +614,7 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
       );
     } catch (e) {
       debugPrint('[seed_library] loadSubscriptions failed: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: categorizeUiError(e),
@@ -626,8 +636,11 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
       try {
         await _repository.unsubscribeFromLibrary(libraryId);
       } catch (e) {
-        // Revert on error
         debugPrint('[seed_library] unsubscribe failed: $e');
+        // V4-FIX-547：同 loadSubscriptions 的 mounted 门——异步缺口期间
+        // notifier 可能已随容器 dispose，回滚写不得落在死 notifier 上。
+        if (!mounted) return;
+        // Revert on error
         state = state.copyWith(
           subscriptions: List.from(state.subscriptions)
             ..insert(existingIndex, subscription),
@@ -639,6 +652,7 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
       try {
         final newSubscription = await _repository.subscribeToLibrary(libraryId);
         final library = await _repository.getLibrary(libraryId);
+        if (!mounted) return;
         state = state.copyWith(
           subscriptions: [
             ...state.subscriptions,
@@ -647,6 +661,7 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
         );
       } catch (e) {
         debugPrint('[seed_library] subscribe failed: $e');
+        if (!mounted) return;
         state = state.copyWith(error: categorizeUiError(e));
       }
     }
