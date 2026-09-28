@@ -1,0 +1,15 @@
+{
+  "task": "V4-U14",
+  "status": "NOT_RUN",
+  "note": "独立审查尚未发生（本卡交付即 REVIEW_READY）。本文件为实现侧占位：审查会话审查后以其实测结论覆写本文件并附 review_r1.md；以下 pre_registered_challenges 为实现方预登记的挑战点，供审查优先攻击，不构成审查结论。",
+  "reviewer": null,
+  "reviewed_sha": null,
+  "verdict": null,
+  "pre_registered_challenges": [
+    "R1-C1 候选：背景声独立开关的向后兼容口径——「无 ambient 键时继承 sound_enabled」是否足以支撑『不破坏现有设置』？攻击面：既有用户 sound=off + 已存场景（rain），升级后焦点计时器触发的 playAmbient 行为对照表（升级前静音/升级后：ambient_enabled 继承 off → 静音），请验证我对照表是否成立。",
+    "R1-C2 候选：深链闸快路径「active.id == taskId 即透传」——active 快照可能是过期版本（任务已被他端改写）。闸不做新鲜度校验，沿用执行屏既有轮询（loadTaskExecutionState 5s）。攻击点：这是否构成『落真实对象』的漏洞？实现方立场：id 相同即真实对象，内容新鲜度归执行屏既有轮询与任务域，闸不新增第二个任务权威。",
+    "R1-C3 候选：404 判定依赖 `_handleDioError` 抛出的字符串（backend detail 含 'not found'）过 `categorizeUiError`——若 backend 返回的 detail 不含 '404'/'not found' 形态（如本地化 detail），已删任务会落「无法确认」面而非「已删除」面。实现方立场：宁可不宣布删除也不误删（诚实保守侧）；但请审查 backend 任务 404 detail 的实际文案形态是否稳定匹配（backend/app/api/tasks 路由 404 detail）。",
+    "R1-C4 候选：unified_settings_screen 的 `_setAmbientScene` 在 ambient 关闭时控件置灰，但 `_loadSensoryPreferences` 读回的 `_ambientScene` 仍显示选中 pill——「选中但置灰」是否诚实？实现方立场：显示的是重开后将生效的场景偏好，置灰表达当前不可播；若审查判不诚实，备选方案是关闭时清除显示选中。",
+    "R1-C5 候选：`_setSoundEnabled(false)` 不再停背景声、`playAmbient` 改查 ambient 开关——全库还有无第三处读 `isSoundEnabled` 来门控背景声的漏改点？（实现方已 grep：playAmbient 一处 + unified_settings UI 门控两处，均已改；请复核。）"
+  ]
+}
