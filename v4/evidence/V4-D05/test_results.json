@@ -1,0 +1,80 @@
+{
+  "card": "V4-D05",
+  "status": "PASS（实现自测面；value 判定待独立审查落盘）",
+  "generated_at": "2026-09-29T03:45:00Z",
+  "implementation_commit": "1e626998081832ca892629a426425d5647e906ca",
+  "results": [
+    {
+      "suite": "tests/unit/test_insight_presentation.py",
+      "cmd_exit_code": 0,
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0,
+      "note": "契约纯函数面：夸大表述门 10（含三例两例反例钉、M-06/D-05 禁词双通道、用户内容不进门、分母为零）/理解宣称门 6/单主建议 4/样本去重 5/撤源排除 4/回访 13/版本冻结 2（其中含参数化组合）"
+    },
+    {
+      "suite": "tests/services/test_evidence_insight_presentation.py",
+      "cmd_exit_code": 0,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "note": "生产入口驱动（record_exposure/record_response/record_outcome_association）：三例两例服务层反例钉/全卡型单主建议不变量/重放不放大样本/无数据空态/软删不复用（卡+回访双面）/拒绝零惩罚（photon_balance 不变量）/回访相关性+非模板对照/窗口语义二分/门零误伤"
+    },
+    {
+      "suite": "受影响面回归扫描（tests/core + 8 个相邻面文件 + 本卡两文件）",
+      "cmd_exit_code": 0,
+      "passed": 597,
+      "failed": 0,
+      "skipped": 1,
+      "note": "含既有权威面回归：attribution 38、retraction_recompute 23、intervention_lifecycle_service、experience_memory_projector、experience_strategy（unit+services）、f507 读侧数据流、insights_evidence_cards_api（既有契约测试零改动通过）。--ignore=tests/core/test_bert_intent_classifier.py 为既有环境债（transformers 不在解释器环境），与本卡 diff 零关联"
+    }
+  ],
+  "static_checks": [
+    {"tool": "ruff 0.15.8", "scope": "4 个变更文件", "exit_code": 0},
+    {"tool": "black 26.3.1 --check", "scope": "4 个变更文件", "exit_code": 0},
+    {
+      "tool": "mypy 1.20.2",
+      "scope": "全仓 app（棘轮口径）",
+      "base_90d8196a": 59,
+      "branch_1e626998": 59,
+      "baseline": 77,
+      "new_errors": 0,
+      "detail": "base/branch 错误清单 diff 为空（字节级同清单）；本卡两文件零错误"
+    }
+  ],
+  "acceptance_self_check": [
+    {
+      "acceptance": "三例只有两例关联不能写因果提升67%",
+      "verdict": "PASS",
+      "positive_negative_pairs": [
+        "test_three_examples_two_linked_causal_percentage_rejected / test_full_linkage_descriptive_percentage_allowed_without_causal_terms",
+        "test_three_exposures_two_linked_card_carries_no_causal_percentage（服务层反例钉，M-06 扫描零违例+causal=False+qualifier 随行）/ test_gate_drops_cards_without_silent_rewrite（正常卡恒过门零误伤）"
+      ]
+    },
+    {
+      "acceptance": "无数据不出「充分理解」，已删来源不复用",
+      "verdict": "PASS",
+      "positive_negative_pairs": [
+        "test_no_data_never_claims / test_complete_data_allows_qualitative_only",
+        "test_no_data_means_no_cards_no_understanding_claim_no_revisit / 三例两例卡 understanding.claim_allowed=False（incomplete_evidence）",
+        "test_deleted_source_rows_are_not_reused_by_cards_or_revisit / test_same_value_different_type_is_not_same_source（不连坐）"
+      ]
+    },
+    {
+      "acceptance": "一条观察≤一个主建议，用户可拒绝且不扣奖励",
+      "verdict": "PASS",
+      "positive_negative_pairs": [
+        "test_single_candidate_envelope_has_reject_affordance_without_penalty / test_two_primary_candidates_fail_loud",
+        "test_user_rejection_recorded_with_zero_reward_consequence（REJECTED 落行+photon_balance 不动+reward_consequence=none）/ test_user_rejection_is_first_class_and_zero_penalty（事后 outcome 不改写拒绝）"
+      ]
+    },
+    {
+      "objective": "回访能证明上次建议是否相关而非套模板",
+      "verdict": "PASS",
+      "evidence": "test_revisit_proves_relevance_via_real_linked_outcome（attr_ 样本身份在册+拒绝对照结构化字段必然不同）+ revisit_evidence_integrity 反例（自封相关不携带身份→假）+ no_prior 孤儿事件丢弃"
+    },
+    {
+      "note_d02r1_c3": "呈现侧样本身份先行去重（D02-R1 C-3 移交硬要求）：test_replayed_outcome_delivery_does_not_inflate_sample_size（绕过写幂等的重放行 raw=2 如实、samples=1 不放大、qualifier 在册）+ 契约层与 D02 派生权威恒同钉"
+    }
+  ]
+}
