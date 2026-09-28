@@ -1,0 +1,135 @@
+{
+  "task": "V4-F06",
+  "title": "无障碍与文本缩放基础能力",
+  "date": "2026-09-29",
+  "executor": "wtF06（worktree /Users/brsama/code/GitHub/wtF06，分支 agent/v4/f06，自 main@fea3a4aa 开出）",
+  "source_sha_base": "fea3a4aa842f2d9205e4c6324d966c81a887039d",
+  "source_sha_head": "工作树（commit 前取证；提交 SHA 见 commit 本体与台账）",
+  "no_push": true,
+  "toolchain": {
+    "flutter": "3.41.3 stable (revision 48c32af034, 2026-02-27)",
+    "host": "darwin 25.6.0 arm64",
+    "gen_note": "mobile/lib/gen 为 gitignored 实体目录：自主检出 cp -R 复制进 worktree（非 symlink，未入库）；flutter pub get 触发 l10n 再生成（-90 行既有现象，F02/F04 同现象同处置）已 git checkout 还原；本卡 l10n 面按 wt729 判例 arb 单键 + gen×3 手改同步，L10N-PARITY 与 I18N 守卫 PASS"
+  },
+  "locks": {
+    "required": [
+      "a11y"
+    ],
+    "note": "sparkle-coordination-v2 远端未配置于本机（git remote 无此远端），租约登记 NOT_RUN；冲突面自证：diff 不含 RF-06 三文件（dashboard_screen/compact_status_bar/task_execution_screen）、不含 app/routes.dart、不含 tokens_v2/theme 通道；本机在航会话 wtD06（backend knowledge/galaxy 后端）wtU03（memory/user 屏）wtI05（backend policy）与卡面无文件交集"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtF06 -b agent/v4/f06 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "依赖解析（新 worktree 无 .dart_tool）",
+      "command": "cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "Got dependencies! 2 packages discontinued（既有口径）；l10n 再生成副产物已还原"
+    },
+    {
+      "id": 3,
+      "purpose": "复制 gitignored 生成目录",
+      "command": "cp -R Sparkle-project/mobile/lib/gen wtF06/mobile/lib/gen",
+      "exit_code": 0
+    },
+    {
+      "id": 4,
+      "purpose": "静态检查（零 issue 口径）",
+      "command": "cd mobile && flutter analyze --no-pub",
+      "exit_code": 0,
+      "note": "No issues found!（全库；过程中 26 pre-existing error 均为 gen 目录缺失所致，cp 后归零）"
+    },
+    {
+      "id": 5,
+      "purpose": "本卡新测试套件（24 用例：四验收面每面一正一反 + 控制组探针活性 + 证据采集）",
+      "command": "cd mobile && flutter test test/core/design/pixel/pixel_a11y_f06_test.dart test/core/design/pixel/pixel_a11y_evidence_test.dart test/core/widgets/app_feedback_a11y_focus_test.dart test/features/galaxy/widget/galaxy_edge_list_a11y_test.dart test/features/settings/presentation/providers/accessibility_composition_test.dart",
+      "exit_code": 0,
+      "note": "+24 全绿（pixel_a11y 11 / evidence 2 / toast_focus 2 / galaxy_edge_list 5 / composition 4）；分套跑实录见 test_results.json"
+    },
+    {
+      "id": 6,
+      "purpose": "design 域回归（F01 令牌 + F02 像素族 + 本卡像素 a11y）",
+      "command": "cd mobile && flutter test test/core/design/",
+      "exit_code": 0,
+      "note": "+214 全绿（含 F02 classic 降级断言原样全绿——classic 零差量组件级守护）"
+    },
+    {
+      "id": 7,
+      "purpose": "导航域回归（F04 Shell + 五 Tab 契约）",
+      "command": "cd mobile && flutter test test/core/navigation/",
+      "exit_code": 0,
+      "note": "+36 全绿（shell_classic_zero_delta 4 原样绿）"
+    },
+    {
+      "id": 8,
+      "purpose": "galaxy 域回归（V3 语义/性能/集成套件）",
+      "command": "cd mobile && flutter test test/features/galaxy/",
+      "exit_code": 0,
+      "note": "+159 ~1 全绿（~1 为既有 skip，非本卡引入；G05-PERF 性能基线不受语义清单改动影响）"
+    },
+    {
+      "id": 9,
+      "purpose": "settings + core/widgets 域回归（a11y provider/组装律 + AppFeedback/toast）",
+      "command": "cd mobile && flutter test test/features/settings/ test/core/widgets/",
+      "exit_code": 0,
+      "note": "+39 ~1 全绿（settings 11 ~1 + widgets 28；~1 为既有 skip）"
+    },
+    {
+      "id": 10,
+      "purpose": "app 壳 + a11y 守卫批回归（组装律消费方 + 触达契约钉）",
+      "command": "cd mobile && flutter test test/app test/widget/a11y_semantic_labels_test.dart test/widget/a11y_touch_target_test.dart test/widget/a11y_contrast_test.dart test/widget/a11y_semantics_label_quality_guard_test.dart test/widget/a11y_sparkle_button_label_dedup_test.dart test/widget/accessibility_settings_screen_test.dart test/widget/nav_decontextualization_contract_test.dart",
+      "exit_code": 0,
+      "note": "+73 全绿（U-07 五 Tab 铁律钉计数恒 5 原样绿）"
+    },
+    {
+      "id": 11,
+      "purpose": "设计棘轮守卫四条",
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py && python3 scripts/guards/check_spacing_rhythm_ratchet.py && python3 scripts/guards/check_typography_rhythm_ratchet.py && python3 scripts/guards/check_dl_spec_ratchet.py",
+      "exit_code": 0,
+      "note": "UI-TOKENS PASS color=225/275 fontSize=634/727；SPACING PASS 1591/1623；TYPO PASS sub12=232/234；DL-SPEC PASS offLadderDuration=177/181（galaxy_screen 回放 Timer 字面量收敛为类级常量后计数不增）"
+    },
+    {
+      "id": 12,
+      "purpose": "l10n/资产旁证守卫",
+      "command": "run_all_rule_guards.sh 中的 L10N-PARITY / I18N / V4S04-ASSETS / V4S04-DPR",
+      "exit_code": 0,
+      "note": "L10N-PARITY PASS 10034 键 == 抽象成员；I18N PASS；V4S04-ASSETS PASS ledger=49；V4S04-DPR PASS pixel entries=5"
+    },
+    {
+      "id": 13,
+      "purpose": "AQ/BG 守卫（worktree 环境受限，主检出核验）",
+      "command": "python3 scripts/check_rule_aq_python_proto_parity.py（主检出）&& python3 scripts/guards/check_rule_bg_proto_cross_language_parity.py（主检出）",
+      "exit_code": 0,
+      "note": "worktree 内 AQ FAIL（No module named app.gen）BG FAIL（proto 生成物缺位）——gitignored 生成目录未入 worktree，环境性；主检出同脚本 AQ PASS（UserStateV1 parity，exceptions emotion_hint/emotion_hint_reserved 既有豁免）BG PASS（7 proto 跨语言 0 staleness）。本卡 diff 零触碰 backend/proto，非回归"
+    },
+    {
+      "id": 14,
+      "purpose": "UI 证据落盘（故事页 200%+减弱动效 与 100% 基线；星图连接子句语义 dump）",
+      "command": "cd mobile && PIXEL_A11Y_EVIDENCE_DIR=<repo>/v4/evidence/V4-F06 flutter test test/core/design/pixel/pixel_a11y_evidence_test.dart && GALAXY_A11Y_EVIDENCE_DIR=<repo>/v4/evidence/V4-F06 flutter test test/features/galaxy/widget/galaxy_edge_list_a11y_test.dart",
+      "exit_code": 0,
+      "note": "2 PNG（dpr=2 整页 RepaintBoundary，Ahem 测试字体块）+ 3 语义 dump（元素树口径：RenderSemanticsAnnotations+RenderParagraph，F02/F04 同口径；galaxy dump 承载连接子句真实文案，PNG 面由像素故事页承担——galaxy 屏 runAsync 真实异步窗会拉入 auth/网络插件链，语义文本为该面证据载体）"
+    }
+  ],
+  "artifacts": [
+    "pixel_story_200pct_reduceMotion.png",
+    "pixel_story_200pct_reduceMotion_semantics.txt",
+    "pixel_story_100pct_baseline.png",
+    "pixel_story_100pct_baseline_semantics.txt",
+    "galaxy_edge_list_connected_semantics.txt"
+  ],
+  "artifacts_sha256": {
+    "pixel_story_200pct_reduceMotion.png": "2f8fc0caf40cd274f08c064c3f5a58106903c2dc5f12cc8258a45f06eab6d11d",
+    "pixel_story_200pct_reduceMotion_semantics.txt": "2d36846d47bbbcc956db67d190863c115cf960bc533381e576e60556ece61917",
+    "pixel_story_100pct_baseline.png": "d9b1a270692ca5400adcc9e539dc7f60c6e47bfeb2e392d78a7c58fea35fbd5a",
+    "pixel_story_100pct_baseline_semantics.txt": "208677d4b1c39a824ea821609afde216c096db719638d16f31112d1764a520ab",
+    "galaxy_edge_list_connected_semantics.txt": "1e123428e2f72576615ce4b2da08cd589d2f7ab4603c66d7ff3c18d5c8035e89"
+  },
+  "screenshots_semantics_note": "故事页 200% 截图：全组件族在 2.0 字阶下零异常渲染（轮廓/阶梯角/状态色/虚线芯片/布局清晰可辨；中文呈 Ahem 方块——tester 字体口径，与 F02 同限；真实文案见同变体 *_semantics.txt 与 100% 基线对照）。星图语义 dump：G+ 变体含「科技 Node 0（已解锁，掌握度 42 分，已学习 3 次，重要度基础），连接：Node 1」等连接子句逐条实录（9 处命中 = 节点条目×读屏遍历投影），无边图对照见 galaxy_edge_list_a11y_test G- 断言。",
+  "llm_usage": "本卡为纯工程实现（无模型调用），actual_model_and_usage = NOT_APPLICABLE",
+  "physical_device_scope": "无真机/模拟器触达；TalkBack/VoiceOver 真机朗读面、触觉/音效感官面按 NOT_RUN 台账留给设备面卡（语义树 dump + liveRegion/逐字相等断言为语义面证据载体，不冒充真机读屏验证）"
+}

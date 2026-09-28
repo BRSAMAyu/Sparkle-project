@@ -175,6 +175,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   bool _isLoading = true;
   bool _didFitInitialCamera = false;
   bool _didPlayEntranceAnimation = false;
+
+  /// V4-F06：构建回放的启动延迟/前滚预算（normal 与 reduce-motion 分支
+  /// 共用单一常量——同值不造两份字面量，DL-SPEC A2.1 离阶时长计数不增）。
+  static const _replayStartupDelay = Duration(milliseconds: 140);
+  static const _replayPreRoll = Duration(milliseconds: 30);
   bool _isBuildAnimating = false;
   bool _isSearchOpen = false;
   bool _isSettingsOpen = false;
@@ -1062,6 +1067,34 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         .copyWith(scale: introScale)
         .centerOnWorldPoint(worldPoint: worldCenter);
 
+    // V4-F06 reduce-motion 静态分支（A-SPEC6 N33 同口径：只认 MediaQuery
+    // disableAnimations/accessibleNavigation，系统 ∨ in-app）：减弱动效下
+    // 不播入场（620ms 模糊/缩放/渐显）与 1400ms 相机推近——相机直落概览、
+    // 入场进度直落终态（模糊 sigma=0、不透明度 1，静止终态可留），
+    // 语义（alwaysIncludeSemantics）与后续装载流程不受影响。
+    if (MediaQuery.disableAnimationsOf(context) ||
+        MediaQuery.accessibleNavigationOf(context)) {
+      setState(() {
+        _camera = overviewCamera;
+        _didFitInitialCamera = true;
+        _didPlayEntranceAnimation = true;
+      });
+      if (playbackLaunch != null) {
+        ref.read(galaxyBuildPlaybackSessionProvider.notifier).state = true;
+      }
+      _entranceController
+        ..stop()
+        ..value = 1.0;
+      _initialBuildReplayTimer?.cancel();
+      _initialBuildReplayTimer = Timer(_replayStartupDelay, () {
+        if (!mounted || _graph == null || playbackLaunch == null) {
+          return;
+        }
+        _startPreparedPlayback(preRoll: _replayPreRoll);
+      });
+      return;
+    }
+
     setState(() {
       _camera = introCamera;
       _didFitInitialCamera = true;
@@ -1080,11 +1113,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       curve: Curves.easeOutCubic,
     );
     _initialBuildReplayTimer?.cancel();
-    _initialBuildReplayTimer = Timer(const Duration(milliseconds: 140), () {
+    _initialBuildReplayTimer = Timer(_replayStartupDelay, () {
       if (!mounted || _graph == null || playbackLaunch == null) {
         return;
       }
-      _startPreparedPlayback(preRoll: const Duration(milliseconds: 30));
+      _startPreparedPlayback(preRoll: _replayPreRoll);
     });
     unawaited(_entranceController.forward());
   }
@@ -1293,6 +1326,30 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (graph == null || graph.nodes.isEmpty) {
       return const SizedBox.shrink();
     }
+    // V4-F06 连接文本列表（ACCESSIBILITY_ASSETS「连接有文本列表」）：
+    // 邻接复用既有 [_buildAdjacency]（物理引擎同源，不造第二权威），按
+    // 图序展开成节点名，经 getNodeSemanticLabel 追加进各节点标签
+    // （「，连接：A、B」）——CustomPaint 连线零语义（R06），连接关系由
+    // 节点条目线性承载。计算随 overlay 一起按图缓存（图变更/语言切换才
+    // 重建，不进每帧热路径）；未知名端点跳过，不造占位名。
+    final adjacency = _buildAdjacency(graph.edges);
+    final connectedNamesByNode = <String, List<String>>{};
+    for (final node in graph.nodes) {
+      final neighborIds = adjacency[node.id];
+      if (neighborIds == null || neighborIds.isEmpty) {
+        continue;
+      }
+      final names = <String>{};
+      for (final neighborId in neighborIds) {
+        final name = _nodesById[neighborId]?.name;
+        if (name != null) {
+          names.add(name);
+        }
+      }
+      if (names.isNotEmpty) {
+        connectedNamesByNode[node.id] = names.toList(growable: false);
+      }
+    }
     // 视觉隐身靠 Opacity(0)（alwaysIncludeSemantics 保语义存活）；
     // 不用 IgnorePointer——新版 framework 会把 IgnorePointer 后代的语义
     // 用户动作整体 blocked（读屏 tap 不可激活）。指针安全由挂载位置保证：
@@ -1323,6 +1380,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     key: ValueKey<String>('galaxy-a11y-node-${node.id}'),
                     node: node,
                     accessibilityService: _accessibilityService,
+                    connectedNames:
+                        connectedNamesByNode[node.id] ?? const <String>[],
                     focusNode: _galaxyFocusManager.getFocusNode(node.id),
                     onTap: () => _activateNodeFromSemantics(node),
                     onDidGainAccessibilityFocus: () =>

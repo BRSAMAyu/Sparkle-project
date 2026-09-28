@@ -3287,6 +3287,7 @@
   "galaxyA11yHintUnlockNode": "Tap to unlock this node",
   "galaxyA11yNavigateTo": "{arg0}",
   "galaxyA11yNavigationHint": "Navigate the knowledge map with gestures",
+  "galaxyA11yNodeConnections": ", linked to {arg0}",
   "galaxyA11yNodeImportance": ", importance: {arg0})",
   "galaxyA11yNodeLocked": " (locked",
   "galaxyA11yNodeMastery": ", mastery {arg0}",

@@ -1,0 +1,128 @@
+{
+  "task": "V4-F06",
+  "date": "2026-09-29",
+  "toolchain": "Flutter 3.41.3 stable (revision 48c32af034) / darwin 25.6.0 arm64",
+  "base_sha": "fea3a4aa842f2d9205e4c6324d966c81a887039d",
+  "suites": [
+    {
+      "id": "new_f06",
+      "command": "flutter test test/core/design/pixel/pixel_a11y_f06_test.dart test/core/design/pixel/pixel_a11y_evidence_test.dart test/core/widgets/app_feedback_a11y_focus_test.dart test/features/galaxy/widget/galaxy_edge_list_a11y_test.dart test/features/settings/presentation/providers/accessibility_composition_test.dart",
+      "passed": 24,
+      "failed": 0,
+      "skipped": 0,
+      "note": "本卡新测试 24 用例全绿：pixel_a11y 11（A±2/B±3/C±2/D±2/E±2 含组内多断言）+ evidence 2 + toast_focus 2 + galaxy_edge_list 5 + composition 4"
+    },
+    {
+      "id": "design_domain",
+      "command": "flutter test test/core/design/",
+      "passed": 214,
+      "failed": 0,
+      "skipped": 0,
+      "note": "含 F02 像素族既有断言（classic 降级/四元组/命中透传）原样全绿"
+    },
+    {
+      "id": "navigation_domain",
+      "command": "flutter test test/core/navigation/",
+      "passed": 36,
+      "failed": 0,
+      "skipped": 0,
+      "note": "含 F04 shell_classic_zero_delta 4 用例原样全绿"
+    },
+    {
+      "id": "core_widgets",
+      "command": "flutter test test/core/widgets/",
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0,
+      "note": "含本卡 app_feedback_a11y_focus_test 2 用例"
+    },
+    {
+      "id": "galaxy_domain",
+      "command": "flutter test test/features/galaxy/",
+      "passed": 159,
+      "failed": 0,
+      "skipped": 1,
+      "note": "~1 为既有 skip（非本卡引入，本卡新用例零 skip）；含 V3 galaxy_screen_semantics_test 4 用例（无边图 V3 标签口径逐字相等原样绿）与语义性能基线"
+    },
+    {
+      "id": "settings_domain",
+      "command": "flutter test test/features/settings/",
+      "passed": 11,
+      "failed": 0,
+      "skipped": 1,
+      "note": "~1 为既有 skip；含本卡 accessibility_composition_test 4 用例与既有 accessibility_provider/screen 测试"
+    },
+    {
+      "id": "app_a11y_batch",
+      "command": "flutter test test/app test/widget/a11y_semantic_labels_test.dart test/widget/a11y_touch_target_test.dart test/widget/a11y_contrast_test.dart test/widget/a11y_semantics_label_quality_guard_test.dart test/widget/a11y_sparkle_button_label_dedup_test.dart test/widget/accessibility_settings_screen_test.dart test/widget/nav_decontextualization_contract_test.dart",
+      "passed": 73,
+      "failed": 0,
+      "skipped": 0,
+      "note": "U-07 五 Tab 铁律钉（计数恒 5）原样全绿"
+    }
+  ],
+  "analyze": {
+    "command": "flutter analyze --no-pub",
+    "result": "No issues found!",
+    "scope": "全库（mobile/lib + test）"
+  },
+  "guards": [
+    {
+      "name": "check_ui_design_tokens_ratchet",
+      "result": "PASS",
+      "detail": "color=225/275, fontSize=634/727 (184 files)"
+    },
+    {
+      "name": "check_spacing_rhythm_ratchet",
+      "result": "PASS",
+      "detail": "spacingHalfStep=1591/1623 (321 files)"
+    },
+    {
+      "name": "check_typography_rhythm_ratchet",
+      "result": "PASS",
+      "detail": "sub12FontSize=232/234, fontWeightW800=0/0, fontWeightW900=6/6"
+    },
+    {
+      "name": "check_dl_spec_ratchet",
+      "result": "PASS",
+      "detail": "offLadderDuration=177/181（回放 Timer 字面量收敛后 galaxy_screen 计数不增）；全维度基线内"
+    },
+    {
+      "name": "L10N-PARITY / I18N / V4S04-ASSETS / V4S04-DPR",
+      "result": "PASS",
+      "detail": "10034 模板键 == 抽象成员；i18n 覆盖 PASS；ledger=49；pixel entries=5"
+    },
+    {
+      "name": "AQ / BG",
+      "result": "NOT_RUN_IN_WORKTREE（环境）—主检出 PASS",
+      "detail": "worktree 缺 gitignored 生成目录（app.gen / proto 生成物）致脚本失败；主检出同脚本 AQ PASS（exceptions: emotion_hint/emotion_hint_reserved 既有豁免）BG PASS（7 proto 0 staleness）；本卡 diff 零触碰 backend/proto，非回归"
+    }
+  ],
+  "failures_fixed": [
+    {
+      "round": 1,
+      "what": "pixel D- 控制组 find.bySemanticsLabel('已取消') 空匹配；B- 探针误入 MaterialApp 框架 AnimatedBuilder",
+      "fix": "D- 改 RegExp 子串定位后断言逐字相等探针判负；B+/B2 AnimatedBuilder 断言限定徽章子树",
+      "nature": "测试探针修正，实现未动"
+    },
+    {
+      "round": 2,
+      "what": "galaxy H+ 读到入场控制器 value=0.0",
+      "fix": "harness 改生产时序（初始 loading 空图，loadGalaxy 完成后图到达）——首帧布局后 apply，入场分支在真实 viewport 下执行；排查中临时插桩已全部移除（git diff 内零 print/F06_DEBUG 残留）",
+      "nature": "测试时序修正，实现未动"
+    },
+    {
+      "round": 3,
+      "what": "DL-SPEC 棘轮 FAIL（galaxy_screen offLadderDuration 23 > 21）",
+      "fix": "reduce-motion 分支与 normal 分支重复的 140ms/30ms 回放 Timer 字面量收敛为类级常量 _replayStartupDelay/_replayPreRoll（同值不造两份字面量，计数回到基线）",
+      "nature": "实现收敛（去重），行为不变"
+    },
+    {
+      "round": 4,
+      "what": "galaxy 证据 PNG 在 test binding 下 toImage 挂起（runAsync 窗外真实异步）；runAsync 窗内又拉入 auth/secure_storage 插件链",
+      "fix": "galaxy 证据改为纯同步语义树 dump（连接子句文本为该面证据载体）；PNG 证据面由像素故事页证据测试承担",
+      "nature": "证据采集口径收敛"
+    }
+  ],
+  "denominator_note": "新测试分母 = 本卡 24 用例 + 触达回归域（design 214 / navigation 36 / widgets 28 / galaxy 159+~1 / settings 11+~1 / app+a11y 批 73）；未跑 mobile 全量套件（非本卡域的 features/home、community、journey 等未触达，diff 零交集）"
+}

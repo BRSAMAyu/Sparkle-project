@@ -7610,6 +7610,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyA11yNavigationHint => '使用手势导航知识星图';
 
   @override
+  String galaxyA11yNodeConnections(Object arg0) {
+    return '，连接：$arg0';
+  }
+
+  @override
   String galaxyA11yNodeImportance(Object arg0) {
     return '，重要度$arg0）';
   }

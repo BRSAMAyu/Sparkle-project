@@ -79,19 +79,44 @@ class _TypingTextState extends State<TypingText> {
   late int _totalGraphemes; // 缓存grapheme总数
   bool _isCompleted = false;
 
+  /// V4-F06 减弱动效口径统一（A-SPEC6 N32/AX-G5 双源分裂统一令）：
+  /// 只认 **MediaQuery**（系统 disableAnimations ∨ accessibleNavigation，
+  /// 与 app 内设置叠加生效），**禁 `platformDispatcher.accessibilityFeatures`
+  /// 直读**（只认系统、漏 in-app 半边，与 SparkleMotion/heatmap 正解范本
+  /// 同源）。initState 里 inherited 不可依赖，故初判推迟到
+  /// [didChangeDependencies]（initState 先照常起打字，本回调在首帧前
+  /// 命中减弱即停并直落全文——Timer 首跳在 charDelay 之后，不会露帧）。
+  bool _reduceMotion = false;
+
+  void _resolveReduceMotion() {
+    _reduceMotion = MediaQuery.disableAnimationsOf(context) ||
+        MediaQuery.accessibleNavigationOf(context);
+    if (_reduceMotion && !_isCompleted) {
+      // 静态分支：停打字/闪烁，直落全文（静止终态可留，WCAG 2.3.3）。
+      _stopTyping();
+      setState(() {
+        _displayedText = widget.text;
+        _isCompleted = true;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _totalGraphemes = GraphemeUtils.graphemeCount(widget.text);
-    // 尊重系统 reduce-motion 设置（无障碍：减少动画）— 直接显示完整文本
-    final reduceMotion = WidgetsBinding
-        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
-    if (widget.animate && !reduceMotion) {
+    if (widget.animate) {
       _startTyping();
     } else {
       _displayedText = widget.text;
       _isCompleted = true;
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _resolveReduceMotion();
   }
 
   @override
@@ -106,9 +131,7 @@ class _TypingTextState extends State<TypingText> {
       _isCompleted = false;
       _totalGraphemes = GraphemeUtils.graphemeCount(widget.text);
 
-      final reduceMotion = WidgetsBinding
-          .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
-      if (widget.animate && !reduceMotion) {
+      if (widget.animate && !_reduceMotion) {
         _startTyping();
       } else {
         setState(() {
@@ -220,9 +243,23 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
       duration: const Duration(milliseconds: 530), // 标准光标闪烁速度
       vsync: this,
     );
-    // 尊重系统 reduce-motion 设置（无障碍：避免持续闪烁可能引发不适）
-    final reduceMotion = WidgetsBinding
-        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // V4-F06 口径统一（N32/AX-G5）：MediaQuery 双源并集，禁 platformDispatcher
+    // 直读。减弱动效 → 静态显示光标（不 repeat，无持续闪烁）。
+    final reduceMotion = MediaQuery.disableAnimationsOf(context) ||
+        MediaQuery.accessibleNavigationOf(context);
+    if (_controller.isAnimating) {
+      if (reduceMotion) {
+        _controller
+          ..stop()
+          ..value = 1.0; // 静态显示光标
+      }
+      return;
+    }
     if (!reduceMotion) {
       unawaited(_controller.repeat(reverse: true));
     } else {
@@ -283,13 +320,25 @@ class _TypingRichTextState extends State<TypingRichText> {
     super.initState();
     _fullText = _extractText(widget.spans);
     _totalGraphemes = GraphemeUtils.graphemeCount(_fullText);
-    // 尊重系统 reduce-motion 设置
-    final reduceMotion = WidgetsBinding
-        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
-    if (widget.animate && !reduceMotion) {
+    if (widget.animate) {
       _startTyping();
     } else {
       _displayedText = _fullText;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // V4-F06 口径统一（N32/AX-G5）：MediaQuery 双源并集（禁 platformDispatcher
+    // 直读）；减弱动效 → 停打字直落全文（静止终态）。
+    if ((MediaQuery.disableAnimationsOf(context) ||
+            MediaQuery.accessibleNavigationOf(context)) &&
+        _typingTimer != null) {
+      _stopTyping();
+      setState(() {
+        _displayedText = _fullText;
+      });
     }
   }
 

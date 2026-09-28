@@ -24,6 +24,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 
 /// 像素状态族（含成功对照态；非成功四态 = 卡面验收 2 的覆盖面）。
 enum PixelRunState { cancelled, unknown, conflict, failed, success }
@@ -285,19 +286,39 @@ class _PixelSuccessBadgeState extends State<PixelSuccessBadge>
   AnimationController? _controller;
   Animation<double>? _rise;
 
+  /// V4-F06 reduce-motion 静态分支：减弱动效生效时不创建 ticker，直接
+  /// 渲染上升终态（对勾全显、位移归零）。口径与 SparkleMotion（N33/A-SPEC6
+  /// AX-G5 双源分裂统一令）同源：只认 MediaQuery（`context.reduceMotion`
+  /// = 系统 disableAnimations ∨ accessibleNavigation ∪ app 内叠加），
+  /// **禁 `platformDispatcher.accessibilityFeatures` 直读**（漏 in-app 半边）。
+  bool get _reduceMotion => context.reduceMotion;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_controller == null) {
-      final motion = PixelProfileTheme.of(context)?.stateMotion;
-      final controller = AnimationController(
-        vsync: this,
-        duration: motion?.milestoneMax ?? const Duration(milliseconds: 650),
-      );
-      _rise = CurvedAnimation(parent: controller, curve: Curves.easeOutCubic);
-      _controller = controller;
-      unawaited(controller.forward());
+    if (_reduceMotion) {
+      // 静态分支：不创建 ticker；若动效已在航（设置中途切换）停并回收，
+      // 直接落静止终态（零 duration 崩溃面在分支前短路）。
+      if (_controller != null) {
+        _controller!
+          ..stop()
+          ..dispose();
+        _controller = null;
+        _rise = null;
+      }
+      return;
     }
+    if (_controller != null) {
+      return;
+    }
+    final motion = PixelProfileTheme.of(context)?.stateMotion;
+    final controller = AnimationController(
+      vsync: this,
+      duration: motion?.milestoneMax ?? const Duration(milliseconds: 650),
+    );
+    _rise = CurvedAnimation(parent: controller, curve: Curves.easeOutCubic);
+    _controller = controller;
+    unawaited(controller.forward());
   }
 
   @override
@@ -311,34 +332,38 @@ class _PixelSuccessBadgeState extends State<PixelSuccessBadge>
     final colors = context.sparkleTheme.colors;
     final typo = context.sparkleTheme.typography;
     final color = colors.semanticSuccess;
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.check_circle, size: widget.dense ? 14 : 18, color: color),
+        const SizedBox(width: DS.xs),
+        Text(
+          '已完成',
+          style: (widget.dense ? typo.labelSmall : typo.labelLarge)
+              .copyWith(color: color),
+        ),
+      ],
+    );
     return Semantics(
       container: true,
       label: '已完成',
       // 子树文本不入语义（读屏内容 = 显式 label，不重复拼接）。
       child: ExcludeSemantics(
-        child: AnimatedBuilder(
-          animation: _rise!,
-          builder: (context, child) => Opacity(
-            opacity: _rise!.value.clamp(0.0, 1.0),
-            child: Transform.translate(
-              offset: Offset(0, (1 - _rise!.value) * 6),
-              child: child,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle, size: widget.dense ? 14 : 18,
-                  color: color,),
-              const SizedBox(width: DS.xs),
-              Text(
-                '已完成',
-                style: (widget.dense ? typo.labelSmall : typo.labelLarge)
-                    .copyWith(color: color),
+        // reduce-motion 静态分支：无 AnimatedBuilder/无 ticker，静止终态
+        // （上升完成：对勾全显、位移 0）；正常分支走上升动效。
+        child: _rise == null
+            ? row
+            : AnimatedBuilder(
+                animation: _rise!,
+                builder: (context, child) => Opacity(
+                  opacity: _rise!.value.clamp(0.0, 1.0),
+                  child: Transform.translate(
+                    offset: Offset(0, (1 - _rise!.value) * 6),
+                    child: child,
+                  ),
+                ),
+                child: row,
               ),
-            ],
-          ),
-        ),
       ),
     );
   }

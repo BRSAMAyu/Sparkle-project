@@ -191,7 +191,15 @@ class GalaxyAccessibilityService {
   // ============================================
 
   /// Generate semantic label for a node
-  String getNodeSemanticLabel(GalaxyNodeModel node) {
+  ///
+  /// V4-F06 星图连接文本列表（ACCESSIBILITY_ASSETS「连接有文本列表」）：
+  /// [connectedNames] 非空时在节点标签尾追加「，连接：A、B」——连接关系
+  /// 经节点条目线性可读，CustomPaint 连线本身零语义（R06 口径）。空列表
+  /// （无边图/调用方未接线）不追加、不造默认值，V3 既有标签字节不变。
+  String getNodeSemanticLabel(
+    GalaxyNodeModel node, {
+    List<String> connectedNames = const <String>[],
+  }) {
     final l10n = I18nService.instance.l10n;
     final sectorName = SectorConfig.getLocalizedName(node.sector);
     final buffer = StringBuffer()
@@ -213,6 +221,10 @@ class GalaxyAccessibilityService {
     buffer.write(
       l10n.galaxyA11yNodeImportance(_importanceLabel(node.importance)),
     );
+
+    if (connectedNames.isNotEmpty) {
+      buffer.write(l10n.galaxyA11yNodeConnections(connectedNames.join('、')));
+    }
 
     return buffer.toString();
   }
@@ -359,6 +371,7 @@ class GalaxyNodeSemantics extends StatelessWidget {
     required this.node,
     required this.child,
     required this.accessibilityService,
+    this.connectedNames = const <String>[],
     this.onTap,
     this.onDoubleTap,
     this.onLongPress,
@@ -371,6 +384,11 @@ class GalaxyNodeSemantics extends StatelessWidget {
   final GalaxyNodeModel node;
   final Widget child;
   final GalaxyAccessibilityService accessibilityService;
+
+  /// V4-F06：与本节点直连的节点名（图序去重；空 = 无边图，标签不带
+  /// 连接子句）。见 [GalaxyAccessibilityService.getNodeSemanticLabel]。
+  final List<String> connectedNames;
+
   final VoidCallback? onTap;
   final VoidCallback? onDoubleTap;
   final VoidCallback? onLongPress;
@@ -392,7 +410,10 @@ class GalaxyNodeSemantics extends StatelessWidget {
         // 逐节点朗读（GALAXY-A11Y 接线：零尺寸条目并排时无边界会被
         // 合并成一整块，节点粒度即丢失）。
         container: true,
-        label: accessibilityService.getNodeSemanticLabel(node),
+        label: accessibilityService.getNodeSemanticLabel(
+          node,
+          connectedNames: connectedNames,
+        ),
         hint: node.isUnlocked
             ? I18nService.instance.l10n.galaxyA11yHintStartLearning
             : I18nService.instance.l10n.galaxyA11yHintUnlockNode,
