@@ -2909,7 +2909,7 @@
         "font_size": 12.0
       },
       {
-        "text": "10月4日 结束",
+        "text": "10月5日 结束",
         "fg": "ff6c655d",
         "bg": "fff8f4ef",
         "ratio": "5.24",
@@ -3007,7 +3007,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/27",
+        "text": "09/28",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -3056,7 +3056,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/29",
+        "text": "09/30",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -3112,7 +3112,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/24",
+        "text": "09/25",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -3318,7 +3318,7 @@
         "font_size": 14.0
       },
       {
-        "text": "2026年10月4日",
+        "text": "2026年10月5日",
         "fg": "ff171717",
         "bg": "fff8f4ef",
         "ratio": "16.37",
@@ -3662,7 +3662,7 @@
         "font_size": 16.0
       },
       {
-        "text": "10月4日周日",
+        "text": "10月5日周一",
         "fg": "ff171717",
         "bg": "fff8f4ef",
         "ratio": "16.37",
@@ -7509,14 +7509,14 @@
         "font_size": 14.0
       },
       {
-        "text": "启用透明模式",
+        "text": "画像透明度",
         "fg": "ff171717",
         "bg": "fff8f4ef",
         "ratio": "16.37",
         "font_size": 16.0
       },
       {
-        "text": "显示状态与资源消耗概览",
+        "text": "控制你的画像与洞察披露的详细程度",
         "fg": "ff171717",
         "bg": "fff8f4ef",
         "ratio": "16.37",
@@ -10532,13 +10532,6 @@
         "font_size": 12.0
       },
       {
-        "text": "30",
-        "fg": "ffffffff",
-        "bg": "fff1ebe4",
-        "ratio": "1.18",
-        "font_size": 12.0
-      },
-      {
         "text": "1",
         "fg": "ffffffff",
         "bg": "fff1ebe4",
@@ -10582,16 +10575,16 @@
       },
       {
         "text": "7",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "8",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10631,16 +10624,16 @@
       },
       {
         "text": "14",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "15",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10680,16 +10673,16 @@
       },
       {
         "text": "21",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "22",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10729,16 +10722,16 @@
       },
       {
         "text": "28",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "29",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10778,16 +10771,16 @@
       },
       {
         "text": "4",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "5",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10827,16 +10820,16 @@
       },
       {
         "text": "11",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "12",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10876,16 +10869,16 @@
       },
       {
         "text": "18",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "19",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10925,16 +10918,16 @@
       },
       {
         "text": "25",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "26",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -10974,16 +10967,16 @@
       },
       {
         "text": "1",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "2",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -11072,16 +11065,16 @@
       },
       {
         "text": "15",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "16",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -11121,16 +11114,16 @@
       },
       {
         "text": "22",
-        "fg": "ff6c655d",
+        "fg": "ffffffff",
         "bg": "fff1ebe4",
-        "ratio": "4.85",
+        "ratio": "1.18",
         "font_size": 12.0
       },
       {
         "text": "23",
-        "fg": "ffffffff",
+        "fg": "ff6c655d",
         "bg": "fff1ebe4",
-        "ratio": "1.18",
+        "ratio": "4.85",
         "font_size": 12.0
       },
       {
@@ -11156,6 +11149,13 @@
       },
       {
         "text": "27",
+        "fg": "ffffffff",
+        "bg": "fff1ebe4",
+        "ratio": "1.18",
+        "font_size": 12.0
+      },
+      {
+        "text": "28",
         "fg": "ffffffff",
         "bg": "fff1ebe4",
         "ratio": "1.18",
@@ -14837,7 +14837,7 @@
         "font_size": 24.0
       },
       {
-        "text": "统一管理你的笔记、课件和 PDF，查看它们落到哪些知识星点，并追踪 Aurora 实际引用了多少次。",
+        "text": "统一管理你的笔记、课件和 PDF，查看它们关联到哪些知识点，并追踪 Aurora 实际引用了多少次。",
         "fg": "c2ffffff",
         "bg": "fff8f4ef",
         "ratio": "1.10",
@@ -15359,14 +15359,14 @@
     "min_ratio": "1.05",
     "samples": [
       {
-        "text": "我们从 OS.pdf 里找到了 5 颗知识星，要现在看看吗？",
+        "text": "我们在《OS.pdf》里找到了 5 个知识点，要现在看看吗？",
         "fg": "ffffffff",
         "bg": "fffef7ff",
         "ratio": "1.05",
         "font_size": 24.0
       },
       {
-        "text": "你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。",
+        "text": "你的星图由你确认：逐个通过、跳过、合并，或先改名再收下。",
         "fg": "b8ffffff",
         "bg": "fffef7ff",
         "ratio": "1.05",
@@ -15534,7 +15534,7 @@
         "font_size": 12.0
       },
       {
-        "text": "审核知识星",
+        "text": "审核知识点",
         "fg": "ffffffff",
         "bg": "fffef7ff",
         "ratio": "1.05",
@@ -15684,7 +15684,7 @@
         "font_size": 12.0
       },
       {
-        "text": "Sep 27, 2026",
+        "text": "Sep 28, 2026",
         "fg": "ff171717",
         "bg": "fff8f4ef",
         "ratio": "16.37",

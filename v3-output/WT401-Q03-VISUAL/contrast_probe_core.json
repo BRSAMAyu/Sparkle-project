@@ -111,18 +111,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -175,34 +189,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -392,18 +378,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -456,34 +456,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -652,18 +624,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -716,48 +702,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "关键指标",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "进度、连续天数、动力",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -1081,18 +1025,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -1145,34 +1103,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -1397,18 +1327,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -1461,34 +1405,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -1642,14 +1558,14 @@
         "font_size": 12.0
       },
       {
-        "text": "我们从 OS.pdf 里找到了 5 颗知识星，要现在看看吗？",
+        "text": "我们在《OS.pdf》里找到了 5 个知识点，要现在看看吗？",
         "fg": "ffffffff",
         "bg": "ff060a12",
         "ratio": "19.81",
         "font_size": 16.0
       },
       {
-        "text": "你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。",
+        "text": "你的星图由你确认：逐个通过、跳过、合并，或先改名再收下。",
         "fg": "b8ffffff",
         "bg": "ff060a12",
         "ratio": "19.81",
@@ -1846,18 +1762,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -1910,34 +1840,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -2035,7 +1937,7 @@
         "font_size": 12.0
       },
       {
-        "text": "14:00",
+        "text": "01:07",
         "fg": "996c655d",
         "bg": "fff8f4ef",
         "ratio": "5.24",
@@ -2112,7 +2014,7 @@
         "font_size": 12.0
       },
       {
-        "text": "14:00",
+        "text": "01:07",
         "fg": "996c655d",
         "bg": "fff8f4ef",
         "ratio": "5.24",
@@ -2168,7 +2070,7 @@
         "font_size": 12.0
       },
       {
-        "text": "14:00",
+        "text": "01:07",
         "fg": "996c655d",
         "bg": "fff8f4ef",
         "ratio": "5.24",
@@ -2365,18 +2267,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -2429,34 +2345,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -2554,7 +2442,7 @@
         "font_size": 12.0
       },
       {
-        "text": "14:00",
+        "text": "01:07",
         "fg": "996c655d",
         "bg": "fff8f4ef",
         "ratio": "5.24",
@@ -2631,7 +2519,7 @@
         "font_size": 12.0
       },
       {
-        "text": "14:00",
+        "text": "01:07",
         "fg": "996c655d",
         "bg": "fff8f4ef",
         "ratio": "5.24",
@@ -2687,7 +2575,7 @@
         "font_size": 12.0
       },
       {
-        "text": "14:00",
+        "text": "01:07",
         "fg": "996c655d",
         "bg": "fff8f4ef",
         "ratio": "5.24",
@@ -2884,18 +2772,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -2948,34 +2850,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -3235,18 +3109,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -3299,34 +3187,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -3712,18 +3572,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -3776,34 +3650,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -4652,18 +4498,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -4716,34 +4576,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -4933,18 +4765,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -4997,34 +4843,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -5452,7 +5270,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09-20",
+        "text": "09-21",
         "fg": "ff52443c",
         "bg": "fff1ebe4",
         "ratio": "7.88",
@@ -6057,18 +5875,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -6121,34 +5953,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
@@ -6275,7 +6079,7 @@
         "font_size": 12.0
       },
       {
-        "text": "10月4日 结束",
+        "text": "10月5日 结束",
         "fg": "ff6c655d",
         "bg": "fff8f4ef",
         "ratio": "5.24",
@@ -6373,7 +6177,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/27",
+        "text": "09/28",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -6422,7 +6226,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/29",
+        "text": "09/30",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -6478,7 +6282,7 @@
         "font_size": 12.0
       },
       {
-        "text": "09/24",
+        "text": "09/25",
         "fg": "ffa49b90",
         "bg": "fff8f4ef",
         "ratio": "2.50",
@@ -6676,18 +6480,32 @@
         "font_size": 19.0
       },
       {
-        "text": "加载失败",
-        "fg": "996c655d",
+        "text": "Sparkle 对你的理解",
+        "fg": "ff6c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
         "font_size": 12.0
       },
       {
-        "text": "轻触重试",
-        "fg": "ff825d49",
+        "text": "我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。",
+        "fg": "ff171717",
         "bg": "fff9f5f0",
-        "ratio": "5.36",
+        "ratio": "16.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
         "font_size": 12.0
+      },
+      {
+        "text": "纠正我的理解",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
       },
       {
         "text": "今日简报",
@@ -6740,34 +6558,6 @@
       },
       {
         "text": "今日待办与进度",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "动态",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "通知、洞察、提醒",
-        "fg": "996c655d",
-        "bg": "fff9f5f0",
-        "ratio": "5.29",
-        "font_size": 12.0
-      },
-      {
-        "text": "工作区卡片",
-        "fg": "ff171717",
-        "bg": "fff9f5f0",
-        "ratio": "16.52",
-        "font_size": 14.0
-      },
-      {
-        "text": "8 张已显示",
         "fg": "996c655d",
         "bg": "fff9f5f0",
         "ratio": "5.29",
