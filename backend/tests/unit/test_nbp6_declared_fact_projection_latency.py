@@ -37,6 +37,7 @@ from app.config import settings
 from app.models.chat import ChatMessage, MessageRole
 from app.models.memory import EpisodicMemory
 from app.models.user import User
+from app.services import accountability_mvp_service as accountability_module
 from app.services import commitment_parser as commitment_parser_module
 from app.services import memory_inferred_write_lane as lane_module
 from app.services.accountability_mvp_service import AccountabilityMvpService
@@ -63,6 +64,9 @@ FROZEN_NOW = datetime(2026, 9, 21, 12, 0, 0)
 def _freeze_clock(monkeypatch):
     monkeypatch.setattr(commitment_parser_module, "_utcnow", lambda: FROZEN_NOW)
     monkeypatch.setattr(lane_module, "_utcnow", lambda: FROZEN_NOW)
+    # 读面同源冻结：待到期判定不得依赖真实时钟（CI42 时间炸弹——真实时刻越过
+    # due_at 2026-09-28T18:00Z 后"未来承诺不进 pending"前提失效，断言引爆）。
+    monkeypatch.setattr(accountability_module, "_utcnow", lambda: FROZEN_NOW)
 
 
 def _patch_kill_switch_modes(monkeypatch, *, working_memory: str, llm_extractor: str) -> None:
