@@ -22,5 +22,18 @@
     "CH-4 workbench 深链 run_id 无鉴权外露面评估：run_id 经 query param 传递，读取全部经认证 API（GET /runs、/journey/hybrid/* 均带 current_user 归属校验），跨用户 run 404——审查请复核无越权读面",
     "CH-5 step_replay 消费面：workbench 用 Snackbar 式 Pill（workbench_replay_notice）呈现幂等回放，清除时机是下次列表重建——审查请核「不呈现为错误/不伪装首次成功」是否满足 X-07 挂载要求原文"
   ],
-  "integration_reverify_plan": "合并后复跑：flutter test test/features/journey/ test/features/learning/（预期 31+31）+ pytest tests/unit/test_hybrid_policy.py tests/unit/test_v4_i08_deep_task_return_control.py（预期 31+24）+ test_j06_hybrid_journey.py（5）"
+  "integration_reverify_plan": "合并后复跑：flutter test test/features/journey/ test/features/learning/（预期 33+31，一审整改后 journey 33）+ pytest tests/unit/test_hybrid_policy.py tests/unit/test_v4_i08_deep_task_return_control.py（预期 31+24）+ test_j06_hybrid_journey.py（5）",
+  "remediation": {
+    "round": "review_1（PASS_WITH_CHALLENGES）",
+    "commit": "be3d8c6a（fix(v4): U04 一审 C-1/C-2+新发现两处+文档勘误）",
+    "covers": [
+      "C-1 整屏 pump 挂载断言固化（task_execution_hybrid_entry_mount_test 2 面）",
+      "C-2 入口零审批写钉：fake 全四方法+命令面记账、白名单=导航与启动/续跑；mutation ②（_openSheet 注入 confirmOutcome）复核 2 面红、复原复绿",
+      "R-2/F-1 workbench onRefresh 改接读面重查（根因补充：卡挂载门 isAwaiting→awaiting != null，expired/cancelled 刷新面自此可达且不误触取消）",
+      "F-B/F-3 workbenchUri task_id 取消费侧：路由 initialTaskId 传入，深链带 task_id 锚定 j06:start:<taskId>（wiring 深链面断言）",
+      "R-4/R-5/F-2 数字口径勘误：test_results total 228→224；diff 头部改可复现口径（全 commit +2782/-5、mobile +2380/-2）；run_manifest arb +39/-1"
+    ],
+    "verification": "journey 33 + task/shared/smoke 124 + deep link 4 + 既有整屏 15 全绿；analyze 归零基线零新增；l10n 零新键；backend 零 diff（详见 run_manifest.json/test_results.json remediation 节）",
+    "date": "2026-09-29"
+  }
 }
