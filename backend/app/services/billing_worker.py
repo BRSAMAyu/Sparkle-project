@@ -14,6 +14,7 @@ from typing import Any
 
 import redis.asyncio as redis
 from loguru import logger
+from redis.exceptions import RedisError
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -40,6 +41,9 @@ class BillingWorker:
     MAX_RECORD_ATTEMPTS = 3
     RETRY_BACKOFF_SECONDS = 1.0
     BILLING_QUEUE = "queue:billing"
+    # V3-FIX-530：Redis 瞬时断连后的重连退避序列（秒），末位封顶——
+    # 对应 2026-09-28 03:02 实录的 Connection reset by peer 杀进程事件。
+    REDIS_RECONNECT_BACKOFF_SECONDS: tuple[float, ...] = (1.0, 5.0, 30.0)
 
     def __init__(
         self,
@@ -82,6 +86,16 @@ class BillingWorker:
         self._dead_letter_queue = "queue:billing:dead_letter"
         # flush 失败后的重试退避（测试可置 0 加速）
         self._flush_retry_backoff = self.RETRY_BACKOFF_SECONDS
+        # V3-FIX-530：Redis 断连重连退避（测试可覆盖加速）与连续失败计数
+        self._reconnect_backoff_seconds = self.REDIS_RECONNECT_BACKOFF_SECONDS
+        self._reconnect_failures = 0
+
+    @staticmethod
+    def _reconnect_delay(backoff: tuple[float, ...], failure_count: int) -> float:
+        """第 failure_count 次连续失败对应的重连退避秒数（序列封顶于末位，空序列为 0）。"""
+        if not backoff:
+            return 0.0
+        return backoff[min(max(failure_count, 1), len(backoff)) - 1]
 
     async def start(self):
         """启动工作器"""
@@ -90,30 +104,56 @@ class BillingWorker:
 
         try:
             while self.is_running:
-                # 尝试从队列获取任务，超时 1 秒
-                result = await self.redis.blpop(self.BILLING_QUEUE, timeout=1)
+                # V3-FIX-530：消费循环韧性壳——Redis 瞬时断连（2026-09-28 03:02 实录
+                # `Connection reset by peer`）只允许单轮消费失败，不得上抛经 lifespan
+                # `await billing_worker_task` 触发 "Application shutdown failed. Exiting"
+                # 杀死整个 engine 进程。业务语义零改动：下方 blpop 消费/批量/flush/死信
+                # 逻辑原样保留，仅在外围加异常壳；CancelledError 照常放行保证正常关停。
+                try:
+                    # 尝试从队列获取任务，超时 1 秒
+                    result = await self.redis.blpop(self.BILLING_QUEUE, timeout=1)
 
-                if result:
-                    _, data = result
-                    try:
-                        record = json.loads(data)
-                        self._batch.append(record)
-                        logger.debug(f"Added record to batch. Current size: {len(self._batch)}")
-                    except Exception as e:
-                        logger.error(f"Failed to parse billing record: {e}")
+                    if result:
+                        _, data = result
+                        try:
+                            record = json.loads(data)
+                            self._batch.append(record)
+                            logger.debug(f"Added record to batch. Current size: {len(self._batch)}")
+                        except Exception as e:
+                            logger.error(f"Failed to parse billing record: {e}")
 
-                # 检查是否需要刷新到数据库（失败不退出进程，走恢复路径）
-                if self._should_flush():
-                    try:
-                        await self._flush_to_db()
-                    except Exception as exc:
-                        await self._recover_failed_batch(exc)
+                    # 检查是否需要刷新到数据库（失败不退出进程，走恢复路径）
+                    if self._should_flush():
+                        try:
+                            await self._flush_to_db()
+                        except Exception as exc:
+                            await self._recover_failed_batch(exc)
+                except asyncio.CancelledError:
+                    raise
+                except (RedisError, ConnectionError, OSError) as exc:
+                    # redis.exceptions.ConnectionError/TimeoutError 均属 RedisError；
+                    # 裸 ConnectionError/OSError 是底层 socket 面兜底（对齐 event_bus
+                    # 消费循环先例）。记日志+退避重试（redis 客户端下轮命令自动重连），
+                    # 成功消费后连续失败计数归零、退避重新起步。
+                    self._reconnect_failures += 1
+                    delay = self._reconnect_delay(self._reconnect_backoff_seconds, self._reconnect_failures)
+                    logger.warning(
+                        "Redis BLPOP failed (consecutive failures={}), backing off {:.1f}s: {}",
+                        self._reconnect_failures,
+                        delay,
+                        exc,
+                    )
+                    await asyncio.sleep(delay)
+                except Exception as exc:
+                    # 兜底：其余非预期异常同样只记录不杀进程，退避后继续消费。
+                    self._reconnect_failures += 1
+                    logger.exception("BillingWorker loop encountered unexpected error (continuing): {}", exc)
+                    await asyncio.sleep(self._reconnect_delay(self._reconnect_backoff_seconds, 1))
+                else:
+                    self._reconnect_failures = 0
 
         except asyncio.CancelledError:
             logger.info("BillingWorker stopping (cancelled)...")
-        except Exception as e:
-            logger.error(f"BillingWorker encountered critical error: {e}")
-            raise
         finally:
             self.is_running = False
             # 停止前尝试刷新最后一批（失败则回退重试/死信，避免静默丢失）
@@ -122,8 +162,15 @@ class BillingWorker:
                     await self._flush_to_db()
                 except Exception as exc:
                     await self._recover_failed_batch(exc)
-            await self.redis.aclose()
-            await self.engine.dispose()
+            # V3-FIX-530：关停清理同样不得上抛（异常曾沿 lifespan 传播杀死进程）
+            try:
+                await self.redis.aclose()
+            except Exception as exc:
+                logger.warning("BillingWorker redis aclose failed: {}", exc)
+            try:
+                await self.engine.dispose()
+            except Exception as exc:
+                logger.warning("BillingWorker engine dispose failed: {}", exc)
             logger.info("BillingWorker stopped.")
 
     def _should_flush(self) -> bool:
