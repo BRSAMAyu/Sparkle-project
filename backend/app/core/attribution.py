@@ -133,8 +133,9 @@ class UnattributedReason(StrEnum):
 class UnjudgeableReason(StrEnum):
     """行损坏/输入无法判定的显式面（对齐 D-05 ``ObservationStatus.UNKNOWN`` 语义）。
 
-    与 unattributed 分开计数（n_unknown 面，同样永不进 rate 分母）：unattributed
-    是「关联不上」，unjudgeable 是「输入坏到无从判定」。
+    单列子计数（n_unknown 面，同样永不进 rate 分母；``broken_row`` 行同时计入
+    n_unattributed 与 n_unknown——⊆ 关系保持分母不变式，D02 一审 C-2 勘误）：
+    unattributed 是「关联不上」，unjudgeable 是「输入坏到无从判定」。
     """
 
     BROKEN_ROW = "broken_row"

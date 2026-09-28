@@ -55,7 +55,7 @@
       "purpose": "突变注入②：超窗照常归因（删失语义破坏演示）",
       "cmd": "sed 突变 if not in_window: → if False: 后 pytest；随后还原",
       "exit_code": 1,
-      "evidence": "2 failed（超窗反例+统一窗对照）→ 还原 38 passed"
+      "evidence": "2 failed（beyond_window 超窗反例 + before_anchor 时序倒置守卫；统一窗对照测不受该突变影响——D02 一审 C-1 勘误，红数 2 本身无误）→ 还原 38 passed"
     },
     {
       "purpose": "突变注入③：sample id 混入查询时点 now（重放幂等破坏演示）",
