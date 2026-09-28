@@ -146,6 +146,21 @@ class AssetReleaseSurfaceGuardTests(unittest.TestCase):
     def current_entries(self) -> list[dict]:
         return json.loads((self.root / "mobile/assets/asset_ledger.json").read_text())["entries"]
 
+    def test_same_indent_list_items_still_parsed(self) -> None:
+        """S04-R1 C1：同缩进 `- ` 列表项（合法 YAML 风格）必须仍被解析——
+        否则该风格 pubspec 下 L003 面对 bundle 目录静默失明。删去
+        in_list_block 的 `or stripped.startswith("- ")` 分支本测试红。"""
+        (self.root / "mobile/pubspec.yaml").write_text(
+            "flutter:\n"
+            "  assets:\n"
+            "  - assets/images/\n"
+            "  - assets/placeholders/\n",
+            encoding="utf-8",
+        )
+        dirs, fonts = self.guard.parse_pubspec_declared_dirs_and_fonts()
+        self.assertEqual(dirs, ["assets/images/", "assets/placeholders/"])
+        self.assertEqual(fonts, [])
+
     def test_green_fixture_has_no_violations(self) -> None:
         self.assertEqual(self.guard.scan(), [])
 
