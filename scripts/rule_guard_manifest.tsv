@@ -88,3 +88,5 @@ FS-CARRY	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_finally_error_carry.
 N37-TIMEOUT	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_n37_timeout_registry.py"
 UX-DUPTITLE	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_section_title_duplication_ratchet.py"
 ENUM-PARITY	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_enum_value_set_parity.py"
+V4S04-ASSETS	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_asset_release_surface.py"
+V4S04-DPR	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_pixel_dpr_policy.py"

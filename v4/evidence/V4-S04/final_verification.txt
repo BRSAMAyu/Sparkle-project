@@ -1,0 +1,26 @@
+# V4-S04 最终验证（2026-09-28 20:05:54 +0800）
+## worktree
+001561c3f74dc80247534a5e5a5802c322c0183d
+agent/v4/s04
+base(main): 001561c3f74dc80247534a5e5a5802c322c0183d
+## versions
+Python 3.14.3
+Flutter 3.41.3 • channel stable • https://github.com/flutter/flutter.git
+## guard: V4S04-ASSETS
+[Rule V4S04-ASSETS] PASS - ledger=49 approved=38 proposed=11 (proposed 全部隔离于发布面)
+exit=0
+## guard: V4S04-DPR
+[Rule V4S04-DPR] PASS - pixel entries=5 全部声明可验证（多DPR/NN/full-res），占位生成可复现
+exit=0
+## ledger verify
+[asset-ledger] PASS - 49 entries verified (hash+size+coverage)
+exit=0
+## ledger scaffold idempotency（重跑应 +0）
+scaffold: +0 new PROPOSED entries, total 49
+## placeholder determinism（重生成 diff 应为空）
+placeholders_dirty_files= 1
+## python guard tests
+Ran 14 tests in 0.036s
+
+OK
+exit=0

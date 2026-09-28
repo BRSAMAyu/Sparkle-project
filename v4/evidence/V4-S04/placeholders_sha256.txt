@@ -1,0 +1,3 @@
+2e898f7b526f53c53e09724d972a546620de8a9e62d706cfb80f7194ba08014a  mobile/assets/placeholders/placeholder_pixel_block.png
+9653356624faf939dbf478066dc7fe70e81f69f9c91271ee8ed9ab343959a5a3  mobile/assets/placeholders/2.0x/placeholder_pixel_block.png
+2cecc7e7fbc742c3376b8b0de6caba886b030bb8d679b62041183d9a784b1897  mobile/assets/placeholders/3.0x/placeholder_pixel_block.png

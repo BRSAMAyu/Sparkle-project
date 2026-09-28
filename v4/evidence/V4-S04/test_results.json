@@ -1,0 +1,37 @@
+{
+  "task": "V4-S04",
+  "generated_at_local": "2026-09-28T20:10:00+08:00",
+  "python": "3.14.3",
+  "flutter": "3.41.3 stable",
+  "denominator": {
+    "guard_unit_tests": "scripts/tests/test_asset_release_guard.py(9) + test_pixel_dpr_policy.py(5)",
+    "dart_tests": "mobile/test/core/assets/asset_catalog_test.dart(5) + 受 catalog 翻转影响的既有 BGM 面 3 文件(26)",
+    "guards_registered": ["V4S04-ASSETS", "V4S04-DPR"],
+    "ledger_verify": "49 entries hash+size+coverage"
+  },
+  "results": [
+    {"suite": "unittest test_asset_release_guard test_pixel_dpr_policy", "passed": 14, "failed": 0, "exit": 0},
+    {"suite": "flutter test asset_catalog + bgm_service + bgm_service_p2_10 + unified_settings_bgm", "passed": 31, "failed": 0, "exit": 0},
+    {"suite": "flutter analyze (asset_catalog.dart + 其测试)", "issues": 0, "exit": 0},
+    {"suite": "Rule V4S04-ASSETS (真实仓)", "violations": 0, "exit": 0},
+    {"suite": "Rule V4S04-DPR (真实仓)", "violations": 0, "exit": 0},
+    {"suite": "generate_asset_ledger --verify", "entries": 49, "exit": 0},
+    {"suite": "generate_asset_ledger --scaffold 幂等", "added": 0, "exit": 0},
+    {"suite": "placeholder determinism (sha256 -c 重生成)", "drift": 0}
+  ],
+  "counterexample_results": [
+    {"case": "未知许可文件进发布目录", "expected": "L003 red", "observed": "L003 x2 exit=1", "pass": true},
+    {"case": "bgm catalog 翻回 releaseApproved=true", "expected": "L006 red", "observed": "L002+L006 exit=1", "pass": true},
+    {"case": "NN 变体非整数倍", "expected": "P002 red", "observed": "P002+P005 exit=1", "pass": true},
+    {"case": "绕过间接层硬编码（夹具）", "expected": "L008 red", "observed": "L008", "pass": true},
+    {"case": "Dart 引用未入账路径（夹具）", "expected": "L007 red", "observed": "L007", "pass": true},
+    {"case": "未知字体文件（夹具）", "expected": "L005 red", "observed": "L005", "pass": true},
+    {"case": "账本缺失（夹具）", "expected": "L000 red", "observed": "L000", "pass": true},
+    {"case": "NN consumer 缺 FilterQuality.none（夹具）", "expected": "P003 red", "observed": "P003", "pass": true},
+    {"case": "像素条目缺 dpr_policy（夹具）", "expected": "P001 red", "observed": "P001", "pass": true}
+  ],
+  "not_run": [
+    {"item": "全量 run_all_rule_guards.sh 60+ 规则基线", "why": "非本卡验收面；worktree 环境债（gen 目录）已按卡指示复制后对 AQ/BG 单独复验 exit=0", "evidence": "run_manifest.json environment.env_debt_note"},
+    {"item": "真机/模拟器上验证 2.0x/3.0x variant 实际选中", "why": "Flutter variant 解析为平台既定行为；本卡交付文件层不变量（IHDR 整数倍）+ AssetManifest 声明正确性，设备面归 F02 像素组件联调"}
+  ]
+}
