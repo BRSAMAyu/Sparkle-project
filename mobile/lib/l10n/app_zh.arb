@@ -40,7 +40,7 @@
   "sensoryFeedbackSectionSubtitle": "统一控制操作音效、成就反馈和触觉回馈",
   "sensoryFeedbackLoadingSubtitle": "正在读取感官反馈偏好...",
   "sensorySoundTitle": "音效反馈",
-  "sensorySoundSubtitle": "关闭后，所有 Sensory 音效与环境音将静默",
+  "sensorySoundSubtitle": "关闭后，操作与确认提示音将静默（背景声有独立开关）",
   "sensoryHapticTitle": "触控反馈",
   "sensoryHapticSubtitle": "关闭后，成就、星图等所有触感反馈都会停止",
   "sensoryAuroraLinkTitle": "Aurora 感官联动",
@@ -16100,5 +16100,14 @@
   "learningContinueActionSemantics": "继续当前动作：{label}",
   "learningSourceBadgeLabel": "来源 {id} 版本 {version}",
   "learningSourceTapSemantics": "查看来源片段 {label}",
-  "learningSourceCompactLabel": "来源 · 版本 {version}"
+  "learningSourceCompactLabel": "来源 · 版本 {version}",
+  "sensoryAmbientEnabledTitle": "背景声",
+  "sensoryAmbientEnabledSubtitle": "独立于提示音；不自动播放，仅在你选择场景或开始专注时播放",
+  "sensorySoundDegradedNotice": "系统拒绝了音频播放，提示音已静音降级；任务与提醒不受影响",
+  "objectUnavailableMissingTitle": "内容已删除或不存在",
+  "objectUnavailableMissingBody": "这个通知指向的内容可能已被删除，或链接已过期。你的其他数据不受影响。",
+  "objectUnavailableOfflineTitle": "暂时无法确认",
+  "objectUnavailableOfflineBody": "网络不可用或服务暂时无法访问，还不能打开这个对象。可以稍后重试。",
+  "objectUnavailableGoTasks": "查看任务列表",
+  "objectUnavailableBackHome": "回到首页"
 }

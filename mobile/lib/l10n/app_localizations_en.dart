@@ -133,7 +133,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sensorySoundSubtitle =>
-      'Turn off all Sensory sounds and ambient audio';
+      'Mute interaction and confirmation cue sounds (ambient sound has its own switch)';
 
   @override
   String get sensoryHapticTitle => 'Haptic Feedback';
@@ -34924,4 +34924,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String learningSourceCompactLabel(Object version) {
     return 'Source version $version';
   }
+
+  @override
+  String get sensoryAmbientEnabledTitle => 'Ambient Sound';
+
+  @override
+  String get sensoryAmbientEnabledSubtitle =>
+      'Independent from cue sounds; never autoplays — plays only when you pick a scene or start focus';
+
+  @override
+  String get sensorySoundDegradedNotice =>
+      'The system rejected audio playback; cue sounds are muted. Tasks and reminders are unaffected.';
+
+  @override
+  String get objectUnavailableMissingTitle => 'Deleted or unavailable';
+
+  @override
+  String get objectUnavailableMissingBody =>
+      'The content this notification pointed to may have been deleted, or the link has expired. Your other data is unaffected.';
+
+  @override
+  String get objectUnavailableOfflineTitle => 'Can\'t verify right now';
+
+  @override
+  String get objectUnavailableOfflineBody =>
+      'The network is unavailable or the service can\'t be reached, so this item can\'t be opened yet. Try again later.';
+
+  @override
+  String get objectUnavailableGoTasks => 'Open task list';
+
+  @override
+  String get objectUnavailableBackHome => 'Back to home';
 }

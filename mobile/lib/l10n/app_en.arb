@@ -40,7 +40,7 @@
   "sensoryFeedbackSectionSubtitle": "Control interaction sounds, achievement feedback, and haptics in one place",
   "sensoryFeedbackLoadingSubtitle": "Loading sensory feedback preferences...",
   "sensorySoundTitle": "Sound Feedback",
-  "sensorySoundSubtitle": "Turn off all Sensory sounds and ambient audio",
+  "sensorySoundSubtitle": "Mute interaction and confirmation cue sounds (ambient sound has its own switch)",
   "sensoryHapticTitle": "Haptic Feedback",
   "sensoryHapticSubtitle": "Turn off haptics for achievements, star map interactions, and more",
   "sensoryAuroraLinkTitle": "Aurora Sensory Link",
@@ -16288,5 +16288,14 @@
   "learningContinueActionSemantics": "Continue current action: {label}",
   "learningSourceBadgeLabel": "Source {id} version {version}",
   "learningSourceTapSemantics": "View source fragment {label}",
-  "learningSourceCompactLabel": "Source version {version}"
+  "learningSourceCompactLabel": "Source version {version}",
+  "sensoryAmbientEnabledTitle": "Ambient Sound",
+  "sensoryAmbientEnabledSubtitle": "Independent from cue sounds; never autoplays — plays only when you pick a scene or start focus",
+  "sensorySoundDegradedNotice": "The system rejected audio playback; cue sounds are muted. Tasks and reminders are unaffected.",
+  "objectUnavailableMissingTitle": "Deleted or unavailable",
+  "objectUnavailableMissingBody": "The content this notification pointed to may have been deleted, or the link has expired. Your other data is unaffected.",
+  "objectUnavailableOfflineTitle": "Can't verify right now",
+  "objectUnavailableOfflineBody": "The network is unavailable or the service can't be reached, so this item can't be opened yet. Try again later.",
+  "objectUnavailableGoTasks": "Open task list",
+  "objectUnavailableBackHome": "Back to home"
 }

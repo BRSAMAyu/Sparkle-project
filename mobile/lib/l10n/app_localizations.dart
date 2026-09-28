@@ -341,7 +341,7 @@ abstract class AppLocalizations {
   /// No description provided for @sensorySoundSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'关闭后，所有 Sensory 音效与环境音将静默'**
+  /// **'关闭后，操作与确认提示音将静默（背景声有独立开关）'**
   String get sensorySoundSubtitle;
 
   /// No description provided for @sensoryHapticTitle.
@@ -60811,6 +60811,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'来源 · 版本 {version}'**
   String learningSourceCompactLabel(Object version);
+
+  /// No description provided for @sensoryAmbientEnabledTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'背景声'**
+  String get sensoryAmbientEnabledTitle;
+
+  /// No description provided for @sensoryAmbientEnabledSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'独立于提示音；不自动播放，仅在你选择场景或开始专注时播放'**
+  String get sensoryAmbientEnabledSubtitle;
+
+  /// No description provided for @sensorySoundDegradedNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统拒绝了音频播放，提示音已静音降级；任务与提醒不受影响'**
+  String get sensorySoundDegradedNotice;
+
+  /// No description provided for @objectUnavailableMissingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容已删除或不存在'**
+  String get objectUnavailableMissingTitle;
+
+  /// No description provided for @objectUnavailableMissingBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个通知指向的内容可能已被删除，或链接已过期。你的其他数据不受影响。'**
+  String get objectUnavailableMissingBody;
+
+  /// No description provided for @objectUnavailableOfflineTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法确认'**
+  String get objectUnavailableOfflineTitle;
+
+  /// No description provided for @objectUnavailableOfflineBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络不可用或服务暂时无法访问，还不能打开这个对象。可以稍后重试。'**
+  String get objectUnavailableOfflineBody;
+
+  /// No description provided for @objectUnavailableGoTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看任务列表'**
+  String get objectUnavailableGoTasks;
+
+  /// No description provided for @objectUnavailableBackHome.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到首页'**
+  String get objectUnavailableBackHome;
 }
 
 class _AppLocalizationsDelegate

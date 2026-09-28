@@ -129,7 +129,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sensorySoundTitle => '音效反馈';
 
   @override
-  String get sensorySoundSubtitle => '关闭后，所有 Sensory 音效与环境音将静默';
+  String get sensorySoundSubtitle => '关闭后，操作与确认提示音将静默（背景声有独立开关）';
 
   @override
   String get sensoryHapticTitle => '触控反馈';
@@ -33441,4 +33441,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String learningSourceCompactLabel(Object version) {
     return '来源 · 版本 $version';
   }
+
+  @override
+  String get sensoryAmbientEnabledTitle => '背景声';
+
+  @override
+  String get sensoryAmbientEnabledSubtitle => '独立于提示音；不自动播放，仅在你选择场景或开始专注时播放';
+
+  @override
+  String get sensorySoundDegradedNotice => '系统拒绝了音频播放，提示音已静音降级；任务与提醒不受影响';
+
+  @override
+  String get objectUnavailableMissingTitle => '内容已删除或不存在';
+
+  @override
+  String get objectUnavailableMissingBody =>
+      '这个通知指向的内容可能已被删除，或链接已过期。你的其他数据不受影响。';
+
+  @override
+  String get objectUnavailableOfflineTitle => '暂时无法确认';
+
+  @override
+  String get objectUnavailableOfflineBody => '网络不可用或服务暂时无法访问，还不能打开这个对象。可以稍后重试。';
+
+  @override
+  String get objectUnavailableGoTasks => '查看任务列表';
+
+  @override
+  String get objectUnavailableBackHome => '回到首页';
 }
