@@ -1,0 +1,36 @@
+Compiling lib/main.dart for the Web...                          
+Wasm dry run findings:
+Found incompatibilities with WebAssembly.
+
+package:flutter_secure_storage_web/flutter_secure_storage_web.dart 5:1 - dart:html unsupported (0)
+package:flutter_secure_storage_web/flutter_secure_storage_web.dart 6:1 - dart:js_util unsupported (15)
+package:flutter_secure_storage_web/src/subtle.dart 21:1 - dart:html unsupported (0)
+package:flutter_secure_storage_web/src/subtle.dart 22:1 - dart:js_util unsupported (15)
+package:flutter_secure_storage_web/src/subtle.dart 26:1 - package:js/js.dart unsupported (14)
+package:isar/src/native/isar_core.dart 4:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/isar_link_impl.dart 3:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/open.dart 4:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/split_words.dart 1:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/bindings.dart 6:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/isar_collection_impl.dart 5:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/txn.dart 3:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/encode_string.dart 1:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/isar_impl.dart 4:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:ffi/src/allocation.dart 5:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:ffi/src/arena.dart 8:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:ffi/src/utf16.dart 5:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:ffi/src/utf8.dart 6:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/index_key.dart 3:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/query_build.dart 3:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+package:isar/src/native/query_impl.dart 4:1 - 'dart:ffi' can't be imported when compiling to Wasm. (2)
+file:///Users/brsama/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/lib/flutter_tts_web.dart 104:23 - invalid_runtime_check_with_js_interop_types lint violation: Cast from 'JSAny?' to 'int' casts a JS interop value to a Dart type, which might not be platform-consistent. (8)
+file:///Users/brsama/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/lib/flutter_tts_web.dart 105:21 - invalid_runtime_check_with_js_interop_types lint violation: Cast from 'JSAny?' to 'String' casts a JS interop value to a Dart type, which might not be platform-consistent. (8)
+file:///Users/brsama/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/lib/flutter_tts_web.dart 107:21 - invalid_runtime_check_with_js_interop_types lint violation: Cast from 'JSAny?' to 'String' casts a JS interop value to a Dart type, which might not be platform-consistent. (8)
+file:///Users/brsama/.pub-cache/hosted/pub.dev/flutter_timezone-5.0.1/lib/flutter_timezone_web.dart 39:22 - invalid_runtime_check_with_js_interop_types lint violation: Cast from 'JSFunction?' to 'List<String> Function(String)?' casts a JS interop value to a Dart type, which might not be platform-consistent. (8)
+
+Consider addressing these issues to enable wasm builds. See docs for more info: https://docs.flutter.dev/platform-integration/web/wasm
+
+Use --no-wasm-dry-run to disable these warnings.
+Compiling lib/main.dart for the Web...                             93.3s
+✓ Built build/web
+DEBUG_EXIT=0

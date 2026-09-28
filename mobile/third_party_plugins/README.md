@@ -1,6 +1,6 @@
 # mobile/third_party_plugins/ — Vendored 插件 Fork
 
-本目录存放 7 个 Flutter 插件的本地 fork，全部通过 `mobile/pubspec.yaml` 的 `dependency_overrides`（`path:` 指向）接入。fork 的主要动机是**本地构建可控性**（Apple Silicon / ARM64 兼容、本地补丁不必等上游发版）。
+本目录存放 8 个插件的本地 fork，全部通过 `mobile/pubspec.yaml` 的 `dependency_overrides`（`path:` 指向）接入。fork 的主要动机是**本地构建可控性**（Apple Silicon / ARM64 兼容、本地补丁不必等上游发版）。
 
 ## Fork 清单
 
@@ -11,6 +11,7 @@
 | `flutter_secure_storage` | 安全存储 | token 存储 |
 | `fluwx` | 微信 SDK（分享/登录） | |
 | `isar_flutter_libs` | Isar 本地数据库原生库 | 离线优先架构的关键依赖 |
+| `isar_generator` (v3.1.0+1) | Isar 代码生成器（build_runner） | FIX-558：schema id 超 JS double 精度域时输出 `int.parse` 串，解封 Flutter Web 构建；补丁与升级注意见其 README |
 | `jpush_flutter` | 极光推送 | |
 | `sentry_flutter` (v8.14.2) | 崩溃监控 | |
 

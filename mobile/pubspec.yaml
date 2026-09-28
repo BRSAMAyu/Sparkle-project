@@ -148,6 +148,10 @@ dependency_overrides:
     path: third_party_plugins/flutter_local_notifications
   flutter_secure_storage:
     path: third_party_plugins/flutter_secure_storage
+  # FIX-558：本 fork 让 isar 生成器对超 JS double 精度域的 schema id 输出
+  # int.parse 串而非 int 字面量（dart2js CFE 拒绝后者），解封 Flutter Web 构建
+  isar_generator:
+    path: third_party_plugins/isar_generator
   isar_flutter_libs:
     path: third_party_plugins/isar_flutter_libs
   jpush_flutter:

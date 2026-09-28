@@ -14,9 +14,9 @@ extension GetCachedListSnapshotCollection on Isar {
       this.collection();
 }
 
-const CachedListSnapshotSchema = CollectionSchema(
+final CachedListSnapshotSchema = CollectionSchema(
   name: r'cls_2528',
-  id: -3993110354800439673,
+  id: int.parse(r'-3993110354800439673'),
   properties: {
     r'cacheKey': PropertySchema(
       id: 0,
@@ -46,7 +46,7 @@ const CachedListSnapshotSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'i_cls_key_2529': IndexSchema(
-      id: -5780496603892815176,
+      id: int.parse(r'-5780496603892815176'),
       name: r'i_cls_key_2529',
       unique: true,
       replace: false,
@@ -59,7 +59,7 @@ const CachedListSnapshotSchema = CollectionSchema(
       ],
     ),
     r'i_cls_ver_2530': IndexSchema(
-      id: 1681328346514525477,
+      id: int.parse(r'1681328346514525477'),
       name: r'i_cls_ver_2530',
       unique: false,
       replace: false,
