@@ -13568,6 +13568,50 @@
       }
     }
   },
+  "galaxyCapabilitySectionTitle": "能力证据与来源",
+  "galaxyCapabilityVerifiedLabel": "独立检验通过",
+  "galaxyCapabilityVerifiedCopy": "掌握度由独立检验（测验等）支撑。",
+  "galaxyCapabilityPracticedLabel": "练习过 · 未独立检验",
+  "galaxyCapabilityPracticedCopy": "有真实参与记录；掌握度尚未通过独立检验，不代表已掌握。",
+  "galaxyCapabilityTraceOnlyLabel": "仅活动痕迹",
+  "galaxyCapabilityTraceOnlyCopy": "只有学习时长等参与记录，不计入能力掌握。",
+  "galaxyCapabilityNonHumanLabel": "Agent 产物",
+  "galaxyCapabilityNonHumanCopy": "这项工作由 Agent 完成，不计入个人能力。",
+  "galaxyCapabilityUnknownLabel": "证据通道未知",
+  "galaxyCapabilityUnknownCopy": "当前数据没有能力检验信息；这里不显示掌握进度。",
+  "galaxyCapabilitySourceEmpty": "暂无来源记录",
+  "galaxyCapabilityProjectionVersion": "投影版本 v{version}",
+  "@galaxyCapabilityProjectionVersion": {
+    "placeholders": {
+      "version": {
+        "type": "int"
+      }
+    }
+  },
+  "galaxyCapabilityProjectionUnknown": "投影版本未知",
+  "galaxyCapabilitySourceFallback": "来源 · {code}",
+  "@galaxyCapabilitySourceFallback": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "galaxyCapabilitySourceOutcome": "学习成果记录",
+  "galaxyCapabilitySourceQuiz": "独立测验",
+  "galaxyCapabilitySourceTask": "任务完成",
+  "galaxyCapabilitySourceDocument": "学习资料",
+  "galaxyCapabilitySourceError": "错题",
+  "galaxyCapabilitySourceTranslation": "翻译",
+  "galaxyCapabilitySourceFocus": "学习时长记录",
+  "galaxyCapabilitySourceCommunity": "社区分享",
+  "galaxyCapabilitySourceChat": "对话",
+  "galaxyCapabilitySourceGraph": "知识图谱构建",
+  "galaxyA11yChannelVerified": "已独立检验",
+  "galaxyA11yChannelPracticed": "练习过，未检验",
+  "galaxyA11yChannelTraceOnly": "仅活动痕迹",
+  "galaxyA11yChannelNonHuman": "Agent产物",
+  "galaxyA11yChannelUnknown": "检验状态未知",
   "intentSuggestedActionLabel": "我建议先这样做",
   "intentCorrectionLabel": "或者我猜错了——",
   "intentConfidenceLabel": "{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）",

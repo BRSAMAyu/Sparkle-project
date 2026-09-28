@@ -29259,6 +29259,100 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get galaxyCapabilitySectionTitle => '能力证据与来源';
+
+  @override
+  String get galaxyCapabilityVerifiedLabel => '独立检验通过';
+
+  @override
+  String get galaxyCapabilityVerifiedCopy => '掌握度由独立检验（测验等）支撑。';
+
+  @override
+  String get galaxyCapabilityPracticedLabel => '练习过 · 未独立检验';
+
+  @override
+  String get galaxyCapabilityPracticedCopy => '有真实参与记录；掌握度尚未通过独立检验，不代表已掌握。';
+
+  @override
+  String get galaxyCapabilityTraceOnlyLabel => '仅活动痕迹';
+
+  @override
+  String get galaxyCapabilityTraceOnlyCopy => '只有学习时长等参与记录，不计入能力掌握。';
+
+  @override
+  String get galaxyCapabilityNonHumanLabel => 'Agent 产物';
+
+  @override
+  String get galaxyCapabilityNonHumanCopy => '这项工作由 Agent 完成，不计入个人能力。';
+
+  @override
+  String get galaxyCapabilityUnknownLabel => '证据通道未知';
+
+  @override
+  String get galaxyCapabilityUnknownCopy => '当前数据没有能力检验信息；这里不显示掌握进度。';
+
+  @override
+  String get galaxyCapabilitySourceEmpty => '暂无来源记录';
+
+  @override
+  String galaxyCapabilityProjectionVersion(int version) {
+    return '投影版本 v$version';
+  }
+
+  @override
+  String get galaxyCapabilityProjectionUnknown => '投影版本未知';
+
+  @override
+  String galaxyCapabilitySourceFallback(String code) {
+    return '来源 · $code';
+  }
+
+  @override
+  String get galaxyCapabilitySourceOutcome => '学习成果记录';
+
+  @override
+  String get galaxyCapabilitySourceQuiz => '独立测验';
+
+  @override
+  String get galaxyCapabilitySourceTask => '任务完成';
+
+  @override
+  String get galaxyCapabilitySourceDocument => '学习资料';
+
+  @override
+  String get galaxyCapabilitySourceError => '错题';
+
+  @override
+  String get galaxyCapabilitySourceTranslation => '翻译';
+
+  @override
+  String get galaxyCapabilitySourceFocus => '学习时长记录';
+
+  @override
+  String get galaxyCapabilitySourceCommunity => '社区分享';
+
+  @override
+  String get galaxyCapabilitySourceChat => '对话';
+
+  @override
+  String get galaxyCapabilitySourceGraph => '知识图谱构建';
+
+  @override
+  String get galaxyA11yChannelVerified => '已独立检验';
+
+  @override
+  String get galaxyA11yChannelPracticed => '练习过，未检验';
+
+  @override
+  String get galaxyA11yChannelTraceOnly => '仅活动痕迹';
+
+  @override
+  String get galaxyA11yChannelNonHuman => 'Agent产物';
+
+  @override
+  String get galaxyA11yChannelUnknown => '检验状态未知';
+
+  @override
   String get intentSuggestedActionLabel => '我建议先这样做';
 
   @override

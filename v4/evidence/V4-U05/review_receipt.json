@@ -1,0 +1,36 @@
+{
+  "card": "V4-U05",
+  "risk": "normal",
+  "independent_reviewers_required": 1,
+  "implementation_state": "REVIEW_READY",
+  "evidence_verdict": "NOT_RUN",
+  "reviewer_instructions": "以卡面三条验收为准（必须可失败）：①节点点开来源与投影 version 一致 ②缩放按钮不遮挡主 CTA，键盘可选节点 ③不开特效仍理解全部信息，无数据不造进度。逐条独立复跑（可失败性亲验：反转任一断言应红；突变注入 M1/M2 见 test_results.json 可直接复放）。红线清单见 diff_or_evidence_only.md §4（五 Tab/RF-06 三文件/classic/backend 只消费）。",
+  "status": "PENDING",
+  "pre_registered_challenges": [
+    {
+      "id": "CH-1",
+      "challenge": "「封顶 SHINING 档」的口径边界：本卡把未检验星封在 fill 0.82/ring 0.38（<85 档视觉），但 `_masteryTemperatureColor` 色温仍随存量分数升温（D04「亮度保留存量分数=参与足迹」）。请审查者裁决：色温升温是否构成「已掌握亮度」的强解读？若是，封顶点在 `_nodeStyle` 一处可改；若否，请确认现口径与后端 `_calculate_brightness`（不封顶）的一致性理解正确。"
+    },
+    {
+      "id": "CH-2",
+      "challenge": "fail-closed 的副作用面：无 `user_status` 的节点（gateway gRPC proto 形状、10 分钟 SmartCache 旧缓存）一律按未检验渲染。这意味着合并后这些面的存量高分星视觉会变暗/降级——这是本卡的意图（诚实），但也是可感知的行为变化。请审查者复验：变化面仅视觉档与读屏后缀，零数据写入、零删除、无掌握度数值改动；并评估是否需要用户可见的过渡说明。"
+    },
+    {
+      "id": "CH-3",
+      "challenge": "「来源与投影 version 一致」的断言强度：同源保证是结构性的（同一 GalaxyNodeModel 快照传入），但抽屉打开期间若后台图刷新（图面视图缓存失效/下拉刷新），sheet 已持有的快照可能落后于新投影——sheet 不监听刷新（模态生命周期内冻结）。请审查者评估：模态内冻结快照是否符合「点开看到的是点开时刻的一致投影」语义，还是应加 staleness 提示（如「数据自打开后已更新」）。"
+    },
+    {
+      "id": "CH-4",
+      "challenge": "J-08 既有 `_OutcomeEvidenceRow` 的 verified 图标（success 色）与本卡通道语义的潜在冲突：成果证据行的图标视觉=「检验通过」形，但 outcome 行可来自任意通道（D04 词表）。本卡登记为限制（V3 已 DONE 面不重置）未改。请审查者裁决：该面是否须随本卡一并修正（换中性图标），还是立接续卡。"
+    },
+    {
+      "id": "CH-5",
+      "challenge": "h5 chain A 测试适配（ensureVisible 前置）是本卡唯一既有测试改动。请审查者对照 diff 确认：适配仅是滚动到目标后点按（点按目标、路由参数、initial_context 逐键断言全部保留），非断言弱化；并抽查同文件其余链（B/D）未受影响。"
+    },
+    {
+      "id": "CH-6",
+      "challenge": "证据截图为 Ahem 方块字形（F04/U03 同先例），真实文案由语义 dump 承载；星图画布本体因 headless 相机限制无像素截图（限制 #1）。请审查者按先例口径裁决证据充分性，并亲验语义 dump 中的「练习过 · 未独立检验/不代表已掌握/投影版本 v7」等原文。"
+    }
+  ],
+  "integration_reverify": "合并后需在集成 SHA 复跑：flutter test test/features/galaxy/ test/widget/（全绿基线见 test_results.json）+ flutter analyze --no-pub lib test（零 issue）+ bash scripts/run_all_rule_guards.sh（88 条）+ 四棘轮守卫"
+}

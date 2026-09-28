@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
+import 'package:sparkle/features/galaxy/domain/capability_channel.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
@@ -1590,7 +1591,9 @@ class StarMapPainter extends CustomPainter {
           style.glowAlpha > 0 &&
           nodeAlpha > 0 &&
           lod.index >= GalaxyLod.l2.index &&
-          (isSpotlighted || camera.scale >= 0.8 || node.masteryScore >= 85)) {
+          (isSpotlighted ||
+              camera.scale >= 0.8 ||
+              (node.capability.claimsVerification && node.masteryScore >= 85))) {
         canvas
           ..drawCircle(
             nodeCenter,
@@ -1671,6 +1674,17 @@ class StarMapPainter extends CustomPainter {
         );
       }
 
+      // V4-U05：能力通道环标记（形状区分维，不开特效也能读）——
+      // 双环=独立检验通过；单细环=练习过（参与足迹）；虚线环=仅痕迹/
+      // Agent 产物/通道未知（与 F02 PixelStateOutline.dashed 同语义）。
+      // 与亮度无关地按 lod ≥ l1 绘制，低分参与节点也有可读的通道身份。
+      if (node.isUnlocked &&
+          nodeAlpha > 0 &&
+          lod.index >= GalaxyLod.l1.index &&
+          style.ringMark != GalaxyStarRingMark.none) {
+        _drawCapabilityRingMark(canvas, nodeCenter, radius, style, nodeAlpha);
+      }
+
       if (examSprintActive &&
           nodeAlpha > 0 &&
           lod.index >= GalaxyLod.l1.index) {
@@ -1712,6 +1726,7 @@ class StarMapPainter extends CustomPainter {
       }
 
       if (!performanceDegraded &&
+          node.capability.claimsVerification &&
           node.masteryScore >= 85 &&
           lod.index >= GalaxyLod.l2.index) {
         canvas.drawCircle(
@@ -2279,53 +2294,22 @@ class StarMapPainter extends CustomPainter {
       _nodeCanvasColor(node),
       masteryScore: node.masteryScore,
     );
-    final mastery = node.masteryScore;
-    if (!node.isUnlocked) {
-      return _PaintNodeStyle(
-        baseColor: baseColor,
-        fillAlpha: 0.22,
-        masteryRingAlpha: 0,
-        glowAlpha: 0,
-        coreAlpha: 0.12,
-      );
-    }
-
-    double fillAlpha;
-    double masteryRingAlpha;
-    double glowAlpha = 0;
-    var coreAlpha = 0.18;
-
-    if (mastery < 30) {
-      fillAlpha = 0.32;
-      masteryRingAlpha = 0;
-    } else if (mastery < 60) {
-      fillAlpha = 0.58;
-      masteryRingAlpha = 0;
-      coreAlpha = 0.24;
-    } else if (mastery < 85) {
-      fillAlpha = 0.82;
-      masteryRingAlpha = 0.38;
-      coreAlpha = 0.28;
-    } else {
-      fillAlpha = 0.94;
-      masteryRingAlpha = 0.72;
-      glowAlpha = lod.index >= GalaxyLod.l2.index ? 0.18 : 0;
-      coreAlpha = 0.34;
-    }
-
-    if (isDragging) {
-      fillAlpha = 0.88;
-      masteryRingAlpha = math.max(masteryRingAlpha, 0.46);
-      glowAlpha = math.max(glowAlpha, 0.14);
-      coreAlpha = math.max(coreAlpha, 0.28);
-    }
-
+    // V4-U05：视觉档唯一判定点 = capability_channel 纯函数（四态分层：
+    // verified 唯一允许掌握档亮度/光晕/脉冲；practiced 与痕迹/Agent 产物/
+    // 无数据 fail-closed 封顶 SHINING 档——参与足迹可见，绝不渲染成已掌握）。
+    final resolved = resolveGalaxyStarVisualStyle(
+      isUnlocked: node.isUnlocked,
+      masteryScore: node.masteryScore,
+      channel: node.capability.channel,
+      isDragging: isDragging,
+    );
     return _PaintNodeStyle(
       baseColor: baseColor,
-      fillAlpha: fillAlpha,
-      masteryRingAlpha: masteryRingAlpha,
-      glowAlpha: glowAlpha,
-      coreAlpha: coreAlpha,
+      fillAlpha: resolved.fillAlpha,
+      masteryRingAlpha: resolved.masteryRingAlpha,
+      glowAlpha: resolved.glowAlpha,
+      coreAlpha: resolved.coreAlpha,
+      ringMark: resolved.ringMark,
     );
   }
 
@@ -2342,7 +2326,11 @@ class StarMapPainter extends CustomPainter {
     if (isDragging) {
       radius *= 1.2;
     }
-    if (allowPulse && node.masteryScore >= 85) {
+    // V4-U05：掌握档呼吸脉冲只属于独立检验通过的星（PRACTICED/痕迹高分
+    // 存量不夸大——脉冲是「已掌握」庆祝语言，与 F02 状态族唯一庆祝同纪律）。
+    if (allowPulse &&
+        node.capability.claimsVerification &&
+        node.masteryScore >= 85) {
       radius *= 1 + 0.06 * math.sin(ambientPhase * 2.1 + _nodeSeed(node.id));
     }
     return radius;
@@ -2494,6 +2482,54 @@ class StarMapPainter extends CustomPainter {
         canvas.drawPath(metric.extractPath(distance, next), paint);
         distance += 8;
       }
+    }
+  }
+
+  /// V4-U05：能力通道环标记（形状区分，不依赖特效）。
+  ///
+  /// - double（verified）：掌握环之外再加一道外环——「双环」是独立检验
+  ///   通过的唯一形状身份；
+  /// - single（practiced）：一道恒定低透明度细环（参与足迹身份，与分数
+  ///   无关地可读）；
+  /// - dashed（trace_only/non_human/unknown）：虚线环（边界不确定性，
+  ///   与 F02 状态族 dashed 同语义；与锁定节点的虚线问号语言区分：无
+  ///   问号、半径外扩、透明度更低）。
+  void _drawCapabilityRingMark(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    _PaintNodeStyle style,
+    double nodeAlpha,
+  ) {
+    final markColor = style.baseColor.withValues(alpha: 0.30 * nodeAlpha);
+    switch (style.ringMark) {
+      case GalaxyStarRingMark.none:
+        break;
+      case GalaxyStarRingMark.double:
+        canvas.drawCircle(
+          center,
+          radius + 4.2,
+          Paint()
+            ..color = style.baseColor.withValues(alpha: 0.5 * nodeAlpha)
+            ..strokeWidth = 1.2
+            ..style = PaintingStyle.stroke,
+        );
+      case GalaxyStarRingMark.single:
+        canvas.drawCircle(
+          center,
+          radius + 3.6,
+          Paint()
+            ..color = markColor
+            ..strokeWidth = 1
+            ..style = PaintingStyle.stroke,
+        );
+      case GalaxyStarRingMark.dashed:
+        _drawDashedCircle(
+          canvas: canvas,
+          center: center,
+          radius: radius + 3.6,
+          color: markColor,
+        );
     }
   }
 
@@ -2908,6 +2944,7 @@ class _PaintNodeStyle {
     required this.masteryRingAlpha,
     required this.glowAlpha,
     required this.coreAlpha,
+    this.ringMark = GalaxyStarRingMark.none,
   });
 
   final Color baseColor;
@@ -2915,4 +2952,7 @@ class _PaintNodeStyle {
   final double masteryRingAlpha;
   final double glowAlpha;
   final double coreAlpha;
+
+  /// V4-U05：能力通道环标记（双环=verified / 单环=practiced / 虚线=痕迹）。
+  final GalaxyStarRingMark ringMark;
 }

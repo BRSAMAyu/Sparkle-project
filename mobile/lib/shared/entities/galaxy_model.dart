@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/features/galaxy/domain/capability_channel.dart';
 import 'package:sparkle/shared/models/compact_knowledge_node.dart';
 
 part 'galaxy_model.g.dart';
@@ -311,6 +312,7 @@ class GalaxyNodeModel {
     this.graphEventSources = const [],
     this.positionX,
     this.positionY,
+    this.capability = const GalaxyNodeCapabilityEvidence(),
   });
 
   factory GalaxyNodeModel.fromJson(Map<String, dynamic> json) {
@@ -406,6 +408,9 @@ class GalaxyNodeModel {
           .toList(growable: false),
       positionX: (json['position_x'] as num?)?.toDouble(),
       positionY: (json['position_y'] as num?)?.toDouble(),
+      // V4-U05：能力通道/投影版本（D04 数据面消费——fail-closed，缺数据
+      // = unknown，绝不把无数据升级成已检验）。
+      capability: GalaxyNodeCapabilityEvidence.fromJson(json),
     );
   }
   final String id;
@@ -482,6 +487,10 @@ class GalaxyNodeModel {
   /// J-08：节点溯源行（后端 NodeWithStatus.graph_event_sources 同形状投影）。
   /// 仅客户端呈现用，不回传服务端（toJson 沿用生成面，不含本字段）。
   final List<Map<String, dynamic>> graphEventSources;
+
+  /// V4-U05：能力证据投影（D04 通道 + 投影版本；`user_status` 快照同源）。
+  /// 缺数据 = unknown（fail-closed：视觉与措辞都不声称检验）。
+  final GalaxyNodeCapabilityEvidence capability;
 
   /// J-08：本节点被真实成果点亮/标记的证据 id 列表（outcome_ledger 溯源行）。
   /// 与 Goal 页轨迹卡（/journey/trajectory galaxy 环）读同一批 outcome id
@@ -602,6 +611,7 @@ class GalaxyNodeModel {
     List<String>? incomingEdgeIds,
     double? positionX,
     double? positionY,
+    GalaxyNodeCapabilityEvidence? capability,
   }) =>
       GalaxyNodeModel(
         id: id ?? this.id,
@@ -630,6 +640,7 @@ class GalaxyNodeModel {
         incomingEdgeIds: incomingEdgeIds ?? this.incomingEdgeIds,
         positionX: positionX ?? this.positionX,
         positionY: positionY ?? this.positionY,
+        capability: capability ?? this.capability,
       );
 
   static SectorEnum _parseSector(Object? raw) {

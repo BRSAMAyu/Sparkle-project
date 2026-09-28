@@ -8,7 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/galaxy/domain/capability_channel.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 /// Galaxy accessibility service for screen readers and haptic feedback
@@ -213,6 +215,10 @@ class GalaxyAccessibilityService {
             node.masteryScore.toStringAsFixed(0),
           ),
         )
+        // V4-U05：通道如实后缀——「掌握度 85%」单独读出会把练习足迹/
+        // legacy 存量说成已掌握（D04：标签不能叫精通）；通道词跟随，
+        // 让检验状态不依赖视觉环标记也能读。
+        ..write(_channelSemanticSuffix(node.capability.channel, l10n))
         ..write(l10n.galaxyA11yNodeStudyCount(node.studyCount));
     } else {
       buffer.write(l10n.galaxyA11yNodeLocked);
@@ -228,6 +234,22 @@ class GalaxyAccessibilityService {
 
     return buffer.toString();
   }
+
+  /// 能力通道 → 读屏后缀（verify=唯一不降级通道；其余如实降级措辞）。
+  String _channelSemanticSuffix(
+    GalaxyCapabilityChannel channel,
+    AppLocalizations l10n,
+  ) =>
+      switch (channel) {
+        GalaxyCapabilityChannel.verified => '，${l10n.galaxyA11yChannelVerified}',
+        GalaxyCapabilityChannel.practiced =>
+          '，${l10n.galaxyA11yChannelPracticed}',
+        GalaxyCapabilityChannel.traceOnly =>
+          '，${l10n.galaxyA11yChannelTraceOnly}',
+        GalaxyCapabilityChannel.nonHuman =>
+          '，${l10n.galaxyA11yChannelNonHuman}',
+        GalaxyCapabilityChannel.unknown => '，${l10n.galaxyA11yChannelUnknown}',
+      };
 
   String _importanceLabel(int importance) => switch (importance) {
         1 => I18nService.instance.l10n.galaxyImportanceEntry,

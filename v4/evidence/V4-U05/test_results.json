@@ -1,0 +1,140 @@
+{
+  "card": "V4-U05",
+  "generated_at": "2026-09-29T02:45:00+08:00",
+  "scope_note": "计数口径：新增 30 测（capability_channel_visual 17 / galaxy_a11y_channel_suffix 3 / node_detail_capability_section 6 / u05_evidence 3 / galaxy_screen_sheet_wiring 1——末项为一审 R1-C1 整改补钉）；回归面 = galaxy 全套+受影响 widget 链 192、顶层 widget 467、其余 GalaxyNodeModel 消费面（goal/knowledge/design）222、insights/journey 24。全部为真实命令真实退出码（run_manifest.json），无删断言凑绿。",
+  "new_tests": [
+    {
+      "file": "mobile/test/features/galaxy/unit/capability_channel_visual_test.dart",
+      "count": 17,
+      "faces": [
+        "fromWire 四值正例 / 未知线值+缺数据 fail-closed 反例",
+        "反例钉：practiced 92 分封顶 SHINING 档零光晕零脉冲",
+        "正例对照：verified 92 分可达掌握档（0.94/0.72/0.18+脉冲+光晕）",
+        "四态逐一钉（practiced/non_human/trace_only/unknown 高分均封顶）",
+        "环标记四态互异（双环/单环/虚线）+ unknown 归虚线",
+        "反例：封顶档零特效时形状标记仍在（特效不承载通道信息）",
+        "锁定节点无通道标记",
+        "快照解析正例（通道/版本/计数/legacy 旗）",
+        "反例：缺 user_status 诚实降级不造版本",
+        "反例：通道线值漂移 fail-closed 为 unknown",
+        "GalaxyNodeModel 端到端消费正例 ×2 + 反例（无 user_status 99 分不进掌握档）"
+      ]
+    },
+    {
+      "file": "mobile/test/features/galaxy/unit/galaxy_a11y_channel_suffix_test.dart",
+      "count": 3,
+      "faces": [
+        "正例：verified 播报含「已独立检验」",
+        "正例：practiced 高分存量播报「练习过，未检验」（不冒充已掌握）",
+        "反例：无通道数据播报「检验状态未知」，绝不声称检验"
+      ]
+    },
+    {
+      "file": "mobile/test/features/galaxy/widget/node_detail_capability_section_test.dart",
+      "count": 6,
+      "faces": [
+        "验收①正：verified 抽屉=独立检验+溯源行+投影版本 v7",
+        "验收①反例钉：practiced 85% 星详情绝无已掌握/检验通过声称（标签面精确断言）",
+        "验收③反：无通道数据 unknown 面 + 暂无来源记录 + 投影版本未知（无编造 vN）",
+        "验收③正：掌握度 0 保持「尚未学习」诚实面且痕迹通道如实",
+        "non_human 通道标签如实（四态词表覆盖）",
+        "200% 字体：能力面完整渲染无异常，关键文案与版本行可见"
+      ]
+    },
+    {
+      "file": "mobile/test/features/galaxy/widget/u05_evidence_test.dart",
+      "count": 3,
+      "faces": [
+        "星图三通道节点同屏进 painter（真实 GalaxyScreen 泵）",
+        "verified 抽屉真实渲染+截图+语义 dump",
+        "practiced 抽屉真实渲染+截图+语义 dump（绝无已掌握声称）"
+      ]
+    },
+    {
+      "file": "mobile/test/features/galaxy/widget/galaxy_screen_sheet_wiring_test.dart",
+      "count": 1,
+      "added_by": "一审 R1-C1 整改（2026-09-28）",
+      "faces": [
+        "R1-C1 接线钉：真实 GalaxyScreen 泵 → 触发节点点开（Enter 与画布点按/读屏 tap 同链路）→ 断言抽屉的节点身份/通道徽章/溯源行/投影版本与该节点 GalaxyNodeModel 快照一致，unknown 降级面（证据通道未知/暂无来源记录/投影版本未知）绝不出现",
+        "对「绕过 _openNodeDetailSheet 直接开 sheet / 丢 capability+graphEventSources」类突变必红（自验见 mutation_injections.M3）"
+      ]
+    }
+  ],
+  "regression_suites": [
+    {
+      "command": "flutter test test/features/galaxy/ test/widget/galaxy_node_preview_card_test.dart test/widget/error_card_galaxy_echo_test.dart test/widget/h5_cross_system_chains_test.dart",
+      "result": "+192 ~1（既有 skip）All tests passed",
+      "note": "含差量举证面：galaxy_screen_keynav_test（键盘可选节点）与 galaxy_rail_cta_clearance_test（缩放 rail 不遮挡主 CTA）随套件全绿；G05 帧预算/语义性能测试全绿（本卡 painter 增量不破坏帧红线）"
+    },
+    {
+      "command": "flutter test test/widget/",
+      "result": "+467 ~4 All tests passed",
+      "note": "h5_cross_system_chains chain A 一处适配：详情新增能力面后 sheet 可滚动内容变长，点按「开始复习」前 ensureVisible（与 node_detail_sheet_test 既有同款模式），断言强度不减（chat 路由参数与 initial_context 逐键断言保留）"
+    },
+    {
+      "command": "flutter test test/features/goal/ test/features/knowledge/ test/core/design/",
+      "result": "全绿",
+      "note": "GalaxyNodeModel 其余消费面"
+    },
+    {
+      "command": "flutter test test/features/insights/ test/features/journey/",
+      "result": "+24 All tests passed"
+    }
+  ],
+  "static_analysis": {
+    "command": "flutter analyze --no-pub lib test",
+    "result": "No issues found!"
+  },
+  "governance_guards": {
+    "command": "bash scripts/run_all_rule_guards.sh",
+    "result": "all rule guards passed (88 rules), exit 0",
+    "design_ratchets": [
+      "UI-TOKENS PASS (color=225/275, fontSize=634/727)",
+      "DL-SPEC PASS",
+      "TYPO-RHYTHM PASS (sub12FontSize=232/234, fontWeightW800=0/0)",
+      "SPACING-RHYTHM PASS (spacingHalfStep=1592/1623)"
+    ]
+  },
+  "mutation_injections": [
+    {
+      "id": "M1",
+      "mutation": "resolveGalaxyStarVisualStyle 的 !verified 分支旁路（练习星放行掌握档）",
+      "caught_by": "capability_channel_visual_test 7 失败",
+      "correction_r1_c2": "一审独立重放（`if (!verified) {` → `if (false) {`，+10 -7 亲跑）实为 7 失败，实现自述误记 6；还原后文件 sha256 恒等 ab92ae25…（与 run_manifest 登记一致）",
+      "restored": "还原后文件 sha256 恒等（ab92ae25…）"
+    },
+    {
+      "id": "M2",
+      "mutation": "sheet 内 _historyBody 掐断 graphEventSources: 透传（同源断链，可复现形式）",
+      "caught_by": "node_detail_capability_section_test verified 溯源行正例 1 失败",
+      "correction_r1_c2": "实现自述的突变对（「_openNodeDetailSheet 不传 graphEventSources 被 node_detail_capability_section_test 2 失败捕获」）不可复现：该测试直构 NodeDetailSheet、不经过 galaxy_screen，按自述字面突变后仍 6/6 全绿（一审亲放）；可复现的突变是 sheet 内 _historyBody 掐断透传，捕获为 1 失败（非自述 2）",
+      "restored": "还原后全绿"
+    },
+    {
+      "id": "M3",
+      "mutation": "_openNodeDetailSheet 同源接线旁路（capability: null + graphEventSources: const []，绕过 wiring 直接开 sheet）",
+      "caught_by": "galaxy_screen_sheet_wiring_test 1 失败（R1-C1 新测，抽屉退化为 unknown 面致「独立检验通过」断言红）",
+      "note": "R1-C1 整改自验（2026-09-28）：突变后新测必红，还原后 galaxy_screen.dart sha256 恒等 0cc8b42b…；此突变类此前零测试可捕获（即 R1-C1 缺口本体）",
+      "restored": "还原后新测全绿，实现文件 sha256 恒等"
+    }
+  ],
+  "r1_rectification": {
+    "date": "2026-09-28",
+    "source": "一审 review_r1.md PASS_WITH_CHALLENGES（R1-C1/R1-C2）",
+    "actions": [
+      "R1-C1：补真实 GalaxyScreen 泵开节点详情抽屉的接线测试（galaxy_screen_sheet_wiring_test，+1）",
+      "R1-C2：本文件 M1/M2 突变记录订正如上；limitations.md #3 「不带 user_status」措辞订正；diff_or_evidence_only.md §5 同批订正"
+    ],
+    "verification": {
+      "galaxy_suite": "flutter test test/features/galaxy/ test/widget/galaxy_node_preview_card_test.dart test/widget/error_card_galaxy_echo_test.dart test/widget/h5_cross_system_chains_test.dart → +193 ~1 All tests passed（192 基线 + 1 接线钉；~1 为既有 skip）",
+      "wiring_test_alone": "+1 All tests passed",
+      "analyze": "flutter analyze --no-pub lib test → No issues found!"
+    },
+    "mutation_selfcheck": "M3 自验一次（红）后还原，实现主逻辑与一审 receipt 未动"
+  },
+  "failures_encountered_and_resolved": [
+    "h5 chain A 初跑失败（sheet 内容变长致点按视口外目标）→ ensureVisible 适配后全绿（断言强度不减）",
+    "worktree 缺 gitignored 生成物（mobile/lib/gen、backend gen）致 analyze/BG 守卫红 → 自主检出复制（非手改生成物）后全绿"
+  ],
+  "overall": "PASS（自测；独立审查待做）"
+}

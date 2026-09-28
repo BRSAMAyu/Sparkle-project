@@ -53268,6 +53268,186 @@ abstract class AppLocalizations {
   /// **'成果证据 · {count} 条'**
   String galaxyOutcomeEvidenceCount(int count);
 
+  /// No description provided for @galaxyCapabilitySectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'能力证据与来源'**
+  String get galaxyCapabilitySectionTitle;
+
+  /// No description provided for @galaxyCapabilityVerifiedLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'独立检验通过'**
+  String get galaxyCapabilityVerifiedLabel;
+
+  /// No description provided for @galaxyCapabilityVerifiedCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度由独立检验（测验等）支撑。'**
+  String get galaxyCapabilityVerifiedCopy;
+
+  /// No description provided for @galaxyCapabilityPracticedLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'练习过 · 未独立检验'**
+  String get galaxyCapabilityPracticedLabel;
+
+  /// No description provided for @galaxyCapabilityPracticedCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'有真实参与记录；掌握度尚未通过独立检验，不代表已掌握。'**
+  String get galaxyCapabilityPracticedCopy;
+
+  /// No description provided for @galaxyCapabilityTraceOnlyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅活动痕迹'**
+  String get galaxyCapabilityTraceOnlyLabel;
+
+  /// No description provided for @galaxyCapabilityTraceOnlyCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'只有学习时长等参与记录，不计入能力掌握。'**
+  String get galaxyCapabilityTraceOnlyCopy;
+
+  /// No description provided for @galaxyCapabilityNonHumanLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Agent 产物'**
+  String get galaxyCapabilityNonHumanLabel;
+
+  /// No description provided for @galaxyCapabilityNonHumanCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'这项工作由 Agent 完成，不计入个人能力。'**
+  String get galaxyCapabilityNonHumanCopy;
+
+  /// No description provided for @galaxyCapabilityUnknownLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据通道未知'**
+  String get galaxyCapabilityUnknownLabel;
+
+  /// No description provided for @galaxyCapabilityUnknownCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前数据没有能力检验信息；这里不显示掌握进度。'**
+  String get galaxyCapabilityUnknownCopy;
+
+  /// No description provided for @galaxyCapabilitySourceEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无来源记录'**
+  String get galaxyCapabilitySourceEmpty;
+
+  /// No description provided for @galaxyCapabilityProjectionVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'投影版本 v{version}'**
+  String galaxyCapabilityProjectionVersion(int version);
+
+  /// No description provided for @galaxyCapabilityProjectionUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'投影版本未知'**
+  String get galaxyCapabilityProjectionUnknown;
+
+  /// No description provided for @galaxyCapabilitySourceFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源 · {code}'**
+  String galaxyCapabilitySourceFallback(String code);
+
+  /// No description provided for @galaxyCapabilitySourceOutcome.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习成果记录'**
+  String get galaxyCapabilitySourceOutcome;
+
+  /// No description provided for @galaxyCapabilitySourceQuiz.
+  ///
+  /// In zh, this message translates to:
+  /// **'独立测验'**
+  String get galaxyCapabilitySourceQuiz;
+
+  /// No description provided for @galaxyCapabilitySourceTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务完成'**
+  String get galaxyCapabilitySourceTask;
+
+  /// No description provided for @galaxyCapabilitySourceDocument.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习资料'**
+  String get galaxyCapabilitySourceDocument;
+
+  /// No description provided for @galaxyCapabilitySourceError.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题'**
+  String get galaxyCapabilitySourceError;
+
+  /// No description provided for @galaxyCapabilitySourceTranslation.
+  ///
+  /// In zh, this message translates to:
+  /// **'翻译'**
+  String get galaxyCapabilitySourceTranslation;
+
+  /// No description provided for @galaxyCapabilitySourceFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习时长记录'**
+  String get galaxyCapabilitySourceFocus;
+
+  /// No description provided for @galaxyCapabilitySourceCommunity.
+  ///
+  /// In zh, this message translates to:
+  /// **'社区分享'**
+  String get galaxyCapabilitySourceCommunity;
+
+  /// No description provided for @galaxyCapabilitySourceChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'对话'**
+  String get galaxyCapabilitySourceChat;
+
+  /// No description provided for @galaxyCapabilitySourceGraph.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识图谱构建'**
+  String get galaxyCapabilitySourceGraph;
+
+  /// No description provided for @galaxyA11yChannelVerified.
+  ///
+  /// In zh, this message translates to:
+  /// **'已独立检验'**
+  String get galaxyA11yChannelVerified;
+
+  /// No description provided for @galaxyA11yChannelPracticed.
+  ///
+  /// In zh, this message translates to:
+  /// **'练习过，未检验'**
+  String get galaxyA11yChannelPracticed;
+
+  /// No description provided for @galaxyA11yChannelTraceOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅活动痕迹'**
+  String get galaxyA11yChannelTraceOnly;
+
+  /// No description provided for @galaxyA11yChannelNonHuman.
+  ///
+  /// In zh, this message translates to:
+  /// **'Agent产物'**
+  String get galaxyA11yChannelNonHuman;
+
+  /// No description provided for @galaxyA11yChannelUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'检验状态未知'**
+  String get galaxyA11yChannelUnknown;
+
   /// No description provided for @intentSuggestedActionLabel.
   ///
   /// In zh, this message translates to:

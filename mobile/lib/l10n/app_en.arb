@@ -13551,6 +13551,50 @@
       }
     }
   },
+  "galaxyCapabilitySectionTitle": "Capability evidence & sources",
+  "galaxyCapabilityVerifiedLabel": "Independently verified",
+  "galaxyCapabilityVerifiedCopy": "Mastery is supported by independent checks (e.g., quizzes).",
+  "galaxyCapabilityPracticedLabel": "Practiced · not verified",
+  "galaxyCapabilityPracticedCopy": "Real participation is recorded; mastery has not passed an independent check yet — not a mastery claim.",
+  "galaxyCapabilityTraceOnlyLabel": "Activity trace only",
+  "galaxyCapabilityTraceOnlyCopy": "Only participation records (e.g., study time); they do not count toward mastery.",
+  "galaxyCapabilityNonHumanLabel": "Agent-produced",
+  "galaxyCapabilityNonHumanCopy": "This work was done by an agent; it does not count as personal capability.",
+  "galaxyCapabilityUnknownLabel": "Evidence channel unknown",
+  "galaxyCapabilityUnknownCopy": "Current data has no verification info; no mastery progress is shown here.",
+  "galaxyCapabilitySourceEmpty": "No source records yet",
+  "galaxyCapabilityProjectionVersion": "Projection v{version}",
+  "@galaxyCapabilityProjectionVersion": {
+    "placeholders": {
+      "version": {
+        "type": "int"
+      }
+    }
+  },
+  "galaxyCapabilityProjectionUnknown": "Projection version unknown",
+  "galaxyCapabilitySourceFallback": "Source · {code}",
+  "@galaxyCapabilitySourceFallback": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "galaxyCapabilitySourceOutcome": "Outcome record",
+  "galaxyCapabilitySourceQuiz": "Independent quiz",
+  "galaxyCapabilitySourceTask": "Task completion",
+  "galaxyCapabilitySourceDocument": "Study material",
+  "galaxyCapabilitySourceError": "Error notebook",
+  "galaxyCapabilitySourceTranslation": "Translation",
+  "galaxyCapabilitySourceFocus": "Study-time log",
+  "galaxyCapabilitySourceCommunity": "Community share",
+  "galaxyCapabilitySourceChat": "Conversation",
+  "galaxyCapabilitySourceGraph": "Graph building",
+  "galaxyA11yChannelVerified": "independently verified",
+  "galaxyA11yChannelPracticed": "practiced, not verified",
+  "galaxyA11yChannelTraceOnly": "activity trace only",
+  "galaxyA11yChannelNonHuman": "agent-produced",
+  "galaxyA11yChannelUnknown": "verification unknown",
   "intentSuggestedActionLabel": "A low-cost first step",
   "intentCorrectionLabel": "Or I got it wrong —",
   "intentConfidenceLabel": "{band, select, high{I'm fairly confident} medium{I'm somewhat confident} low{I'm not quite sure yet} other{Confidence}} ({percent}%)",

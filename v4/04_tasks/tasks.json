@@ -2117,9 +2117,9 @@
     "V4-F02",
     "V4-D04"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "PASS_WITH_CHALLENGES",
    "kind": "implementation",
    "required_locks": [
     "ui-galaxy"
@@ -2168,7 +2168,12 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "ff6a8dc1 PASS_WITH_CHALLENGES（D04 通道红线三重证实：唯一判定点 capability_channel.dart:49+painter 三调用点+M1 独立重放 7 失败；验收三条过；CH-1~6 全裁决；合并树语义组合亲验成立——a11y 播报序 mastery→通道后缀→F06 连接子句）",
+    "remediation": "544ff1e4 R1-C1 接线测试钉（galaxy_screen_sheet_wiring +1=193；M3 突变自验红+字节恒等双验证）+R1-C2 三处订正（M2 不可复现对改记 _historyBody 掐断 1 失败/M1 7 失败/limitations #3 proto 子块措辞）",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑"
+   }
   },
   {
    "id": "V4-U06",
