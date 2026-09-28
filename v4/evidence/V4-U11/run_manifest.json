@@ -138,7 +138,7 @@
     "two_account_scenario.json": "7950e081c98372daecf6795b637c3904f1e301e1727eb72085965df4d12e4f6d",
     "run_manifest.json": "self-referential：本文件定稿后不可自哈希；以其提交对象 SHA 为锚"
 },
-    "actual_model_and_usage_if_llm": "executor 模型 = GLM（account:bigmodel-individual-coding-plan，GLM-5.3-Flash reasoning agent，ZCode 会话）；精确 token 计数未暴露给会话，如实记 NOT_EXPOSED；本卡零 LLM 推理调用（场景走 register/squad/error/checkin 真实端点，不触模型面）",
+    "actual_model_and_usage_if_llm": "executor 模型 = GLM（account:bigmodel-individual-coding-plan，GLM-5.3-Flash reasoning agent，ZCode 会话）；精确 token 计数未暴露给会话，如实记 NOT_EXPOSED；场景断言零依赖 LLM 输出（走 register/squad/error/checkin 真实端点；错题创建会触发既有 fire-and-forget 背景分析任务，本卡断言不消费其输出，如实披露）",
     "screenshots_video_and_semantics_if_ui": "UI 面为小队详情撤回动作与火堆徽标：语义以 widget 测试断言（中文文案/ValueKey 定位）代替截图语义 dump（F06/U14 同等语义文本口径）；真机截图未采（无接入设备），记 limitations",
     "physical_device_scope_if_sensory": "本卡零触觉/音频面改动（假声效开关为移除非接线）；无真实设备，记 DEVICE_UNVERIFIED 不适用口径"
   }
