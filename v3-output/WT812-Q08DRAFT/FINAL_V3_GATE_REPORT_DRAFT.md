@@ -16,7 +16,7 @@
 | tasks.json | done=104 / TODO=3 | **不变：done=104 / TODO=3**（O-01/Q-07/Q-08） | `v3/07_tasks/tasks.json` 机器口径实测 |
 | CI | 四绿（23/25/27/29） | **五绿 gh 逐条实核（23/25/27/29-rerun/30）＋第 6 绿（31）与 CI 32 在跑系主会话引述（协调分支 state 口径，本 worktree 不可 gh 实核）**；CI 29 attempt1 真红=FIX-547（已修，wt807 分支@`45336b1b` 在途未并主干，v0.9 §6 如实标注） | [V3-COMPLETE-STATUS-FOR-V4.md §6](../../v3/V3-COMPLETE-STATUS-FOR-V4.md)（v0.9）、轮#312-#314 |
 | mypy | 55 零漂移 | **双口径：本地棘轮 55 ／ CI 基线按首绿实测对齐 77**（差异披露在 v0.9 §6/§9， greens 27/29r/30 连过门） | 同上 |
-| 台账 | 45 OPEN（P2×5） | **47 OPEN（P2×6：168/439/505/542/545/547；P3×33、P4×8）——本 worktree HEAD 机器口径实测（行尾状态格 `^OPEN` 正则）；增量=FIX-547（P2 真红）/549/554（P3）等新登记。P1 维持 0** | [DYNAMIC_ISSUES.md](../../v3/06_agent_fleet/DYNAMIC_ISSUES.md)（431 行）@5c288841 |
+| 台账 | 45 OPEN（P2×5） | **46 OPEN（P2×5：168/439/505/542/545；P3×33、P4×8）——机器口径实测（行尾状态格 `^OPEN` 正则）；原计 47/P2×6 系 FIX-547 陈旧 OPEN 重复行误计（同 ID FIXED@3bf967ac 在册，wt816 一审 C2 勘误 2026-09-28 已正）。P1 维持 0** | [DYNAMIC_ISSUES.md](../../v3/06_agent_fleet/DYNAMIC_ISSUES.md)（431 行）@5c288841 |
 | E-08 | 复测已补 4P/2F | 不变；独立审查 **APPROVE-closure**（条件 C1=追踪义务落账——已落 FIX-545 行，台账 L417 亲证） | [WT803-E08REV/receipt.md](../WT803-E08REV/receipt.md) §1/§6 |
 | J-02 | 全量 6/6 | 不变（A1a 99.8-102.2s×6、FirstActionCard 6/6、纯 UI 注册 6/6） | [WT802-J02-RETEST/REPORT.md](../WT802-J02-RETEST/REPORT.md) |
 | 预裁 | ①已裁 ②在航 ③④⑤待 | ①已裁@`cf8d6c16`（**但入册存在缺口，见 §1.V3-0 W12-01**）②③④⑥备忘齐（wt806/wt808）；⑤仍待 | git log 亲证 |
@@ -45,7 +45,7 @@
 
 - **草案裁决：PASS-with-notes**。
 - **可证伪判据与证据**：
-  - 「≤3 分钟 meaningful action proposal」：J-02 全量秒表 **6/6 ≤180s（99,767-102,170ms，另有迭代跑 51,347ms 佐证带宽下限）**、FirstActionCard 6/6、纯 UI 注册 6/6 无 bounce——run_id `j02retest_macos_20260928_101701_wt802`，[WT802-J02-RETEST/REPORT.md](../WT802-J02-RETEST/REPORT.md) §0/§1 delta 表。判据=verdict.json leg_r_runs 全 in_budget；复现=同 harness 重跑。**引用口径注记：这是 J-01/J-02 秒表面（macOS desktop 真应用通道），非统计分母口径，随报告注明。**
+  - 「≤3 分钟 meaningful action proposal」：J-02 全量秒表 **6/6 ≤180s（98,767-102,170ms（一审 C3 勘误：原误 99,767），另有迭代跑 51,347ms 佐证带宽下限）**、FirstActionCard 6/6、纯 UI 注册 6/6 无 bounce——run_id `j02retest_macos_20260928_101701_wt802`，[WT802-J02-RETEST/REPORT.md](../WT802-J02-RETEST/REPORT.md) §0/§1 delta 表。判据=verdict.json leg_r_runs 全 in_budget；复现=同 harness 重跑。**引用口径注记：这是 J-01/J-02 秒表面（macOS desktop 真应用通道），非统计分母口径，随报告注明。**
   - 首屏无内部名词＋A/B 清零：[WT401-Q03-VISUAL/rubric_scores.md](../WT401-Q03-VISUAL/rubric_scores.md) 核心 13 屏 A/B=0（渲染形态=flutter_tester 390×844@2x 单档，引用时保留此限定）。
   - demo 不冒充用户历史：FIX-143 FIXED@`62241e59`（`is_example` 全链透传＋「示例」badge）；J-02 A1b 种子隔离活栈复证（guest_03a6e396305e：memory_goals=0、episodic 3 行全归属自身 uid）。
   - 无 P0/P1 阻断：J-02 四件闭环（FIX-539/540/543 端到端实证）；JOURNEY ns001 day1-7 门 7/7 PASS（轮#289，升栈 0-7 步全绿为基座）。
@@ -81,7 +81,7 @@
 - **可证伪判据与证据**：
   - **修前 dashboard 快照（现值口径）**：[WT404-Q04-REDTEAM/dashboard.json](../WT404-Q04-REDTEAM/dashboard.json)（`git_sha=46762b31`、100 records、20 blind pairs，本会话程序化读数亲证）——fleet 级 **precision=0.0（目标 0.95）、valid_uses=0/10、gates 全 false、acceptance="FAIL"**；over-personalization 41.67%（p01/p02 per-persona `overpersonalization_rate=0.4167` 实测）；paired uplift=0.0pp。同报告四路隐私/隔离面 PASS（敏感零泄漏/删除撤回零复活/跨用户零串号/无关历史零上 prompt）。
   - **修复与锁（修后无全量重跑）**：FIX-67 FIXED@`7244efb2`、FIX-68/69/70 FIXED@`12ce081b`；q04 两锁翻转＋双失明锁 `backend/tests/q04_personal_redteam/test_q04_redteam_final.py`（亲证存在，套件在 445 实跑绿内）。**锁级证据不能替代 dashboard 级复测——这是 FAIL 判定与「按锁级判 PASS」选项的区别线。**
-  - **必须如实带上的双独立 eval 同向证据**：uplift 0.0pp（Q-04）＋A-08 消融 journey 面 no_memory 臂 0.55 反超 full 臂 0.45（[WT393-A08-ABLATION/summary.json](../WT393-A08-ABLATION/summary.json)）——**当前实现下个性化净贡献未被证明为正**。DoD 原文「达不到必须报告真实结果而非改口径」。
+  - **必须如实带上的反证分量（wt816 一审 C1 勘误后口径）**：uplift 0.0pp（Q-04 dashboard 级）为个性化净贡献未证的主要反证；A-08 消融（[WT393-A08-ABLATION/summary.json](../WT393-A08-ABLATION/summary.json)）journey 面**方向实为正贡献**——full 臂 stuck_accuracy=0.65 > no_memory 臂 0.55（净 +0.10）、utility full=-16.2 > no_memory=-21.4（净 +5.2，WT393 REPORT 原文「方向达成（含反例）」）——原草案此处方向写反（一审 CHALLENGED C1，2026-09-28 已正）。两证据不同向，不构成「双独立同向证据」；FAIL 判定依据=dashboard precision 0.0+修后无 dashboard 级复测（NOT_REMEASURED 形态），此两条不因 A-08 方向勘误而变。DoD 原文「达不到必须报告真实结果而非改口径」。
 - **FAIL-派V4 内容（若不补跑）**：V4 工作项=q04 六路红队全量复测（驱动在库，约半窗），产出修后 dashboard 级复测＋uplift 重估；复测前任何 PASS 表述均不成立。
 - **证据链接**：同上。
 
