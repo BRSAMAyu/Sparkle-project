@@ -1572,6 +1572,38 @@ class ContextPackBuilder:
             else _normalized_ranked(resolved_episodic)
         )
 
+        # V4-I02（合法历史的效用筛选与反向迁移抑制）：M-03 预筛（阶段一合法性）
+        # 之后的阶段二效用门——低效用/异类型失败经验不进 context，抑制 B03 冻结
+        # 负基线（A-08 修后 full 0.45 < no_memory 0.55）指向的坏经验污染。只作用
+        # 于 optional history（episodic 排序面）；mandatory context（当前目标/
+        # 显式约束）不经本门。旗标默认关：关 = 零行为变化（不调用、无 metadata）。
+        if settings.ENABLE_MEMORY_UTILITY_GATE:
+            from app.services.memory_utility_gate import apply_history_utility_gate
+
+            _pre_gate_episodic = list(ranked_episodic)
+            ranked_episodic, utility_gate_meta = apply_history_utility_gate(
+                ranked_episodic,
+                query_text=query_text,
+                top_k=settings.MEMORY_UTILITY_GATE_TOP_K,
+            )
+            if not utility_gate_meta.get("passed", True):
+                # 反 gaming（验收②）：required-memory 场景全拒 = recall miss，
+                # 不能过门——回退 V3 预筛后路径保召回，miss 如实登记（评测侧计
+                # recall 失败，不包装成通过）。宁可退回旧行为，不让筛选器靠
+                # 「全拒用」刷干净。
+                ranked_episodic = _pre_gate_episodic
+                utility_gate_meta["bypassed"] = True
+                utility_gate_meta["verdict"] = "required_memory_recall_miss_bypass"
+                try:
+                    from app.core.business_metrics import MEMORY_UTILITY_GATE_DECISIONS_TOTAL
+
+                    MEMORY_UTILITY_GATE_DECISIONS_TOTAL.labels(
+                        outcome="bypassed", reason="required_memory_recall_miss"
+                    ).inc()
+                except Exception:  # pragma: no cover - metrics must never break retrieval
+                    pass
+            metadata["memory_utility_gate"] = utility_gate_meta
+
         semantic_metadata: dict[str, Any] = {}
         if focus_decision and focus_decision.semantic_gating_enabled and settings.ENABLE_CONTEXT_SEMANTIC_GATING:
             ranked_preferences, semantic_metadata["preferences"] = await _apply_semantic_gating(

@@ -1,0 +1,132 @@
+{
+  "task": "V4-I02",
+  "session": "wtI02",
+  "date": "2026-09-28",
+  "summary": {
+    "new_tests": 25,
+    "new_tests_passed": 25,
+    "affected_surface_tests_passed": 371,
+    "affected_surface_breakdown": [
+      {
+        "suite": "新增效用门单测+接线/集成",
+        "command_files": 2,
+        "passed": 25,
+        "failed": 0
+      },
+      {
+        "suite": "受影响面（prefilter/context_pack/selfcheck/funnel/ranking/pipeline/context_manager/hard-filter-wiring）",
+        "command_files": 11,
+        "passed": 173,
+        "failed": 0
+      },
+      {
+        "suite": "context_pack 消费面 sweep（observability/ranking/conflicts/focusing/budget/deny-quiet/import-cycle 等）",
+        "command_files": 12,
+        "passed": 132,
+        "failed": 0
+      },
+      {
+        "suite": "experience projector+contract",
+        "command_files": 2,
+        "passed": 62,
+        "failed": 0
+      },
+      {
+        "suite": "multi-agent spine context",
+        "command_files": 2,
+        "passed": 4,
+        "failed": 0
+      }
+    ],
+    "deleted_or_weakened_assertions": 0,
+    "existing_tests_modified": 0
+  },
+  "static_checks": {
+    "mypy_ratchet": {
+      "count": 55,
+      "baseline": 77,
+      "verdict": "PASS（只降不升；基线文件未改）"
+    },
+    "mypy_touched_files_zero_drift": {
+      "files": [
+        "app/core/context_pack.py",
+        "app/config/settings.py",
+        "app/core/business_metrics.py",
+        "app/services/memory_utility_gate.py"
+      ],
+      "worktree_errors": 30,
+      "pre_change_main_checkout_errors": 30,
+      "diff": "empty",
+      "new_module_errors": 0,
+      "verdict": "零漂移"
+    },
+    "ruff_touched_files": "All checks passed!",
+    "black_new_files": "clean（存量文件 black 债 pre-existing，主检出同态，未重排版）"
+  },
+  "rule_guards_final": {
+    "command": "bash scripts/run_all_rule_guards.sh",
+    "exit_code": 0,
+    "result": "all rule guards passed (86 rules)",
+    "highlights": {
+      "ENUM-PARITY": "PASS 77 条 FAIL=0 WARN=7（既有 WARN，非本卡引入）",
+      "Rule_K": "PASS 84 controlled + 1389 rule-z files",
+      "Rule_Z": "PASS",
+      "Rule_BG": "PASS 7 protos across Go/Python/Dart（21 staleness WARN 为 worktree 生成物时间戳，非语义差异）"
+    },
+    "first_run_failures_env_only": [
+      "K",
+      "Z",
+      "BG"
+    ],
+    "first_run_root_cause": "fresh worktree 缺未跟踪生成物 + cp -R 保留了指回主检出的 symlink；与代码变更无关，解引用重拷后复跑全绿"
+  },
+  "acceptance_evidence": {
+    "FIX52_cross_type_failure": {
+      "unit": [
+        "test_fix52_cross_type_failure_is_hard_rejected",
+        "test_fix52_failure_without_type_anchor_not_hard_rejected",
+        "test_fix52_same_type_failure_still_informs_within_type"
+      ],
+      "integration": "test_flag_on_suppresses_negative_transfer_keeps_good_recall：异类型失败 summary 不在 pack.episodic_memories 也不在 to_prompt_context()",
+      "verdict": "PASS"
+    },
+    "required_memory_recall_and_no_all_reject_pass": {
+      "unit": [
+        "test_required_memory_with_good_history_recalls",
+        "test_required_memory_all_rejected_fails_the_gate",
+        "test_non_required_all_rejected_reports_verdict_but_not_recall_miss"
+      ],
+      "integration": "test_flag_on_required_memory_all_rejected_bypasses_without_silent_empty：passed=False + bypassed=true + verdict=required_memory_recall_miss_bypass，候选保留（不静默清空）",
+      "precision_denominator": "空选择 precision=None（N/A，不是 0% 更不是 100%，对齐 B03 denominator_policy）",
+      "verdict": "PASS"
+    },
+    "illegal_entries_never_in_prompt": {
+      "unit": [
+        "test_selection_is_subset_of_input_never_resurrects"
+      ],
+      "integration": "test_flag_on_suppresses_negative_transfer_keeps_good_recall（wrong-user 行不入 pack/prompt）；AST 双钉 test_ast_build_wires_utility_gate / test_ast_build_references_gate_flag 防接线删除",
+      "legality_owner": "M-03 prefilter（既有 76+ 测不重写，本门只消费预筛 allowed）",
+      "verdict": "PASS"
+    },
+    "frozen_utility_anchor": {
+      "test": "test_frozen_outcome_weights_match_b03_freeze（直读 v4/evidence/V4-B03/frozen_utility.json 对表）",
+      "verdict": "PASS"
+    },
+    "flag_off_zero_behavior": {
+      "test": "test_flag_off_default_keeps_v3_behavior（无 memory_utility_gate metadata、候选原样）",
+      "verdict": "PASS"
+    }
+  },
+  "scope_and_denominator_statement": "本卡验证覆盖=新增模块 25 测 + memory/context 受影响面 346 测 + 契约/golden 相邻面；未覆盖=全量 backend 套件（HEAVY=False 卡边界）、live/真模型流程（本卡零模型调用）、D 臂离线四臂 utility 数值（归 B03 协议后续评测卡，本卡只交付机制与冻结锚）。",
+  "model_calls": "none（确定性规则，无 LLM/API 用量与费用）",
+  "artifacts_sha256": {
+    "v4/evidence/V4-I02/diff_or_evidence_only.md": "2fbc3d3fc665b8049221339f3b3ac9f14a28610f096d076cf9b77fd00f243308",
+    "v4/evidence/V4-I02/run_manifest.json": "8bcc63eeb3742e4114306a06830872dbdad24c2ebcde16019e8c7fda18191d39",
+    "v4/evidence/V4-I02/limitations.md": "7b5ad3a37fe66a92a507b2782a8dc7f04c5a274985e300ee89bea91e449ba655",
+    "v4/evidence/V4-I02/tasks_json_V4-I02_field_backup.json": "9e9cd0a31a4afaea602858ed31709982fa544f8ed3a39bb49b7acabaefb62da6",
+    "backend/app/services/memory_utility_gate.py": "40a4f4022925e2cbed8601611793ba81cf87344cce967185c04f6c420ec68652",
+    "backend/tests/unit/test_memory_utility_gate.py": "375d50fd60b008fc58e35bf5d0fb9f40250d3927c1531c764e9ee9bcd8089ddc",
+    "backend/tests/unit/test_memory_utility_gate_wiring.py": "4f6af40b799e6aabaf359bb94f6fa0ee7f7e4325c879384d21fcbab4229f525f",
+    "note": "test_results.json 自身不含自身哈希（自指）；哈希在其写入后计算，模块/测试文件哈希与 commit 内容一致"
+  }
+}
