@@ -3,7 +3,7 @@
 > V3 DONE 不是“任务卡都关闭”，而是下面用户级、系统级与运行级证据同时成立。
 
 ## Gate V3-0 — Truth
-- 42 个 feature 有唯一 portfolio 状态：CORE / CONTEXTUAL / LABS / HIDDEN / RETIRE；不存在用户可达的半成品入口。
+- 42 个 feature 有唯一 portfolio 状态：CORE / CONTEXTUAL / LABS / HIDDEN / RETIRE；不存在用户可达的半成品入口。（**V3 决议注 2026-09-28**：42 系 B-01 初始册载口径；B-01Δ 定域审计后全集实况=43——F24 onboarding 并入 user 承载除名、F43 journey/F44 recovery 入册、F20 leaderboard/F26 photon 重定 CONTEXTUAL；唯一真源=v3-output/B-01/MODULE_MATRIX.csv，裁决依据 WT786-P513MEMO+WT790-B01DELTA）
 - 所有核心统计数字都有数据 lineage；mock/seed/demo 明确隔离且不会进入真实缓存或真实用户分析。
 - 当前模型、embedding、ASR/TTS、OCR 等能力由 runtime probe 得到，不凭配置文件宣称可用。
 

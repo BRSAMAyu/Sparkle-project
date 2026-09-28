@@ -634,5 +634,12 @@
     "theater/simulation/seed_library LABS 群: 运行时确认 demo 数据不混入(D20)"
   ],
   "unknown_items": [],
-  "partial_note": "全部 42 项均有静态证据定级, 无 UNKNOWN 残留; goals/plan_execution_records 空表列入 retest_needed, 不影响状态判定(其 JTBD/可达性证据独立成立)"
+  "partial_note": "全部 42 项均有静态证据定级, 无 UNKNOWN 残留; goals/plan_execution_records 空表列入 retest_needed, 不影响状态判定(其 JTBD/可达性证据独立成立)",
+  "feature_count": 43,
+  "b01_delta_merge": {
+    "date": "2026-09-28",
+    "source": "v3-output/WT790-B01DELTA/MODULE_MATRIX_DELTA.csv",
+    "ruling": "F20/F26 换行（HIDDEN→CONTEXTUAL）；F24 onboarding 除名并入 user 承载（目录已删功能活在 user 路由——wt790 判定）；F43 journey/F44 recovery 新增 CONTEXTUAL；42→43",
+    "review_receipt_coverage": "REVIEW_RECEIPT.md 覆盖原始 42；Δ 行以 WT790 delta_report 同口径审计"
+  }
 }
