@@ -5,8 +5,10 @@
 1. **截图/设备面 NOT_RUN**——三次尝试用 flutter_tester 真渲染采集三档样面
    PNG（RepaintBoundary.toImage），在 flutter_tester 软渲染环境
    （--enable-software-rendering --skia-deterministic-rendering）下
-   `toImage/toByteData` 挂起（每用例 ~10 分钟无返回，人工终止）；按卡面
-   「模拟器不在本机 HEAVY 空窗内则不硬跑」授权跳过，改以 30 个组件级
+   `toImage/toByteData` 挂起（每用例 ~10 分钟无返回，人工终止）；按
+   MASTER_DESIGN HEAVY 单槽纪律 + 五面截图归属 V4-F05（HEAVY）+ B04
+   setBypassCSP 旁路先例的同一授权逻辑跳过（一审 C1 勘误：原引号内
+   措辞全仓无逐字原文，实义授权成立、引用措辞失准），改以 30 个组件级
    widget 测试（含真实渲染的渲染盒尺寸断言）作组件面证据。五面
    （首页/卡住 sheet/记忆/长回答/星图）preview 截图与三 profile 切换
    状态流属 **V4-F05（HEAVY）** 范围，本卡不越权代跑。临时采集测试文件
