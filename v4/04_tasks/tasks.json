@@ -73,9 +73,9 @@
       "id": "V4-B02",
       "title": "43模块及在用路由映射增量",
       "depends_on": [],
-      "status": "READY",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS_WITH_CHALLENGES_CLOSED",
       "kind": "verification",
       "required_locks": [
         "v4-portfolio"
@@ -126,7 +126,8 @@
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
       "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
       "evidence_pointer": "v4/evidence/V4-B02/",
-      "evidence_summary": "43/43 特征映射 (mapping.csv); 136 路由分类=5 tab_shell+116 active+4 legacy_redirect+1 deep_link_only+10 registered_no_ui_entry; 32/32 路由组挂载; 深链10类型8闭合2歧义(DF-08/09); 漂移登记10新+2确认未变(drift_findings.md); 矩阵未改(归B01线); 产品代码零修改; source_sha=3c4618cc; 待1位独立审查(review_receipt.json PENDING)"
+      "evidence_summary": "43/43 特征映射 (mapping.csv); 136 路由分类=5 tab_shell+116 active+4 legacy_redirect+1 deep_link_only+10 registered_no_ui_entry; 32/32 路由组挂载; 深链10类型8闭合2歧义(DF-08/09); 漂移登记10新+2确认未变(drift_findings.md); 矩阵未改(归B01线); 产品代码零修改; source_sha=3c4618cc; 待1位独立审查(review_receipt.json PENDING)",
+      "review": "R1 PASS_WITH_CHALLENGES@7a5ec30b + C1-C4 勘误@17b89acd/8e266e5e"
     },
     {
       "id": "V4-B03",
