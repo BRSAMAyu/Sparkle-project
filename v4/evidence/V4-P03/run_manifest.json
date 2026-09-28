@@ -1,0 +1,129 @@
+{
+  "card": "V4-P03",
+  "title": "运行韧性与V3外部依赖衔接",
+  "worktree": "/Users/brsama/code/GitHub/wtP03",
+  "branch": "agent/v4/p03",
+  "base_sha": "4a5dc5f215e31d3e06308b3dfc3fffb69abd4bd8",
+  "source_sha": "f14937de（feat commit，agent/v4/p03；本文件与 tasks.json 更新属其后的 state commit）",
+  "date": "2026-09-28",
+  "executor": "wtP03 implementation agent (V4-P03, HEAVY=True)",
+  "scope": "FIX-530/542 运维面正式化：Go 网关 locales 目录 CWD 自锚定（FIX-542 修法方向②）+ 正式服务监督器（FIX-530/542 修法方向①，收编 /tmp/engine_watchdog.sh）+ FIX-557 数据面属主预检 + 现有 dev 脚本容器名漂移修复；O-01/Q-07/Q-08 外部门绑定（不替代授权）。零迁移、零 proto、零模型调用、无 UI 变更。",
+  "environment": {
+    "platform": "darwin 25.6.0 arm64",
+    "go": "go1.25.7 darwin/arm64（gateway go.mod: 1.24.0）",
+    "python": "3.11.15（/opt/homebrew/bin/python3.11，pytest 9.0.2）",
+    "flutter": "flutter test（worktree 移入 gitignored mobile/lib/gen 后可编译）",
+    "live_stack_at_evidence_time": "engine-api :8000 / engine-grpc :50051 / gateway :8080 在跑（他人会话所有，本卡全程只读探测，未杀未启未重启任何真实栈进程）；sparkle_db/sparkle_redis/sparkle_minio 容器 healthy"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "cmd": "go test ./internal/i18n/ -v -count=1",
+      "cwd": "backend/gateway",
+      "exit_code": 0,
+      "result": "7 passed（TestDefaultLocalesDir_IsCWDIndependent / BogusLocalLocalesIgnored / EnvOverrideWins / EnvOverrideInvalidFailsLoud / WalkUpFindsFromSubdirectory / Init_WithResolvedDir_LoadsBundle / IsLocalesDir_RejectsIncomplete）"
+    },
+    {
+      "id": 2,
+      "cmd": "python3.11 -m pytest scripts/tests/test_supervisor_probe.py scripts/tests/test_service_supervisor.py -q -p no:cacheprovider",
+      "cwd": "worktree root",
+      "exit_code": 0,
+      "result": "17 passed（10 探测核心 + 7 监督器端到端；全部使用 127.0.0.1:0 真实 decoy 进程）"
+    },
+    {
+      "id": 3,
+      "cmd": "go build -o /tmp/p03_gateway_base ./cmd/server（基线，主检出 main@4a5dc5f2 无本卡改动）",
+      "cwd": "Sparkle-project/backend/gateway",
+      "exit_code": 0,
+      "result": "基线二进制构建成功（仅写 /tmp，不动主检出树）"
+    },
+    {
+      "id": 4,
+      "cmd": "go build -o /tmp/p03_gateway_probe ./cmd/server（含本卡修复，worktree 移入 gitignored gen/ 后）",
+      "cwd": "wtP03/backend/gateway",
+      "exit_code": 0,
+      "result": "修复后二进制构建成功；gen/ 三处（gateway/mobile/app）均 gitignored 不入库"
+    },
+    {
+      "id": 5,
+      "cmd": "cd / && JWT_SECRET=p03probe-ephemeral-not-a-secret PORT=8081 POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=1 /tmp/p03_gateway_base",
+      "exit_code": 1,
+      "result": "红对照（真实进程+敌意 CWD=/）：main.go:43 \"Failed to initialize i18n, falling back to defaults\",\"error\":\"open locales: no such file or directory\" —— FIX-542 原始失败签名逐字复现；随后 DB fatal（探针设计，零栈接触）。日志 /tmp/p03_base_wrongcwd.log",
+      "note": "JWT_SECRET 为一次性 throwaway 探针值，非仓库密钥；POSTGRES_PORT=1 使 DB 立即拒绝，i18n 之后进程即退出，不触 Redis/worker/agent"
+    },
+    {
+      "id": 6,
+      "cmd": "cd / && JWT_SECRET=p03probe-ephemeral-not-a-secret PORT=8081 POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=1 /tmp/p03_gateway_probe",
+      "exit_code": 1,
+      "result": "绿（同一敌意 CWD=/，修复后二进制）：main.go:51 \"i18n locales initialized\",\"locales_dir\":\"/Users/brsama/code/GitHub/wtP03/backend/gateway/locales\",\"resolution\":\"source-anchored ...\" —— CWD 不再决定资源路径；exit 1 系探针设计的 DB fatal。日志 /tmp/p03_fixed_wrongcwd.log"
+    },
+    {
+      "id": 7,
+      "cmd": "cd backend/gateway && GATEWAY_LOCALES_DIR=/nonexistent_p03 /tmp/p03_gateway_probe（同探针 env）",
+      "exit_code": 1,
+      "result": "负例 fail-loud：\"Failed to resolve locales dir\" + error \"GATEWAY_LOCALES_DIR=/nonexistent_p03 is not a valid locales dir (missing [en.json zh.json])\" + diagnostics —— 显式错配不静默回落。日志 /tmp/p03_negative_env.log"
+    },
+    {
+      "id": 8,
+      "cmd": "python3.11 scripts/ops/service_supervisor.py --once --data-plane",
+      "cwd": "worktree root",
+      "exit_code": 1,
+      "result": "真实栈一次探测循环（只读）：engine-api 绿（:8000 port+health 200）、engine-grpc 绿（:50051）、gateway 「alive 但 not ready」——/healthz 200 与 /readyz 503 分离探测真实捕获在跑网关的既有 DB 面降级（readyz body: database unhealthy, SASL auth failed for user postgres；属在跑栈既有状态，非本卡回归，见 limitations）；data_plane_owner 绿（sparkle-cosmos_sparkle_postgres_data）；postgres/minio 绿、redis NOAUTH（alive but auth-gated，诚实标注）"
+    },
+    {
+      "id": 9,
+      "cmd": "BASE_REF=4a5dc5f2 python3.11 scripts/check_migration_contracts.py",
+      "exit_code": 0,
+      "result": "No changed migration files —— 迁移回滚面：本卡零迁移；契约门绿"
+    },
+    {
+      "id": 10,
+      "cmd": "flutter test test/core/design/pixel_preview_prefs_guard_test.dart test/core/design/pixel_preview_prefs_restore_test.dart --reporter compact",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "2 passed（主题回滚面：越界持久索引 99 回落 classic=preview off；合法索引恢复对应档）——首跑因 worktree 缺 gitignored mobile/lib/gen 红编译错，移入后绿（如实记录）"
+    },
+    {
+      "id": 11,
+      "cmd": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// python3.11 -m pytest tests/unit/test_semantic_selector.py -q --no-header -p no:cacheprovider",
+      "cwd": "backend",
+      "exit_code": 0,
+      "result": "77 passed（selector 回滚面：SEMANTIC_SELECTOR_MODE off/shadow/live，shadow 不改生产路由、失败不破坏路由；默认 off=V3 安全策略）——首跑 2 failed 系缺 gitignored app/gen，移入后全绿（如实记录）"
+    },
+    {
+      "id": 12,
+      "cmd": "python3.11 -m mypy scripts/ops/supervisor_probe.py scripts/ops/service_supervisor.py && python3.11 -m ruff check scripts/ops/ scripts/tests/test_supervisor_probe.py scripts/tests/test_service_supervisor.py && python3.11 -m black --check（格式化后复检）",
+      "exit_code": 0,
+      "result": "mypy 无问题；ruff All checks passed；black 已格式化 4 文件后全绿。零新增漂移"
+    },
+    {
+      "id": 13,
+      "cmd": "go vet ./internal/i18n/ ./cmd/server/ && gofmt -l internal/i18n/ cmd/server/main.go",
+      "cwd": "backend/gateway（gen/ 移入后）",
+      "exit_code": 0,
+      "result": "vet 通过；gofmt 无输出"
+    },
+    {
+      "id": 14,
+      "cmd": "docker inspect sparkle_db --format \"{{range .Mounts}}{{.Name}}{{end}}\"",
+      "exit_code": 0,
+      "result": "sparkle-cosmos_sparkle_postgres_data —— RESTACK 铁律属主复核绿；本卡全程未 up/down/restart 任何容器、未触数据卷"
+    }
+  ],
+  "denominator": {
+    "new_tests": 26,
+    "breakdown": "Go i18n 7 + supervisor_probe 10 + service_supervisor 7",
+    "existing_faces_rerun": "迁移契约门 1 命令 + 主题回滚 2 + selector 77",
+    "touched_existing_files": "backend/gateway/cmd/server/main.go（i18n 初始化块）、scripts/dev/up.sh（容器名+FIX-557 预检）、scripts/dev/healthcheck.sh（容器名）、scripts/README.md（登记）"
+  },
+  "artifacts": {
+    "external_gate_binding.json": "O-01/Q-07/Q-08 绑定（does_not_replace_authorization=true）",
+    "diff_or_evidence_only.md": "差量举证叙述",
+    "test_results.json": "测试计数与反例清单",
+    "review_receipt.json": "审查回执骨架（待双审回填）",
+    "limitations.md": "已知限制"
+  },
+  "llm_usage": "零模型调用（纯确定性运维/测试面，actual_model_and_usage 不适用）",
+  "ui": "无 UI 变更（mobile 仅跑既有主题回滚测试）",
+  "credentials_tcc": "全程零凭据使用、零 TCC 操作、零云调用；O-01 保持 TODO/BLOCKED 等用户，未伪造"
+}

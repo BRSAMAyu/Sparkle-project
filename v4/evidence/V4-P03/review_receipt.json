@@ -1,0 +1,26 @@
+{
+  "card": "V4-P03",
+  "date": "2026-09-28",
+  "status": "REVIEW_READY",
+  "risk": "high",
+  "independent_reviewers_required": 2,
+  "self_review": {
+    "verdict": "PASS_WITH_CHALLENGES",
+    "notes": "实现会话自审不算完成；以下为预登记审查挑战点，供独立审查会话重点复核"
+  },
+  "challenges_for_reviewers": [
+    "C-1 探测面等价性：失联/自愈证据全部来自 127.0.0.1:0 decoy 真实进程而非在跑栈（他人会话所有，HEAVY 纪律）——请审查 decoy 路径与真实服务路径的等价性论证是否成立（同一监督器代码、同探测协议、不同端口与进程属主）",
+    "C-2 真实二进制红绿对照的边界：base 二进制构建自主检出 main（无本卡 delta）、probe 二进制含修复；两次启动仅 i18n 行为应不同，DB fatal 均为探针设计——请复核日志（/tmp/p03_{base,fixed}_wrongcwd.log、p03_negative_env.log）确认无其他混淆变量（JWT_SECRET 同值、同 env 面）",
+    "C-3 readyz 503 定性：在跑网关 DB SASL 失败被定性为既有态而非本卡回归——请独立 curl 复核并确认本卡改动面（i18n 初始化块/up.sh/healthcheck.sh/新增 ops 脚本）不可能触达该面",
+    "C-4 up.sh 预检的覆盖缺口：SPARKLE_ALLOW_RESTACK=1 越权开关仅拦「容器灭失+真卷存在」一种形态；若容器在跑但挂错卷（sparkle-project_ 前缀）走 die 分支——请审查 case 分支是否穷尽 FIX-557 事故形态",
+    "C-5 redis liveness 判定放宽是否可接受：NOAUTH 记 ok=true（alive-but-auth-gated）——安全语义上「需要认证」确证服务在跑，但若审查认为数据面检查应 fail-closed（无凭据=红），需裁决后改判据",
+    "C-6 绑定不越权复核：external_gate_binding.json 是否存在任何「以 V4 证据翻转原门状态」的语义泄漏（应只有消费与挂靠，无状态改写）"
+  ],
+  "evidence_index": [
+    "run_manifest.json（14 命令全录：cmd/exit_code/result）",
+    "test_results.json（26 新测试 + 3 真实二进制探针 + 诚实失败 3 条）",
+    "diff_or_evidence_only.md（验收逐条举证）",
+    "limitations.md（8 条限制）",
+    "external_gate_binding.json（O-01/Q-07/Q-08 绑定）"
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "card": "V4-P03",
+  "title": "运行韧性与V3外部依赖衔接",
+  "binding_date": "2026-09-28",
+  "source_sha": "4a5dc5f215e31d3e06308b3dfc3fffb69abd4bd8",
+  "branch": "agent/v4/p03",
+  "principle": "V4 候选绑定原 O-01/Q-07/Q-08 外部门；V4 不替代授权、不复制申请账号工程卡、不代跑任何授权面。原 V3 已 DONE 任务 ID 与证据不可重置；三门当前状态原样沿用。",
+  "gates": [
+    {
+      "gate_id": "O-01",
+      "source": "v3/07_tasks/tasks.json@4a5dc5f2",
+      "title": "公网 Staging HTTPS/WSS 一键部署",
+      "original_status": "TODO",
+      "original_acceptance": [
+        "GJ01 远端设备通过；密钥不在 client bundle。",
+        "部署/rollback 文档和 smoke 脚本。"
+      ],
+      "external_inputs_required": [
+        "用户阿里云 AK（用户三击授权——截至本卡未提供，门保持 BLOCKED 等用户，绝不代跑）",
+        "macOS TCC 辅助功能授权（09-28 已解锁，仅解决本机自动化前置，不等于云凭据）",
+        "公网域名/证书与费用授权"
+      ],
+      "v4_consumers": [
+        "V4-Q08 发布裁决（其验收原文：原O-01/Q-07/Q-08未过就不称公网商业上线）"
+      ],
+      "v4_binding": "公网 HTTPS/WSS、证书、系统权限、费用授权只在原 O-01 处理；V4 候选（如公网部署相关就绪度）挂本门状态展示，无凭据时如实 BLOCKED_EXTERNAL，不伪造通过。",
+      "does_not_replace_authorization": true,
+      "internal_work_continues_without_credentials": true
+    },
+    {
+      "gate_id": "Q-07",
+      "source": "v3/07_tasks/tasks.json@4a5dc5f2",
+      "title": "Chaos / Recovery / Offline / Restore Storm 终验",
+      "original_status": "TODO",
+      "original_acceptance": [
+        "false success=0；duplicate=0；历史 restore storm SLO 不大幅退化。"
+      ],
+      "external_inputs_required": [
+        "真实整窗真栈（HEAVY），无外部凭据依赖"
+      ],
+      "v4_consumers": [
+        "V4-Q07（depends_on 含 V4-P03）——控制钟模拟与真实跨进程会话分开运行，注入撤回/离线/副作用unknown；可用已完成 V3 证据，但本次触达链必须新复验"
+      ],
+      "v4_binding": "P03 交付的监督/失联检测/自愈面（scripts/ops/service_supervisor.py + supervisor_probe.py 及其真实进程反例测试）是 V4-Q07 混沌演练的受测对象之一；Q-07 执行时沿用原 Q-07 验收判据，不降阈值、不以 P03 证据替代终验。",
+      "does_not_replace_authorization": true,
+      "internal_work_continues_without_credentials": true
+    },
+    {
+      "gate_id": "Q-08",
+      "source": "v3/07_tasks/tasks.json@4a5dc5f2",
+      "title": "V3 Final Gate Audit / Commercial RC",
+      "original_status": "TODO",
+      "original_acceptance": [
+        "V3_DEFINITION_OF_DONE 每条有 evidence link 和 PASS/FAIL/BLOCKED。",
+        "不能用“107任务完成”替代产品 gate。",
+        "输出 FINAL_V3_GATE_REPORT.md。"
+      ],
+      "external_inputs_required": [
+        "O-01 与 Q-07 的门状态（上游外部条件）"
+      ],
+      "v4_consumers": [
+        "V4-Q08 发布裁决与可修改设计快照（验收原文含：原O-01/Q-07/Q-08未过就不称公网商业上线）"
+      ],
+      "v4_binding": "V4-Q08 的分层完成矩阵把「设计预览/工程/效用/外部发布」四种结论独立；外部发布结论直接消费本文件三门原状态，不以 V4 工程完成度翻转外部门。",
+      "does_not_replace_authorization": true,
+      "internal_work_continues_without_credentials": true
+    }
+  ],
+  "fix_ledger_anchor": {
+    "FIX-530": "v3/06_agent_fleet/DYNAMIC_ISSUES.md 行 402（FIXED@92179f4c 韧性壳；进程守护正式化提案归 ops 卡=本卡）",
+    "FIX-542": "v3/06_agent_fleet/DYNAMIC_ISSUES.md 行 414（OPEN，ops 家族；修法方向①守护统一②启动路径自锚定③上游丢失退出行为——本卡落实①②，③经 readyz 分离探测显性化）"
+  },
+  "candidate_readiness_snapshot": {
+    "supervision_face": "READY_INTERNAL（守护+检测+自愈已交付并有真实进程反例证据）",
+    "public_deployment_face": "BLOCKED_EXTERNAL（O-01 等用户 AK/费用授权，未越权）",
+    "final_chaos_verification": "NOT_RUN_BY_DESIGN（属 V4-Q07/原 Q-07 终验，不在本卡代跑）",
+    "release_verdict": "NOT_RUN_BY_DESIGN（属 V4-Q08/原 Q-08 终裁）"
+  }
+}

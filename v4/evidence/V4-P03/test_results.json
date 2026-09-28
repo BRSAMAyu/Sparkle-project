@@ -1,0 +1,98 @@
+{
+  "card": "V4-P03",
+  "date": "2026-09-28",
+  "summary": {
+    "new_tests_total": 26,
+    "new_tests_passed": 26,
+    "existing_faces_rerun": {
+      "go_i18n": "7/7（含 2 次复跑）",
+      "migration_contract_gate": "exit 0（No changed migration files——本卡零迁移）",
+      "theme_rollback_flutter": "2/2",
+      "semantic_selector_pytest": "77/77"
+    },
+    "lint_type": "mypy 无问题 / ruff clean / black formatted / go vet+gofmt clean",
+    "can_fail_counterexamples": 6
+  },
+  "new_tests": [
+    {
+      "suite": "backend/gateway/internal/i18n/resolve_test.go (Go)",
+      "count": 7,
+      "cases": [
+        "TestDefaultLocalesDir_IsCWDIndependent——真实 os.Chdir 到 /、/tmp、$HOME 三敌意 CWD，解析结果逐一相同（CWD 不决定资源路径）",
+        "TestDefaultLocalesDir_BogusLocalLocalesIgnored——反例：CWD 下存在缺 zh.json 的伪 locales 目录不被采纳，仍解析到真 bundle",
+        "TestDefaultLocalesDir_EnvOverrideWins",
+        "TestDefaultLocalesDir_EnvOverrideInvalidFailsLoud——反例：显式错配报错不静默",
+        "TestDefaultLocalesDir_WalkUpFindsFromSubdirectory",
+        "TestInit_WithResolvedDir_LoadsBundle",
+        "TestIsLocalesDir_RejectsIncomplete"
+      ],
+      "exit_code": 0
+    },
+    {
+      "suite": "scripts/tests/test_supervisor_probe.py",
+      "count": 10,
+      "cases": [
+        "test_healthy_real_process_probes_green——真实 http.server decoy 进程绿",
+        "test_real_process_loss_detected_red——反例：SIGKILL 真进程→探测红（失联可检）",
+        "test_pseudo_dead_process_detected_red——反例：伪失联（端口关、进程面其他 PID 存活）→探测红（PID 存活≠健康）",
+        "test_alive_but_broken_503_detected_red——反例：端口活但 503→health 红",
+        "test_threshold_requires_consecutive_failures",
+        "test_cooldown_suppresses_restart_loop",
+        "test_hourly_cap_turns_restart_into_alert——反例：超限转告警不掩盖根因",
+        "test_blackout_window_forces_observe_only",
+        "test_probe_service_missing_port_red",
+        "test_probe_module_cli_json_and_exit_code——CLI 真子进程：绿 exit 0 / 杀后 exit 1"
+      ],
+      "exit_code": 0
+    },
+    {
+      "suite": "scripts/tests/test_service_supervisor.py（真实进程端到端演练）",
+      "count": 7,
+      "cases": [
+        "test_once_cli_green_on_healthy_decoy",
+        "test_once_cli_red_after_real_kill——反例：真杀进程→--once exit 1",
+        "test_full_recovery_restart_cycle——恢复面可执行证据：失联红→监督器执行 restart_cmd→绿",
+        "test_restart_runs_with_repo_cwd_not_caller_cwd——FIX-542 监督器层断言：restart 以 cwd=REPO_ROOT 执行（pwd 逐字比对），与调用方 CWD 无关",
+        "test_observe_mode_withholds_restart——观察模式绝不执行重启",
+        "test_restart_cap_alerts_instead_of_looping",
+        "test_fix557_owner_precheck_real_and_negative——真实 docker inspect 属主预检 + 错误前缀 monkeypatch 负例（引用 FIX-557/RESTACK_RUNBOOK）"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "real_binary_probes": [
+    {
+      "probe": "基线（修复前）二进制 ← 敌意 CWD /",
+      "expected": "i18n 初始化失败（FIX-542 原始签名）",
+      "actual": "\"Failed to initialize i18n, falling back to defaults\",\"error\":\"open locales: no such file or directory\"",
+      "verdict": "RED（对照成立）"
+    },
+    {
+      "probe": "修复后二进制 ← 敌意 CWD /",
+      "expected": "locales 自锚定解析成功",
+      "actual": "\"i18n locales initialized\" locales_dir=wtP03/backend/gateway/locales resolution=source-anchored",
+      "verdict": "GREEN"
+    },
+    {
+      "probe": "修复后二进制 + GATEWAY_LOCALES_DIR=/nonexistent_p03",
+      "expected": "fail-loud + 诊断",
+      "actual": "warn + \"is not a valid locales dir (missing [en.json zh.json])\" + diagnostics",
+      "verdict": "GREEN（显式错配不静默）"
+    }
+  ],
+  "live_once_mode": {
+    "cmd": "python3.11 scripts/ops/service_supervisor.py --once --data-plane",
+    "exit_code": 1,
+    "verdict": "诚实红：gateway alive(healthz 200)/not_ready(readyz 503) 分离探测捕获在跑网关既有 DB 面降级（非本卡回归，见 limitations）；engine-api/grpc 绿；数据面属主绿；redis NOAUTH 诚实标注 alive-but-auth-gated（修复了首版 redis-cli exit-code 假绿——探测面自身也被真实栈纠偏一轮）"
+  },
+  "honest_failures_during_work": [
+    "首版 decoy 用单行 python -c 语法错→5 红，改生成脚本文件后绿（保留记录）",
+    "worktree 缺三处 gitignored 生成物（gateway/gen、mobile/lib/gen、backend/app/gen）→迁移主题/selector 首跑红，移入后绿",
+    "首版 redis 数据面检查以 exit code 判活，真实栈 NOAUTH 暴露假绿→改按应答体判（PONG=全量 / NOAUTH=alive-auth-gated）"
+  ],
+  "not_run_by_design": [
+    "对在跑真实栈的杀进程/自愈演练——他人会话所有，反例面以专用 decoy 真实进程等价执行",
+    "O-01 授权面（无凭据，BLOCKED_EXTERNAL，未伪造）",
+    "Q-07 混沌终验与 Q-08 终裁（属后续验证卡，不在本卡代跑）"
+  ]
+}
