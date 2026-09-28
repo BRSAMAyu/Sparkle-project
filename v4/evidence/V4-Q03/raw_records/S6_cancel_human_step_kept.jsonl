@@ -1,0 +1,4 @@
+{"ts": "2026-09-28T20:38:13.413392+00:00", "scenario": "S6_cancel_human_step_kept", "step": "cancelled", "run_id": "e3dd53dc-2759-465c-8518-a0834a09b9f8", "terminal_reason": "user_cancelled", "human_step_completion": null, "awaiting_state": "cancelled"}
+{"ts": "2026-09-28T20:38:13.415090+00:00", "scenario": "S6_cancel_human_step_kept", "step": "late_confirm_409", "status": 409, "terminal_reason": "user_cancelled"}
+{"ts": "2026-09-28T20:38:16.301813+00:00", "scenario": "S6_cancel_human_step_kept", "step": "journey_cancelled_judgment_untouched", "run_id": "4079404d-1ac0-43e8-9c95-5ff0022ad415", "judgment_completion": null, "submit_after_cancel": "rejected"}
+{"ts": "2026-09-28T20:38:19.206329+00:00", "scenario": "S6_cancel_human_step_kept", "step": "restart_new_attempt", "old_run": "4079404d-1ac0-43e8-9c95-5ff0022ad415", "new_run": "5bfe63d3-a058-4353-827c-ad12fa43af96", "new_awaiting": "judgment", "old_status": "CANCELLED"}

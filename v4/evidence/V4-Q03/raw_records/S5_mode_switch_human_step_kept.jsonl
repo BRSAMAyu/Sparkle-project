@@ -1,0 +1,5 @@
+{"ts": "2026-09-28T20:38:13.106839+00:00", "scenario": "S5_mode_switch_human_step_kept", "step": "journey_started", "run_id": "5e3efbbb-2a24-41fc-8f97-2746384a00af", "awaiting": "judgment"}
+{"ts": "2026-09-28T20:38:13.107575+00:00", "scenario": "S5_mode_switch_human_step_kept", "step": "agent_bypass_rejected", "error": "step 'judgment' is owner='human'; only agent-owned steps can be completed by the agent (human/hybrid steps go through the user path)", "judgment_completion": null}
+{"ts": "2026-09-28T20:38:13.111434+00:00", "scenario": "S5_mode_switch_human_step_kept", "step": "mode_reentry_same_run", "run_id": "5e3efbbb-2a24-41fc-8f97-2746384a00af", "awaiting": "judgment", "new_run_created": false}
+{"ts": "2026-09-28T20:38:13.119792+00:00", "scenario": "S5_mode_switch_human_step_kept", "step": "user_judgment_advanced", "awaiting": "outcome", "llm_calls": 1}
+{"ts": "2026-09-28T20:38:13.120898+00:00", "scenario": "S5_mode_switch_human_step_kept", "step": "cold_state_replay", "run_id": "5e3efbbb-2a24-41fc-8f97-2746384a00af", "awaiting": "outcome"}

@@ -3380,9 +3380,10 @@
     "V4-U04",
     "V4-I07"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
-   "evidence_verdict": "NOT_RUN",
+   "status": "in_progress",
+   "implementation_state": "REVIEW_READY",
+   "evidence_verdict": "PASS_WITH_FINDINGS_PENDING_REVIEW",
+   "progress_note": "2026-09-29 wtQ03：REVIEW_READY 交付（worktree wtQ03，分支 agent/v4/q03 @ a8f46650，未 push）。验收剧本七场景 S1-S7（L1 真实服务/REST/sqlite 行，零生产 LLM，基线依赖 10 文件 174 passed）全 PASS，突变 M1-M3 自证可失败：护栏1 Agent 代答零掌握（结算门 BLOCK×2 形态+sprint 0 增长+WARN 留痕+receipt 恒 NON_HUMAN 零融合+user/quiz 正面点亮对照）；护栏2 示例/检验答案全可达面零泄漏（leaf 键 correct 含内；渐隐转移表 8 步单调）；护栏3 切模式/取消/重连人类步骤不跳（owner 纪律拒越权、取消不落完成戳、x07 confirm 幂等重放 resume 恰一次、交付确认不重复完成）；护栏4 完成/能力分立报表（deliverable 代办完成面结算+25 而 receipt 通道仍 NON_HUMAN；真人效率/迁移=unknown_not_measured）。缺陷如实上交：F1（B 级）example 起点经 check/enter 不可达检验段——request_independent_check 对合法中间推进误标 HOLD.evidence_not_supported × enter_check 持久化门永不写回（单跳 attempt→check 正常，U10 既有测试只覆盖该跳；check_journey_reachability=FAIL_F1 计入 value 裁决）；F2（C 级）judgment 幂等重放重跑起草 LLM 并重复落 execute_check 产物行（不越人类步）。value=PASS_WITH_FINDINGS；BLOCKED 无；模拟器 vs 真人边界与 unknown 见 limitations。证据 10 件+52 条原始记录+日志，sha256 见 run_manifest。见 v4/evidence/V4-Q03/{diff_or_evidence_only,limitations}.md",
    "kind": "verification",
    "required_locks": [
     "qa-learning"

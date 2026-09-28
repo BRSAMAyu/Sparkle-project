@@ -1,0 +1,8 @@
+{
+  "task": "V4-Q03",
+  "status": "PENDING",
+  "risk": "high",
+  "required_independent_reviewers": 2,
+  "note": "review_receipt 由独立未参与实现/验收的会话落盘（作者不自审）。审查基线=卡面三条验收 + 验收铁律六条 + run_manifest.verdict_summary；审查面=F1/F2 缺陷归因与锚点核验、四护栏判定是否越权宣称（尤其 check_journey_reachability=FAIL_F1 是否被正确计入 value 裁决）、模拟器 vs 真人边界标记、探针可失败性（突变 M1-M3 复跑）。base SHA=a8f46650。",
+  "reviews": []
+}
