@@ -156,6 +156,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sensoryAmbientVolumeTitle => 'Ambient Volume';
 
   @override
+  String get sensorySfxVolumeTitle => 'Prompt Sound Volume';
+
+  @override
   String get bgmSectionTitle => 'Background Music';
 
   @override

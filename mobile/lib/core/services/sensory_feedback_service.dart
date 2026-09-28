@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:sparkle/core/services/audio_asset_gate.dart';
+import 'package:sparkle/core/services/audio_focus_controller.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -180,6 +182,10 @@ class SensoryFeedbackService {
   static const _ambientEnabledKey = 'sensory_feedback.ambient_enabled';
   static const _ambientVolumeKey = 'sensory_feedback.ambient_volume';
   static const _ambientSceneKey = 'sensory_feedback.ambient_scene';
+
+  /// S02：提示音独立音量（环境/提示音两独立音量的提示音侧；环境音量键为
+  /// 既有 [_ambientVolumeKey]，U14 同源——不造第二权威，音量只存本处）。
+  static const _sfxVolumeKey = 'sensory_feedback.sfx_volume';
   static const _auroraLinkageEnabledKey =
       'sensory_feedback.aurora_linkage_enabled';
 
@@ -202,6 +208,13 @@ class SensoryFeedbackService {
   static AudioPlayer? _ambientPlayer;
   static AmbientScene _currentScene = AmbientScene.none;
   static double _currentAmbientOutputVolume = 0;
+
+  /// S02：环境床是否因焦点抢占（录音/通话）而暂停——恢复时据此续播，
+  /// 与「用户停止」（不自续）严格区分。
+  static bool _ambientPausedByFocus = false;
+
+  /// S02：焦点裁决解绑函数（dispose 时解绑）。
+  static VoidCallback? _focusUnsubscribe;
 
   // ── Throttle ──────────────────────────────────────────────────────────────
   static final Map<SensoryFeedbackEvent, DateTime> _lastEmission = {};
@@ -233,6 +246,63 @@ class SensoryFeedbackService {
 
     _ambientPlayer = AudioPlayer();
     await _ambientPlayer!.setReleaseMode(ReleaseMode.loop);
+
+    // S02：订阅音频焦点裁决——状态机是策略权威，本服务是唯一执行面。
+    // （重开不自续：init 不产生任何播放会话，冷启动焦点恒为 IDLE。）
+    _focusUnsubscribe ??= AudioFocusController.instance
+        .addListener(_applyAudioFocusDecision);
+  }
+
+  /// S02：焦点裁决 → 输出面调整（环境床 duck/暂停/恢复；提示音抑制在
+  /// emit() 读取）。执行面只跟随裁决，不自创策略。
+  static void _applyAudioFocusDecision(AudioFocusDecision decision) {
+    final player = _ambientPlayer;
+    if (player == null || _currentScene == AmbientScene.none) {
+      return;
+    }
+    if (decision.state == AudioFocusState.stoppedByUser) {
+      // 耳机拔出/用户停止：停止而非暂停——不自续（MOTION：耳机拔出不转
+      // 扬声器大声续播）。
+      _ambientPausedByFocus = false;
+      _currentAmbientOutputVolume = 0;
+      unawaited(_fadeAmbientTo(0, duration: Duration.zero, steps: 1));
+      unawaited(player.stop());
+      return;
+    }
+    if (decision.promptsSuppressed) {
+      // 录音/通话：暂停（瞬时抢占，结束后按平台惯例恢复）。
+      _ambientPausedByFocus = true;
+      _currentAmbientOutputVolume = 0;
+      unawaited(player.pause());
+      return;
+    }
+    if (decision.state == AudioFocusState.duckedByTts ||
+        decision.ambientFactor >= 1) {
+      // duck 压低 / 恢复播放：按「用户环境音量 × 焦点系数」落输出音量；
+      // 若此前被抢占暂停 → 续播。
+      final wasPausedByFocus = _ambientPausedByFocus;
+      _ambientPausedByFocus = false;
+      unawaited(
+        _applyAmbientOutputVolume(resumeIfPausedByFocus: wasPausedByFocus),
+      );
+    }
+  }
+
+  /// S02：环境床输出音量 = 用户环境音量 × 焦点系数（唯一合成点）。
+  static Future<void> _applyAmbientOutputVolume({
+    bool resumeIfPausedByFocus = false,
+  }) async {
+    final player = _ambientPlayer;
+    if (player == null || _currentScene == AmbientScene.none) {
+      return;
+    }
+    final target =
+        (await getAmbientVolume()) * AudioFocusController.instance.ambientFactor;
+    if (resumeIfPausedByFocus) {
+      await player.resume();
+    }
+    await player.setVolume(target.clamp(0.0, 1.0));
+    _currentAmbientOutputVolume = target.clamp(0.0, 1.0);
   }
 
   // ---------------------------------------------------------------------------
@@ -242,8 +312,12 @@ class SensoryFeedbackService {
   static Future<SharedPreferences> _getPrefs() async =>
       _prefs ??= await SharedPreferences.getInstance();
 
+  /// V4-S02（卡验收 1「未明确点播无声音」/ MOTION「默认环境声与提示音关闭」）：
+  /// 提示音默认**关闭**——用户在设置显式开启后才发声；开启后尊重当前偏好。
+  /// （V3 期默认 true 的旧行为由本卡按 V4 规格显式变更，证据面见
+  /// v4/evidence/V4-S02/diff_or_evidence_only.md 的行为差量登记。）
   static Future<bool> isSoundEnabled() async =>
-      (await _getPrefs()).getBool(_soundEnabledKey) ?? true;
+      (await _getPrefs()).getBool(_soundEnabledKey) ?? false;
 
   static Future<bool> isHapticEnabled() async =>
       (await _getPrefs()).getBool(_hapticEnabledKey) ?? true;
@@ -254,26 +328,35 @@ class SensoryFeedbackService {
   static Future<void> setHapticEnabled(bool enabled) async =>
       (await _getPrefs()).setBool(_hapticEnabledKey, enabled);
 
-  /// U14：背景声独立开关。
-  ///
-  /// 卡验收 1（动效/背景声/提示音/触觉独立偏好）：背景声不再寄生于提示音
-  /// 开关。键未落时向后兼容地继承既有「提示音开关」对背景声的事实门控
-  /// （老用户关了提示音，背景声保持静音，不被升级悄悄打开）；用户首次
-  /// 显式切换背景声后即独立。开启本开关**不自动续播**（默认不自动播放；
-  /// 播放仍只由用户显式选场景/开始专注触发）。
-  static Future<bool> isAmbientEnabled() async {
-    final prefs = await _getPrefs();
-    final saved = prefs.getBool(_ambientEnabledKey);
-    if (saved != null) return saved;
-    return isSoundEnabled();
-  }
+  /// U14：背景声独立开关；S02 收紧缺省（卡验收 1「未明确点播无声音」）：
+  /// 键未落时默认**关闭**（不再继承提示音开关——比 U14 继承保护更强的
+  /// 绝对缺省：任何未显式点播的用户都不被自动打开背景声；显式切换后即
+  /// 独立持久化）。开启本开关**不自动续播**（默认不自动播放；播放仍只由
+  /// 用户显式选场景/开始专注触发）。
+  static Future<bool> isAmbientEnabled() async =>
+      (await _getPrefs()).getBool(_ambientEnabledKey) ?? false;
 
   static Future<void> setAmbientEnabled(bool enabled) async {
     await (await _getPrefs()).setBool(_ambientEnabledKey, enabled);
     if (!enabled) {
+      // 显式用户停止 → STOPPED_BY_USER（抢占结束也不自续）。
+      AudioFocusController.instance.stopByUser();
       await stopAmbient();
     }
     // enabled=true 不自动续播：尊重「默认不自动播放；重开不自行续播」。
+  }
+
+  // ---------------------------------------------------------------------------
+  // S02：提示音独立音量（环境/提示音两独立音量）
+  // ---------------------------------------------------------------------------
+
+  /// 提示音用户音量（0.0–1.0，与每事件规格音量相乘；独立于环境音量键）。
+  static Future<double> getSfxVolume() async =>
+      (await _getPrefs()).getDouble(_sfxVolumeKey) ?? 1.0;
+
+  static Future<void> setSfxVolume(double volume) async {
+    await (await _getPrefs()).setDouble(_sfxVolumeKey, volume.clamp(0.0, 1.0));
+    // 不触碰环境床音量——两独立音量互不连带（测试钉）。
   }
 
   /// U14：音频播放是否已处于降级（静音）态（设置页诚实呈现用）。
@@ -326,6 +409,11 @@ class SensoryFeedbackService {
 
   static Future<void> setAmbientVolume(double volume) async {
     await (await _getPrefs()).setDouble(_ambientVolumeKey, volume);
+    // S02：输出 = 用户环境音量 × 焦点系数（duck/暂停时改音量不得越权放大）。
+    if (_currentScene != AmbientScene.none) {
+      await _applyAmbientOutputVolume();
+      return;
+    }
     _currentAmbientOutputVolume = volume;
     await _ambientPlayer?.setVolume(volume);
   }
@@ -368,8 +456,13 @@ class SensoryFeedbackService {
   }) async {
     if (!_shouldEmit(event)) return;
 
+    // S02（卡验收 2）：录音/通话抢占期间提示音全抑制——「录音不回录提示音」。
+    // 触觉与视觉不受影响，调用方（任务/提醒流）恒不感知。
     final soundAllowed =
-        enableSound && await isSoundEnabled() && !_audioPlaybackDegraded;
+        enableSound &&
+        await isSoundEnabled() &&
+        !_audioPlaybackDegraded &&
+        !AudioFocusController.instance.promptsSuppressed;
     final hapticAllowed = enableHaptic && await isHapticEnabled();
 
     if (soundAllowed &&
@@ -492,8 +585,28 @@ class SensoryFeedbackService {
     final path = scene.assetPath;
     if (path == null) return;
 
+    // S04 合法资产门（运行时消费面）：未许可资产静默跳过（fallback=silent），
+    // 任务流不受影响；打包面由 S04 守卫拦截（L003/L004）。
+    if (!AudioAssetGate.isLicensed(path)) {
+      if (kDebugMode) {
+        debugPrint(
+          'SensoryFeedback: ambient "$path" blocked by asset license gate '
+          '(not APPROVED+ship in asset_ledger) — silent fallback.',
+        );
+      }
+      return;
+    }
+
     // U14：背景声只受其独立开关门控（提示音开关不再连带背景声）。
     if (!await isAmbientEnabled()) return;
+
+    // S02：显式点播（用户选场景/开始专注）才进入 USER_PLAYING；录音/通话
+    // 抢占期间点播被拒（返回 false）——录音不回录背景床。
+    final sessionStarted =
+        AudioFocusController.instance.beginUserPlaybackSession();
+    if (!sessionStarted) {
+      return;
+    }
 
     final volume = await getAmbientVolume();
     if (previousScene != AmbientScene.none) {
@@ -506,8 +619,16 @@ class SensoryFeedbackService {
     await _fadeAmbientTo(volume);
   }
 
+  /// S02：用户显式停止（设置关开关/选「无」）→ STOPPED_BY_USER。
+  static Future<void> stopAmbientByUser() async {
+    AudioFocusController.instance.stopByUser();
+    await stopAmbient();
+  }
+
   static Future<void> stopAmbient() async {
     _currentScene = AmbientScene.none;
+    _ambientPausedByFocus = false;
+    AudioFocusController.instance.endUserPlaybackSession();
     final player = _ambientPlayer;
     if (player == null) return;
     await _fadeAmbientTo(0);
@@ -518,10 +639,16 @@ class SensoryFeedbackService {
 
   static Future<void> resumeAmbient() async {
     if (_currentScene == AmbientScene.none) return;
+    // S02：停止态（耳机拔出/用户停止）不自续——须用户显式再点播。
+    if (AudioFocusController.instance.state == AudioFocusState.stoppedByUser) {
+      return;
+    }
     await _ambientPlayer?.resume();
   }
 
   static Future<void> dispose() async {
+    _focusUnsubscribe?.call();
+    _focusUnsubscribe = null;
     for (final p in _pool) {
       await p.dispose();
     }
@@ -531,6 +658,7 @@ class SensoryFeedbackService {
     _ambientPlayer = null;
     _currentScene = AmbientScene.none;
     _currentAmbientOutputVolume = 0;
+    _ambientPausedByFocus = false;
     _lastEmission.clear();
     _recentSoundEvents.clear();
     _recentHapticEvents.clear();
@@ -546,6 +674,12 @@ class SensoryFeedbackService {
   // ---------------------------------------------------------------------------
 
   static const String _ui = 'audio/ui/';
+
+  /// S02 测试面：提示音规格表资产路径只读访问（资产门对账用，见
+  /// audio_asset_gate_s02_test.dart）。
+  @visibleForTesting
+  static String debugAssetPathFor(SensoryFeedbackEvent event) =>
+      _spec(event).assetPath;
 
   static _SoundSpec _spec(SensoryFeedbackEvent event) {
     switch (event) {
@@ -717,6 +851,22 @@ class SensoryFeedbackService {
       return;
     }
 
+    // S02 合法资产门：未许可提示音不播（fallback=silent 语义，账本为权威；
+    // 打包面由 S04 守卫拦截）。反例钉见 audio_asset_gate_s02_test.dart。
+    if (!AudioAssetGate.isLicensed(spec.assetPath)) {
+      if (kDebugMode) {
+        debugPrint(
+          'SensoryFeedback: "${spec.assetPath}" blocked by asset license '
+          'gate (not APPROVED+ship in asset_ledger) — silent fallback.',
+        );
+      }
+      return;
+    }
+
+    // S02：提示音用户音量（独立音量轴）× 每事件规格音量。
+    final sfxVolume = await getSfxVolume();
+    final outputVolume = (spec.volume * sfxVolume).clamp(0.0, 1.0);
+
     // Local debug builds on mobile simulators/emulators are noticeably more
     // stable and responsive when short UI sounds use the native system click
     // instead of going through AudioPlayer asset setup on every interaction.
@@ -740,7 +890,7 @@ class SensoryFeedbackService {
       await player.stop();
       await player.play(
         AssetSource(spec.assetPath),
-        volume: spec.volume,
+        volume: outputVolume,
         mode: PlayerMode.lowLatency,
       );
       // U14：播放成功 → 清降级计数（能力恢复）。

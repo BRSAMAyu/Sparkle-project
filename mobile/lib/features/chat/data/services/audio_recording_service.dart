@@ -6,12 +6,18 @@ import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:record/record.dart';
 import 'package:sparkle/core/network/ws_ticket_client.dart';
+import 'package:sparkle/core/services/audio_focus_controller.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// 音频录制服务
 /// 负责录制音频并实时流式传输到服务器
+///
+/// V4-S02：录音接入音频焦点状态机——开始录音登记 PAUSED_BY_RECORDING
+/// （提示音/环境床全输出抑制：「录音不回录提示音」）；停止/清理时解除，
+/// 抢占结束按平台惯例恢复到抢占前会话态。本服务只登记焦点事实，不直接
+/// 操纵播放器（执行面跟随 AudioFocusController 裁决）。
 class AudioRecordingService {
   AudioRecordingService({WsTicketClient? ticketClient})
       : _ticketClient = ticketClient ?? WsTicketClient();
@@ -106,6 +112,9 @@ class AudioRecordingService {
       );
 
       final audioStream = await _recorder.startStream(config);
+
+      // S02：麦克风真实开流成功 → 登记录音抢占（全输出抑制，录音不回录）。
+      AudioFocusController.instance.beginRecording();
 
       // 4. 监听音频数据流并实时发送
       _audioStreamSubscription = audioStream.listen(
@@ -312,6 +321,9 @@ class AudioRecordingService {
 
     try {
       _isRecording = false;
+
+      // S02：录音会话真实终结 → 解除录音抢占（幂等；重复清理为 no-op）。
+      AudioFocusController.instance.endRecording();
 
       _durationTimer?.cancel();
       _durationTimer = null;

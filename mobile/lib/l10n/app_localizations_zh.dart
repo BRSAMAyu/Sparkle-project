@@ -150,6 +150,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sensoryAmbientVolumeTitle => '环境音音量';
 
   @override
+  String get sensorySfxVolumeTitle => '提示音音量';
+
+  @override
   String get bgmSectionTitle => '背景音乐';
 
   @override
