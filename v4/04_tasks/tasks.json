@@ -3299,9 +3299,9 @@
     "V4-I06",
     "V4-D03"
    ],
-   "status": "REVIEW_READY",
-   "implementation_state": "REVIEW_READY",
-   "evidence_verdict": "FAIL_L1_BLOCKED_L2",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "FAIL_L1_BLOCKED_L2_NOT_PASS",
    "progress_note": "2026-09-29 wtQ02：REVIEW_READY 交付（worktree wtQ02，分支 agent/v4/q02，未 push）。原反例（B03 冻结 V3-NEG-A08-POSTFIX-NOMEMORY-BEATS-FULL）当前 SHA 复现 REPRODUCED（sha256 六工件全对表+双路径重算逐数一致+当前 SHA 复跑聚合逐数全同+三类已声明分歧归一化后逐字节一致+applied 归因只收窄）；四臂 L1 运行 30 dev+120×2 seed holdout episode/臂，profile 簇配对 bootstrap 95% CI：M11 形状（C−A/D−A）=结构性精确 0（I02 门集成面不在 A-08 回路+I05 live 门 decision 门出无可触发条件、admission 收益门/72h 窗真实触发但差分被 confirm-backstop 吸收——结局级恒等：120/120 episode 结局逐数相同，非记录级；一审 C1 措辞整改），M12 形状点估计 +3.3/+5.8pp 但 CI 跨 0 未建立，冻结 utility A−B 两 seed 稳定为负——L1 效果门 FAIL，产品 value=NOT_PASS；L2 live 层 BLOCKED_EXPLICIT（heavy_token_required=false + budget enabled=false，零模型调用账目在案，未伪造）；选择面 Surface-2（D 门唯一集成面 context_pack）CTX 族 9 场景 oracle 全绿（合规面非收益面）。零产品代码改动；pytest 180 passed / mypy 59≤77 / ruff+black 新文件全清。见 v4/evidence/V4-Q02/{diff_or_evidence_only,limitations}.md（9 条限制：生成者未会话隔离的缓解、效应量噪声域、反例保持 OPEN 等）",
    "kind": "verification",
    "required_locks": [
@@ -3348,7 +3348,13 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "7f3d7de6 PASS_WITH_CHALLENGES（M11 定性=harness 面局限非产品缺口不登记 FIX：I02 已接真实装配链三点+I05 六锚；揪出三处披露失实→C1）",
+    "remediation": "6ff6cc8e C1 三处措辞修正（结局级恒等非记录级+I05 门真实触发被 confirm-backstop 吸收；零数据变更；C2 种子固定暂缓保冻结工件一致性=R2 接受）",
+    "r2": "4e2797e6 PASS_WITH_CHALLENGES_CLOSED（C1 逐字+底层双重闭合：两 seed 120/120 结局 diff=0、A vs C 差异实证 s1 9→4/s2 18→13；反例 REPRODUCED@6ff6cc8e 亲跑；八靶全验；fold 107 亲跑复现；D1-D3 非阻断）",
+    "integration_reverify": "1b6fe153 合并零冲突；q02_surface2+fold 107 集成切片绿（与 R2 亲跑同批）"
+   }
   },
   {
    "id": "V4-Q03",
