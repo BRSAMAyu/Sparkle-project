@@ -33,8 +33,8 @@
 ### DF-08 [深链歧义] F01 achievement milestone id-less 深链落错屏
 - deep_link_service.dart:82-89：`sparkle://milestone` 无 id 时映射 `/achievements/milestone`；该精确路径未注册（仅 `/achievements/milestone/:milestoneId`），GoRouter 会匹配 `/achievements/:id`（id='milestone'）落入成就详情屏而非报 404——静默错屏。带 id 时正常达 milestone 庆祝屏（该路由 UI 0 入边、深链专用）。
 
-### DF-09 [深链歧义] F19/F14 sparkle://node id-less 落 404 兜底
-- `sparkle://node` 无 id 映射 `/galaxy/node`；galaxy_routes 仅注册 `/galaxy/node/:id`（knowledgeDetail）→ errorBuilder 404 兜底。带 id 正常（knowledge_detail_screen）。
+### DF-09 [深链歧义-已勘误] F19/F14 sparkle://node id-less 静默 no-op
+- 【R1-C1 勘误 2026-09-28：原述「落 404 兜底」不实】`sparkle://node` 无 id 有 null 守卫（deep_link_service.dart:97-98），resolveRoute 返回 null → 不发生导航，真实行为=静默 no-op。带 id 正常（knowledge_detail_screen）。降级为记录性发现（无错屏危害）。
 
 ### DF-10 [路由无入边] F09 documents 的 /documents
 - `/documents` 与 `/library` 双路径同组注册（documents_routes.dart:7-8,12,21）；UI 仅用 `/library`（profile_screen.dart:674、unified_settings_screen.dart:831），/documents 0 入边。备播双面，建议矩阵注记或 B-01 裁决收敛。
