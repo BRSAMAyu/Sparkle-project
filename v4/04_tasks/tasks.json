@@ -1794,7 +1794,7 @@
    "progress_note": "2026-09-29 wtD05：REVIEW_READY 交付（worktree wtD05，分支 agent/v4/d05，未 push）。已知边界如实登记 9 条（v4/evidence/V4-D05/limitations.md）：评测/统计面未跑 value 不标 PASS；「充分理解」是呈现资格门非理解度度量；回访面窗口边界（30d 窗外上次建议不进回访）；churned 参数面与 D-05 聚合兜底通道的极端一档差；样本身份 domain=OCCURRENCE 命名空间约定；outcome 账本级撤回传播未接呈现面（软删行为真实删除信号）；门无独立 off 旗标（revert 即回滚）；无 UI 截面（文案组合归 U13）；bert 测试文件环境债显式 ignore。",
    "review": {
     "r1": "1ed3866a PASS_WITH_CHALLENGES（数字全独立复现：52/597/mypy 字节级同清单/SHA256 逐字节；R-C1 豁免面探针无绕行/goal 引用用户自述放行+claim/note 双通道拒；R-C5 账本撤回无可接状态亲核=软删行即真实信号；验收 mutation ①②③全红：数值门/无数据门/信封 fail-loud）",
-    "integration_reverify": "本 commit 即合并态（merge-tree 预验 0 冲突），复验随合并后跑+OpenAPI 机械门",
+    "integration_reverify": "953e8f9b 合并零冲突；OpenAPI 机械门过；D05 切片 52 passed（unit 43+services 9）@集成 SHA 复验补录（后台批误跑全量 14311 的 47 failed/76 err=sqlite 本地覆盖下集成测试环境伪红，CI44 正规环境全量绿已证 main 无关）",
     "challenges_registered": "CH-1 呈现去重 (type,tag) 二元组 vs SliceSummary 四元组签名不一致（重放不放大红线成立；重复卡 id 为 V3 既有）→FIX-568；CH-2 presentation_gate_dropped 分支零测试（探针已验工作）→FIX-568 注记；O-1..O-3 receipt §7"
    }
   },
