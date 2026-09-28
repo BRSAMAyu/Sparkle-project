@@ -18,7 +18,7 @@
 
 - **未重建任何 V3 真源**：零新表、零迁移、零 proto、零新事件名（`git diff 17c14cea -- backend/app/core/event_registry.py backend/proto` 零改动）。P-03 存储载体（UserPreferencesCenter.explicit CAS 合并写）、P-06 解析器（quiet/cap/低刺激交集）、Notification 账本（cap 计数对象）全部原样消费。
 - **改动 5 个既有文件均为接线/扩展**：`proactive_suggestion_service.py`（+subject 级方法与纯函数辅助，既有类型级行为零改动）、`celery_tasks.py`（两任务闸门接线+信封）、`notification_center.py`（API 记录面追加）、`config.py`（+2 旋钮）、`metrics.py`（+1 计数器）；新增 3 文件（闸门 + 2 测试文件）。
-- **对外形状兼容**：comeback 任务 skipped 响应的 `suggestion_suppressed`/`notification_burden`/`notification_settings_unavailable` 形状逐字段保持；既有 242 基线测（含 `execute_counter==1` 抑制路径单读钉）零改动全绿。
+- **对外形状兼容**：comeback 任务 skipped 响应的 `suggestion_suppressed`/`notification_burden`/`notification_settings_unavailable` 形状逐字段保持；既有同集基线测（勘误后口径 1202，见文末整改注记 C-2b；初版误记 242）零改动全绿。
 
 ## 与验收逐条对照（可失败 = 每条一正一反 + 反例钉 + 突变演示）
 
@@ -31,4 +31,10 @@
 - 纯 backend：mobile/ 与 gateway/ 零改动。
 - 零 LLM、零模型调用、零费用；闸门确定性（同输入恒同裁决）。
 - 不绕权限、不造第二权威：预算面只消费既有事件/读面（P-03 JSONB、P-06 解析器、Notification 账本、Plan/Task 读侧）；无权限语义变更。
-- 回滚开关：`PROACTIVE_UNIFIED_BUDGET_ENABLED=false` = passthrough（恢复各渠道既有行为，有测试钉）；保留 V3 路径与数据向后兼容（既有响应形状/存储零迁移）。
+- 回滚开关：`PROACTIVE_UNIFIED_BUDGET_ENABLED=false` = passthrough **全关紧急开关**（一审 C-2a 如实口径：nudge 渠道既有内联 P-03/P-06 检查已被闸门替代，off 态连既有保护一并失效，非「恢复各渠道既有行为」——见 limitations#10；passthrough 语义有测试钉）；保留 V3 路径与数据向后兼容（既有响应形状/存储零迁移）。
+
+## 一审整改注记（2026-09-29，wtP01 整改会话）
+
+- **C-1（行为）**：spine→nudge 跨渠道 subject 抑制结构性失效已修——`recall_notification_task` 放行路径把上下文 subject 键（`plan_id`/`task_id`/`goal_id`）直落 `Notification.data`，`subject_refs_from_payload` 兼读预算信封 `proactive_budget.subject`（顶层键优先）。补真实链端到端双向矩阵 `backend/tests/api/test_p01_cross_channel_suppression_e2e.py`（真实任务产形 → 真实 `NotificationService.create` 落库 → 真实 suggestion-action handler → 提取 → P-03 写库 → 闸门判定；spine 静音→同 plan nudge 拦 + nudge 拒绝→同 subject spine 拦）；摘 C-1 修复突变该矩阵方向一转红，还原绿。
+- **C-2a（措辞）**：rollback 口径改为「全关紧急开关」（config.py / unified_budget.py docstring / limitations#10 / 本文件回滚条目）。
+- **C-2b（勘误）**：「基线 242」失实——base 同 9 文件集实收集 1202（一审 base 临时 worktree 亲测），真实算术 1219 = 1202 + 17（新测），零回归结论不变；`run_manifest.json`/`test_results.json`/本文件数字与口径已订正。

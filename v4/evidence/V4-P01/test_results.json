@@ -11,7 +11,8 @@
       "passed": 1219,
       "failed": 0,
       "duration_sec": 135.78,
-      "baseline_before_change_same_set_minus_new_files": 242,
+      "baseline_before_change_same_set_minus_new_files": 1202,
+      "erratum_r1_c2b": "初版记 242 作 same-set 分母失实：base 同 9 文件集实收集 1202（一审在 base 临时 worktree 亲测，head 同集亦 1202）；真实算术 1219 = 1202 + 17（新测），零回归结论不变",
       "note": "零回归；P-01 事件管线 32 测、P-06 负担/24h 时钟、P-03 反馈诚实性、nudge/spine 投递面全部保持绿"
     },
     "contract_gates": {
@@ -81,5 +82,36 @@
       "restored": "diff 干净，17 passed"
     }
   ],
+  "remediation_r1": {
+    "date_local": "2026-09-29",
+    "scope": "一审 APPROVE_WITH_CONDITIONS 条件收口：C-1（spine→nudge 抑制接线，行为）/C-2a（rollback 口径）/C-2b（基线勘误）；整改 commit 见 review_r1.md 整改注记",
+    "c1_fix": "生产者侧：recall_notification_task 放行路径把上下文 subject 键（plan_id/task_id/goal_id，源自 subject_refs_from_payload(parsed_context)）直落 Notification.data；提取面：subject_refs_from_payload 兼读预算信封 proactive_budget.subject（顶层键优先，损坏形状不炸）",
+    "new_e2e_tests": {
+      "file": "backend/tests/api/test_p01_cross_channel_suppression_e2e.py",
+      "total": 2,
+      "passed": 2,
+      "chain": "真实任务产形（recall_notification_task/comeback_nudge_task 体外呼 mock，与 wiring 测试同款纪律）→ 真实 NotificationService.create 落库 → 真实 record_suggestion_action handler → 提取 → P-03 写库读回 → 统一闸门判定；双向矩阵：spine 静音→同 plan nudge 拦 + nudge 拒绝→同 subject spine 拦",
+      "note": "零合成载荷——账本行 data 与生产者构造逐字段一致（一审 F1 指出的反向半场缺口就此闭合）"
+    },
+    "affected_surface_regression_after_fix": {
+      "cmd": "原 11 文件集 + tests/api/test_p01_cross_channel_suppression_e2e.py -q",
+      "passed": 1221,
+      "failed": 0,
+      "duration_sec": 170.52,
+      "note": "原 11 文件集单独复跑 1219 passed 零失败（184.55s）——与一审亲跑基线面同数，零回归"
+    },
+    "mutation_check": {
+      "mutation": "摘除 C-1 两处修复（提取面信封读块 + 生产者 data 键盖章行）",
+      "observed": "3 failed：新端到端方向一（spine 静音→nudge，首个断言即 KeyError plan_id）+ 生产者半场钉（wiring）+ 提取面半场钉（闸门测试）；方向二（nudge→spine）不受累保持绿（其 data 本就带 plan_id）",
+      "restored": "还原后 19 passed"
+    },
+    "mechanical_gates": {
+      "mypy": "六入口文件各 33 errors in 31 files == 一审基线同数（零新增，未触棘轮 ≤77）",
+      "ruff": "整改 6 文件 All checks passed",
+      "black": "5 文件零漂移；celery_tasks.py 14 hunks 为 base 既有漂移（与 71b81d9f 同 hunk 集，仅行位移 +8），零新增",
+      "openapi": "pytest tests/contract/test_api_router_openapi_contract.py → 3 passed（零漂移：data 面非路由面）"
+    },
+    "knob_wording_c2a": "PROACTIVE_UNIFIED_BUDGET_ENABLED off = 全关紧急开关（非「恢复各渠道既有行为」）口径已同步：config.py 注释 / unified_budget.py docstring 与步骤 0 注释 / limitations#10 / diff_or_evidence_only.md / test_knob_off_passthrough docstring"
+  },
   "verdict_note": "评测口径：本卡测试全绿 + 三突变可失败性演示；value 面的真人打扰指标未验证（无真实用户试验，见 limitations）"
 }

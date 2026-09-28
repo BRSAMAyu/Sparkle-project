@@ -3023,13 +3023,14 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
         # （此前 spine 渠道只有自身 Redis 冷却，不过 quiet/cap、不认另一
         # 渠道的拒绝）。与 spine 自身冷却的关系：本闸门在前，被抑制时不
         # 消耗 spine 冷却状态（record_sent 不发生）。
+        spine_subject_refs = subject_refs_from_payload(parsed_context)
         async with AsyncSessionLocal() as budget_session:
             budget_decision = await UnifiedProactiveBudgetService(budget_session).evaluate(
                 ProactiveBudgetRequest(
                     user_id=user_id,
                     channel=ProactiveChannel.SPINE,
                     suggestion_type="recall_notification",
-                    subject_refs=subject_refs_from_payload(parsed_context),
+                    subject_refs=spine_subject_refs,
                     prompt_kind=trigger_type,
                 )
             )
@@ -3092,6 +3093,13 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
                         "effort_estimate": message.effort_estimate,
                         "deadline_pressure_label": message.deadline_pressure_label,
                         "recall_score": message.recall_score,
+                        # V4-P01 一审 C-1: 上下文 subject 键直落 data——
+                        # suggestion-action 提取面（subject_refs_from_payload）
+                        # 读这些键升格跨渠道 subject 抑制；键不落 data 则
+                        # spine 卡拒绝/静音零写入、同 plan nudge 照常放行
+                        # （一审 F1 结构性失效，端到端钉
+                        # tests/api/test_p01_cross_channel_suppression_e2e.py）。
+                        **{f"{domain}_id": ref for domain, ref in spine_subject_refs.items()},
                         # V4-P01: 预算消耗与因果来源可追（与账本行同源）。
                         "proactive_budget": build_budget_envelope(
                             channel=ProactiveChannel.SPINE,
@@ -3099,7 +3107,7 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
                                 user_id=user_id,
                                 channel=ProactiveChannel.SPINE,
                                 suggestion_type="recall_notification",
-                                subject_refs=subject_refs_from_payload(parsed_context),
+                                subject_refs=spine_subject_refs,
                                 prompt_kind=trigger_type,
                             ),
                             decision=budget_decision,

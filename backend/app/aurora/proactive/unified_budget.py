@@ -38,7 +38,9 @@ subject/prompt_key）与账本行同源共存；被抑制的决定落 Prometheus
 硬约束（继承 P-01/WT378 纪律）：
 - 零 LLM、确定性、失败 fail-closed（设置读不到 → 抑制而非放行）；
 - 旋钮 ``PROACTIVE_UNIFIED_BUDGET_ENABLED``（默认开，off = passthrough
-  回滚开关，恢复各渠道既有行为）；
+  **全关紧急开关**——nudge 渠道既有的内联 P-03/P-06 检查已被本闸门
+  替代，off 态连这些既有保护一并失效，并非「恢复各渠道既有行为」；
+  一审 C-2a 如实口径）；
 - 测试经 monkeypatch 覆盖本配置模块属性（pydantic Settings 禁未知字段，
   与 P-01 旋钮同款），新旋钮同步进测试复位 fixture。
 """
@@ -132,8 +134,11 @@ def derive_prompt_key(
 def subject_refs_from_payload(payload: Mapping[str, Any]) -> dict[str, str]:
     """从建议载荷/通知 data 提取渠道无关 subject refs（``domain:id`` 键）。
 
-    只认既有字段（plan_id/task_id/goal_id，含 goal_state.goal_id 投影），
-    不新造命名；无 id 字段返回空 dict（无 subject 提示）。
+    只认既有字段（plan_id/task_id/goal_id，含 goal_state.goal_id 投影）与
+    预算信封 ``proactive_budget.subject``（放行路径盖进账本行的同一
+    subject——一审 C-1：信封在场的账本行即使缺顶层键也必须可提取），
+    不新造命名；顶层键后读、同域优先（生产者上下文是第一真源）。
+    无 id 字段返回空 dict（无 subject 提示）。
     """
     refs: dict[str, str] = {}
 
@@ -142,6 +147,12 @@ def subject_refs_from_payload(payload: Mapping[str, Any]) -> dict[str, str]:
         if text:
             refs[domain] = text
 
+    envelope = payload.get("proactive_budget")
+    if isinstance(envelope, Mapping):
+        envelope_subject = envelope.get("subject")
+        if isinstance(envelope_subject, Mapping):
+            for domain in ("plan", "task", "goal"):
+                _put(domain, envelope_subject.get(domain))
     _put("plan", payload.get("plan_id"))
     _put("task", payload.get("task_id"))
     goal_state = payload.get("goal_state")
@@ -233,7 +244,8 @@ class UnifiedProactiveBudgetService:
             prompt_kind=request.prompt_kind,
         )
 
-        # 0. 回滚开关：off = passthrough（恢复各渠道既有行为，审计保留）。
+        # 0. 回滚开关：off = passthrough（全关紧急开关——nudge 渠道既有的
+        #    内联 P-03/P-06 检查已被本闸门替代，off 态一并失效；审计保留）。
         if not bool(getattr(proactive_config, "PROACTIVE_UNIFIED_BUDGET_ENABLED", True)):
             decision = ProactiveBudgetDecision(True, "passthrough", prompt_key, {"decided_at": moment.isoformat()})
             _record_metric(request, decision)

@@ -32,6 +32,7 @@ from app.aurora.proactive.unified_budget import (
 )
 
 PLAN_ID = "00000000-0000-0000-0000-00000000000a"
+TASK_ID = "00000000-0000-0000-0000-00000000000b"
 USER_ID = "00000000-0000-0000-0000-000000000001"
 
 
@@ -147,7 +148,11 @@ def test_spine_recall_blocked_after_nudge_rejection_nail():
 
 
 def test_spine_recall_allowed_stamps_budget_envelope():
-    """正：spine 渠道预算内放行，通知 data 携带可追预算信封。"""
+    """正：spine 渠道预算内放行，通知 data 携带可追预算信封。
+
+    一审 C-1 修复钉（生产者半场）：上下文 subject 键（task_id/plan_id）必须
+    直落通知 data——suggestion-action 提取面读这些键升格跨渠道抑制。
+    """
     fake_session_local = _FakeSessionCM(lambda: _FakeScalarResult([]))
 
     mock_spine_cls = MagicMock()
@@ -176,18 +181,21 @@ def test_spine_recall_allowed_stamps_budget_envelope():
     try:
         from app.core.celery_tasks import recall_notification_task
 
-        result = recall_notification_task(USER_ID, "long_silence", json.dumps({}))
+        result = recall_notification_task(USER_ID, "long_silence", json.dumps({"task_id": TASK_ID}))
     finally:
         for p in reversed(patches):
             p.stop()
 
     assert result["status"] == "sent"
+    # C-1 修复钉：上下文 subject 键直落 data（修复前固定形状不含该键）。
+    assert captured["data"]["task_id"] == TASK_ID
     envelope = captured["data"]["proactive_budget"]
     assert envelope["channel"] == "spine"
     assert envelope["suggestion_type"] == "recall_notification"
     assert envelope["prompt_kind"] == "long_silence"
+    assert envelope["subject"] == {"task": TASK_ID}
     assert envelope["prompt_key"] == derive_prompt_key(
-        ProactiveChannel.SPINE, "recall_notification", "", prompt_kind="long_silence"
+        ProactiveChannel.SPINE, "recall_notification", f"task:{TASK_ID}", prompt_kind="long_silence"
     )
     assert isinstance(envelope["daily_cap"], int)
     assert "decided_at" in envelope

@@ -209,6 +209,9 @@ async def test_cross_channel_rejection_blocks_spine_nail(db_session):
     assert decision.details["subject"] == f"plan:{PLAN_ID}"
 
     # 反向同样成立：spine 卡（task subject 解析出 plan）被静音 → nudge 被拦。
+    # 一审 C-1 整改后该载荷即真实 spine data 形状（生产者把上下文键直落
+    # data）；「真实 API→提取→写库」全链由
+    # tests/api/test_p01_cross_channel_suppression_e2e.py 端到端钉承载。
     await record_cross_channel_suppression(
         db_session,
         USER_ID,
@@ -337,7 +340,11 @@ async def test_gate_writes_no_emotion_signals(db_session):
 
 @pytest.mark.asyncio
 async def test_knob_off_passthrough(db_session, monkeypatch):
-    """回滚开关：闸门 off = passthrough，抑制态不再拦（恢复各渠道既有行为）。"""
+    """回滚开关：闸门 off = passthrough，抑制态不再拦。
+
+    口径（一审 C-2a）：这是**全关紧急开关**而非「恢复既有行为」——nudge
+    渠道既有的内联 P-03/P-06 检查已被闸门替代，off 态连既有保护一并失效。
+    """
     monkeypatch.setattr(proactive_config, "PROACTIVE_UNIFIED_BUDGET_ENABLED", False)
     await record_cross_channel_suppression(
         db_session, USER_ID, {"plan_id": PLAN_ID}, persistent=True, source_type="comeback_nudge", now=_moment()
@@ -413,9 +420,23 @@ async def test_subjectless_prompt_skips_effect_dedup_but_keeps_burden(db_session
 
 @pytest.mark.asyncio
 async def test_subject_refs_extraction_from_notification_payload():
-    """载荷→subject refs 只认既有字段（plan_id/task_id/goal_state.goal_id）。"""
+    """载荷→subject refs 只认既有字段（plan_id/task_id/goal_state.goal_id）。
+
+    一审 C-1 修复钉（提取面半场）：账本行缺顶层键但盖有预算信封时，信封
+    ``proactive_budget.subject`` 必须可提取——真实 spine 通知（C-1 修复前的
+    固定 data 形状）靠这一半场兜底；顶层键在场时优先（生产者上下文第一真源）。
+    """
     refs = subject_refs_from_payload(
         {"plan_id": PLAN_ID, "task_id": TASK_ID, "goal_state": {"goal_id": "g-1"}, "other": "ignored"}
     )
     assert refs == {"plan": PLAN_ID, "task": TASK_ID, "goal": "g-1"}
     assert subject_refs_from_payload({}) == {}
+
+    # C-1 提取面钉：信封 subject 兜底（修复前该形状提取零 subject）。
+    envelope_only = subject_refs_from_payload({"proactive_budget": {"subject": {"plan": PLAN_ID, "task": TASK_ID}}})
+    assert envelope_only == {"plan": PLAN_ID, "task": TASK_ID}
+    # 顶层键优先于信封（同域冲突时生产者上下文胜出）。
+    both = subject_refs_from_payload({"plan_id": OTHER_PLAN_ID, "proactive_budget": {"subject": {"plan": PLAN_ID}}})
+    assert both == {"plan": OTHER_PLAN_ID}
+    # 信封形状损坏（非 Mapping）不炸、不提取。
+    assert subject_refs_from_payload({"proactive_budget": {"subject": "plan:x"}}) == {}
