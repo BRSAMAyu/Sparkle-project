@@ -563,10 +563,23 @@ Future<void> legRRegistered({
     return;
   }
   // Tap the CheckboxListTile TILES (whole-row hit area — J-01 lesson).
+  // wt800 FIX-539: at the desktop 800x600 logical window the consent tiles
+  // sit AT/below the fold — blind fixed-coordinate taps silently miss the
+  // second tile (warnIfMissed:false), leaving Privacy unchecked; every
+  // submit tap is then blocked at the consent guard whose only feedback is
+  // a transient toast → the measured "register tap dead, zero feedback"
+  // signature (V3-FIX-539, 6/6). Ensure FULL visibility before each tap
+  // (ensureVisible, same contract as the submit button below) — partial
+  // visibility is not enough because the tap targets the tile CENTER.
+  // Harness-side change, disclosed: NOT re-verified on a real device run.
   final tiles = find.byType(CheckboxListTile);
   final nTiles = tiles.evaluate().length;
   passData['register_tos_tiles'] = nTiles;
   for (var t = 0; t < nTiles; t++) {
+    try {
+      await tester.ensureVisible(tiles.at(t));
+      await tester.pump(const Duration(milliseconds: 400));
+    } catch (_) {}
     clicks[0]++;
     await tester.tap(tiles.at(t), warnIfMissed: false);
     await tester.pump(const Duration(milliseconds: 250));

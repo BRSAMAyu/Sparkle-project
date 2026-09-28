@@ -24,9 +24,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  /// V3-FIX-539：consent 区锚点 —— 提交被协议守卫拦截时滚动到因，
+  /// 不再只给一个 2.5s 瞬态 snackbar（J-02 桌面实测 6/6「零反馈」根因：
+  /// 800x600 桌面窗 Privacy tile 中心在折叠线下，驱动/用户漏勾后提交
+  /// 像死按钮，toast 消失后屏面与 tap 前完全一致）。
+  final _consentSectionKey = GlobalKey();
+
   bool _isPasswordVisible = false;
   bool _acceptedTos = false;
   bool _acceptedPrivacy = false;
+
+  /// consent 拦截的持久在因指示：内联错误 + 未勾 tile 高亮，勾齐即清。
+  bool _consentError = false;
 
   /// N25（A-SPEC5 v1.5）校验三段制：未提交前不提前报错（disabled），
   /// 首次提交失败后转即时校验（onUserInteraction），提交时全量兜底。
@@ -41,6 +51,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
+  /// V3-FIX-539：consent 拦截的持久在因反馈 —— 内联错误 + tile 高亮 +
+  /// 滚动到因。瞬态 toast 保留（唯一即时通道），但不再让「tap 像没响应」：
+  /// toast 消失后屏面仍有可恢复的指向性指示（J-02 桌面 6/6 零反馈根治）。
+  void _flagConsentMissing() {
+    setState(() => _consentError = true);
+    final consentContext = _consentSectionKey.currentContext;
+    if (consentContext != null) {
+      unawaited(
+        Scrollable.ensureVisible(
+          consentContext,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          alignment: 0.15,
+        ),
+      );
+    }
+  }
+
   void _submit() {
     // O3（J-01 桌面实测）：键盘 done 与按钮双通道同帧触发时，register 已
     // 把 isLoading 置真（provider 内同步置位），此处直接吞掉第二次提交，
@@ -50,6 +78,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (!_acceptedTos || !_acceptedPrivacy) {
         AppFeedback.info(
             context, AppLocalizations.of(context)!.authTermsRequired,);
+        _flagConsentMissing();
         return;
       }
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
@@ -321,53 +350,96 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                   ),
                   const SizedBox(height: DS.lg),
-                  SparkleStaggerItem(
-                    index: 5,
-                    child: CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _acceptedTos,
-                      onChanged: (value) {
-                        unawaited(
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection,
+                  // V3-FIX-539：consent 区整体锚定（_consentSectionKey），
+                  // 提交被守卫拦截时滚动到因；嵌套 Column 保持外层
+                  // CrossAxisAlignment.stretch 的视觉语义不变。
+                  Column(
+                    key: _consentSectionKey,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SparkleStaggerItem(
+                        index: 5,
+                        child: CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _acceptedTos,
+                          // FIX-539：拦截后未勾 tile 低错误色底提示。
+                          tileColor: _consentError && !_acceptedTos
+                              ? DS.error.withValues(alpha: 0.08)
+                              : null,
+                          onChanged: (value) {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            setState(() {
+                              _acceptedTos = value ?? false;
+                              if (_acceptedTos && _acceptedPrivacy) {
+                                _consentError = false;
+                              }
+                            });
+                          },
+                          title: Text(context.l10n.authAgreeTerms),
+                          controlAffinity:
+                              ListTileControlAffinity.leading,
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: () => context.push('/legal/terms'),
+                          child: Text(context.l10n.authViewTerms),
+                        ),
+                      ),
+                      SparkleStaggerItem(
+                        index: 6,
+                        child: CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _acceptedPrivacy,
+                          tileColor: _consentError && !_acceptedPrivacy
+                              ? DS.error.withValues(alpha: 0.08)
+                              : null,
+                          onChanged: (value) {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            setState(() {
+                              _acceptedPrivacy = value ?? false;
+                              if (_acceptedTos && _acceptedPrivacy) {
+                                _consentError = false;
+                              }
+                            });
+                          },
+                          title: Text(context.l10n.authAgreePrivacy),
+                          controlAffinity:
+                              ListTileControlAffinity.leading,
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: () => context.push('/legal/privacy'),
+                          child: Text(context.l10n.authViewPrivacy),
+                        ),
+                      ),
+                      // FIX-539：持久内联错误 —— toast 消失后仍在，勾齐即清。
+                      if (_consentError &&
+                          (!_acceptedTos || !_acceptedPrivacy))
+                        Padding(
+                          padding: const EdgeInsets.only(top: DS.spacing8),
+                          child: Text(
+                            l10n.authTermsRequired,
+                            key: const ValueKey('consentInlineError'),
+                            style: TextStyle(
+                              color: DS.error,
+                              fontSize: 12,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
                           ),
-                        );
-                        setState(() => _acceptedTos = value ?? false);
-                      },
-                      title: Text(context.l10n.authAgreeTerms),
-                      controlAffinity: ListTileControlAffinity.leading,
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () => context.push('/legal/terms'),
-                      child: Text(context.l10n.authViewTerms),
-                    ),
-                  ),
-                  SparkleStaggerItem(
-                    index: 6,
-                    child: CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _acceptedPrivacy,
-                      onChanged: (value) {
-                        unawaited(
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection,
-                          ),
-                        );
-                        setState(() => _acceptedPrivacy = value ?? false);
-                      },
-                      title: Text(context.l10n.authAgreePrivacy),
-                      controlAffinity: ListTileControlAffinity.leading,
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () => context.push('/legal/privacy'),
-                      child: Text(context.l10n.authViewPrivacy),
-                    ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: DS.xl),
                   SparkleStaggerItem(

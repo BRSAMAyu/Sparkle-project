@@ -127,9 +127,12 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
     expect(
+      // V3-FIX-539（wt800）：consent 拦截反馈从单通道（瞬态 toast）扩为
+      // 双通道（toast + 持久内联错误，勾齐即清）——1 → 2 契约更新，
+      // 非删断言；内联通道见 register_screen_f539_consent_deadend_test。
       find.text('请先同意用户协议与隐私政策'),
-      findsOneWidget,
-      reason: 'O3：TOS 未勾的提交必须有可见反馈',
+      findsNWidgets(2),
+      reason: 'O3：TOS 未勾的提交必须有可见反馈（toast + 持久内联）',
     );
 
     // 勾回协议 → 提交真正到达 repository（stub 失败）→ 可见错误 snackbar。
