@@ -77585,7 +77585,7 @@
     },
     "/api/v1/notification-center/notifications/{notification_id}/suggestion-action": {
       "post": {
-        "description": "P-03: record user feedback on a proactive suggestion card.\n\n四要素的两个「可忽略」入口：\n- ``ignore_today``（今天不再看）→ 该建议类型 24h 冷却（拒绝后 cooldown）。\n- ``mute_type``（不再提醒此类）→ 持久静音该建议类型。\n\n校验通知归属；反馈即已读；抑制态真实落库，nudge 生成路径据此抑制。",
+        "description": "P-03: record user feedback on a proactive suggestion card.\n\n四要素的两个「可忽略」入口：\n- ``ignore_today``（今天不再看）→ 该建议类型 24h 冷却（拒绝后 cooldown）。\n- ``mute_type``（不再提醒此类）→ 持久静音该建议类型。\n\nV4-P01: 反馈同时升格为跨渠道 subject 抑制（plan/task/goal）——用户在\n任一渠道拒绝/静音后，其他渠道不得就同一 subject 补发同一提示。\n\n校验通知归属；反馈即已读；抑制态真实落库，nudge 生成路径据此抑制。",
         "operationId": "record_suggestion_action_api_v1_notification_center_notifications__notification_id__suggestion_action_post",
         "parameters": [
           {
