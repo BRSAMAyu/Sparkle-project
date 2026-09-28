@@ -1,12 +1,15 @@
 """V4-I02 · utility gate 接线守卫 + context_pack 集成测试。
 
 三面守卫（变异必红，C-03/test_context_hard_filter_wiring 同型）：
-- AST 钉：``context_pack.build`` 必须调用 ``apply_history_utility_gate`` 且引用
-  ``ENABLE_MEMORY_UTILITY_GATE`` 旗标（删除接线 / 摘旗标两种变异都红）；
+- AST 钉：``context_pack.build`` 必须调用 ``apply_history_utility_gate``、派生
+  ``derive_current_type_anchors``（一审 R1 整改：集成面类型锚接线）且引用
+  ``ENABLE_MEMORY_UTILITY_GATE`` 旗标（删除接线 / 删锚派生 / 摘旗标变异都红）；
 - flag OFF（默认）：零行为变化——不产生 ``memory_utility_gate`` metadata，
   预筛后候选原样进 pack；
-- flag ON 行为：验收①异类型失败不进 prompt / 验收②required-memory 全拒 bypass
-  不静默清空 / 验收③越权（wrong-user）条目不得复活（M-03 预筛在门上游）。
+- flag ON 行为：验收①异类型失败不进 prompt（含一审探针同形态高相关 0.75/1.0
+  回归）/ 验收②required-memory 全拒 bypass 不静默清空 / 验收③越权（wrong-user）
+  条目不得复活（M-03 预筛在门上游）/ 无锚路径行为不变 + anchors_unavailable
+  如实登记（不静默）。
 """
 
 from __future__ import annotations
@@ -73,6 +76,13 @@ def test_ast_build_wires_utility_gate():
     """变异：删 build 的 apply_history_utility_gate 调用 → 红。"""
     calls, _ = _build_analysis()
     assert "apply_history_utility_gate" in calls
+
+
+def test_ast_build_derives_current_type_anchors():
+    """变异（一审 R1 整改钉）：删 build 的 derive_current_type_anchors 派生与传参
+    → 硬门集成面退化为恒不触发（CHALLENGE-1 复发）→ 红。"""
+    calls, _ = _build_analysis()
+    assert "derive_current_type_anchors" in calls
 
 
 def test_ast_build_references_gate_flag():
@@ -197,14 +207,17 @@ async def test_flag_on_suppresses_negative_transfer_keeps_good_recall(db_session
     gate_meta = (pack.metadata or {}).get("memory_utility_gate") or {}
     assert gate_meta.get("applied") is True
     assert gate_meta.get("passed") is True
+    # 一审 R1 整改：集成面派生了当次类型锚（无 plan 时回退 route/intent 类别）
+    # → 硬门已武装，异类型失败在此面走硬拒（不再退化为软路径低分拒）。
+    assert gate_meta.get("current_type_anchors") == ["chat"]
+    assert gate_meta.get("anchors_unavailable") is False
     assert any(
         decision.get("selected") and "confirmed_bonus" in decision.get("reasons", [])
         for decision in gate_meta.get("decisions", [])
     )
-    # 上游 M-03 status 维度已剔除 resolved 行（既有 V3 法则）——门只消费预筛
-    # allowed，resolved 正例到不了本面（见 evidence limitations，非本卡边界）。
+    # 异类型失败（vocab_memorization × chat 锚零交集）= FIX52 硬拒（验收①）。
     assert any(
-        not decision.get("selected") and "utility_low_score" in decision.get("reasons", [])
+        not decision.get("selected") and "negative_transfer_cross_type" in decision.get("reasons", [])
         for decision in gate_meta.get("decisions", [])
     )
     # prompt 面（to_prompt_context）同样不含被筛条目。
@@ -245,3 +258,111 @@ async def test_flag_on_required_memory_all_rejected_bypasses_without_silent_empt
     assert gate_meta.get("required_memory_recall") is False
     # bypass = 回退 V3 预筛后路径：候选保留（有召回），不是静默清空。
     assert any("单词背诵" in str(entry.get("summary") or "") for entry in pack.episodic_memories)
+
+
+# ---------------------------------------------------------------------------
+# 一审 R1 整改回归（review_r1.md CHALLENGE-1 探针同形态）
+# ---------------------------------------------------------------------------
+
+_PROBE_QUERY = "math exercise plan with word count and progress"  # 恰 8 个词法项
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("summary", "expected_relevance"),
+    [
+        # 内容覆盖 query 6/8 项 → relevance 0.75（一审探针 score=+0.04 档）。
+        ("math exercise plan with word count all failed overdue", "relevance:0.75"),
+        # 内容覆盖 query 8/8 项 → relevance 1.0（一审探针极端档 score=+0.2925）。
+        ("math exercise plan with word count and progress failed overdue", "relevance:1.0"),
+    ],
+)
+async def test_flag_on_high_relevance_cross_type_failure_hard_rejected_at_pack_surface(
+    db_session, monkeypatch, summary, expected_relevance
+):
+    """一审探针回归（验收①集成面）：essay_writing 失败经验对 math 查询高词法相关
+    （relevance 0.75 / 1.0 两档各跑一轮，软分均在阈上）→ 集成面必须被 FIX52 硬拒，
+    reason=negative_transfer_cross_type 落 metadata，不进 pack/prompt。
+
+    一审实测（整改前）：同形态在集成面 SELECTED——硬门因 current_type_anchors
+    恒空而不可触发。本测变异（删锚派生/删传参）必红。
+    """
+    _, user_id = await _make_user(db_session)
+    await _add_episodic(
+        db_session,
+        user_id=user_id,
+        summary=summary,
+        tag="essay_writing",
+        hours_ago=4,
+        due_hours_ago=2,
+    )
+    # 隔离 M-05 selfcheck（独立下游词法门）：本文件只测效用门变量，selfcheck 行为归其自有测试。
+    monkeypatch.setattr(settings, "ENABLE_MEMORY_USE_SELFCHECK", False, raising=False)
+    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 200, "goals": 200, "episodic": 600}})
+    builder = ContextPackBuilder(db_session, scheduler=scheduler)
+    original_flag = settings.ENABLE_MEMORY_UTILITY_GATE
+    try:
+        settings.ENABLE_MEMORY_UTILITY_GATE = True
+        pack = await builder.build(user_id, intent="chat", query_text=_PROBE_QUERY)
+    finally:
+        settings.ENABLE_MEMORY_UTILITY_GATE = original_flag
+
+    summaries = [str(entry.get("summary") or "") for entry in pack.episodic_memories]
+    assert all("overdue" not in summary for summary in summaries), summaries
+    # prompt 面（to_prompt_context）同样不含被硬拒条目。
+    prompt_blob = str(pack.to_prompt_context().get("episodic_memories"))
+    assert "overdue" not in prompt_blob
+
+    gate_meta = (pack.metadata or {}).get("memory_utility_gate") or {}
+    assert gate_meta.get("applied") is True
+    # 锚派生如实登记：集成面已武装（route/intent 类别回退），非静默空锚。
+    assert gate_meta.get("current_type_anchors") == ["chat"]
+    assert gate_meta.get("anchors_unavailable") is False
+    assert gate_meta.get("passed") is True  # 非 required-memory 场景
+
+    decisions = gate_meta.get("decisions", [])
+    assert len(decisions) == 1
+    decision = decisions[0]
+    assert decision.get("selected") is False
+    assert "negative_transfer_cross_type" in decision.get("reasons", []), decision
+    # 探针关键前提：软分在阈上（整改前会入选），只有硬门拦得住。
+    assert decision.get("score", 0.0) > 0.0, decision
+    assert expected_relevance in decision.get("reasons", []), decision
+
+
+@pytest.mark.asyncio
+async def test_flag_on_without_type_anchors_keeps_soft_path_and_records_unavailable(db_session, monkeypatch):
+    """无锚路径行为不变（整改前集成面原行为钉）：无任何结构化类型声明
+    （route/intent/plan 全空）→ 锚为空 + metadata anchors_unavailable=True 如实
+    登记（不静默）→ 硬门不触发，异类型失败走软路径低分拒（与整改前一致）。"""
+    _, user_id = await _make_user(db_session)
+    await _add_episodic(
+        db_session,
+        user_id=user_id,
+        summary="单词背诵任务到期未完成，连续失败",
+        tag="vocab_memorization",
+        hours_ago=4,
+        due_hours_ago=2,
+    )
+    # 隔离 M-05 selfcheck（独立下游词法门）：本文件只测效用门变量，selfcheck 行为归其自有测试。
+    monkeypatch.setattr(settings, "ENABLE_MEMORY_USE_SELFCHECK", False, raising=False)
+    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 200, "goals": 200, "episodic": 600}})
+    builder = ContextPackBuilder(db_session, scheduler=scheduler)
+    original_flag = settings.ENABLE_MEMORY_UTILITY_GATE
+    try:
+        settings.ENABLE_MEMORY_UTILITY_GATE = True
+        # query 不含 required-memory marker（非召回场景，避开 bypass 分支）。
+        pack = await builder.build(user_id, intent="", query_text="开始今天的数学练习")
+    finally:
+        settings.ENABLE_MEMORY_UTILITY_GATE = original_flag
+
+    gate_meta = (pack.metadata or {}).get("memory_utility_gate") or {}
+    assert gate_meta.get("applied") is True
+    assert gate_meta.get("current_type_anchors") == []
+    assert gate_meta.get("anchors_unavailable") is True
+    decision = (gate_meta.get("decisions") or [{}])[0]
+    assert decision.get("selected") is False
+    assert "negative_transfer_cross_type" not in decision.get("reasons", [])
+    assert "utility_low_score" in decision.get("reasons", [])
+    # 软路径结果不变：低相关失败仍被压下、不进 pack（与整改前该面行为一致）。
+    assert all("单词背诵" not in str(entry.get("summary") or "") for entry in pack.episodic_memories)

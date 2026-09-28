@@ -22,6 +22,7 @@ from app.services.memory_utility_gate import (
     REQUIRED_MEMORY_MARKERS,
     UtilityFeatures,
     apply_history_utility_gate,
+    derive_current_type_anchors,
     evaluate_history_utility,
     extract_utility_features,
     required_memory_query,
@@ -408,6 +409,72 @@ def test_apply_history_utility_gate_reports_recall_miss_for_bypass():
     assert kept == []
     assert metadata["passed"] is False
     assert metadata["required_memory_recall"] is False
+
+
+# ---------------------------------------------------------------------------
+# 集成面类型锚派生（一审 R1 整改）
+# ---------------------------------------------------------------------------
+
+
+def test_derive_current_type_anchors_from_plan_and_route():
+    """plan_type + task by_type + route_intent 全部入锚，统一 strip+lower 口径
+    （对齐候选侧 ``task_type:*`` tag 的 ``_type_anchors_from_tags``）。"""
+    plan_context = {
+        "plan_type": "Sprint",
+        "task_summary": {"by_type": {"LEARNING": {"total": 2}, "TRAINING": {"total": 1}}},
+    }
+    anchors = derive_current_type_anchors(plan_context, route_intent="Learn", intent="chat")
+    assert anchors == frozenset({"sprint", "learning", "training", "learn"})
+
+
+def test_derive_current_type_anchors_falls_back_to_route_then_intent():
+    assert derive_current_type_anchors(None, route_intent="error_diagnosis", intent="chat") == frozenset(
+        {"error_diagnosis"}
+    )
+    assert derive_current_type_anchors({}, route_intent=None, intent="chat") == frozenset({"chat"})
+
+
+def test_derive_current_type_anchors_empty_when_no_structured_declaration():
+    """无任何结构化类型声明 → 空集（调用方必须记 anchors_unavailable，不静默）。"""
+    assert derive_current_type_anchors(None) == frozenset()
+    assert derive_current_type_anchors({}) == frozenset()
+    assert derive_current_type_anchors({"plan_type": None, "task_summary": {"by_type": {}}}, route_intent="  ") == (
+        frozenset()
+    )
+
+
+def test_derive_current_type_anchors_ignores_malformed_shapes():
+    """畸形形状（非 dict 的 task_summary / None 值）健壮跳过，只收可用声明。"""
+    anchors = derive_current_type_anchors(
+        {"plan_type": "growth", "task_summary": "bad", "by_type": "also_bad"},
+        route_intent=None,
+        intent=None,
+    )
+    assert anchors == frozenset({"growth"})
+
+
+def test_apply_history_utility_gate_records_anchor_availability():
+    """metadata 如实登记实际参与判定的当次锚；空锚 → anchors_unavailable=True
+    （硬门未触发的真相落 metadata，不许静默）。"""
+    item = _episodic_item(id="ep-neutral", resolved_at=None, due_at=None)
+
+    kept_with, meta_with = apply_history_utility_gate(
+        [_Entry(item)],
+        query_text=_QUERY_MATH,
+        now=NOW,
+        current_type_anchors=_MATH_ANCHORS,
+    )
+    assert meta_with["current_type_anchors"] == ["math_practice"]
+    assert meta_with["anchors_unavailable"] is False
+    assert kept_with
+
+    _, meta_without = apply_history_utility_gate(
+        [_Entry(item)],
+        query_text=_QUERY_MATH,
+        now=NOW,
+    )
+    assert meta_without["current_type_anchors"] == []
+    assert meta_without["anchors_unavailable"] is True
 
 
 def test_relevance_is_bounded_and_lexical():

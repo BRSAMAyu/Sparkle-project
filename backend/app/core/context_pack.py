@@ -1578,12 +1578,27 @@ class ContextPackBuilder:
         # 于 optional history（episodic 排序面）；mandatory context（当前目标/
         # 显式约束）不经本门。旗标默认关：关 = 零行为变化（不调用、无 metadata）。
         if settings.ENABLE_MEMORY_UTILITY_GATE:
-            from app.services.memory_utility_gate import apply_history_utility_gate
+            from app.services.memory_utility_gate import (
+                apply_history_utility_gate,
+                derive_current_type_anchors,
+            )
 
             _pre_gate_episodic = list(ranked_episodic)
+            # V4-I02 一审 R1 整改（CHALLENGE-1）：集成面必须派生当次类型锚再传
+            # 门——不传（默认空集）时 FIX52 硬门（negative_transfer_cross_type）
+            # 恒不触发，高相关异类型失败经软分仍可进 pack（一审探针实证）。
+            # 保守派生：只取结构化类型声明（plan_type / task by_type /
+            # route_intent），不自由文本猜类型；取不到传空并经
+            # metadata["anchors_unavailable"]=True 如实登记（不静默）。
+            _current_type_anchors = derive_current_type_anchors(
+                plan_context,
+                route_intent=route_intent,
+                intent=intent,
+            )
             ranked_episodic, utility_gate_meta = apply_history_utility_gate(
                 ranked_episodic,
                 query_text=query_text,
+                current_type_anchors=_current_type_anchors,
                 top_k=settings.MEMORY_UTILITY_GATE_TOP_K,
             )
             if not utility_gate_meta.get("passed", True):

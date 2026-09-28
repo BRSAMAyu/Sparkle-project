@@ -7,13 +7,13 @@
 - 本卡边界：不削弱/绕过 M-03 合法性检查（硬规则）；让 resolved 正例重新可选属 M-03 契约变更，应由其单一 owner 另卡裁决。
 - D 臂评测含义：四臂对比时"正例召回"当前主要落在 neutral/confirmed 行（confirmed_bonus/relevance 生效），不是 resolved 行。
 
-## 2. 集成面 `current_type_anchors` 恒为空 → FIX52 硬门在 pack 面未全功率
+## 2. 集成面类型锚为保守派生：无结构化类型声明时锚为空 → 硬门不触发（如实登记 anchors_unavailable）
 
-`context_pack.build` 在该装配点没有当次 task_type/domain 信息（只有 plan_id），接线未传类型锚。效果分级：
+一审 R1（CHALLENGE-1）整改后，`context_pack.build` 经 `derive_current_type_anchors` 从当次任务上下文派生 `current_type_anchors` 传入门：只取**结构化类型声明字段**——`plan_context["plan_type"]`（Plan.type）、`plan_context["task_summary"]["by_type"]` 键（Task.type）、`route_intent`（回退 `intent`）——不做自由文本猜类型。效果分级：
 
-- 单测层：异类型失败硬拒（`negative_transfer_cross_type`）全功率验证；
-- pack 集成层：异类型失败仍被抑制，但走的是冻结 `unresolved_episode -1.0` + relevance + stale 的**软路径**（fixture 实测 score≈-0.60 → `utility_low_score` 拒），不是硬拒。
-- 后续卡可从 route_intent/plan 派生类型锚传入（有明确挂点 `current_type_anchors` 参数），本卡不越界猜类型。
+- 集成面（flag on）：有任一结构化声明即武装 → 一审探针形态（essay_writing 失败经验 relevance 0.75/1.0）在 pack 面被**硬拒**（`negative_transfer_cross_type`，回归测 `test_flag_on_high_relevance_cross_type_failure_hard_rejected_at_pack_surface` 钉住）；
+- **残留限制**：当 route/intent 与 plan 均无任何类型声明（如 `intent=""` 的裸调用、且无 plan_id）→ 锚为空，硬门条件 `bool(current_type_anchors)` 为 False 不触发，异类型失败只剩软路径。此时 metadata 记 `anchors_unavailable=true` + `current_type_anchors=[]`（`test_flag_on_without_type_anchors_keeps_soft_path_and_records_unavailable`），不静默。生产主链（chat.py）恒传 `route_intent or intent`，实际不会落到空锚；
+- 派生锚是**路由/计划类别词表**（chat/learn/sprint/LEARNING…），与候选侧 `task_type:*`/`domain:*` 自由 tag 的交集判定按字面值比对（strip+lower）。写入侧 tag 词汇若不与当次声明值同词，跨类型失败按异类型硬拒（FIX52 语义如此：失败只在声明同类型时放行）；同词表对齐归写入侧卡。
 
 ## 3. marker tag 词汇（`wrong_followed_decision`/`question`/`control_intrusion`/`task_type:*`/`domain:*`）当前无写入方
 

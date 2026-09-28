@@ -21,7 +21,7 @@
 
 ## 验收对照（必须可失败）
 
-1. **FIX52 异类型失败不拉向 skill/difficulty**：`test_fix52_cross_type_failure_is_hard_rejected`（异类型失败经验对当前类型零交集 → 硬拒 `negative_transfer_cross_type`，无论分数）；同类型失败 `test_fix52_same_type_failure_still_informs_within_type`（只在同类型/有效时间影响候选）。集成面 `test_flag_on_suppresses_negative_transfer_keeps_good_recall` 证明污染条目不进 `pack.episodic_memories` 也不进 `to_prompt_context()`。
+1. **FIX52 异类型失败不拉向 skill/difficulty**：`test_fix52_cross_type_failure_is_hard_rejected`（异类型失败经验对当前类型零交集 → 硬拒 `negative_transfer_cross_type`，无论分数）；同类型失败 `test_fix52_same_type_failure_still_informs_within_type`（只在同类型/有效时间影响候选）。集成面：`test_flag_on_high_relevance_cross_type_failure_hard_rejected_at_pack_surface`（一审探针同形态回归，essay_writing 失败 × math 查询 relevance **0.75/1.0 两档**、软分阈上 → `negative_transfer_cross_type` 硬拒，不进 `pack.episodic_memories` 也不进 `to_prompt_context()`；metadata 如实登记 `current_type_anchors`/`anchors_unavailable`）+ `test_flag_on_suppresses_negative_transfer_keeps_good_recall`（同类型好经验仍召回）。一审 R1 曾判此项集成面 FAIL（锚未接线，高相关异类型失败 SELECTED），整改后按左述回归测成立。
 2. **required-memory 场景有召回，全部拒用不能过门**：`test_required_memory_with_good_history_recalls`（有召回）；`test_required_memory_all_rejected_fails_the_gate`（`passed=False` + `required_memory_recall=False` + precision N/A=None，不是 0% 更不是 100%）；集成 `test_flag_on_required_memory_all_rejected_bypasses_without_silent_empty`（bypass 保召回 + `required_memory_recall_miss_bypass` 如实登记，不静默清空、不包装成通过）。
 3. **已删/越权/过期/错 scope 任何条目不入 prompt**：合法性归 M-03 预筛所有（既有测试不重写）；本门选择集 ⊆ 输入集（`test_selection_is_subset_of_input_never_resurrects`），接线只消费预筛 allowed；集成含 wrong-user 行，flag ON 下不进 pack/prompt（`test_flag_on_suppresses_negative_transfer_keeps_good_recall`）。AST 双钉防接线被删。
 
@@ -35,3 +35,17 @@
 
 - `ENABLE_MEMORY_UTILITY_GATE`（默认 **False**）：关 = 不调用、无 metadata、零行为变化（`test_flag_off_default_keeps_v3_behavior`）。开 = 门生效 + metadata。
 - 回滚 = 关旗标；独立 commit，无 schema/契约/生成文件改动，V3 路径与数据不受影响。
+
+## 一审整改（R1，CHALLENGE-1 → 方案 a）
+
+一审（`review_r1.md` @ commit `91397ce8`）判 CHALLENGED：`context_pack.build` 调用 `apply_history_utility_gate` 未传 `current_type_anchors`（默认空集）→ FIX52 硬拒在 flag-on 唯一集成面恒不触发；探针实证 essay_writing 失败经验 relevance=0.75 时 score=+0.04 被 SELECTED 进 pack。按 Leader 裁决方案 (a) 整改：
+
+| 文件 | 整改差量 |
+|---|---|
+| `backend/app/services/memory_utility_gate.py` | +`derive_current_type_anchors`（集成面类型锚保守派生：只取结构化类型声明 plan_type / task by_type / route_intent→intent 回退，不自由文本猜类型）；`apply_history_utility_gate` metadata 增记 `current_type_anchors` + `anchors_unavailable`（空锚不静默） |
+| `backend/app/core/context_pack.py` | 门调用点派生并传入 `current_type_anchors`（取不到 → 空集 + metadata 如实登记，软路径行为与整改前一致） |
+| `backend/tests/unit/test_memory_utility_gate_wiring.py` | +AST 钉 `test_ast_build_derives_current_type_anchors`（删锚派生必红）；+一审探针同形态回归 `test_flag_on_high_relevance_cross_type_failure_hard_rejected_at_pack_surface`（relevance 0.75/1.0 两档参数化，断言硬拒 + reason 落 metadata + score>0 证明整改前会被选中）；+无锚路径行为不变钉 `test_flag_on_without_type_anchors_keeps_soft_path_and_records_unavailable`；`test_flag_on_suppresses_negative_transfer_keeps_good_recall` 的拒用 reason 断言由 `utility_low_score` 更新为 `negative_transfer_cross_type`（整改后集成面走硬拒，语义升级非削弱；`existing_tests_modified=1` 如实登记） |
+| `backend/tests/unit/test_memory_utility_gate.py` | +5 测：锚派生四态（plan+route / 回退 / 空声明 / 畸形健壮）+ 锚可用性 metadata 登记 |
+| `v4/evidence/V4-I02/limitations.md` | #2 按整改后事实重写（删除「pack 集成层仍被抑制但走软路径」的失实全称；残留限制=无结构化声明时空锚 + anchors_unavailable 登记） |
+
+整改后门 metadata 形状新增 `current_type_anchors: list[str]` 与 `anchors_unavailable: bool`（观测面，flag off 时无此 metadata，零影响）。

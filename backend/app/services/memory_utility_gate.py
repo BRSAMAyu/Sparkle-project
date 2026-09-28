@@ -430,6 +430,49 @@ def evaluate_history_utility(
 # ---------------------------------------------------------------------------
 
 
+def derive_current_type_anchors(
+    plan_context: dict[str, Any] | None = None,
+    *,
+    route_intent: str | None = None,
+    intent: str | None = None,
+) -> frozenset[str]:
+    """集成面（context_pack.build）的当次类型锚保守派生（一审 R1 整改）。
+
+    一审 CHALLENGE-1：``context_pack.build`` 原样不传 ``current_type_anchors``
+    （默认空集）→ FIX52 硬门条件含 ``bool(current_type_anchors)`` →
+    ``negative_transfer_cross_type`` 在 flag-on 的唯一集成面恒不触发，高相关
+    异类型失败经软分仍可进 pack（探针实证 relevance=0.75 时 score=+0.04 被选中）。
+
+    派生口径（只消费**结构化类型声明字段**，不从自由文本猜类型）：
+    - ``plan_context["plan_type"]``：Plan.type 声明值（如 sprint/growth）；
+    - ``plan_context["task_summary"]["by_type"]`` 的键：当次 plan 的 Task.type
+      值（如 LEARNING/TRAINING）；
+    - ``route_intent``（回退 ``intent``）：本次请求的路由类别声明（chat/learn/
+      error_diagnosis 等）。
+
+    与候选侧 ``task_type:*`` / ``domain:*`` tag 同一比较口径（strip + lower，
+    对齐 ``_type_anchors_from_tags``）。取不到任何声明值 → 空集：调用方
+    ``apply_history_utility_gate`` 必须在 metadata 记
+    ``anchors_unavailable=True``——空锚时 FIX52 硬门不触发，这一事实不许静默。
+    """
+    anchors: set[str] = set()
+    context = plan_context if isinstance(plan_context, dict) else {}
+
+    def _add(value: Any) -> None:
+        text = str(value or "").strip().lower()
+        if text:
+            anchors.add(text)
+
+    _add(context.get("plan_type"))
+    task_summary = context.get("task_summary")
+    by_type = task_summary.get("by_type") if isinstance(task_summary, dict) else None
+    if isinstance(by_type, dict):
+        for task_type in by_type:
+            _add(task_type)
+    _add(route_intent or intent)
+    return frozenset(anchors)
+
+
 def apply_history_utility_gate(
     ranked_items: list[Any],
     *,
@@ -445,6 +488,11 @@ def apply_history_utility_gate(
     metadata 为 metadata-only 观测面（id/reason/score，零正文回灌——metadata
     经 ``to_prompt_context`` 可进 prompt）。调用方契约：输入必须是 M-03 预筛
     后的 allowed 列表；``passed=False`` 时调用方回退全量输入并登记 bypass。
+
+    类型锚（一审 R1 整改）：调用方应经 ``derive_current_type_anchors`` 从当次
+    任务上下文派生 ``current_type_anchors`` 后传入；不传（空集）时 FIX52 硬门
+    不触发，metadata 以 ``current_type_anchors``（实际参与判定的锚）+
+    ``anchors_unavailable``（空集 True）如实登记，不许静默。
     """
     now_naive = ensure_naive_utc(now) or ensure_naive_utc(datetime.now())
     features_list = [extract_utility_features(entry.item, now=now_naive) for entry in ranked_items]
@@ -458,6 +506,10 @@ def apply_history_utility_gate(
     kept = [entry for entry in ranked_items if str(getattr(entry.item, "id", "")) in result.selected_ids]
     metadata = result.to_metric_payload()
     metadata["applied"] = True
+    # 类型锚可观测（一审 R1 整改）：记录实际参与判定的当次锚；空集 = 硬门未
+    # 触发，anchors_unavailable=True 如实申报，不静默。
+    metadata["current_type_anchors"] = sorted(current_type_anchors)
+    metadata["anchors_unavailable"] = not current_type_anchors
     if result.candidate_count and result.selected_count < result.candidate_count:
         logger.info(
             "V4-I02 utility gate: candidates={} selected={} verdict={} required_memory={}",

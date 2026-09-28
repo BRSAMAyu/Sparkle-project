@@ -87,8 +87,9 @@
         "test_fix52_failure_without_type_anchor_not_hard_rejected",
         "test_fix52_same_type_failure_still_informs_within_type"
       ],
-      "integration": "test_flag_on_suppresses_negative_transfer_keeps_good_recall：异类型失败 summary 不在 pack.episodic_memories 也不在 to_prompt_context()",
-      "verdict": "PASS"
+      "integration": "test_flag_on_high_relevance_cross_type_failure_hard_rejected_at_pack_surface（一审探针同形态，relevance 0.75/1.0 两档 → negative_transfer_cross_type 硬拒，不进 pack/prompt，R1 整改新增）+ test_flag_on_suppresses_negative_transfer_keeps_good_recall（同类型好经验仍召回；异类型失败 reason 已升级为硬拒）",
+      "wiring_guards": "AST 钉 test_ast_build_wires_utility_gate / test_ast_build_derives_current_type_anchors / test_ast_build_references_gate_flag（删接线/删锚派生/摘旗标变异必红）",
+      "verdict": "PASS（R1 整改后；整改前集成面为 FAIL，见 review_r1.md CHALLENGE-1）"
     },
     "required_memory_recall_and_no_all_reject_pass": {
       "unit": [
@@ -119,14 +120,29 @@
   },
   "scope_and_denominator_statement": "本卡验证覆盖=新增模块 25 测 + memory/context 受影响面 346 测 + 契约/golden 相邻面；未覆盖=全量 backend 套件（HEAVY=False 卡边界）、live/真模型流程（本卡零模型调用）、D 臂离线四臂 utility 数值（归 B03 协议后续评测卡，本卡只交付机制与冻结锚）。",
   "model_calls": "none（确定性规则，无 LLM/API 用量与费用）",
+  "r1_remediation": {
+    "date": "2026-09-28",
+    "trigger": "review_r1.md CHALLENGE-1：集成面未传 current_type_anchors → FIX52 硬拒在 flag-on 唯一集成面恒不触发",
+    "fix": "方案 (a)：context_pack.build 派生并传入类型锚（结构化声明保守派生）+ metadata anchors_unavailable 不静默 + 探针同形态回归测",
+    "test_counts": {
+      "gate_unit_and_wiring": "34 passed（原 25 全绿 + 新增 9）",
+      "affected_surface": "182 + 132 + 62 + 4 passed（含新增 9）",
+      "existing_tests_modified": 1,
+      "modified_test_note": "test_flag_on_suppresses_negative_transfer_keeps_good_recall：拒用 reason 断言 utility_low_score → negative_transfer_cross_type（集成面软路径升级为硬拒，语义增强；0 断言删除或削弱）"
+    },
+    "probe_regression": "test_flag_on_high_relevance_cross_type_failure_hard_rejected_at_pack_surface[0.75/1.0]：relevance 0.75/1.0 两档 essay_writing 失败 × math 查询 → selected=False + negative_transfer_cross_type ∈ reasons + score>0（整改前会被 SELECTED）+ 不进 pack/prompt + current_type_anchors/anchors_unavailable 如实登记",
+    "no_anchor_path_pin": "test_flag_on_without_type_anchors_keeps_soft_path_and_records_unavailable：无结构化声明 → 锚空 + anchors_unavailable=true + 软路径行为与整改前一致（不静默）",
+    "static_checks": "ruff All passed；black 3 files unchanged；mypy ratchet 55/77；mypy worktree vs 主检出 30==30 逐行 identical（受触文件自身 0 error）；rule guards 86 rules 全绿 exit 0"
+  },
   "artifacts_sha256": {
-    "v4/evidence/V4-I02/diff_or_evidence_only.md": "2fbc3d3fc665b8049221339f3b3ac9f14a28610f096d076cf9b77fd00f243308",
-    "v4/evidence/V4-I02/run_manifest.json": "8bcc63eeb3742e4114306a06830872dbdad24c2ebcde16019e8c7fda18191d39",
-    "v4/evidence/V4-I02/limitations.md": "7b5ad3a37fe66a92a507b2782a8dc7f04c5a274985e300ee89bea91e449ba655",
+    "v4/evidence/V4-I02/diff_or_evidence_only.md": "348aae35ad1bb2ff4181afbdfdffac79577d4491ab819bafe22f1d0a33d770c9",
+    "v4/evidence/V4-I02/run_manifest.json": "c5b94fc8eae3f8775c497dbc9615973c504b84adbac0cbabbfe609e46d1e7c6b",
+    "v4/evidence/V4-I02/limitations.md": "c4b2338ad0401c20c699c34cbf590d1aac6409872a6d339e9328188107f518bf",
     "v4/evidence/V4-I02/tasks_json_V4-I02_field_backup.json": "9e9cd0a31a4afaea602858ed31709982fa544f8ed3a39bb49b7acabaefb62da6",
-    "backend/app/services/memory_utility_gate.py": "40a4f4022925e2cbed8601611793ba81cf87344cce967185c04f6c420ec68652",
-    "backend/tests/unit/test_memory_utility_gate.py": "375d50fd60b008fc58e35bf5d0fb9f40250d3927c1531c764e9ee9bcd8089ddc",
-    "backend/tests/unit/test_memory_utility_gate_wiring.py": "4f6af40b799e6aabaf359bb94f6fa0ee7f7e4325c879384d21fcbab4229f525f",
-    "note": "test_results.json 自身不含自身哈希（自指）；哈希在其写入后计算，模块/测试文件哈希与 commit 内容一致"
+    "backend/app/services/memory_utility_gate.py": "fd1f4355a445eb210f2375db849f69079478d335d4716408fae4be24b6591f06",
+    "backend/tests/unit/test_memory_utility_gate.py": "a2a1532668ce0bedbbee4b600ee2601343283c99b703a7030d351c2d6952f597",
+    "backend/tests/unit/test_memory_utility_gate_wiring.py": "5f1ccd1c695040bb6f60b029a8ad1d9e0bdd3e08e753d3a9aad1236bb3585a7f",
+    "backend/app/core/context_pack.py": "2fe4e1aeeb76a4e54329edb0f10887b3c699f8d4e9ed79b3e767f49bcc287300",
+    "note": "test_results.json 自身不含自身哈希（自指）；R1 整改后全量重算（2026-09-28），模块/测试/证据哈希与整改 commit 内容一致"
   }
 }
