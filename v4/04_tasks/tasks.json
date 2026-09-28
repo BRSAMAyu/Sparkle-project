@@ -1076,9 +1076,9 @@
         "V4-I02",
         "V4-B05"
       ],
-      "status": "READY",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS_WITH_CHALLENGES_CLOSED",
       "kind": "implementation",
       "required_locks": [
         "context-receipt"
@@ -1129,7 +1129,12 @@
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
       "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
-      "review": "REVIEW_READY（本 commit：66 新用例 + 187 受影响面全绿 + 813 闭包全绿 + mypy 基线零漂移 + ruff/black 清 + alembic 单头与真库 upgrade/downgrade 验证；待未参与会话在本 commit SHA 独立审查后销账）",
+      "review": {
+        "r1": "f298600d PASS_WITH_CHALLENGES（66+187+813 亲跑；红线可失败性 scratch 反转亲验）",
+        "c1": "合并交互缺陷（I02 bypass 全拒载荷被透传→surfaced 翻 rejected）→ 已落修：apply_utility_gate_metadata 对 bypassed 载荷整体作废+回归钉死+冻结测试注释改口径",
+        "o1_o7": "非阻塞观察 7 项随 receipt 登记",
+        "integration_reverify": "合并+C1 修复后 90+48 passed；迁移单头 i06_20260928"
+      },
       "evidence_pointer": "v4/evidence/V4-I06/"
     },
     {
