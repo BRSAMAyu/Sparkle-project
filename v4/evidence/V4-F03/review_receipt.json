@@ -1,0 +1,20 @@
+{
+  "task": "V4-F03",
+  "status": "PENDING",
+  "independent_reviewers_required": 2,
+  "note": "实现自证完成（backend 17 新测 + 161 回归；mobile 18 新测 + 199 回归；analyze/ruff/black/四守卫全过），等待两位独立未参与会话审查（高风险卡=双审）。审查挑战点预登记见 limitations.md 末节（5 条）。自报完成不算完成——本 receipt 在双审落账前恒为 PENDING。",
+  "reviewer": null,
+  "verdict": null,
+  "challenges": [],
+  "suggested_challenge_points": [
+    "C-1 闭合的生产强度：三挂点是否构成生产路径；INVALID_COMMAND fail-loud 不被韧性壳吞；懒转/双投影 dedupe 身份恒一",
+    "mobile/backend copy 表镜像无跨端单一真源（键数断言可红、改字不红）——是否需生成式同步脚本后续卡",
+    "version 校验口径：失败事件不做 version 校验（失败是已发生事实）是否可接受",
+    "replay 抑制为会话级内存集合：App 重启后同 event_id 可再触发声/触（跨会话持久去重未夹带）",
+    "适配器尚无真实屏幕消费方（WS frame 缺位；F04 在航）——「统一入口」的闭合标准裁决"
+  ],
+  "evidence_dir": "v4/evidence/V4-F03/",
+  "base_sha": "7155398499674ad6ee3ffea3d97d163b94387d22",
+  "branch": "agent/v4/f03",
+  "date_created": "2026-09-28"
+}

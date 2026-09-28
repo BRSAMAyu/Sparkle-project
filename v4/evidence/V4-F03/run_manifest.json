@@ -1,0 +1,102 @@
+{
+  "task": "V4-F03",
+  "title": "真实状态驱动的反馈呈现适配器",
+  "date": "2026-09-28",
+  "executor": "wtF03（worktree /Users/brsama/code/GitHub/wtF03，分支 agent/v4/f03，自 main@71553984 开出）",
+  "source_sha_base": "7155398499674ad6ee3ffea3d97d163b94387d22",
+  "source_sha_head": "工作树（commit 前取证；提交 SHA 见 commit 本体与台账）",
+  "no_push": true,
+  "locks": {
+    "required": ["experience-presenter"],
+    "note": "sparkle-coordination-v2 远端未配置于本机（git fetch 无此 remote），租约登记 NOT_RUN；冲突面自证：backend 改动仅 3 文件且全为 additive 挂点/可观测面（action_command_service.py +12、action_proposals.py +8、intervention_record_service.py +11/-1），不触 metrics.py（D03/I04/I08 在航冲突面）、不触 experience_readouts.py（I08 在航）、不触 .env/proto/迁移/生成文件；mobile 改动全为新增文件，零既有文件修改"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtF03 -b agent/v4/f03 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "本卡新套件（backend 适配器 + copy 冻结表 + C-2 可观测面）",
+      "command": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// python -m pytest tests/services/test_experience_presentation_adapter.py -q",
+      "exit_code": 0,
+      "result": "17 passed in 7.00s"
+    },
+    {
+      "id": 3,
+      "purpose": "受影响面回归（D01 事件面 + X-03 服务/API + FIX-507 接线）",
+      "command": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// python -m pytest tests/services/test_experience_presentation_adapter.py tests/unit/test_action_command_service.py tests/unit/test_action_proposals_api.py tests/core/test_experience_event.py tests/services/test_experience_event_service.py tests/services/test_f507_lifecycle_wiring.py -q",
+      "exit_code": 0,
+      "result": "115 passed in 103.04s（17 新 + 98 回归：action_command_service 32、action_proposals_api 16、D01 契约 31、D01 服务 13、f507 9）"
+    },
+    {
+      "id": 4,
+      "purpose": "X-03 邻接套件回归（挂点宿主的其余测试面）",
+      "command": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// python -m pytest tests/unit/test_x04_action_flow.py tests/unit/test_j04_first_action_chain.py tests/unit/test_p04_auto_execution_permissions.py tests/unit/test_milestone_command_path.py tests/unit/test_first_action_edit_atomicity.py -q",
+      "exit_code": 0,
+      "result": "46 passed in 152.90s"
+    },
+    {
+      "id": 5,
+      "purpose": "backend 静态检查（新增 2 文件 + 改动 3 文件 + 新测试）",
+      "command": "cd backend && python -m ruff check app/core/experience_copy.py app/services/experience_presentation_adapter.py app/services/action_command_service.py app/services/intervention_record_service.py app/api/v1/action_proposals.py tests/services/test_experience_presentation_adapter.py && python -m black --check <同上新增 3 文件>",
+      "exit_code": 0,
+      "result": "All checks passed! / 1 file would be left unchanged（black 通过）"
+    },
+    {
+      "id": 6,
+      "purpose": "依赖解析 + gitignored 生成目录（新 worktree）",
+      "command": "cd mobile && flutter pub get；cp -R 主检出/mobile/lib/gen lib/gen；cp -R 主检出/backend/app/gen backend/app/gen",
+      "exit_code": 0,
+      "note": "flutter pub get 误触 l10n 再生成（F02 同款已知行为），已 git checkout -- lib/l10n/ 还原，不在 diff 中；backend/app/gen 与 mobile/lib/gen 为 gitignored 实体目录（复制非 symlink，永不提交）"
+    },
+    {
+      "id": 7,
+      "purpose": "mobile 静态检查（新增目录）",
+      "command": "cd mobile && flutter analyze --no-pub lib/core/experience test/core/experience",
+      "exit_code": 0,
+      "result": "No issues found!（dart fix --apply 清 62 条 info lint，仅触本卡 4 个新文件，git status 佐证）"
+    },
+    {
+      "id": 8,
+      "purpose": "本卡新套件（mobile 适配器 + 模型解析 + 徽章绑定）",
+      "command": "cd mobile && flutter test test/core/experience",
+      "exit_code": 0,
+      "result": "18/18 passed（适配器 14 + 徽章绑定 4；每验收面一正一反）"
+    },
+    {
+      "id": 9,
+      "purpose": "F02 组件面回归（成功动效唯一载体红线面）",
+      "command": "cd mobile && flutter test test/core/design",
+      "exit_code": 0,
+      "result": "160/160 passed（既有像素组件族零回退）"
+    },
+    {
+      "id": 10,
+      "purpose": "app 壳冒烟回归",
+      "command": "cd mobile && flutter test test/app test/widget_test.dart",
+      "exit_code": 0,
+      "result": "+39 ~1 All tests passed（~1 = test/widget_test.dart:69 既有 skip:true，F02 一审 C1 勘误口径）"
+    },
+    {
+      "id": 11,
+      "purpose": "设计四棘轮守卫",
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py / check_typography_rhythm_ratchet.py / check_spacing_rhythm_ratchet.py / check_dl_spec_ratchet.py",
+      "exit_code": 0,
+      "result": "四守卫全 PASS（ratchet holds；新文件零新债务）"
+    }
+  ],
+  "artifacts_sha256": {
+    "backend/app/core/experience_copy.py": "74aeed000ba2fd1233acd03b019e8c0644130b3906131553ef9bb8c9bae31181",
+    "backend/app/services/experience_presentation_adapter.py": "7eb2e7cea4be38ce9f613869ea65ac402f75a1442ba771cce9c95c6d27dcd3fe",
+    "backend/tests/services/test_experience_presentation_adapter.py": "63d2692c0405aca3872e48c56f6c535fa8ce02d54e9e851c745dda3cc0181822",
+    "mobile/lib/core/experience/experience_event.dart": "7dac24cee79b005eee1310696e9315cc9ca7d553d701abac2089d646de690a7e",
+    "mobile/lib/core/experience/experience_feedback_adapter.dart": "020e120abf5f2856d5d01c327a1505ce74a5c327e0cd3aa9fe06c1ad02621866"
+  },
+  "device_scope": {
+    "real_device": "NOT_RUN（本机无 iOS/Android 真机；声/触为决策面单测 + 既有 SensoryFeedbackService 出口委托，真实设备听感/震感属 DEVICE_UNVERIFIED，不阻止其他 Agent 推进——MOTION 纪律原文）"
+  },
+  "llm_usage": "本卡为纯工程实现，无模型调用、无推理费用"
+}

@@ -1,0 +1,119 @@
+{
+  "task": "V4-F03",
+  "date": "2026-09-28",
+  "environment": "worktree wtF03 无 .env；backend pytest 需 SECRET_KEY=ci-test-key DATABASE_URL=sqlite://（conftest 强制 test 环境落 sqlite 内存，不触 dev DB）；Python 3.11.15 / pytest 9.0.2（共享主检出 venv）；Flutter 3.41.3 stable",
+  "suites": [
+    {
+      "name": "backend 新套件（tests/services/test_experience_presentation_adapter.py）",
+      "command": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// python -m pytest tests/services/test_experience_presentation_adapter.py -q",
+      "exit_code": 0,
+      "result": "17 passed in 7.00s",
+      "coverage": {
+        "acceptance_1": [
+          "test_committed_receipt_projects_success_event（正：committed 回执→state_confirmed 成功事件，版本锚 after）",
+          "test_receipt_identity_is_content_addressed_and_replay_stable（重放恒同 event_id/dedupe_key）",
+          "test_pending_proposal_projects_nothing（反：无终态→拒绝）",
+          "test_committed_status_without_receipt_body_is_refused（反：状态谎报无回执本体→拒绝）",
+          "test_receipt_body_without_committed_status_is_refused（反：回执体不自洽→拒绝）",
+          "test_user_cancelled_and_rejected_produce_no_event（契约 §6：用户取消/拒绝不产事件）",
+          "test_missing_version_chain_is_refused_not_guessed（version 全链缺失→拒绝不猜）",
+          "test_subjectless_command_is_refused（create 型无 subject→拒绝不造泛化成功）"
+        ],
+        "acceptance_2": [
+          "test_evidence_registration_routes_to_registered_copy_never_mastery（证据登记→evidence.registered）",
+          "test_copy_table_semantic_layering_is_structural（memory→memory.saved 非任务成功文案；成功面孔封闭集；全表禁词扫描精通/已掌握）",
+          "test_copy_routers_are_closed_and_pinned（三路由+全表逐键冻结）"
+        ],
+        "acceptance_3": [
+          "test_expired_terminal_projects_failure_never_success（expired→terminal_failed+error_state=expired，模态恒中性）"
+        ],
+        "c1_closure": [
+          "test_invalid_command_error_is_fail_loud_on_production_path（ACTION_INVALID_COMMAND 生产路径 fail-loud）",
+          "test_version_conflict_error_projects_failure_event（project_error_state 生产路径）",
+          "test_safe_hooks_never_raise_and_observe_refusal（韧性壳）"
+        ],
+        "c2_closure": [
+          "test_mark_seen_hook_observes_degraded_projection（挂点降级 reason 进可观测 warning）"
+        ],
+        "transport": [
+          "test_committed_receipt_publishes_on_existing_topic（既有单主题 experience.event_projected）"
+        ]
+      }
+    },
+    {
+      "name": "backend 回归组合（X-03 服务/API + D01 事件面 + FIX-507 接线）",
+      "command": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// python -m pytest tests/services/test_experience_presentation_adapter.py tests/unit/test_action_command_service.py tests/unit/test_action_proposals_api.py tests/core/test_experience_event.py tests/services/test_experience_event_service.py tests/services/test_f507_lifecycle_wiring.py -q",
+      "exit_code": 0,
+      "result": "115 passed in 103.04s"
+    },
+    {
+      "name": "backend X-03 邻接套件（挂点宿主其余面）",
+      "command": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// python -m pytest tests/unit/test_x04_action_flow.py tests/unit/test_j04_first_action_chain.py tests/unit/test_p04_auto_execution_permissions.py tests/unit/test_milestone_command_path.py tests/unit/test_first_action_edit_atomicity.py -q",
+      "exit_code": 0,
+      "result": "46 passed in 152.90s"
+    },
+    {
+      "name": "mobile 新套件（test/core/experience/）",
+      "command": "flutter test test/core/experience",
+      "exit_code": 0,
+      "result": "18/18 passed（experience_feedback_adapter_test 14 + experience_feedback_badge_test 4）",
+      "coverage": {
+        "acceptance_1": [
+          "解析正例 + E1/E2/未注册 kind 反例×3（fail-safe：null→忽略计数，绝不当成功）",
+          "committed 任务事件→成功面孔（success 徽章 + 成功声/触一次）",
+          "结构违规→ignoredInvalid 无视觉无声触且计数可观测（反）",
+          "同 event_id 重播→replaySuppressed：sink 调用数不变（不重复震/音）、visualState=null（不重放庆祝）、copy 仍在（文本状态仍恢复）"
+        ],
+        "acceptance_2": [
+          "memory committed→presentHighlight：无成功徽章/无成功声触、轻触 selection 一次（正+反两面）",
+          "证据登记→「证据已登记」中性呈现",
+          "冻结文案表禁词扫描（精通/已掌握/掌握度/mastery 零命中）+ 成功面孔封闭集 + 17 键镜像"
+        ],
+        "acceptance_3": [
+          "resolveUnknownDisplayState→PixelRunState.unknown（正）",
+          "committed 事件+版本未知（断网）→presentUnknown：unknown 徽章、零感官、绝不成功视觉（反）",
+          "版本不符→staleVersionSuppressed：无庆祝仅中性文本",
+          "widget 面：unknown/failed/conflict 树中 PixelSuccessBadge findsNothing；成功面孔正例控制组证明断言判别力"
+        ],
+        "failure_face": [
+          "version_conflict→conflict 徽章 / expired→failed 徽章；警示触一次无连锁蜂鸣"
+        ]
+      }
+    },
+    {
+      "name": "mobile F02 组件面回归",
+      "command": "flutter test test/core/design",
+      "exit_code": 0,
+      "result": "160/160 passed"
+    },
+    {
+      "name": "mobile app 壳冒烟",
+      "command": "flutter test test/app test/widget_test.dart",
+      "exit_code": 0,
+      "result": "+39 ~1 All tests passed（~1 = 既有 skip:true 用例，非挂起）"
+    }
+  ],
+  "static_checks": [
+    { "command": "flutter analyze --no-pub lib/core/experience test/core/experience", "result": "No issues found!", "exit_code": 0 },
+    { "command": "ruff check <6 个 backend 触达文件>；black --check <3 个新增文件>", "result": "All checks passed!", "exit_code": 0 },
+    { "command": "scripts/guards/check_ui_design_tokens_ratchet.py", "result": "PASS — color=225/275, fontSize=634/727 (184 files)", "exit_code": 0 },
+    { "command": "scripts/guards/check_typography_rhythm_ratchet.py", "result": "PASS — sub12=232/234, w900=6/6", "exit_code": 0 },
+    { "command": "scripts/guards/check_spacing_rhythm_ratchet.py", "result": "PASS — spacingHalfStep=1591/1623", "exit_code": 0 },
+    { "command": "scripts/guards/check_dl_spec_ratchet.py", "result": "PASS — 15 dims ratchet held", "exit_code": 0 }
+  ],
+  "failures_fixed": [
+    {
+      "what": "flutter analyze 首跑 62 条 info lint（omit_local_variable_types 等）+ 1 条 error（schema_version 局部变量因常量比较不提升导致 String? → String）",
+      "fix": "guard 改为 schemaVersion == null 前置判空修复 error；dart fix --apply 清 info（仅触本卡 4 新文件）；badge 测试补 require_trailing_commas"
+    },
+    {
+      "what": "flutter pub get 误触 l10n 生成文件再生成（F02 同款已知行为，-90 行）",
+      "fix": "git checkout -- mobile/lib/l10n/ 还原；不在 diff 中"
+    }
+  ],
+  "honesty_notes": [
+    "mobile 适配器为事件呈现统一入口 + 徽章绑定测试；无任何既有屏幕在本卡改为经适配器呈现（WS 下发面缺位，见 limitations #1/#4）",
+    "声/触为决策面断言（记录型 sink），非真机听感/震感证据（device_scope NOT_RUN）",
+    "~1 为既有 skip 用例（F02 一审 C1 勘误口径），非新增跳过"
+  ]
+}

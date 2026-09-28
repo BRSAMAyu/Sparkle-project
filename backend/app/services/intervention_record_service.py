@@ -18,6 +18,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -161,12 +162,21 @@ class InterventionRecordService:
         if record is not None and not already_seen:
             from app.services.experience_event_service import record_rendered_exposure_safe
 
-            await record_rendered_exposure_safe(
+            result = await record_rendered_exposure_safe(
                 self.db,
                 self.event_bus,
                 record,
                 rendered_surface=rendered_surface,
             )
+            # V4-F03（D01 二审挑战 C-2）：挂点不再丢弃投影结果——降级原因进
+            # 可观测面（稳定前缀 warning，运维可 grep 计数；转场本身不受影响）。
+            if result is not None and not result.projected:
+                logger.warning(
+                    "experience_presentation.degraded record={} decision={} reason={}",
+                    getattr(record, "id", "-"),
+                    result.decision_id or "-",
+                    result.reason,
+                )
         return record
 
     async def mark_dismissed(self, record_id: uuid.UUID) -> InterventionRecord | None:

@@ -240,6 +240,14 @@ async def approve_proposal(
     try:
         result = await service.approve(proposal_id, user_id=current_user.id, idempotency_key=key)
     except ActionCommandError as exc:
+        # V4-F03 呈现适配挂点（错误面）：确认失败（版本冲突/过期/非 pending 等）
+        # → terminal_failed 呈现事件，错误语义永不通成功视觉。韧性壳——挂点
+        # 失败只留痕，HTTP 错误映射原样进行。
+        from app.services.experience_presentation_adapter import project_action_error_by_id_safe
+
+        await project_action_error_by_id_safe(
+            db, None, proposal_id=proposal_id, user_id=current_user.id, error=exc
+        )
         raise _to_http_error(exc) from None
     return ProposalMutationResponse(
         proposal=service.proposal_projection(result.proposal),
