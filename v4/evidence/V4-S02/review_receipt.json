@@ -1,6 +1,6 @@
 {
   "task": "V4-S02",
-  "review_state": "NOT_RUN",
+  "review_state": "R1_DONE: APPROVE_WITH_CONDITIONS (wtS02R1, see review_r1.md; awaiting R2)",
   "independent_reviewers_required": 2,
   "note": "高风险卡：需 2 份独立未参与会话审查 + 集成 SHA 可失败复验后才能销账。本文件为占位，R1/R2 receipt 由审查会话另行落盘（review_r1.md/review_r2.md），审查结论回写本文件 review_state。",
   "pre_registered_challenges": [
