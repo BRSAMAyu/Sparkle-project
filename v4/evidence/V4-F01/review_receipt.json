@@ -1,0 +1,14 @@
+{
+  "task": "V4-F01",
+  "date": "2026-09-28",
+  "required_independent_reviewers": 1,
+  "status": "PENDING",
+  "honest_note": "独立审查未发生（本会话为实现会话，不自称完成）。本卡按 fleet 验收模型=独立未参与会话审查 + 集成 SHA 可失败测试复核；审查会话接手时以本目录 run_manifest.json/test_results.json 与分支 agent/v4/f01 的 diff 为对象执行集成 SHA 复验。",
+  "review_checklist_suggestion": [
+    "classic 零差量：运行 test/core/design/pixel_preview_theme_test.dart 的「classic 零差量/往返回退」组（41 槽逐槽断言，可失败）",
+    "preview 默认 off：确认 ThemeManager 默认字段与持久化键缺省回落 classic",
+    "对比度：复跑自动对比度组（测试内实现 WCAG 相对亮度，无外部依赖）",
+    "守卫：复跑 scripts/guards/check_ui_design_tokens_ratchet.py 及设计四守卫",
+    "红线：git diff 范围核验（不触 routes、不触生成文件、不触经典主题路径）"
+  ]
+}

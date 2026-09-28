@@ -386,8 +386,8 @@
       "depends_on": [
         "V4-B04"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
+      "status": "IN_PROGRESS",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
       "kind": "implementation",
       "required_locks": [

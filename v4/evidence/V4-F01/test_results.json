@@ -1,0 +1,101 @@
+{
+  "task": "V4-F01",
+  "date": "2026-09-28",
+  "flutter": "3.41.3 stable",
+  "summary": {
+    "new_tests_total": 30,
+    "new_tests_passed": 30,
+    "regression_design_and_unit": "408 passed (+408 ~1)",
+    "regression_app_and_theme_widgets": "47 passed (+47 ~1)",
+    "analyze_touched_files": "No issues found",
+    "analyze_design_dirs": "No issues found",
+    "guards": {
+      "UI-TOKENS": "PASS (color=225/275, fontSize=634/727)",
+      "DL-SPEC": "PASS (15 dims ratchet held)",
+      "TYPO-RHYTHM": "PASS (sub12=232/234, w900=6/6)",
+      "SPACING-RHYTHM": "PASS (spacingHalfStep=1591/1623)"
+    }
+  },
+  "new_suite": {
+    "path": "mobile/test/core/design/pixel_preview_theme_test.dart",
+    "groups": [
+      {
+        "name": "preview 默认 off 与 classic 零差量",
+        "cases": [
+          "默认档是 classic，preview 关",
+          "classic 下主题与既有发布主题逐槽零差量（浅/深两态，41 颜色槽逐槽比对）",
+          "classic 往返回退：dusk → classic 逐槽回到原发布主题",
+          "preview 状态持久化 + reset 归零",
+          "initialize 越界索引回落 classic"
+        ]
+      },
+      {
+        "name": "PROPOSED 色板锚值",
+        "cases": [
+          "paperDay 锚值（13 提案槽逐值断言）",
+          "dusk 锚值（深色档）",
+          "quiet 锚值（低刺激档）",
+          "候选档产出既有 SparkleThemeData 结构（唯一令牌体系，typography 恒等断言）"
+        ]
+      },
+      {
+        "name": "自动对比度测量（3 profile × 4 组）",
+        "cases": [
+          "核心文案角色 ≥4.5:1（10 角色 × 3 容器面 = 30 对/档）",
+          "主 CTA onPrimary ≥4.5:1 + onError ≥4.5:1（AppThemes 实路径）",
+          "描边线 border 槽 ≥3:1 图形线",
+          "聊天气泡文本 ≥4.5:1（双气泡）"
+        ]
+      },
+      {
+        "name": "ThemeManager preview 通道与唯一令牌源",
+        "cases": [
+          "preview 开启时 AppThemes 走候选档且挂载像素扩展；classic 不挂载",
+          "候选档钉死亮度：dusk 下 light/dark 入口都出暮色（colorScheme.brightness=dark）",
+          "DS 静态层与 preview 档一致（唯一运行时 token 源）"
+        ]
+      },
+      {
+        "name": "PixelProfileTheme 扩展",
+        "cases": [
+          "pixelStep=2dp，cornerCut=[4,8,12]，stateMotion=80/160/220/650ms（3 档）",
+          "accentInk = proposal on_accent 槽（浅档白墨 / dusk 深墨 #17261C）",
+          "copyWith / lerp / 相等性（t<0.5 取前者约定）"
+        ]
+      },
+      {
+        "name": "200% 字阶：主 CTA 无截断、系统字号可继承（3 profile 真实渲染）",
+        "cases": [
+          "每档：无异常、标签渲染尺寸随 TextScaler.linear(2.0) 放大、标签盒完整落入按钮盒、按钮 ≥48dp、字阶复用 SparkleTypography"
+        ]
+      }
+    ]
+  },
+  "failures_fixed": [
+    {
+      "round": 1,
+      "symptom": "6 失败：CTA 断言按「按钮高度随字阶长高」写，实测 M3 FilledButton 高度钳 48.0（文本盒 17→33px 增大且完整容纳，按钮宽度随之增长）",
+      "fix": "断言改为可失败且符合平台真实契约的组合：文本尺寸放大 + 文本盒不超出按钮盒 + 无异常 + ≥48dp 命中目标",
+      "nature": "测试断言口径修正（不是降阈值：原断言对发布主题同样不成立，属对平台行为误设）"
+    },
+    {
+      "round": 2,
+      "symptom": "dusk onPrimary <4.5:1 —— classic 的 getContrastSafeText(白/文本色二选一) 在 dusk 亮 accent (#B9D5B5) 下两侧都不达 4.5:1",
+      "fix": "design_system.dart `_buildThemeData` 在 preview 开启时 onPrimary/onSecondary/onError 取 proposal on_accent 槽（accentInk）；classic 路径原公式零差量",
+      "nature": "产品码实装缺陷修复（候选档色→主题映射缺口，本卡职责面内）"
+    },
+    {
+      "round": 3,
+      "symptom": "「候选档钉死亮度」失败：lightTheme 入口传 Brightness.light 导致 dusk colorScheme.brightness=light 与暗色面板不一致",
+      "fix": "AppThemes.lightTheme/darkTheme 的 _buildThemeData brightness 参数改取 theme.colors.brightness（classic 恒等）",
+      "nature": "产品码一致性修复（classic 零差量有逐槽断言背书）"
+    },
+    {
+      "round": 4,
+      "symptom": "lerp 断言 t=0.5 期望 paperDay 实得 dusk",
+      "fix": "对齐 SparkleThemeData.lerp 既有约定（t<0.5 取前者），断言改 0.25/0.5/0.75 三点",
+      "nature": "测试口径对齐既有约定"
+    }
+  ],
+  "regression_scope_note": "受影响面 = 设计系统直接测试（test/core/design 14 文件）+ 单元层（test/unit）+ app 壳路由冒烟（test/app）+ 主题敏感 widget 测试（chat dark mode / a11y 语义 / widget_test.dart）。features 全量 widget 测试与 golden 未跑（本卡不改 features 文件、classic 零差量有逐槽断言，features 行为不受本卡输入影响）；全量守卫基线未重跑（跑的是设计四守卫，与卡面点名一致）。"
+}

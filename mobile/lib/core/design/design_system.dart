@@ -37,6 +37,7 @@ import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/breakpoints.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
+import 'package:sparkle/core/design/tokens_v2/pixel_preview_theme.dart';
 import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
@@ -49,6 +50,7 @@ export 'materials.dart';
 export 'responsive_widgets.dart';
 export 'tokens_v2/animation_token.dart';
 export 'tokens_v2/color_token.dart';
+export 'tokens_v2/pixel_preview_theme.dart';
 export 'tokens_v2/responsive_system.dart';
 export 'tokens_v2/state_tokens.dart';
 export 'tokens_v2/theme_manager.dart';
@@ -60,14 +62,17 @@ export 'widgets/sparkle_refresh_indicator.dart';
 
 /// MaterialApp 主题配置
 class AppThemes {
+  // V4-F01：brightness 取 theme.colors.brightness（而非请求入口）。
+  // classic 路径两者恒等（零差量）；像素候选 preview 档钉死自身亮度
+  // （dusk 走 lightTheme 入口也输出暗色），保证 colorScheme/扩展同档一致。
   static ThemeData get lightTheme {
     final theme = ThemeManager().themeForBrightness(Brightness.light);
-    return _buildThemeData(theme, Brightness.light);
+    return _buildThemeData(theme, theme.colors.brightness);
   }
 
   static ThemeData get darkTheme {
     final theme = ThemeManager().themeForBrightness(Brightness.dark);
-    return _buildThemeData(theme, Brightness.dark);
+    return _buildThemeData(theme, theme.colors.brightness);
   }
 
   static ThemeData _buildThemeData(
@@ -77,6 +82,14 @@ class AppThemes {
     final colors = theme.colors;
     final isDark = brightness == Brightness.dark;
     final isHighContrast = ThemeManager().highContrast;
+    // V4-F01 像素候选 preview：onPrimary/onSecondary/onError 取 proposal
+    // on_accent 槽（accentInk）——浅档 accent 深到可衬白墨、dusk accent
+    // 亮到需深墨，classic 的 getContrastSafeText 白/文本色二选一在 dusk
+    // 档两侧都不达 4.5:1。classic（preview off）保持原公式零差量。
+    final pixelAccentInk = ThemeManager().pixelPreviewEnabled
+        ? PixelProfileTheme.forProfile(ThemeManager().pixelPreviewProfile)
+            .accentInk
+        : null;
     final textTheme = _buildTextTheme(theme, highContrast: isHighContrast);
     final sparkleExtension = brightness == Brightness.light
         ? SparkleThemeExtension.light(
@@ -99,22 +112,25 @@ class AppThemes {
         seedColor: colors.brandPrimary,
         brightness: brightness,
         primary: colors.brandPrimary,
-        onPrimary: ThemeUtils.getContrastSafeText(
-          colors.brandPrimary,
-          darkText: colors.textPrimary,
-        ),
+        onPrimary: pixelAccentInk ??
+            ThemeUtils.getContrastSafeText(
+              colors.brandPrimary,
+              darkText: colors.textPrimary,
+            ),
         secondary: colors.brandSecondary,
-        onSecondary: ThemeUtils.getContrastSafeText(
-          colors.brandSecondary,
-          darkText: colors.textPrimary,
-        ),
+        onSecondary: pixelAccentInk ??
+            ThemeUtils.getContrastSafeText(
+              colors.brandSecondary,
+              darkText: colors.textPrimary,
+            ),
         surface: colors.surfacePrimary,
         onSurface: colors.textPrimary,
         error: colors.semanticError,
-        onError: ThemeUtils.getContrastSafeText(
-          colors.semanticError,
-          darkText: colors.textPrimary,
-        ),
+        onError: pixelAccentInk ??
+            ThemeUtils.getContrastSafeText(
+              colors.semanticError,
+              darkText: colors.textPrimary,
+            ),
       ).copyWith(
         surfaceContainerLowest: colors.surfaceAmbient,
         surfaceContainerLow: colors.surfacePrimary,
@@ -335,6 +351,11 @@ class AppThemes {
       extensions: [
         _SparkleThemeExtension(theme),
         sparkleExtension, // 🔧 修复：注册公开的 SparkleThemeExtension
+        // V4-F01 像素候选主题（PROPOSED）：仅 preview 开启时挂载
+        // PixelProfileTheme（pixelStep/cornerCut/accentInk/stateMotion）。
+        // classic（默认发布面）不携带本扩展，行为零差量。
+        if (ThemeManager().pixelPreviewEnabled)
+          PixelProfileTheme.forProfile(ThemeManager().pixelPreviewProfile),
       ],
     );
   }

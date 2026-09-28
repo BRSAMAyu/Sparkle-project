@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/tokens_v2/pixel_preview_theme.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/shared/entities/task_model.dart' show TaskType;
@@ -32,6 +33,18 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
   Map<String, dynamic>? _skinConfig; // 皮肤配置（{theme, colors}）
   Map<String, dynamic>? get skinConfig => _skinConfig;
 
+  // V4-F01 像素候选主题 preview 通道（PROPOSED_NOT_APPROVED）。
+  // 默认 classic = preview 关：themeForBrightness 走既有路径，发布面零差量；
+  // 仅显式切到候选档时才替换主题，且 classic 随时可回退（卡面验收）。
+  // 切换 UI 归 V4-F05 的 preview 面所有，此处只提供编程式入口。
+  PixelPreviewProfile _pixelPreviewProfile = PixelPreviewProfile.classic;
+  PixelPreviewProfile get pixelPreviewProfile => _pixelPreviewProfile;
+  bool get pixelPreviewEnabled =>
+      _pixelPreviewProfile != PixelPreviewProfile.classic;
+
+  /// 像素候选主题持久化键（preview 通道，独立于既有 theme_mode/brand_preset）。
+  static const String pixelPreviewPrefsKey = 'pixel_preview_profile';
+
   bool _initialized = false;
   bool get initialized => _initialized;
   bool _observerRegistered = false;
@@ -45,7 +58,16 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// 按指定亮度解析主题，避免 MaterialApp.light/darkTheme 误用当前系统亮度。
+  ///
+  /// V4-F01：preview 开启时返回像素候选档主题（候选档各自钉死亮度，
+  /// 见 pixel_preview_theme.dart）；候选优先于品牌预设/商城皮肤——
+  /// preview 是被评估的候选主题本体。classic（默认）不进此分支，
+  /// 既有路径逐字节保持。
   SparkleThemeData themeForBrightness(Brightness brightness) {
+    if (_pixelPreviewProfile != PixelPreviewProfile.classic) {
+      return pixelPreviewThemeData(_pixelPreviewProfile);
+    }
+
     final baseTheme = brightness == Brightness.light
         ? SparkleThemeData.light(
             highContrast: _highContrast,
@@ -76,6 +98,13 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
         .values[prefs.getInt('brand_preset') ?? BrandPreset.sparkle.index];
     _highContrast = prefs.getBool('high_contrast') ?? false;
     _colorBlindFriendly = prefs.getBool('color_blind_friendly') ?? false;
+
+    // V4-F01 像素候选主题（preview 通道）：索引越界回落 classic（preview off）。
+    final pixelIndex = prefs.getInt(ThemeManager.pixelPreviewPrefsKey) ??
+        PixelPreviewProfile.classic.index;
+    if (pixelIndex >= 0 && pixelIndex < PixelPreviewProfile.values.length) {
+      _pixelPreviewProfile = PixelPreviewProfile.values[pixelIndex];
+    }
 
     // 🆕 加载商城皮肤配置
     _equippedSkinId = prefs.getString('equipped_skin_id');
@@ -116,6 +145,17 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// V4-F01：切换像素候选主题档（preview 通道）。
+  ///
+  /// [PixelPreviewProfile.classic] = preview 关（回退既有发布主题）。
+  /// 只改本通道状态并通知；不触碰 mode/brand/skin/highContrast 状态。
+  Future<void> setPixelPreviewProfile(PixelPreviewProfile profile) async {
+    if (_pixelPreviewProfile == profile) return;
+    _pixelPreviewProfile = profile;
+    await _saveToPrefs();
+    notifyListeners();
+  }
+
   /// 切换高对比度
   Future<void> toggleHighContrast(bool enabled) async {
     _highContrast = enabled;
@@ -145,6 +185,7 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
     _colorBlindFriendly = false;
     _equippedSkinId = null;
     _skinConfig = null;
+    _pixelPreviewProfile = PixelPreviewProfile.classic;
     await _saveToPrefs();
     notifyListeners();
   }
@@ -274,6 +315,10 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
     await prefs.setInt('brand_preset', _brandPreset.index);
     await prefs.setBool('high_contrast', _highContrast);
     await prefs.setBool('color_blind_friendly', _colorBlindFriendly);
+    await prefs.setInt(
+      ThemeManager.pixelPreviewPrefsKey,
+      _pixelPreviewProfile.index,
+    );
 
     // 🆕 保存商城皮肤配置
     if (_equippedSkinId != null) {
