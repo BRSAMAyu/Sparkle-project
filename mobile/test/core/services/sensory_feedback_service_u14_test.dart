@@ -42,9 +42,20 @@ void main() {
       expect(await SensoryFeedbackService.isSoundEnabled(), isTrue);
     });
 
-    test('向后兼容：无 ambient 键时继承提示音开关（老用户不被升级打开）', () async {
+    test('向后兼容：无 ambient 键时缺省关闭（老用户不被升级悄悄打开；'
+        'V4-S02 收紧缺省为绝对关闭，比继承更强——见卡验收1「未明确点播无声音」）',
+        () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'sensory_feedback.sound_enabled': false,
+      });
+      await SensoryFeedbackService.dispose();
+
+      expect(await SensoryFeedbackService.isAmbientEnabled(), isFalse);
+    });
+
+    test('V4-S02 缺省收紧：即使提示音开着，无 ambient 键也缺省关闭', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'sensory_feedback.sound_enabled': true,
       });
       await SensoryFeedbackService.dispose();
 

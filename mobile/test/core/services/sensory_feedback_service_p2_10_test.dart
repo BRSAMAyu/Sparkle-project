@@ -22,11 +22,18 @@ void main() {
     await SensoryFeedbackService.dispose();
   });
 
-  test('sound preference defaults on and persists toggles', () async {
+  // V4-S02 行为差量：提示音默认关闭（MOTION「默认环境声与提示音关闭」/
+  // 卡验收1「未明确点播无声音」）。原断言「defaults on」按 V4 规格显式
+  // 变更为 defaults off——非删断言凑绿，反例面（显式开启后发声）由
+  // sensory_feedback_service_s02_test.dart 钉死。
+  test('sound preference defaults off (V4-S02) and persists toggles',
+      () async {
+    expect(await SensoryFeedbackService.isSoundEnabled(), isFalse);
+
+    await SensoryFeedbackService.setSoundEnabled(true);
+
     expect(await SensoryFeedbackService.isSoundEnabled(), isTrue);
-
     await SensoryFeedbackService.setSoundEnabled(false);
-
     expect(await SensoryFeedbackService.isSoundEnabled(), isFalse);
   });
 
@@ -52,7 +59,10 @@ void main() {
     expect(AmbientScene.ocean.assetPath, 'audio/ambient/ocean_waves.ogg');
   });
 
-  test('sound budget limits rapid distinct events to five emissions', () async {
+  test('sound budget limits rapid distinct events to five emissions',
+      () async {
+    // V4-S02：默认关闭后，预算语义以「已点播」为前提——显式开启再计。
+    await SensoryFeedbackService.setSoundEnabled(true);
     var soundCalls = 0;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {

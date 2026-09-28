@@ -21,6 +21,9 @@ void main() {
       'sensory_feedback.sound_enabled': true,
       'sensory_feedback.haptic_enabled': true,
       'sensory_feedback.aurora_linkage_enabled': true,
+      // V4-S02：背景声缺省改为关闭（卡验收1「未明确点播无声音」）。本测的
+      // 主旨是开关持久化而非缺省值——显式种子为开，使「关掉并落位」可断言。
+      'sensory_feedback.ambient_enabled': true,
     });
     await SensoryFeedbackService.dispose();
   });
