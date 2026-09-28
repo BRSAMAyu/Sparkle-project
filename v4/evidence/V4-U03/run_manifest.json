@@ -1,0 +1,78 @@
+{
+  "card": "V4-U03",
+  "title": "我的理解：项目范围与校准控制",
+  "generated_at": "2026-09-29T00:30:00+08:00",
+  "executor": "V4 fleet implementation agent (U03)",
+  "branch": "agent/v4/u03",
+  "worktree": "wtU03",
+  "base_commit": "555346fe4d28fea6b1af10b2493a190d77979f4c",
+  "design_approval": "协调方确认放行（回执面板进既有 /memory/understanding、I06 唯一数据源、M-08 变更链+冲突面、F03 反向面）",
+  "environment": {
+    "flutter": "3.41.3 stable (revision 48c32af034)",
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.14 (guards)",
+    "note": "本机为 macOS 实体机；mobile/lib/gen 为 gitignored 生成物，自主检出复制（未 symlink、未入库）"
+  },
+  "commands": [
+    {
+      "purpose": "依赖解析",
+      "command": "flutter pub get --offline",
+      "cwd": "mobile",
+      "exit_code": 0
+    },
+    {
+      "purpose": "l10n 再生成（arb 43 新键 + 9 黑话清理键 → 生成 dart）",
+      "command": "flutter gen-l10n",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "note": "gen-l10n 顺带规范化既有生成文件空行（+0/-90 行纯空白），无文案变更"
+    },
+    {
+      "purpose": "静态分析全量",
+      "command": "flutter analyze",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "No issues found"
+    },
+    {
+      "purpose": "全量测试套件（最终验证）",
+      "command": "flutter test",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+2817 passed / ~23 skipped / 0 failed"
+    },
+    {
+      "purpose": "本卡新增测试（六个文件定向跑）",
+      "command": "flutter test test/features/memory/",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+117 passed / 0 failed"
+    },
+    {
+      "purpose": "UI 证据落盘（顶层截图 + 语义树 dump）",
+      "command": "U03_EVIDENCE_DIR=<evidence dir> flutter test test/features/memory/presentation/screens/understanding_screen_evidence_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+2 passed；u03_receipt_ready_360x800.png/_semantics.txt、u03_receipt_offline_360x800.png/_semantics.txt 落盘"
+    },
+    {
+      "purpose": "四棘轮守卫",
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py && python3 scripts/guards/check_typography_rhythm_ratchet.py && python3 scripts/guards/check_spacing_rhythm_ratchet.py && python3 scripts/guards/check_dl_spec_ratchet.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "result": "四守卫全 PASS（新文件零新债务）"
+    }
+  ],
+  "artifacts": {
+    "v4/evidence/V4-U03/u03_receipt_ready_360x800.png": "80bce407e1bcfcea48040062a978be664f68e4074274b3dfc9acd3f0b0c6f302",
+    "v4/evidence/V4-U03/u03_receipt_ready_360x800_semantics.txt": "a1e518169d730ecdb2bddd31413791fd4493737a101677ee7973878964f8cca8",
+    "v4/evidence/V4-U03/u03_receipt_offline_360x800.png": "cced4e3ca1220ec715863d40106369079d67a223052f2366a15d05c4aacb1c69",
+    "v4/evidence/V4-U03/u03_receipt_offline_360x800_semantics.txt": "4566dffea7e670bb0013c891dab9839b8256d95341bdfa29351e49ac4ca8f3f0"
+  },
+  "screenshots_semantics_note": "截图为测试泵顶层整屏（360x800 dpr2；测试环境无 CJK 字体，字形呈 Ahem 方块——同 F04 证据先例），真实文案以同族 *_semantics.txt 为准（元素树口径语义 dump：面板标题/说明/why-now/来源已核对行/归因分组/忘记按钮/四组视图逐条在案）。ready 截图 = live 回执（1 选中 resolved + 2 拒用归因 + budget 说明 + why-now）；offline 截图 = 断网诚实态（错误文案 + 重试，非空数据非成功视觉）。",
+  "llm_usage": "本卡为纯工程实现（无模型调用），actual_model_and_usage = NOT_APPLICABLE",
+  "physical_device_scope": "无真机/模拟器触达；键盘可达性以 widget 测试焦点+按键事件实证（Space 激活=点按），200% 字体以 TextScaler.linear(2.0) 泵浦实证",
+  "no_duplicate_evidence": "V3 U-03 四组理解面（M-08 链）原样保留不重写；mobile 侧 context_selection_receipt 消费面此前零命中（I06 为 backend 记录层），本卡为其首个呈现位",
+  "known_side_effects": "运行 q03 visual probe 套件会重写 v3-output/WT401-Q03-VISUAL/*.json（时间戳类抖动，非本卡变更）——提交前已 git checkout 还原",
+  "source_sha_note": "全部改动基于 555346fe；实现+测试 12 文件改动（+956/-182）+ 9 新文件，未 push"
+}

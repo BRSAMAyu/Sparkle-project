@@ -244,6 +244,9 @@ class ApiEndpoints {
   static const String growthReturnCaseFile = '/growth/return-case-file';
   static const String experienceUnderstandingSnapshot =
       '/experience/understanding-snapshot';
+  // V4-U03: I06 context_selection_receipt.v1 读面（这次的理解回执）。
+  static const String experienceContextReceiptLatest =
+      '/experience/context-receipts/latest';
   static const String experienceGrowthDashboard =
       '/experience/growth-dashboard';
   static const String experienceCommunityAccountability =
