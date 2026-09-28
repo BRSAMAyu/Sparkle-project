@@ -1,0 +1,22 @@
+{
+  "card": "V4-I05",
+  "risk": "high",
+  "required_independent_reviewers": 2,
+  "status": "PENDING_REVIEW",
+  "note": "占位文件：本卡作者不自审。两位独立审查会话请在各自审查完成后将 verdict/receipt/head 写入本文件（或落 review_r1.md/review_r2.md 并回填），审点建议见 diff_or_evidence_only.md『审查挑战点预登记』与 limitations.md。",
+  "implementation_head_hint": "agent/v4/i05 分支头（base ff02ec03）",
+  "reviews": [
+    {
+      "reviewer": "PENDING_R1",
+      "verdict": "PENDING",
+      "receipt_id": null,
+      "reviewed_head": null
+    },
+    {
+      "reviewer": "PENDING_R2",
+      "verdict": "PENDING",
+      "receipt_id": null,
+      "reviewed_head": null
+    }
+  ]
+}

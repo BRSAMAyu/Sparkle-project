@@ -1,0 +1,103 @@
+{
+  "card": "V4-I05",
+  "title": "经验策略影子验证与有界启用",
+  "generated_at": "2026-09-28T23:59:00+08:00",
+  "session": "wtI05 (worktree ../wtI05, branch agent/v4/i05)",
+  "base_sha": "ff02ec03419c54cb40cc05128ff110277f8bbb9f",
+  "implementation_commit": "see git log of agent/v4/i05 (feat(v4): I05 经验策略影子验证与有界启用)",
+  "environment": {
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.11.15 (.venv of main checkout, shared interpreter)",
+    "pytest": "9.0.2",
+    "ruff": "0.15.8",
+    "black": "26.3.1 (line-length 120)",
+    "mypy": "1.20.2",
+    "env_vars": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite://"
+  },
+  "commands": [
+    {
+      "purpose": "本卡纯契约层测试",
+      "cmd": "cd backend && pytest tests/unit/test_experience_strategy.py -q",
+      "exit_code": 0,
+      "summary": "56 passed"
+    },
+    {
+      "purpose": "本卡服务层测试（sqlite 隔离，真实 D-05→M-06→A-05 证据链）",
+      "cmd": "cd backend && pytest tests/services/test_experience_strategy_service.py -q",
+      "exit_code": 0,
+      "summary": "17 passed"
+    },
+    {
+      "purpose": "受影响面全量回归（本卡 2 + I04 2 + I02 2 + I03 1 + A-05 1 + M-06/D02/D03/I06/I07/D05 邻接面 9）",
+      "cmd": "cd backend && pytest tests/unit/test_experience_strategy.py tests/services/test_experience_strategy_service.py tests/unit/test_no_action_supplement.py tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py tests/unit/test_semantic_selector.py tests/services/test_policy_patch_service.py tests/services/test_friction_chat_wiring.py tests/services/test_experience_memory_projector.py tests/core/test_attribution.py tests/core/test_retraction_recompute.py tests/services/test_retraction_recompute_service.py tests/unit/test_hybrid_policy.py tests/unit/test_context_selection_receipt_sources.py tests/unit/test_context_selection_receipt_wiring.py tests/services/test_intervention_lifecycle_service.py tests/core/test_experience_event.py -q",
+      "exit_code": 0,
+      "summary": "549 passed（两轮：格式化前后各一轮，全绿）"
+    },
+    {
+      "purpose": "ruff（全部改动文件）",
+      "cmd": "cd backend && ruff check app/core/experience_strategy.py app/services/policy_patch_service.py app/config/settings.py app/core/metrics.py tests/unit/test_experience_strategy.py tests/services/test_experience_strategy_service.py",
+      "exit_code": 0,
+      "summary": "All checks passed（改动文件零新增；自动修复 C408/C416/UP 三类风格项后复检通过）"
+    },
+    {
+      "purpose": "black（改动文件，line-length 120）",
+      "cmd": "cd backend && black app/core/experience_strategy.py app/services/policy_patch_service.py tests/unit/test_experience_strategy.py tests/services/test_experience_strategy_service.py && black --check <same>",
+      "exit_code": 0,
+      "summary": "6 files would be left unchanged"
+    },
+    {
+      "purpose": "mypy 棘轮门（全仓，ratchet 口径）",
+      "cmd": "bash scripts/ci/mypy_ratchet.sh",
+      "exit_code": 0,
+      "summary": "mypy errors: 59 / baseline: 77 —— 零新增（fresh-cache 对照实验：main@ff02ec03 同口径同为 59，唯一多出条目 app/aurora/policy_loader.py yaml-stub 为 main 检出陈旧 mypy 缓存伪影，与本卡文件无关；改动文件直查 mypy app/core/experience_strategy.py app/services/policy_patch_service.py 零错误）"
+    },
+    {
+      "purpose": "shadow 零行为红线·突变反转变红实证",
+      "cmd": "sed-mutate patched_decision_inputs（shadow 档同 live 应用门出集：strategy_mode == LIVE → != OFF）→ pytest tests/services/test_experience_strategy_service.py -q",
+      "exit_code": 1,
+      "summary": "突变下 1 failed / 16 passed——恰为红线测 test_shadow_payload_identical_to_off_byte_for_byte FAILED；还原后 17/17 绿（备份恢复，git diff 复核零残留）"
+    }
+  ],
+  "model_budget": {
+    "real_model_calls": 0,
+    "note": "红线遵守：全部测试为纯函数/引擎重放/sqlite 隔离生产服务路径，零真实模型调用、零上游请求、零 API key 环境（LLMRouter 27 configs 无 key 注册）下全绿。experience_strategy.py 为纯函数契约层零 IO。影子臂 stub=鸭子类型假记录（纯层）+真实 D-05 生产路径（服务层），无 Mock 冒充模型结果。"
+  },
+  "diff_summary": {
+    "new_files": [
+      "backend/app/core/experience_strategy.py",
+      "backend/tests/unit/test_experience_strategy.py",
+      "backend/tests/services/test_experience_strategy_service.py",
+      "v4/evidence/V4-I05/*"
+    ],
+    "modified_files": [
+      "backend/app/services/policy_patch_service.py (+467/-28：折叠/admission 模式面/decision 门面/shadow_report/撤回失效/actor 参数/缓存键档位)",
+      "backend/app/config/settings.py (+10：EXPERIENCE_STRATEGY_MODE=shadow 默认 + LIVE_WINDOW_HOURS=72)",
+      "backend/app/core/metrics.py (+10：sparkle_experience_strategy_shadow_total{stage,verdict})"
+    ],
+    "not_touched": [
+      "backend/app/core/policy_patch.py（A-05 core 契约词表/状态机/档位零改动）",
+      "proto/、alembic 迁移、*/gen/ 生成文件、mobile/、gateway/",
+      "backend/app/aurora/no_action_supplement.py、semantic_selector.py、memory_utility_gate.py（I04/I03/I02 实现）"
+    ]
+  },
+  "per_file_test_counts": {
+    "tests/unit/test_experience_strategy.py": 56,
+    "tests/services/test_experience_strategy_service.py": 17,
+    "tests/unit/test_no_action_supplement.py": 39,
+    "tests/unit/test_memory_utility_gate.py": 25,
+    "tests/unit/test_memory_utility_gate_wiring.py": 9,
+    "tests/unit/test_semantic_selector.py": 77,
+    "tests/services/test_policy_patch_service.py": 39,
+    "tests/services/test_friction_chat_wiring.py": 76,
+    "tests/services/test_experience_memory_projector.py": 22,
+    "tests/core/test_attribution.py": 38,
+    "tests/core/test_retraction_recompute.py": 23,
+    "tests/services/test_retraction_recompute_service.py": 11,
+    "tests/unit/test_hybrid_policy.py": 31,
+    "tests/unit/test_context_selection_receipt_sources.py": 8,
+    "tests/unit/test_context_selection_receipt_wiring.py": 11,
+    "tests/services/test_intervention_lifecycle_service.py": 36,
+    "tests/core/test_experience_event.py": 31,
+    "_total": 549
+  }
+}
