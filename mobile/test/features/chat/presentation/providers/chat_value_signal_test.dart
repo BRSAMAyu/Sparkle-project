@@ -17,6 +17,9 @@ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
+import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
+import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 /// N47（A-SPEC8B §4）· 价值信号接线回归：firstDiagnosisOutput 与
@@ -263,6 +266,17 @@ Future<(ProviderContainer, _FakeChatRepository)> _buildHarness({
       authRepositoryProvider.overrideWithValue(
         _FakeAuthRepository(token: 'test-token'),
       ),
+      // V3-FIX-547：subscriptionsProvider 真实现构建时 unawaited 触发
+      // loadSubscriptions()，在测试环境的完成路径是真 Dio 网络失败——
+      // 其到达时长（DNS/连接错误回包）是秒级不受控墙钟，续延一旦落在
+      // container.dispose 之后即抛 Bad state（"failed after test
+      // completion"，CI 29 job 108772804580 实录栈）。此处以确定性空
+      // 订阅 notifier 覆写：sendMessage 只读 subscriptions 列表（本
+      // 环境真实现恒因网络失败为空），语义等价、零网络、零悬挂续延，
+      // 竞态窗口按构造消除而非靠等待时长覆盖。
+      subscriptionsProvider.overrideWith(
+        (ref) => SubscriptionsNotifier(_EmptySubscriptionRepository()),
+      ),
     ],
   );
   return (container, repository);
@@ -274,8 +288,18 @@ ChatNotifier _createNotifier(
 ) =>
     ChatNotifier(repository, _ContainerForwardingRef(container));
 
-Future<void> _settle() =>
-    Future<void>.delayed(const Duration(milliseconds: 80));
+/// 事件循环确定性 drain：若干轮 Duration.zero 让微任务链（流事件派发、
+/// unawaited 的 value-signal 落库续延、PersistentNotifier 内存读回填）
+/// 完整落地后才继续。原 80ms 固定墙钟睡眠是负载敏感等待（V3-FIX-547
+/// 同族，FIX-544 先例：预算型等待应对 runner 负载免疫）；本测试链上
+/// sendFuture 完成后残留工作全部是微任务级（真 Timer 族——首事件守卫、
+/// 流超时——均在流 done 时 disarm/cancel），微任务在任何 timer 触发前
+/// 即全部排空，轮数只需覆盖事件循环跳数（当前链深 ≤3，8 轮余量充足）。
+Future<void> _settle() async {
+  for (var i = 0; i < 8; i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
+}
 
 typedef _ChatStreamFactory = Stream<ChatStreamEvent> Function(
   String message,
@@ -333,6 +357,29 @@ class _FakeChatRepository extends ChatRepository {
   void dispose() {
     unawaited(_connectionController.close());
   }
+}
+
+/// V3-FIX-547 竞态源的对置替身：确定性空订阅仓库，绝无网络 I/O。
+/// 真 `seedLibraryRepositoryProvider` 构造真 ApiClient/Dio，在测试
+/// 环境里 `getMySubscriptions` 必然走网络失败路径且时长不受控（即
+/// harness 覆写注释所述竞态源）；本替身同签名返回空页，行为等价、
+/// 同步可完成。
+class _EmptySubscriptionRepository extends SeedLibraryRepository {
+  _EmptySubscriptionRepository() : super(_NoopApiClient());
+
+  @override
+  Future<PaginatedResponse<UserLibrarySubscription>> getMySubscriptions({
+    bool? isEnabled,
+    int page = 1,
+    int pageSize = 20,
+  }) async =>
+      PaginatedResponse<UserLibrarySubscription>(
+        items: const <UserLibrarySubscription>[],
+        total: 0,
+        page: page,
+        pageSize: pageSize,
+        totalPages: 0,
+      );
 }
 
 /// 真实 ProviderContainer 转发 Ref：ChatNotifier 既有依赖照常解析，
