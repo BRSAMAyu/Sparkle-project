@@ -27,6 +27,13 @@ from app.core.action_command import (
 )
 from app.core.outcome_ledger import OutcomeSource, derive_outcome_id
 from app.core.run_state_machine import RunStatus, RunWaitKind
+from app.models.execution_intent import (
+    ExecutionIntent,
+    ExecutionIntentStatus,
+    ExecutionMode,
+    ExecutorType,
+    TrustLevel,
+)
 from app.models.focus import FocusSession
 from app.models.galaxy import KnowledgeNode, StudyRecord
 from app.models.task import Task, TaskStatus
@@ -1123,6 +1130,32 @@ async def execute_journey(scenario, ctx: ScenarioContext) -> ScenarioRun:
 
         run_spec = dict(scenario.inputs.get("run") or {})
         steps = run_spec.get("steps")
+        # V4-FIX-560 · GJ06 审批门与生产同锚：approval 等待的解除通道是 intent
+        # 状态漏斗，transition 进 AWAITING_APPROVAL 强制 intent 绑定（无 intent
+        # 的 approval 等待无解除通道，逐源头拒绝）。harness 按执行轨道真实形状
+        # 先落 intent 行再绑定 run（GJ07 走 user-step 交棒，无需 intent）。
+        intent_id: Any = None
+        if journey == "GJ06":
+            intent = ExecutionIntent(
+                plan_id=None,
+                task_id=task.id,
+                user_id=ctx.user.id,
+                execution_mode=ExecutionMode.AGENT,
+                executor=ExecutorType.OPENCLAW,
+                goal=run_spec.get("objective") or f"X-10 {journey}",
+                instructions=[],
+                target_env=None,
+                policy={},
+                success_criteria={},
+                result_contract={},
+                timeout_seconds=300,
+                status=ExecutionIntentStatus.RUNNING,
+                trust_level=TrustLevel.RAW,
+                idempotency_key=f"x10-{journey}-{uuid4().hex[:12]}",
+            )
+            ctx.session.add(intent)
+            await ctx.session.commit()
+            intent_id = intent.id
         created = await run.call(
             ctx,
             "create_run",
@@ -1131,6 +1164,7 @@ async def execute_journey(scenario, ctx: ScenarioContext) -> ScenarioRun:
                 objective=run_spec.get("objective", f"X-10 {journey}"),
                 kind="execution",
                 task_id=task.id,
+                intent_id=intent_id,
                 risk_class=run_spec.get("risk_class"),
                 steps=[dict(s) for s in steps] if steps else None,
             ),

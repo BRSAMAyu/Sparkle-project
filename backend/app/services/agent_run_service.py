@@ -382,6 +382,14 @@ class HumanStepNotCompletedError(RunStateError):
     不可达；先经 :meth:`complete_user_step` 显式作答，或走取消/过期等诚实终态）。"""
 
 
+class ApprovalWaitRequiresIntentError(RunStateError):
+    """无 intent 绑定的 run 不得进入 AWAITING_APPROVAL（V4-FIX-560：approval
+    豁免伪造向量的源头门——approval 等待的解除通道是 intent 状态漏斗
+    （approve/reject 经 execution_service 变更 intent → :meth:`project_intent_status`
+    投影），无 intent 的 approval 等待没有任何解除通道，属死态；逐源头拒绝优于
+    出边守卫。与 :class:`HumanStepNotCompletedError` 同族（RunStateError 子类）。"""
+
+
 #: V4-I08 · 深任务返回控制 deadline（秒）。深任务运行中，查看当前阶段产物
 #: （GET /runs/{id}：current_stage + steps wire + awaiting prompt/artifacts）、
 #: 取消（POST /runs/{id}/cancel）、离开（无需交互，恢复经 run 持久态 +
@@ -667,6 +675,23 @@ class AgentRunService:
             return RunMutationResult(run=run, applied=False, created=False, event_name=None, event_written=False)
 
         assert_transition_legal(current, target)
+
+        # V4-FIX-560 · approval 等待态源头 intent 门：AWAITING_APPROVAL 的解除
+        # 通道是 intent 状态漏斗（approve/reject 经 execution_service 变更 intent
+        # → :meth:`project_intent_status` 投影）；无 intent 绑定的 run 落入
+        # AWAITING_APPROVAL 后在引擎信任边界内没有任何解除通道——三步链
+        # RUNNING→AWAITING_APPROVAL→SUCCEEDED 可由同一信任主体直调完成，
+        # 审批从未触达人类（I08 双审 C-1 向量）。属死态，逐源头拒绝优于出边
+        # 守卫：任何 actor 直调 transition 进 approval 等待都必须携带 intent 绑定
+        # （in-tree 唯一生产者 project_intent_status 天然满足——run 即由 intent
+        # 找到/创建）。图零改动——本守卫与 I08 user_step 守卫同构，钉在服务层。
+        if target is RunStatus.AWAITING_APPROVAL and run.intent_id is None:
+            raise ApprovalWaitRequiresIntentError(
+                f"run {run_id} ({current.value}) cannot enter AWAITING_APPROVAL without a bound execution intent: "
+                "an approval wait with no intent has no release channel "
+                "(无 intent 的 approval 等待无解除通道，属死态) — "
+                "anchor approval-gated runs to the intent state funnel (project_intent_status)"
+            )
 
         # V4-I08 · 人类步骤伪造守卫（验收 3 反例面）：run 在等待用户步骤且该步
         # 无完成戳时，任何 actor（worker/system/recovery/projection——含直接调
