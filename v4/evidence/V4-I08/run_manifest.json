@@ -1,0 +1,89 @@
+{
+  "card": "V4-I08",
+  "title": "深任务返回控制与恢复一致性",
+  "worktree": "/Users/brsama/code/GitHub/wtI08",
+  "branch": "agent/v4/i08",
+  "base_sha": "33dc2223dbdaf27bc7de07bf63e914ec65335332",
+  "source_sha": "23fe2c9c4dade7378a07e80963cbfc456d4213e3（feat commit，agent/v4/i08；本文件与 tasks.json 更新属其后的 state commit）",
+  "date": "2026-09-28",
+  "executor": "wtI08 implementation agent (V4-I08)",
+  "scope": "backend service/core contract minimal delta on existing X-05/06/07/09 run spine; zero new tables; zero migrations; zero proto changes; zero model calls; no UI",
+  "environment": {
+    "platform": "darwin 25.6.0 arm64",
+    "python": "3.11.15 (/Users/brsama/code/GitHub/Sparkle-project/backend/.venv, shared venv)",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2",
+    "ruff": "0.15.8",
+    "black": "26.3.1",
+    "note": "无 Intel AI PC；本卡为纯确定性服务层增量，不涉任何硬件能力声明"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "cmd": "pytest tests/unit/test_v4_i08_deep_task_return_control.py -q --no-header -p no:cacheprovider",
+      "cwd": "backend",
+      "env": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite://（无 .env——worktree 口径，sqlite）",
+      "exit_code": 0,
+      "result": "24 passed"
+    },
+    {
+      "id": 2,
+      "cmd": "pytest tests/unit/test_v4_i08_deep_task_return_control.py tests/unit/test_hybrid_run_steps.py tests/unit/test_hybrid_run_steps_api.py tests/unit/test_agent_run_service.py tests/unit/test_x06_run_budget.py tests/unit/test_x09_failure_recovery.py tests/unit/test_runs_api.py tests/unit/test_runs_api_hardening.py tests/unit/test_j06_hybrid_journey.py tests/unit/test_run_state_machine.py tests/unit/test_run_step_projection.py tests/unit/test_wt392_r2v3_review.py -q",
+      "cwd": "backend",
+      "exit_code": 0,
+      "result": "273 passed（受影响面回归：X-05 run service / X-06 budget / X-07 hybrid steps+API / X-09 failure-recovery / runs API×2 / hybrid journey / 状态机冻结 / 步骤投影 / wt392 复验）"
+    },
+    {
+      "id": 3,
+      "cmd": "mypy app --ignore-missing-imports --no-error-summary | grep 'error:' | wc -l",
+      "cwd": "backend",
+      "exit_code": 0,
+      "result": "55（基线 quality/mypy_baseline.txt=77 → ratchet PASS 零新增；grep 'run_steps|agent_run_service|api/v1/runs' = 0 条）"
+    },
+    {
+      "id": 4,
+      "cmd": "ruff check app/core/run_steps.py app/services/agent_run_service.py app/api/v1/runs.py tests/unit/test_v4_i08_deep_task_return_control.py && black --check <同上4文件>",
+      "cwd": "backend",
+      "exit_code": 0,
+      "result": "All checks passed / 4 files would be left unchanged（首轮 SIM300 Yoda 1 处 ruff --fix；black 重排后全部重跑绿）"
+    },
+    {
+      "id": 5,
+      "cmd": "bash scripts/run_all_rule_guards.sh",
+      "cwd": "repo root",
+      "exit_code": 0,
+      "result": "all rule guards passed (86 rules)",
+      "history": "初跑 BG FAIL = worktree 缺 proto 生成产物（Go/Dart gen 为 gitignored 环境产物，I01 同款环境缺项）；从主检出复制 backend/gateway/gen 与 mobile/lib/gen（均 gitignored，未入库）后 PASS。本卡零 proto 契约变更"
+    },
+    {
+      "id": 6,
+      "cmd": "git worktree add ../wtI08 -b agent/v4/i08 main",
+      "cwd": "/Users/brsama/code/GitHub/Sparkle-project",
+      "exit_code": 0,
+      "result": "base = 33dc2223（main）；工作期内 main 已前移至 150bc205（D02 合并）——本分支不 rebased，集成时按舰队惯例处理；本卡改动与 D02 归因域零交集"
+    }
+  ],
+  "artifacts_sha256": {
+    "backend/app/core/run_steps.py": "1ddc350702e149c0ee947e751eb1962d3916a28d9deebaa8b04f37115ebec5ea",
+    "backend/app/services/agent_run_service.py": "39030edced50175cf398dfc4c88187a35ec0cbac1e470a90966dc35e62b38b6b",
+    "backend/app/api/v1/runs.py": "48003a2bbf3de42b67922e9b5ddedc515c4a94d156b47ab7c8e0a0a8f0e95ccb",
+    "backend/tests/unit/test_v4_i08_deep_task_return_control.py": "89ef34bff21f5bded9b7290bbb7e96cdec3172f932e552a116e983d8402fc2c1"
+  },
+  "llm_usage": {
+    "actual_model": "none",
+    "calls": 0,
+    "note": "纯确定性服务层守卫/对账物化；本卡零模型调用，无价格来源需要登记"
+  },
+  "ui_evidence": "none（纯 backend；查看面=GET /runs 投影语义，由 awaiting_step/steps wire 既有投影承载，本卡测试断言其字段）",
+  "sensory_device_scope": "none",
+  "dependencies_consumed": {
+    "V4-B06": "v4/evidence/V4-B05/contract_receipt_min.md（§9 反例集：WS MessageAck 非业务 committed——ack 门的语义来源；§5 episode_resume_view 读模型零改动前提）",
+    "V4-I01": "episode_resume_view.v1 + episode_resume_service（离开后恢复经既有视图语义；本卡不另起第二读真源）",
+    "X-05/06/07/09（V3 已 DONE，复用不重写）": "run 状态机封闭图 / 预算终态 / hybrid steps 契约 / 工具账本对账证据机制"
+  },
+  "honest_failures": [
+    "首轮新测试 1 failed：对 transition details['budget_exceeded'] 的断言写错（该键载超限维度名 ['tool_calls'] 而非 reason 串）——测试断言错误，修测试；产品码未因此放宽",
+    "rule guards 首轮 BG FAIL（worktree 缺 gitignored 生成产物的环境缺项）——复制生成产物后 PASS，如实记录未绕过",
+    "mypy 本地 55 vs 任务简报提及的 54：基线文件权威值=77（CI linux 较高），55<77 PASS；54/77 的 54 疑为其他分支时点口径，未自行改基线"
+  ]
+}

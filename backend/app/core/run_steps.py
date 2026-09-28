@@ -39,6 +39,9 @@ __all__ = [
     "StepCompletionKind",
     "StepOwnerVocabulary",
     "StepCompletionKindVocabulary",
+    "USER_STEP_ANSWER_ACTIONS",
+    "ACK_CLASS_ANSWER_MARKERS",
+    "normalize_user_step_action",
     "MAX_RUN_STEPS",
     "MAX_STEP_ARTIFACTS",
     "normalize_run_steps",
@@ -92,6 +95,59 @@ class StepCompletionKind(StrEnum):
 
 StepOwnerVocabulary: frozenset[str] = frozenset(o.value for o in StepOwner)
 StepCompletionKindVocabulary: frozenset[str] = frozenset(k.value for k in StepCompletionKind)
+
+
+# ---------------------------------------------------------------------------
+# V4-I08 · 用户步「有效答案」词表门（ack 类自动回应永不算人类有效答案）
+# ---------------------------------------------------------------------------
+
+#: 用户完成 awaiting step 时``action`` 的封闭词表（服务层权威；API 层
+#: ``^(confirm|edit)$`` 是其 wire 子集，``decide`` 由 hybrid journey 服务层使用）。
+#: 词表外任何值都不构成人类有效答案——完成戳必须携带显式答案动作。
+USER_STEP_ANSWER_ACTIONS: frozenset[str] = frozenset({"confirm", "edit", "decide"})
+
+#: ack 类自动回应标记（封闭冻结；传输/通知层确认语义，非业务答案）。
+#: B05 合同 §9 反例「WS MessageAck：传输层确认，不证明业务 committed」的
+#: 步骤面落实——这些值即使被客户端当 action 提交，也**永不**被记账为人类
+#: 有效答案（fail-closed：显式拒绝，不静默转写为 confirm）。
+ACK_CLASS_ANSWER_MARKERS: frozenset[str] = frozenset(
+    {
+        "ack",
+        "acked",
+        "acknowledge",
+        "acknowledged",
+        "acknowledgement",
+        "acknowledgment",
+        "received",
+        "read",
+        "seen",
+    }
+)
+
+
+def normalize_user_step_action(action: Any) -> str:
+    """归一化 + 校验用户步答案动作（fail-closed；``complete_user_step`` 唯一入口）。
+
+    - 归一化：strip + lower（``"Confirm "`` ≡ ``"confirm"``）；
+    - 空/非串 → ``ValueError``（无动作不构成答案）；
+    - ack 类标记 → ``ValueError``（**显式点名**：ack 是传输层确认，不是人类
+      有效答案——V4-I08 验收 1 反例面，不静默转写、不记账）；
+    - 词表外未知值 → ``ValueError``（封闭词表，扩展需过 reviewer）。
+    """
+    normalized = str(action or "").strip().lower()
+    if not normalized:
+        raise ValueError("user step answer action is required; an empty action is not a valid human answer")
+    if normalized in ACK_CLASS_ANSWER_MARKERS:
+        raise ValueError(
+            f"action {normalized!r} is an ack-class automatic response (transport/notification "
+            "acknowledgement); it is never recorded as a valid human answer — human steps complete "
+            f"only via explicit answer actions {sorted(USER_STEP_ANSWER_ACTIONS)}"
+        )
+    if normalized not in USER_STEP_ANSWER_ACTIONS:
+        raise ValueError(
+            f"user step answer action {normalized!r} out of vocabulary " f"(closed: {sorted(USER_STEP_ANSWER_ACTIONS)})"
+        )
+    return normalized
 
 
 def normalize_artifact_refs(raw: Any) -> list[dict[str, str]]:

@@ -1,0 +1,68 @@
+{
+  "card": "V4-I08",
+  "date": "2026-09-28",
+  "python": "3.11.15",
+  "env": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite://（worktree 无 .env，sqlite 口径）",
+  "suites": [
+    {
+      "name": "test_v4_i08_deep_task_return_control.py（本卡新契约测试）",
+      "cmd": "pytest tests/unit/test_v4_i08_deep_task_return_control.py -q",
+      "exit_code": 0,
+      "passed": 24,
+      "failed": 0
+    },
+    {
+      "name": "受影响面回归（12 文件）",
+      "cmd": "pytest tests/unit/test_v4_i08_deep_task_return_control.py tests/unit/test_hybrid_run_steps.py tests/unit/test_hybrid_run_steps_api.py tests/unit/test_agent_run_service.py tests/unit/test_x06_run_budget.py tests/unit/test_x09_failure_recovery.py tests/unit/test_runs_api.py tests/unit/test_runs_api_hardening.py tests/unit/test_j06_hybrid_journey.py tests/unit/test_run_state_machine.py tests/unit/test_run_step_projection.py tests/unit/test_wt392_r2v3_review.py -q",
+      "exit_code": 0,
+      "passed": 273,
+      "failed": 0
+    }
+  ],
+  "acceptance_mapping": [
+    {
+      "acceptance": "5s内可查看/取消/离开；ack不算有效答案",
+      "positive": [
+        "test_view_and_cancel_within_return_deadline（查询+取消路径 asyncio.wait_for(DEEP_TASK_RETURN_DEADLINE_SECONDS=5.0) 钉死；阶段产物/awaiting prompt/artifacts 一次可见；常量 <=5.0 防放宽）",
+        "test_valid_answer_completes_human_step_and_stamps_action（confirm/decide 照常完成+幂等重放）",
+        "test_normalize_user_step_action_valid_answers_accepted"
+      ],
+      "negative": [
+        "test_ack_action_cannot_complete_human_step（ack/received 显式拒绝；无完成戳、保持 AWAITING_USER、无 user_resumed 事件、投影仍 awaiting）",
+        "test_normalize_user_step_action_ack_class_never_valid（9 个 ack 标记全拒 + 空/未知拒）",
+        "test_view_paths_404_isolation_within_deadline（跨用户 404 同 deadline）"
+      ]
+    },
+    {
+      "acceptance": "重启/断网/重试不双写，取消后外部副作用如实对账",
+      "positive": [
+        "test_cancel_materializes_side_effect_reconciliation（succeeded 写效果+补偿提示+durable 入 result_ref；GET 面同源）",
+        "test_inflight_recovery_twice_no_double_write 第一轮（UNKNOWN_OUTCOME+interrupted 对账证据恰一次）"
+      ],
+      "negative": [
+        "test_inflight_recovery_twice_no_double_write 第二轮（账本 already_resolved、terminal_noop、迁移/事件计数不变）",
+        "test_cancel_double_fire_single_transition_single_event（取消重试恰一次迁移/一个事件、证据 first-wins）",
+        "test_cancel_without_ledger_rows_writes_no_empty_evidence（无账本不造空对账）"
+      ]
+    },
+    {
+      "acceptance": "人类步骤等待，不由Agent伪造完成；预算暂停与unknown终态显式对账",
+      "positive": [
+        "test_user_answer_then_succeed_is_legal（显式作答后 RUNNING→SUCCEEDED 合法）",
+        "test_budget_pause_materializes_reconciliation（BUDGET_EXCEEDED+result_ref 证据+审计标记）",
+        "test_sweep_unknown_outcome_materializes_reconciliation（孤儿 UNKNOWN_OUTCOME+已写效果如实可见）"
+      ],
+      "negative": [
+        "test_no_path_succeeds_run_over_unanswered_human_step（5 actor × {SUCCEEDED,PARTIAL} 参数化全拒；等待态与事件面零变化）",
+        "test_budget_under_limit_leaves_run_running_without_evidence（未超限不终态化不预写证据）"
+      ]
+    }
+  ],
+  "static_checks": {
+    "ruff": "All checks passed（4 改动文件）",
+    "black": "4 files would be left unchanged",
+    "mypy": "55 errors vs baseline 77（ratchet PASS；改动文件 0 条）",
+    "rule_guards": "all rule guards passed (86 rules)"
+  },
+  "falsifiability_note": "ack 门删除→ack 测试在 pytest.raises 处红（step_completion_stamped 仅截断不校验，结构可证）；伪造守卫删除→AWAITING_USER→SUCCEEDED 是 ALLOWED_RUN_TRANSITIONS 冻结图内合法边（test_run_state_machine 可证），守卫测试必红；对账物化删除→result_ref 断言红；延迟钉为 wait_for 超时硬上限。"
+}
