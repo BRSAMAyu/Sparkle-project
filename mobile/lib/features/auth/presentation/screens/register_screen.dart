@@ -434,7 +434,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             key: const ValueKey('consentInlineError'),
                             style: TextStyle(
                               color: DS.error,
-                              fontSize: 12,
+                              fontSize: DS.fontSizeXs,
                               fontWeight: DS.fontWeightMedium,
                             ),
                           ),
