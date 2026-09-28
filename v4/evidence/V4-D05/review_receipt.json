@@ -1,0 +1,15 @@
+{
+  "card": "V4-D05",
+  "review_state": "PENDING",
+  "required_independent_reviewers": 1,
+  "note": "作者不自审：本文件由独立审查会话落盘（审查结论/挑战点/复验命令与 exit code）。占位不含任何审查结论。",
+  "author": "V4-D05 fleet implementation agent",
+  "implementation_commit": "1e626998081832ca892629a426425d5647e906ca",
+  "pre_registered_review_challenges": [
+    "R-C1（夸大门参数面）：门对 n_linked/n_denominator 取自卡自身分母（friction=响应数/暴露数、helped=n_observed/n_exposed、goal=completed/total）——请挑战该分子选取是否与卡面「关联」语义一致；user-content 豁免（SYSTEM_CLAIM_KEYS 只扫系统组写键）是否留出绕行面。",
+    "R-C2（样本身份命名空间）：presentation_sample_id 的 domain=OCCURRENCE 固定约定（limitations #5）——请挑战其与 D02 四域权威的边界及未来迁移成本。",
+    "R-C3（拒绝优先级）：回访判定把用户拒绝放在去重样本之前（事后链接 outcome 不改写拒绝）——请挑战该优先序与「回访证明相关性」目标的张力；reward_consequence=\"none\" 是否需要服务端不变量测试加强（现钉 photon_balance==0 + REJECTED 行恰一）。",
+    "R-C4（understanding 门松紧）：samples>0 且 missing=censored=0 才放行——goal_progress 卡（账本完整）恒放行而 friction 卡（无删失概念字段）missing/censored 恒 0 亦放行，请挑战 friction 卡放行是否过松。",
+    "R-C5（已删来源口径）：已删来源消费钉在软删行过滤 + 契约层 exclude_withdrawn_refs；outcome 账本级撤回传播未接（limitations #6）——请裁决是否阻塞本卡 REVIEW_READY。"
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "card": "V4-D05",
+  "title": "可读且不夸大的洞察与经验回访",
+  "generated_at": "2026-09-29T03:40:00Z",
+  "implementation_branch": "agent/v4/d05",
+  "base_sha": "90d8196ad3895c41f58fbd2ad895367202f2067f",
+  "commit_after": "1e626998081832ca892629a426425d5647e906ca",
+  "worktree": "../wtD05",
+  "pushed": false,
+  "environment": {
+    "platform": "darwin arm64 (macOS 25.6.0)",
+    "python": "3.11.15 (homebrew, via Sparkle-project/backend/.venv/bin/python)",
+    "pytest": "8.x (asyncio_mode=auto)",
+    "ruff": "0.15.8",
+    "black": "26.3.1",
+    "mypy": "1.20.2",
+    "env_discipline": ".env 零触碰：测试进程以进程级环境变量注入 SECRET_KEY（未读写任何 env 文件）；wtD05 无 .env，测试经 conftest 落 sqlite 内存库",
+    "generated_code_note": "backend/app/gen/ 为 gitignored 生成产物实体复制（测试环境需要，零提交、零手改）"
+  },
+  "model_usage": {
+    "llm_calls": 0,
+    "llm_cost_usd": 0.0,
+    "note": "纯确定性 backend 面：契约层零 IO/零 LLM；测试 sqlite 隔离不触模型。测试进程日志中的 LLMRouter init 为配置装载（27 model configs），无任何推理调用、无费用。"
+  },
+  "commands_and_exit_codes": [
+    {
+      "purpose": "契约层单元测试（43：每验收面一正一反+夸大门反例钉）",
+      "cmd": "cd backend && SECRET_KEY=<proc-env> .venv/bin/python -m pytest tests/unit/test_insight_presentation.py -q --tb=short",
+      "exit_code": 0,
+      "summary": "43 passed"
+    },
+    {
+      "purpose": "服务层呈现契约测试（9：生产入口驱动 sqlite）",
+      "cmd": "cd backend && SECRET_KEY=<proc-env> .venv/bin/python -m pytest tests/services/test_evidence_insight_presentation.py -q --tb=short",
+      "exit_code": 0,
+      "summary": "9 passed"
+    },
+    {
+      "purpose": "受影响面回归扫描（权威相邻面 + 本卡两文件）",
+      "cmd": "cd backend && SECRET_KEY=<proc-env> .venv/bin/python -m pytest tests/core tests/services/test_intervention_lifecycle_service.py tests/services/test_experience_memory_projector.py tests/services/test_experience_strategy_service.py tests/services/test_f507_readface_dataflow.py tests/api/test_insights_evidence_cards_api.py tests/unit/test_insight_presentation.py tests/services/test_evidence_insight_presentation.py tests/unit/test_experience_strategy.py -q --ignore=tests/core/test_bert_intent_classifier.py",
+      "exit_code": 0,
+      "summary": "597 passed, 1 skipped",
+      "ignore_reason": "tests/core/test_bert_intent_classifier.py 为既有环境债（transformers/AutoTokenizer 不在解释器环境，模块属性缺失），与本卡 diff 零关联（该文件及其 import 链未被本卡触碰）；主检出 main 上同文件亦无法在本环境执行。"
+    },
+    {
+      "purpose": "ruff（零新增基线）",
+      "cmd": "cd backend && python -m ruff check app/core/insight_presentation.py app/services/evidence_insight_service.py tests/unit/test_insight_presentation.py tests/services/test_evidence_insight_presentation.py",
+      "exit_code": 0,
+      "summary": "All checks passed"
+    },
+    {
+      "purpose": "black（零新增基线）",
+      "cmd": "cd backend && python -m black --check app/core/insight_presentation.py app/services/evidence_insight_service.py tests/unit/test_insight_presentation.py tests/services/test_evidence_insight_presentation.py",
+      "exit_code": 0,
+      "summary": "4 files would be reformatted = 0（--check 通过）"
+    },
+    {
+      "purpose": "mypy 棘轮（base=branch 字节级清单比对）",
+      "cmd": "mypy app --ignore-missing-imports --no-error-summary | grep 'error:' | wc -l",
+      "exit_code": 0,
+      "base_count": 59,
+      "branch_count": 59,
+      "baseline": 77,
+      "detail": "branch(1e626998) 59 = base(90d8196a) 59，diff 清单为空（零新增）；59 ≤ 77 棘轮门过。base 复验经临时 worktree 在精确分支点 90d8196a 执行（main 心跳前移使主检出不可作 base），临时 worktree 已清理。"
+    }
+  ],
+  "scope_and_denominator": {
+    "changed_files": 4,
+    "added": [
+      "backend/app/core/insight_presentation.py (615 行, insight.presentation.v1)",
+      "backend/tests/unit/test_insight_presentation.py (43 测)",
+      "backend/tests/services/test_evidence_insight_presentation.py (9 测)"
+    ],
+    "modified": [
+      "backend/app/services/evidence_insight_service.py (+293/−47, 最小增量)"
+    ],
+    "untouched_authorities": [
+      "backend/app/core/attribution.py (D02 零改动，消费 derive_attribution_sample_id)",
+      "backend/app/core/experience_memory.py (M-06 零改动，消费 scan_output_for_causal_assertions)",
+      "backend/app/core/intervention_lifecycle.py (D-05 词表/窗口/摘要零改动)",
+      "backend/app/core/experience_strategy.py (I05 零改动)",
+      "backend/app/core/retraction_recompute.py (D03 零改动)",
+      "backend/app/api/v1/insights.py (路由零改动)",
+      "mobile/ 与 gateway/ 零改动"
+    ],
+    "test_denominator": "新增 52 测（unit 43 + services 9）+ 受影响面扫描合计 597 passed / 1 skipped；既有失败基线零回归（API 契约测试 test_insights_evidence_cards_api.py 原样通过，未改断言）"
+  },
+  "artifacts_sha256": {
+    "v4/evidence/V4-D05/diff_or_evidence_only.md": "03dfbc34f8c4dda6534c34d54b42e4830494715cbbefdaac160bc3a7372cbe39",
+    "backend/app/core/insight_presentation.py": "370aaa3f8b6ba4a928660bb9e2eaa0eb4f3fd62f9a380f0fcf332588ffb4124e",
+    "backend/app/services/evidence_insight_service.py": "8ae859a54772221b57e8a2facc8cb05030edd54564801756f89d123d0bf7d2f9",
+    "backend/tests/unit/test_insight_presentation.py": "04ec4227dca56223661c13e6376b09e41e9516ea159750de780f36e142743120",
+    "backend/tests/services/test_evidence_insight_presentation.py": "7dbef1c65bbc79cd8d07b9386eae8eab22e25a67f4f95b21f37d6e3314306359"
+  },
+  "screenshots_video_and_semantics_if_ui": "本卡为数据/判定面卡，无 UI 表面（呈现词表与组合归 V4-U13 洞察报告 UI，tasks.json 中 U13 depends_on V4-D05）。结构化出口语义：每卡 next_step/understanding 附加信封 + payload 根级 revisit/presentation_schema；mobile 既有 fromJson 只读已知键，附加字段向后兼容（evidence_cards_api 既有契约测试原样通过）。"
+}

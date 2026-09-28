@@ -1732,8 +1732,8 @@
     "V4-D02",
     "V4-I05"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
+   "status": "in_progress",
+   "implementation_state": "REVIEW_READY",
    "evidence_verdict": "NOT_RUN",
    "kind": "implementation",
    "required_locks": [
@@ -1785,7 +1785,13 @@
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
    "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
-   "notes": "D02-R1 C-3 硬要求：分母对重放投递如实计数，呈现侧必须按 sample_id（attr_<sha256[:32]>）先行去重，不得把重放算进样本量"
+   "notes": "D02-R1 C-3 硬要求：分母对重放投递如实计数，呈现侧必须按 sample_id（attr_<sha256[:32]>）先行去重，不得把重放算进样本量",
+   "implementation_branch": "agent/v4/d05",
+   "implementation_base_sha": "90d8196ad3895c41f58fbd2ad895367202f2067f",
+   "evidence_dir": "v4/evidence/V4-D05",
+   "evidence_pointer": "v4/evidence/V4-D05/",
+   "evidence_summary": "D07 事实卡读面（/insights/evidence-cards → EvidenceInsightService）全部出口过呈现契约层 insight.presentation.v1（新增 backend/app/core/insight_presentation.py 纯函数，零 IO/LLM/第二真源）：夸大表述门（M-06 因果断言扫描单一权威复用+数值面因果成效×百分比/部分关联子集百分比双通道——三例两例关联写不出因果提升67%，违例卡整体扣下 meta.presentation_gate_dropped 响亮失败）；呈现侧样本量按 D02 权威 attr_<sha256[:32]> 样本身份先行去重（D02-R1 C-3 义务：重放投递如实计 raw 不进样本量，审计可见）；单主建议信封 next_step（≤1 主建议 fail-loud；user_can_reject=True/reject_penalty=none 结构冻结，拒绝路径真实存在且零奖励后果）；理解宣称门 understanding（无数据不出卡不出宣称；有 missing/censored 扣下「充分理解」资格）；已删来源不复用（软删行读面即刻回落+exclude_withdrawn_refs 精确身份不连坐）；回访 data.revisit（相关性由真实事件证明：attr_ 样本身份在册+revisit_evidence_integrity 钉死非套模板；用户拒绝一等决定最高优先；窗口/删失消费 D-05 resolve_observation_status 唯一权威；无事件不出回访）。新增 52 测（unit 43+services 9，每验收面一正一反+夸大门反例钉）+受影响面回归 597 passed/1 skipped；mypy 59=base 零新增≤77、ruff/black 零新增；零迁移/零 proto/零路由改动/零模型调用；mobile 零触碰（附加字段向后兼容，呈现文案归 U13）。source_sha=90d8196a（base）、实现 commit 1e626998；待 1 位独立审查（normal），review_receipt.json PENDING 挑战点预登记 5 条（R-C1 门参数面/R-C2 样本身份命名空间/R-C3 拒绝优先序/R-C4 understanding 松紧/R-C5 已删来源口径）",
+   "progress_note": "2026-09-29 wtD05：REVIEW_READY 交付（worktree wtD05，分支 agent/v4/d05，未 push）。已知边界如实登记 9 条（v4/evidence/V4-D05/limitations.md）：评测/统计面未跑 value 不标 PASS；「充分理解」是呈现资格门非理解度度量；回访面窗口边界（30d 窗外上次建议不进回访）；churned 参数面与 D-05 聚合兜底通道的极端一档差；样本身份 domain=OCCURRENCE 命名空间约定；outcome 账本级撤回传播未接呈现面（软删行为真实删除信号）；门无独立 off 旗标（revert 即回滚）；无 UI 截面（文案组合归 U13）；bert 测试文件环境债显式 ignore。"
   },
   {
    "id": "V4-D06",
