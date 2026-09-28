@@ -1,0 +1,10 @@
+{
+  "backend/tests/q02_surface2.py": "aef4375e0edefcef5eb35a41b52bd1638f262288581742392f6bd2034bf3a560",
+  "diff_or_evidence_only.md": "e820a087654158fead2daddb427c9390ad3f71a3480a878cc1574a7d56d55f62",
+  "limitations.md": "d20f2312065a190c2050c0ffa966474f7f098274f7af38196070cd0a4a5da807",
+  "review_receipt.json": "fce6d02cda1b48cfc0e6fbb2c620bf247ebdb4886ce52b2780da35307d8a58b2",
+  "run_manifest.json": "cc155b478dbe279af6554ef3e69e5f192c1f1cef526b18dbc4dc481f5aa9b746",
+  "scripts/devtools/q02_run_four_arm_utility_eval.py": "271ac47e5ac8f3c6330188648c3c98a8a34c3ccc1d3355f4234113eddab5c185",
+  "test_results.json": "b391e8751636aaf919320e46f217aff45ff949d5630616b861c5b8e1c520998b",
+  "v4/evidence/V4-Q02/reproduce_counterexample.py": "353bc592a77d33cbfdaaf9254608172db287684646ddf09d7475b3f57dd252be"
+}

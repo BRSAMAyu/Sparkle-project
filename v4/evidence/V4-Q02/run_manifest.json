@@ -1,0 +1,135 @@
+{
+  "task": "V4-Q02",
+  "title": "记忆效用四臂与新holdout（L1 可控服务模拟；L2 真模型层 BLOCKED_EXPLICIT）",
+  "kind": "verification_run",
+  "generated_at_utc": "2026-09-29T00:20:00+00:00",
+  "evaluated_source_sha": "a2b17f1cbf1a20e17743f64ff3de13b190a40f21",
+  "evaluated_source_note": "评测运行发生时工作区 HEAD=main 最新 a2b17f1c（I05 收口/I8/D6/F5/U4 合并态）；本卡新增文件仅为评测基础设施（零产品代码改动），被评对象=该 SHA 的产品路径",
+  "branch": "agent/v4/q02",
+  "worktree": "../wtQ02",
+  "build_id": "L1_CONTROLLABLE_SERVICE_SIMULATION@a2b17f1c+q02-eval-infra",
+  "stack": {
+    "db": "sqlite+aiosqlite in-memory（ScenarioDB/静态池；每 persona/场景隔离世界）",
+    "cache": "fakeredis（FakeRedis decode_responses）",
+    "clock": "受控模拟时钟（sim_clock 按 sim_day 回锚真实 now；clock_kind=controlled）",
+    "llm": "零调用（LLM Provider 因隔离环境无 key 初始化失败日志=预期噪声；全链确定性服务，无任何模型请求发出）",
+    "python": "backend/.venv（主检出共享解释器；PYTHONHASHSEED=0 按 A-08 可复现性契约）"
+  },
+  "config_flags_at_run": {
+    "ENABLE_MEMORY_UTILITY_GATE": "默认 False（臂 D 显式置 True，臂后恢复并断言）",
+    "EXPERIENCE_STRATEGY_MODE": "默认 shadow（臂 C/D 显式置 live，臂后恢复并断言）",
+    "NO_ACTION_CORRECTION_MODE": "off（全臂部署默认）",
+    "ENABLE_MEMORY_USE_SELFCHECK": "Surface-2 面隔离置 False（M-05 独立词法门不属本卡变量）"
+  },
+  "model_requested_vs_actual": {
+    "requested": "无（本卡 heavy_token_required=false；budget.example.json enabled=false, max_spend=null）",
+    "actual": {
+      "llm_calls": 0,
+      "llm_prompt_tokens": 0,
+      "llm_completion_tokens": 0,
+      "llm_cost": 0,
+      "note": "全部证据层为 L1（确定性服务模拟）；零真实模型调用、零 judge 调用"
+    }
+  },
+  "l2_live_model_layer": {
+    "status": "BLOCKED_EXPLICIT",
+    "reason": "四臂 live-model 层（M11 的 LIVE_MODEL_SYNTHETIC 终判面）需要批量收费模型预算授权；本卡卡面 heavy_token_required=false，v4/06_evaluation/budget.example.json 冻结 enabled=false/max_spend=null（无授权不发收费批量请求——B06 验收第1条同律）。凭据在活栈 .env 存在（B06 冻结 31 模型/30 key）但预算授权缺失≠可执行",
+    "blocking_evidence": [
+      "v4/06_evaluation/budget.example.json: enabled=false, max_spend=null（冻结注释：无授权不发收费批量请求）",
+      "tasks.json V4-Q02: heavy_token_required=false",
+      "本 run 零模型调用账目（actual.llm_calls=0）",
+      "worktree 无 backend/.env（gitignored）；本卡按只读纪律未读取任何密钥"
+    ],
+    "not_silently_skipped": true,
+    "consequence": "M11/M12 的 live 层判定=NOT_RUN(BLOCKED_EXPLICIT)；L1 层判定照常交付（价值裁决只覆盖 L1 面，不外推 live/真人）"
+  },
+  "commands_and_exit_codes": [
+    {
+      "command": "SECRET_KEY=... backend/.venv/bin/python v4/evidence/V4-Q02/reproduce_counterexample.py --write",
+      "purpose": "冻结反例复现（sha256 对表+双路径重算+当前 SHA 复跑 A-08 full/no_memory）",
+      "exit_code": 0,
+      "attempts": 1,
+      "duration_s": 9
+    },
+    {
+      "command": "SECRET_KEY=... backend/.venv/bin/python scripts/devtools/q02_run_four_arm_utility_eval.py --phase dev",
+      "purpose": "开发阶段 30 episode/臂 × 四臂 + 协议不变量",
+      "exit_code": 0,
+      "attempts": 3,
+      "duration_s": 28,
+      "attempts_note": "前两次为脚本调试（MemoryService 签名/模型导入路径），修 runner 自身非被评对象；末次为格式化后最终复跑"
+    },
+    {
+      "command": "SECRET_KEY=... backend/.venv/bin/python scripts/devtools/q02_run_four_arm_utility_eval.py --phase freeze",
+      "purpose": "冻结清单落盘（臂定义/判据/schema/零模型声明；冻结后 holdout 才生成）",
+      "exit_code": 0
+    },
+    {
+      "command": "SECRET_KEY=... backend/.venv/bin/python scripts/devtools/q02_run_four_arm_utility_eval.py --phase holdout",
+      "purpose": "holdout：2 seed × 30 profile × 4 episode × 四臂（每臂 120 episode/seed）",
+      "exit_code": 0,
+      "duration_s": 195
+    },
+    {
+      "command": "SECRET_KEY=... backend/.venv/bin/python scripts/devtools/q02_run_four_arm_utility_eval.py --phase analyze",
+      "purpose": "臂级汇总+配对 profile 簇 bootstrap 95% CI+双 seed 敏感性",
+      "exit_code": 0
+    },
+    {
+      "command": "SECRET_KEY=... backend/.venv/bin/python scripts/devtools/q02_run_four_arm_utility_eval.py --phase surface2",
+      "purpose": "选择面四方式对照（真实 ContextPackBuilder+M-03 预筛+I02 门；CTX 族 9 场景 oracle）",
+      "exit_code": 0,
+      "attempts": 1
+    },
+    {
+      "command": "cd backend && .venv/bin/python -m pytest tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py tests/unit/test_experience_strategy.py tests/services/test_experience_strategy_service.py -q",
+      "exit_code": 0,
+      "result": "107 passed"
+    },
+    {
+      "command": "cd backend && .venv/bin/python -m pytest tests/unit/test_memory_eval_service.py tests/unit/test_memory_retrieval_prefilter.py tests/unit/test_context_selection_receipt_wiring.py -q",
+      "exit_code": 0,
+      "result": "73 passed"
+    },
+    {
+      "command": "cd backend && .venv/bin/python -m mypy app --ignore-missing-imports --no-error-summary | grep 'error:' | wc -l",
+      "exit_code": 0,
+      "result": "59（基线 77，只降不升棘轮；本卡新文件均在 app 作用域外，清单零新增）"
+    },
+    {
+      "command": "cd backend && .venv/bin/python -m ruff check <本卡三个新文件>",
+      "exit_code": 0,
+      "result": "All checks passed（新文件零违规；未改动既有文件）"
+    },
+    {
+      "command": "cd backend && .venv/bin/python -m black <本卡三个新文件>",
+      "exit_code": 0,
+      "result": "reformatted 3 files（新文件格式化到位）"
+    }
+  ],
+  "scope_and_denominator": {
+    "episode_units": {
+      "dev": "15 profile × 2 episode = 30/臂（A-08 冻结 10 persona + 种子扩展 5 persona）",
+      "holdout_per_seed": "30 profile × 4 episode = 120/臂（种子独立生成；seed 20260928 主判定 + 20260929 敏感性）",
+      "total_episodes_run": "(30 + 120×2) × 4 臂 = 1080 episode 运行",
+      "denominator_rules": "未解决/缺失计入分母不排除；0 分母 N/A 不是 0%/100%；预算内未收口=失败（frozen_utility.json denominator_policy）——比较不丢失败",
+      "n_accounting": "配对差值以 profile 为簇单位（30 profile bootstrap），episode 嵌套于 profile；同一 source 多摘要不加 n：分析单元=episode/profile，无任何摘要级 n 累积；证据层 n 语义归 I05 fold_evidence_refs 单一权威（其服务面测试承载，本卡不重写）"
+    },
+    "surface2_units": "9 场景 × 3 选择方式（gate_off/gate_on/no_history），每方式独立种子库真实装配面运行"
+  },
+  "artifacts_sha256_ref": "runs/artifacts_sha256.json（全部 run 产物逐文件 sha256；runs/ 目录 gitignore——重跑可复现，冻结判据以脚本+种子为准）",
+  "frozen_sources_verified": {
+    "row": "V3-NEG-A08-POSTFIX-NOMEMORY-BEATS-FULL（v4/evidence/V4-B03/negative_results.jsonl）",
+    "sha256_all_match": true,
+    "artifacts": [
+      "v3-output/WT412-FRICTION-FIXES/a08-post-fix/EVAL_RESULTS.md",
+      "v3-output/WT412-FRICTION-FIXES/a08-post-fix/summary.json",
+      "v3-output/WT412-FRICTION-FIXES/a08-post-fix/raw/full.jsonl",
+      "v3-output/WT412-FRICTION-FIXES/a08-post-fix/raw/no_memory.jsonl",
+      "v3-output/WT412-FRICTION-FIXES/a08-post-fix/raw/no_experience.jsonl",
+      "v3-output/WT412-FRICTION-FIXES/a08-post-fix/raw/fixed_policy.jsonl"
+    ]
+  },
+  "timezone": "UTC（生成时间戳）；模拟时钟按 A-08 sim_clock 口径",
+  "failures_and_retries_disclosed": "见 commands_and_exit_codes.attempts；无静默重试、无样本替换、无阈值调整"
+}

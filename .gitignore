@@ -307,6 +307,13 @@ artifacts/e2e/
 # P03-R2：监督器告警 JSONL 防呆
 artifacts/ops/
 
+# ========================================
+# V4-Q02 四臂评测运行生成物（raw jsonl / 分析 JSON；脚本与冻结清单入库，
+# 运行产物不入库——run_manifest.json 记 artifacts_sha256，重跑可复现）
+# ========================================
+v4/evidence/V4-Q02/runs/
+
+
 # Keep dictionaries directory (MDX files for vocabulary lookup)
 # data/dictionaries/
 
