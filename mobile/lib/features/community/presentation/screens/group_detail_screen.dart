@@ -292,7 +292,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                 child: BonfireWidget(
                   level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
                   size: 100,
-                  showCrackleToggle: true,
                 ),
               ),
             ),

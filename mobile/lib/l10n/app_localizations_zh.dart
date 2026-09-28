@@ -3598,6 +3598,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get squadShareSuccess => '已分享到小队';
 
   @override
+  String get squadSharedErrorRetractAction => '撤回';
+
+  @override
+  String get squadSharedErrorRetractConfirmTitle => '撤回这张错题分享？';
+
+  @override
+  String get squadSharedErrorRetractConfirmBody =>
+      '撤回后小队成员将不再看到这张错题卡。之后你可以在错题本重新分享。';
+
+  @override
+  String get squadSharedErrorRetractSuccess => '已撤回错题分享';
+
+  @override
+  String squadSharedErrorRetractFailed(Object error) {
+    return '撤回失败：$error';
+  }
+
+  @override
+  String bonfireLevelBadge(int level) {
+    return '火堆等级 $level';
+  }
+
+  @override
   String get squadTitle => '冲刺小队';
 
   @override

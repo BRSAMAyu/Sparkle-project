@@ -147,4 +147,20 @@ class SquadRepository {
         ApiResponseParser.unwrapMap(response.data, action: 'shareError');
     return SharedErrorEntry.fromJson(payload);
   }
+
+  /// 撤回一条自己的错题分享（软删；仅分享者本人可撤——非本人/已撤后端
+  /// 统一 404 不泄露存在性）。幂等诚实：重复撤回 already_retracted=true。
+  Future<SharedErrorRetractResult> retractSharedError(
+    String groupId,
+    String shareId,
+  ) async {
+    final response = await _apiClient.delete<dynamic>(
+      ApiEndpoints.squadSharedErrorRetract(groupId, shareId),
+    );
+    final payload = ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'retractSharedError',
+    );
+    return SharedErrorRetractResult.fromJson(payload);
+  }
 }

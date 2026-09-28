@@ -125,5 +125,26 @@ class SharedErrorList {
   final List<SharedErrorEntry> items;
 }
 
+/// 撤回（软删）结果——对齐后端 `SharedErrorRetractResponse`：
+/// 幂等诚实语义，重复撤回 `alreadyRetracted=true`，不报错不造假。
+class SharedErrorRetractResult {
+  const SharedErrorRetractResult({
+    required this.shareId,
+    required this.retracted,
+    this.alreadyRetracted = false,
+  });
+
+  factory SharedErrorRetractResult.fromJson(Map<String, dynamic> json) =>
+      SharedErrorRetractResult(
+        shareId: json['share_id'] as String? ?? '',
+        retracted: json['retracted'] == true,
+        alreadyRetracted: json['already_retracted'] == true,
+      );
+
+  final String shareId;
+  final bool retracted;
+  final bool alreadyRetracted;
+}
+
 DateTime? _parseDate(Object? raw) =>
     raw is String ? DateTime.tryParse(raw)?.toUtc() : null;
