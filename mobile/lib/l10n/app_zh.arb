@@ -3276,6 +3276,7 @@
   "galaxyA11yHintUnlockNode": "点击解锁此节点",
   "galaxyA11yNavigateTo": "{arg0}",
   "galaxyA11yNavigationHint": "使用手势导航知识星图",
+  "galaxyA11yNodeConnections": "，连接：{arg0}",
   "galaxyA11yNodeImportance": "，重要度{arg0}）",
   "galaxyA11yNodeLocked": "（未解锁",
   "galaxyA11yNodeMastery": "，掌握度 {arg0} 分",

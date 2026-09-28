@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/painting.dart' show TextScaler;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
@@ -37,6 +38,40 @@ double normalizeFontScale(Object? rawValue) {
   final parsed = double.tryParse(rawValue?.toString() ?? '');
   return (parsed ?? 1.0).clamp(0.85, 1.4);
 }
+
+/// ── V4-F06 app 壳无障碍组装律（单一权威实现面）─────────────────────────
+///
+/// app.dart 的 MediaQuery 组装委托到这里，规则与测试同源（A-SPEC6 N31
+/// 叠加律 + 1.4.4）：**app 内设置是系统设置的叠加/乘数，不是替换**。
+///
+/// - [composeDisableAnimations] / [composeAccessibleNavigation]：
+///   系统 ∨ app 内（系统减弱动效/读屏用户不被 app 默认关掉）；
+/// - [composeAppTextScaler]：系统字阶夹到 [0.85, 1.35]（布局安全窗，
+///   A-SPEC6 既定口径）后 × app 内 [AccessibilitySettings.fontScale]。
+///   已注册上限注记：系统 200% + app 内最大 1.4 → 有效 1.89×（200% 全
+///   通路穿透需调夹窗，归规范 owner，不在组件族卡内擅改）。
+bool composeDisableAnimations({required bool system, required bool inApp}) =>
+    system || inApp;
+
+/// 同 [composeDisableAnimations]（accessibleNavigation 同一叠加律）。
+bool composeAccessibleNavigation({
+  required bool system,
+  required bool inApp,
+}) =>
+    system || inApp;
+
+/// 系统字阶 × app 内字号倍率的组合（settings 模块唯一权威）。
+TextScaler composeAppTextScaler({
+  required TextScaler systemScaler,
+  required double fontScale,
+}) =>
+    TextScaler.linear(
+      systemScaler
+          .clamp(minScaleFactor: 0.85, maxScaleFactor: 1.35)
+          .scale(16) /
+          16 *
+          fontScale,
+    );
 
 bool _readBool(Object? rawValue, {required bool fallback}) {
   if (rawValue is bool) return rawValue;

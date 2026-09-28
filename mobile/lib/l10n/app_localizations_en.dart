@@ -7895,6 +7895,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Navigate the knowledge map with gestures';
 
   @override
+  String galaxyA11yNodeConnections(Object arg0) {
+    return ', linked to $arg0';
+  }
+
+  @override
   String galaxyA11yNodeImportance(Object arg0) {
     return ', importance: $arg0)';
   }

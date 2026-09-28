@@ -718,9 +718,9 @@
     "V4-F02",
     "V4-F04"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "PASS_WITH_CHALLENGES",
    "kind": "implementation",
    "required_locks": [
     "a11y"
@@ -770,7 +770,11 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "c257c928 PASS_WITH_CHALLENGES（验收三条全独立证实：48dp C+/C- 判别、contrast 15 对独立重算最低 5.24、零 ticker M2 mutation 双证；C1-C5 全过——C1 组装律等价 M1 双红、C3 夹窗=A-SPEC6 N32 存量注记转 R5、C4 typing_text 迁移有令但零覆盖→FIX-565、C5 gen-l10n 实证 churn=−90 纯空行）；mutation 3/3 红；勘误 2 处少计非虚报（R1-C1b）",
+    "integration_reverify": "合并态待录（本 commit 即合并态）"
+   }
   },
   {
    "id": "V4-I01",

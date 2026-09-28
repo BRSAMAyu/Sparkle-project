@@ -121,25 +121,28 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
                   data: mediaQuery.copyWith(
                     // N31 叠加律（A-SPEC6 AX-G1，WCAG 1.4.4）：app 内设置是系统
                     // 设置的乘数/或叠加，不是替换——系统大字号用户不被 app 默认
-                    // 1.0 打回、系统减弱动效不被 app 默认关掉。
+                    // 1.0 打回、系统减弱动效不被 app 默认关掉。组装律的唯一
+                    // 权威实现与测试在 accessibility_provider（V4-F06）。
                     textScaler: accessibility.isLoaded
-                        ? TextScaler.linear(
-                            mediaQuery.textScaler
-                                    .clamp(minScaleFactor: 0.85, maxScaleFactor: 1.35)
-                                    .scale(16) /
-                                16 *
-                                accessibility.fontScale,
+                        ? composeAppTextScaler(
+                            systemScaler: mediaQuery.textScaler,
+                            fontScale: accessibility.fontScale,
                           )
                         : mediaQuery.textScaler.clamp(
                             minScaleFactor: 0.85,
                             maxScaleFactor: 1.35,
                           ),
                     disableAnimations: accessibility.isLoaded
-                        ? (mediaQuery.disableAnimations || accessibility.reduceMotion)
+                        ? composeDisableAnimations(
+                            system: mediaQuery.disableAnimations,
+                            inApp: accessibility.reduceMotion,
+                          )
                         : mediaQuery.disableAnimations,
                     accessibleNavigation: accessibility.isLoaded
-                        ? (mediaQuery.accessibleNavigation ||
-                            accessibility.screenReaderOptimized)
+                        ? composeAccessibleNavigation(
+                            system: mediaQuery.accessibleNavigation,
+                            inApp: accessibility.screenReaderOptimized,
+                          )
                         : mediaQuery.accessibleNavigation,
                   ),
                   child: PulseScope(

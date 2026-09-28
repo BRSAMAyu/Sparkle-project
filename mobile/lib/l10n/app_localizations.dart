@@ -14030,6 +14030,12 @@ abstract class AppLocalizations {
   /// **'使用手势导航知识星图'**
   String get galaxyA11yNavigationHint;
 
+  /// No description provided for @galaxyA11yNodeConnections.
+  ///
+  /// In zh, this message translates to:
+  /// **'，连接：{arg0}'**
+  String galaxyA11yNodeConnections(Object arg0);
+
   /// No description provided for @galaxyA11yNodeImportance.
   ///
   /// In zh, this message translates to:
