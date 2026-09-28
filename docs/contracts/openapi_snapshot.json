@@ -4199,6 +4199,39 @@
         "title": "CancelRunRequest",
         "type": "object"
       },
+      "CapabilityReadStateInfo": {
+        "description": "V4-D04：用户级能力投影读门出口（撤回重算期 UI/工具同门两出口）。\n\n语义 = D03 ``retraction.recompute.v1`` ``evaluate_read_gate``（同一门的\n透传，不在 schema 层重造判定）：pending 或世代落后 ⇒ ``stale=True`` 且\n``suggestions_allowed=False``。节点/列表/insight 各面消费同一门 ⇒\n「撤回证据后节点、列表、insight 同 version」。",
+        "properties": {
+          "stale": {
+            "default": false,
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "default": "fresh",
+            "title": "Status",
+            "type": "string"
+          },
+          "suggestions_allowed": {
+            "default": true,
+            "title": "Suggestions Allowed",
+            "type": "boolean"
+          },
+          "ui_marker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ui Marker"
+          }
+        },
+        "title": "CapabilityReadStateInfo",
+        "type": "object"
+      },
       "CapsuleDetailSchema": {
         "description": "胶囊详情 Schema",
         "properties": {
@@ -5232,6 +5265,19 @@
           "last_message_at"
         ],
         "title": "ChatSession",
+        "type": "object"
+      },
+      "CheckSubmitRequest": {
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "answer"
+        ],
+        "title": "CheckSubmitRequest",
         "type": "object"
       },
       "CheckinCreateSchema": {
@@ -15909,6 +15955,16 @@
       "GalaxyGraphResponse": {
         "description": "星图完整数据响应",
         "properties": {
+          "capability_read_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CapabilityReadStateInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "edges": {
             "anyOf": [
               {
@@ -21968,7 +22024,7 @@
         "type": "object"
       },
       "MasteryEvidenceInfo": {
-        "description": "G-01: evidence provenance of a mastery value.\n\nis_legacy_estimate=True 表示该 mastery 来自 legacy 时间公式且没有任何\n真实证据（quiz/task_outcome/chat_signal/material_ref）支撑——UI 可区分\n展示；真实证据融合后旗标摘除。",
+        "description": "G-01: evidence provenance of a mastery value.\n\nis_legacy_estimate=True 表示该 mastery 来自 legacy 时间公式且没有任何\n真实证据（quiz/task_outcome/chat_signal/material_ref）支撑——UI 可区分\n展示；真实证据融合后旗标摘除。\n\nV4-D04 能力通道（数据面区分「练习过 vs 独立检验通过」；词表 =\n``capability_channel.CapabilityChannel``）：\n- ``verified``：节点有独立检验级证据（quiz/task_outcome 账本行）——\n  唯一可支撑能力描述（含 BRILLIANT/MASTERED 标签）的通道；\n- ``practiced``：仅参与/弱证据/legacy 时间存量——参与足迹，标签不得\n  声称掌握（状态标签按 verified 封顶，见 ``NodeWithStatus._calculate_status``）。",
         "properties": {
           "breakdown": {
             "additionalProperties": {
@@ -21976,6 +22032,17 @@
             },
             "title": "Breakdown",
             "type": "object"
+          },
+          "capability_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capability Channel"
           },
           "evidence_count": {
             "default": 0,
@@ -41276,6 +41343,17 @@
               }
             ],
             "title": "Next Review At"
+          },
+          "projection_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection Version"
           },
           "recent_error_count": {
             "default": 0,
@@ -73192,6 +73270,169 @@
         "summary": "List Leaderboard Types",
         "tags": [
           "leaderboards"
+        ]
+      }
+    },
+    "/api/v1/learning-journey/tasks/{task_id}": {
+      "get": {
+        "description": "目标上下文旅程视图（资料/错题/练习/检验；来源可见、答案不出库）。",
+        "operationId": "get_goal_learning_journey_api_v1_learning_journey_tasks__task_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Goal Learning Journey Api V1 Learning Journey Tasks  Task Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Goal Learning Journey",
+        "tags": [
+          "learning-journey"
+        ]
+      }
+    },
+    "/api/v1/learning-journey/tasks/{task_id}/check/enter": {
+      "post": {
+        "description": "用户在旅程页显式选择「检验」（证据不支持 → 类型化暂缓，不推进）。",
+        "operationId": "enter_goal_independent_check_api_v1_learning_journey_tasks__task_id__check_enter_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Enter Goal Independent Check Api V1 Learning Journey Tasks  Task Id  Check Enter Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Enter Goal Independent Check",
+        "tags": [
+          "learning-journey"
+        ]
+      }
+    },
+    "/api/v1/learning-journey/tasks/{task_id}/check/submit": {
+      "post": {
+        "description": "检验提交判分（确定性归一比对，零模型；响应不携带答案材料）。",
+        "operationId": "submit_goal_independent_check_api_v1_learning_journey_tasks__task_id__check_submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckSubmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Submit Goal Independent Check Api V1 Learning Journey Tasks  Task Id  Check Submit Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Submit Goal Independent Check",
+        "tags": [
+          "learning-journey"
         ]
       }
     },
