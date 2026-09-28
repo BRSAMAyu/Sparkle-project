@@ -1,0 +1,160 @@
+{
+  "budget_ms": 180000,
+  "collected_at": "2026-09-28T04:13:30.676112+00:00",
+  "leg_r_runs": 8,
+  "within_budget": 7,
+  "passes": [
+    {
+      "persona": "PX1",
+      "log": "run_macos_px1.log",
+      "t_action_ready_ms": 51347,
+      "within_3min_budget": true,
+      "pure_ui_register": true,
+      "register_ui_bounce": false,
+      "consent_inline_error_shown": null,
+      "consent_inline_error_text": null,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_skip_route": "chat",
+      "loading_feedback_observed": true,
+      "action_confirmed": false,
+      "total_ms": 119356,
+      "clicks": 10
+    },
+    {
+      "persona": "PX1",
+      "log": "run_macos_px1_rerun2.log",
+      "t_action_ready_ms": null,
+      "within_3min_budget": false,
+      "pure_ui_register": false,
+      "register_ui_bounce": true,
+      "consent_inline_error_shown": false,
+      "consent_inline_error_text": null,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_skip_route": null,
+      "loading_feedback_observed": null,
+      "action_confirmed": null,
+      "total_ms": null,
+      "clicks": null
+    },
+    {
+      "persona": "PX1",
+      "log": "run_macos_px1_rerun3.log",
+      "t_action_ready_ms": 102170,
+      "within_3min_budget": true,
+      "pure_ui_register": true,
+      "register_ui_bounce": false,
+      "consent_inline_error_shown": null,
+      "consent_inline_error_text": null,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_skip_route": "chat",
+      "loading_feedback_observed": true,
+      "action_confirmed": false,
+      "total_ms": 170073,
+      "clicks": 13
+    },
+    {
+      "persona": "PX2",
+      "log": "run_macos_px2.log",
+      "t_action_ready_ms": 98767,
+      "within_3min_budget": true,
+      "pure_ui_register": true,
+      "register_ui_bounce": false,
+      "consent_inline_error_shown": null,
+      "consent_inline_error_text": null,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_skip_route": "chat",
+      "loading_feedback_observed": true,
+      "action_confirmed": false,
+      "total_ms": 167231,
+      "clicks": 13
+    },
+    {
+      "persona": "PX3",
+      "log": "run_macos_px3.log",
+      "t_action_ready_ms": 100735,
+      "within_3min_budget": true,
+      "pure_ui_register": true,
+      "register_ui_bounce": false,
+      "consent_inline_error_shown": null,
+      "consent_inline_error_text": null,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_skip_route": "chat",
+      "loading_feedback_observed": true,
+      "action_confirmed": false,
+      "total_ms": 168638,
+      "clicks": 13
+    },
+    {
+      "persona": "PX4",
+      "log": "run_macos_px4.log",
+      "t_action_ready_ms": 101730,
+      "within_3min_budget": true,
+      "pure_ui_register": true,
+      "register_ui_bounce": false,
+      "consent_inline_error_shown": null,
+      "consent_inline_error_text": null,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_skip_route": "chat",
+      "loading_feedback_observed": true,
+      "action_confirmed": false,
+      "total_ms": 169834,
+      "clicks": 13
+    },
+    {
+      "persona": "PX5",
+      "log": "run_macos_px5.log",
+      "t_action_ready_ms": 99754,
+      "within_3min_budget": true,
+      "pure_ui_register": true,
+      "register_ui_bounce": false,
+      "consent_inline_error_shown": null,
+      "consent_inline_error_text": null,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_skip_route": "chat",
+      "loading_feedback_observed": true,
+      "action_confirmed": false,
+      "total_ms": 167958,
+      "clicks": 13
+    },
+    {
+      "persona": "PX5",
+      "log": "run_macos_px5_full.log",
+      "t_action_ready_ms": 99948,
+      "within_3min_budget": true,
+      "pure_ui_register": true,
+      "register_ui_bounce": false,
+      "consent_inline_error_shown": null,
+      "consent_inline_error_text": null,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_skip_route": "chat",
+      "loading_feedback_observed": true,
+      "action_confirmed": false,
+      "total_ms": 168000,
+      "clicks": 13
+    }
+  ]
+}

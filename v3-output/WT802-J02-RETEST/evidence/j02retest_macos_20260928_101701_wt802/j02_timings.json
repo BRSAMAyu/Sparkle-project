@@ -1,0 +1,482 @@
+{
+  "driver": "integration_test/j02_fastpath_journey_test.dart",
+  "spec": "v3-output/WT784-J02PREP/runbook.md §3/§4/§8",
+  "budget_ms": 180000,
+  "collected_at": "2026-09-28T04:13:30.517383+00:00",
+  "note": "combined from per-process logs' J02_SUMMARY lines by wt792 collect_timings.py",
+  "processes": [
+    {
+      "log": "run_macos_px1.log",
+      "pass_param": "0",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T11:27:46.807339",
+      "finished_at": "2026-09-28T11:29:54.786564",
+      "failures": [
+        "pass PX1: proposal confirm did not reach the committed face"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px1_rerun.log",
+      "pass_param": "0",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T11:35:39.554560",
+      "finished_at": "2026-09-28T11:36:26.265038",
+      "failures": [
+        "journey aborted: The finder \"Found 0 widgets with type \"SparkleButton\" that are ancestors of widgets with text \"注册\": []\" (used in a call to \"tap()\") could not find any matching widgets."
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px1_rerun2.log",
+      "pass_param": "0",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T11:39:33.276755",
+      "finished_at": "2026-09-28T11:40:33.564303",
+      "failures": [
+        "pass PX1: UI register silent bounce (pure-UI mandate; inline_error=false, tiles=[])"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px1_rerun3.log",
+      "pass_param": "0",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T11:43:56.457720",
+      "finished_at": "2026-09-28T11:46:55.010458",
+      "failures": [
+        "pass PX1: proposal confirm did not reach the committed face"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px2.log",
+      "pass_param": "1",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T11:48:07.546964",
+      "finished_at": "2026-09-28T11:51:03.489727",
+      "failures": [
+        "pass PX2: proposal confirm did not reach the committed face"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px3.log",
+      "pass_param": "2",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T11:51:41.313068",
+      "finished_at": "2026-09-28T11:54:38.726769",
+      "failures": [
+        "pass PX3: proposal confirm did not reach the committed face"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px4.log",
+      "pass_param": "3",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T11:55:14.011231",
+      "finished_at": "2026-09-28T11:58:12.527160",
+      "failures": [
+        "pass PX4: proposal confirm did not reach the committed face"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px5.log",
+      "pass_param": "4",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T11:58:50.722332",
+      "finished_at": "2026-09-28T12:01:47.260683",
+      "failures": [
+        "pass PX5: proposal confirm did not reach the committed face"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px5_full.log",
+      "pass_param": "4",
+      "legs": [
+        "R",
+        "G",
+        "U"
+      ],
+      "harness_t0": "2026-09-28T12:02:30.819534",
+      "finished_at": "2026-09-28T12:10:35.680558",
+      "failures": [
+        "pass PX5: proposal confirm did not reach the committed face",
+        "leg G: guest dashboard never appeared",
+        "leg U: GuestConversionCard CTA not visible (degraded to the login register link; card-visibility claim=false)",
+        "leg U: upgrade did not flip in place (dashboard=false, login_bounce=false, source=email)",
+        "leg U: persona onboarding not reachable after upgrade"
+      ],
+      "guest_username": "guest_03a6e396305e",
+      "upgraded_username": "j02up8579134"
+    }
+  ],
+  "passes": [
+    {
+      "persona": {
+        "id": "PX1",
+        "name": "比赛 Builder",
+        "arc": "deadline",
+        "goal": "两周内做出一个可展示的算法可视化比赛作品，至少能完整跑起来给评委演示。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 2217,
+      "t_register_done_ms": 8920,
+      "t_action_ready_ms": 51347,
+      "total_ms": 119356,
+      "clicks": 10,
+      "failures": null,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "pure_ui_register": true,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 18866,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 26638,
+      "t_fastpath_submitted_ms": 32890,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "loading_feedback_observed": true,
+      "within_3min_budget": true,
+      "honest_error_face_shown": false,
+      "t_confirm_ms": 119356,
+      "action_confirmed": false,
+      "source_log": "run_macos_px1.log"
+    },
+    {
+      "persona": {
+        "id": "PX1",
+        "name": "比赛 Builder",
+        "arc": "deadline",
+        "goal": "两周内做出一个可展示的算法可视化比赛作品，至少能完整跑起来给评委演示。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 3347,
+      "t_register_done_ms": 59545,
+      "t_action_ready_ms": null,
+      "total_ms": null,
+      "clicks": null,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "register_ui_bounce": true,
+      "consent_inline_error_shown": false,
+      "consent_inline_error_text": null,
+      "tile_checked_states_post_bounce": [],
+      "register_error_markers": [
+        "隐私"
+      ],
+      "source_log": "run_macos_px1_rerun2.log"
+    },
+    {
+      "persona": {
+        "id": "PX1",
+        "name": "比赛 Builder",
+        "arc": "deadline",
+        "goal": "两周内做出一个可展示的算法可视化比赛作品，至少能完整跑起来给评委演示。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 1835,
+      "t_register_done_ms": 58442,
+      "t_action_ready_ms": 102170,
+      "total_ms": 170073,
+      "clicks": 13,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_register_landing": "elsewhere",
+      "pure_ui_register": true,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 69422,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 77273,
+      "t_fastpath_submitted_ms": 83856,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "loading_feedback_observed": true,
+      "within_3min_budget": true,
+      "honest_error_face_shown": false,
+      "t_confirm_ms": 170073,
+      "action_confirmed": false,
+      "source_log": "run_macos_px1_rerun3.log"
+    },
+    {
+      "persona": {
+        "id": "PX2",
+        "name": "科研 Builder",
+        "arc": "stalled",
+        "goal": "推进毕业论文：两周内跑完实验并写出前三节初稿。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 965,
+      "t_register_done_ms": 57378,
+      "t_action_ready_ms": 98767,
+      "total_ms": 167231,
+      "clicks": 13,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_register_landing": "elsewhere",
+      "pure_ui_register": true,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 68261,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 76071,
+      "t_fastpath_submitted_ms": 82654,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "loading_feedback_observed": true,
+      "within_3min_budget": true,
+      "honest_error_face_shown": false,
+      "t_confirm_ms": 167231,
+      "action_confirmed": false,
+      "source_log": "run_macos_px2.log"
+    },
+    {
+      "persona": {
+        "id": "PX3",
+        "name": "作品集 Builder",
+        "arc": "stalled",
+        "goal": "边学 React 边做出 3 个能放进作品集的前端项目。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 801,
+      "t_register_done_ms": 57111,
+      "t_action_ready_ms": 100735,
+      "total_ms": 168638,
+      "clicks": 13,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_register_landing": "elsewhere",
+      "pure_ui_register": true,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 67986,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 75867,
+      "t_fastpath_submitted_ms": 82700,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "loading_feedback_observed": true,
+      "within_3min_budget": true,
+      "honest_error_face_shown": false,
+      "t_confirm_ms": 168638,
+      "action_confirmed": false,
+      "source_log": "run_macos_px3.log"
+    },
+    {
+      "persona": {
+        "id": "PX4",
+        "name": "课程 Builder",
+        "arc": "deadline",
+        "goal": "7天后《计算机网络》期末考试，目前基本没学，目标是别挂科。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 758,
+      "t_register_done_ms": 56690,
+      "t_action_ready_ms": 101730,
+      "total_ms": 169834,
+      "clicks": 13,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_register_landing": "elsewhere",
+      "pure_ui_register": true,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 67417,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 75252,
+      "t_fastpath_submitted_ms": 81851,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "loading_feedback_observed": true,
+      "within_3min_budget": true,
+      "honest_error_face_shown": false,
+      "t_confirm_ms": 169834,
+      "action_confirmed": false,
+      "source_log": "run_macos_px4.log"
+    },
+    {
+      "persona": {
+        "id": "PX5",
+        "name": "Creator",
+        "arc": "completion",
+        "goal": "持续产出学习类播客，第一个月先发出 2 期。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 815,
+      "t_register_done_ms": 56671,
+      "t_action_ready_ms": 99754,
+      "total_ms": 167958,
+      "clicks": 13,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_register_landing": "elsewhere",
+      "pure_ui_register": true,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 67375,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 75212,
+      "t_fastpath_submitted_ms": 82304,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "loading_feedback_observed": true,
+      "within_3min_budget": true,
+      "honest_error_face_shown": false,
+      "t_confirm_ms": 167958,
+      "action_confirmed": false,
+      "source_log": "run_macos_px5.log"
+    },
+    {
+      "persona": {
+        "id": "PX5",
+        "name": "Creator",
+        "arc": "completion",
+        "goal": "持续产出学习类播客，第一个月先发出 2 期。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 777,
+      "t_register_done_ms": 57032,
+      "t_action_ready_ms": 99948,
+      "total_ms": 168000,
+      "clicks": 13,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "tile_checked_states_pre_submit": [
+        true,
+        true
+      ],
+      "post_register_landing": "elsewhere",
+      "pure_ui_register": true,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 67862,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 75767,
+      "t_fastpath_submitted_ms": 82342,
+      "deferred_questions_not_asked": true,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "loading_feedback_observed": true,
+      "within_3min_budget": true,
+      "honest_error_face_shown": false,
+      "t_confirm_ms": 168000,
+      "action_confirmed": false,
+      "source_log": "run_macos_px5_full.log"
+    }
+  ],
+  "proposals": {
+    "PX1": "你的第一步 | 两周内做出一个可展示的算法可视化比赛作品，至少能完整跑起来给评委演示。 | 选定一个经典算法并确定可视化核心交互点 | 打开笔记软件，写下拟选算法（如快速排序），并描述用户需点击哪一步才能看到变化。 | 产出 | 一份包含算法名称和关键交互逻辑的简短文本说明。 | 完成证据 | 产出一件可见的东西 | 轮到谁 | 你做 · 约 15 分钟 | 开始这一步 | 这个不合适 | 编辑",
+    "PX2": "你的第一步 | 推进毕业论文：两周内跑完实验并写出前三节初稿。 | 搭建实验代码骨架并验证环境 | 打开IDE，新建项目文件夹，创建main.py，写入print('Hello Experiment')并运行成功。 | 产出 | 一个可运行的空实验脚本，确认开发环境无误。 | 完成证据 | 可检查的完成证据 | 轮到谁 | 你做 · 约 10 分钟 | 开始这一步 | 这个不合适 | 编辑",
+    "PX3": "你的第一步 | 边学 React 边做出 3 个能放进作品集的前端项目。 | 初始化项目1并渲染Hello World | 终端运行npx create-react-app portfolio-project-1，打开src/App.js，将return改为<h1>Project 1</h1>并保存。 | 产出 | 本地服务器启动，浏览器显示'Project 1'页面，开发环境就绪。 | 完成证据 | 可检查的完成证据 | 轮到谁 | 一起做 · 约 10 分钟 | 开始这一步 | 这个不合适 | 编辑",
+    "PX4": "你的第一步 | 7天后《计算机网络》期末考试，目前基本没学，目标是别挂科。 | 获取历年真题并建立错题本 | 打开浏览器搜索‘计算机网络期末真题’，下载一份PDF，新建文档命名为‘真题记录’。 | 产出 | 一份可打印的历年真题试卷和用于记录知识点的空白文档。 | 完成证据 | 产出一件可见的东西 | 轮到谁 | 你做 · 约 15 分钟 | 开始这一步 | 这个不合适 | 编辑",
+    "PX5": "你的第一步 | 持续产出学习类播客，第一个月先发出 2 期。 | 确定首期播客主题并列出3个核心观点 | 打开笔记软件，写下首期想聊的具体学习主题，并列出支撑该主题的3个关键知识点或故事。 | 产出 | 一份包含明确主题和3个核心论点的简短大纲草稿。 | 完成证据 | 产出一件可见的东西 | 轮到谁 | 你做 · 约 15 分钟 | 开始这一步 | 这个不合适 | 编辑"
+  }
+}

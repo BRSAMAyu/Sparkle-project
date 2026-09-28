@@ -1,0 +1,179 @@
+{
+  "steps": [
+    {
+      "leg": "R",
+      "step": "r0_first_surface",
+      "status": "PASS",
+      "note": "F2 primary CTA no-scroll=true",
+      "ts": "2026-09-28T12:03:09.544637"
+    },
+    {
+      "leg": "R",
+      "step": "r1_register_nav",
+      "status": "PASS",
+      "note": "retry cap ×3",
+      "ts": "2026-09-28T12:03:10.838795"
+    },
+    {
+      "leg": "R",
+      "step": "r2_register_filled",
+      "status": "PASS",
+      "note": "username=j02px58191211",
+      "ts": "2026-09-28T12:03:12.980459"
+    },
+    {
+      "leg": "R",
+      "step": "r3_register_submit",
+      "status": "PASS",
+      "note": "pure-UI register ok; landing=profile-tab (541 family); dashboard_walked=true",
+      "ts": "2026-09-28T12:03:28.316963"
+    },
+    {
+      "leg": "R",
+      "step": "r3_register_submit",
+      "status": "PASS",
+      "note": "soft wall reached",
+      "ts": "2026-09-28T12:03:28.317027"
+    },
+    {
+      "leg": "R",
+      "step": "r3_softwall_resume_card",
+      "status": "PASS",
+      "note": "A2a registered-side session face",
+      "ts": "2026-09-28T12:03:28.318381"
+    },
+    {
+      "leg": "R",
+      "step": "r4_resume_persona",
+      "status": "PASS",
+      "note": "persona step 1 visible",
+      "ts": "2026-09-28T12:03:46.081888"
+    },
+    {
+      "leg": "R",
+      "step": "r5_cta_negative_gate",
+      "status": "PASS",
+      "note": "wt764: empty goal must not show the fast-path CTA",
+      "ts": "2026-09-28T12:03:46.083168"
+    },
+    {
+      "leg": "R",
+      "step": "r5_goal_typed",
+      "status": "PASS",
+      "note": "hint visible=true",
+      "ts": "2026-09-28T12:03:46.700305"
+    },
+    {
+      "leg": "R",
+      "step": "r6_deferred_semantics",
+      "status": "PASS",
+      "note": "modeling reached without persona steps 2-5",
+      "ts": "2026-09-28T12:03:55.341764"
+    },
+    {
+      "leg": "R",
+      "step": "r7_modeling_skip",
+      "status": "PASS",
+      "note": "landing=chat (code: chat when post-onboarding message present; runbook table said home — recorded as measured)",
+      "ts": "2026-09-28T12:03:58.470868"
+    },
+    {
+      "leg": "R",
+      "step": "r7_first_action_entry",
+      "status": "PASS",
+      "note": "FirstActionCard generate entry visible",
+      "ts": "2026-09-28T12:04:06.376904"
+    },
+    {
+      "leg": "R",
+      "step": "r8_loading_feedback",
+      "status": "PASS",
+      "note": "F5: progress indicator inside FirstActionCard during generation",
+      "ts": "2026-09-28T12:04:08.298569"
+    },
+    {
+      "leg": "R",
+      "step": "r8_action_generate",
+      "status": "PASS",
+      "note": "t_action_ready_ms=99948 budget=180000ms within=true",
+      "ts": "2026-09-28T12:04:10.881282"
+    },
+    {
+      "leg": "R",
+      "step": "r9_action_confirm",
+      "status": "FAIL",
+      "note": "wait timeout after 60s",
+      "ts": "2026-09-28T12:05:18.933406"
+    },
+    {
+      "leg": "R",
+      "step": "r9_action_confirm",
+      "status": "FAIL",
+      "note": "useful action endpoint",
+      "ts": "2026-09-28T12:05:18.933712"
+    },
+    {
+      "leg": "G",
+      "step": "g0_reach_login",
+      "status": "PASS",
+      "note": "",
+      "ts": "2026-09-28T12:05:56.612883"
+    },
+    {
+      "leg": "G",
+      "step": "g1_guest_home",
+      "status": "FAIL",
+      "note": "wait timeout after 60s",
+      "ts": "2026-09-28T12:06:58.538257"
+    },
+    {
+      "leg": "G",
+      "step": "g1_guest_session_stable",
+      "status": "PASS",
+      "note": "A2b: guest lands and STAYS on the dashboard (no persona loop)",
+      "ts": "2026-09-28T12:07:01.901793"
+    },
+    {
+      "leg": "G",
+      "step": "g2_seed_scan",
+      "status": "PASS",
+      "note": "seeded_goal_words=true declared_example_marker=false (missing marker is measurement data per J-01 O1)",
+      "ts": "2026-09-28T12:07:11.630158"
+    },
+    {
+      "leg": "G",
+      "step": "g3_demo_chat",
+      "status": "PASS",
+      "note": "sent=true reply_seen=false (demo round; memory isolation is proven by the orchestrator G4 probes)",
+      "ts": "2026-09-28T12:08:50.298066"
+    },
+    {
+      "leg": "U",
+      "step": "u1_upgrade_form",
+      "status": "PASS",
+      "note": "conversion_card=false (A2c upgrade face)",
+      "ts": "2026-09-28T12:09:38.650473"
+    },
+    {
+      "leg": "U",
+      "step": "u2_upgrade_submit",
+      "status": "FAIL",
+      "note": "in_place=false (dashboard=false login_bounce=false registration_source=email consent_inline=null tiles=[]) — V3-FIX-205 family",
+      "ts": "2026-09-28T12:09:59.932925"
+    },
+    {
+      "leg": "U",
+      "step": "u3_persona_reachable",
+      "status": "FAIL",
+      "note": "resume_card=false persona_screen=false (router_smoke upgrade face)",
+      "ts": "2026-09-28T12:10:27.946514"
+    }
+  ],
+  "failures": [
+    "pass PX5: proposal confirm did not reach the committed face",
+    "leg G: guest dashboard never appeared",
+    "leg U: GuestConversionCard CTA not visible (degraded to the login register link; card-visibility claim=false)",
+    "leg U: upgrade did not flip in place (dashboard=false, login_bounce=false, source=email)",
+    "leg U: persona onboarding not reachable after upgrade"
+  ]
+}

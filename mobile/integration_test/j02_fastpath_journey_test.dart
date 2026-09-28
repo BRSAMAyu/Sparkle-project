@@ -71,14 +71,17 @@ import 'package:sparkle/main.dart' as app;
 ///    in-place flip (same session, no logout-to-login, registrationSource
 ///    leaves 'guest') → persona onboarding still reachable (resume card).
 ///
-/// HONESTY RULES (inherited from J-01 + runbook §6):
+/// HONESTY RULES (inherited from J-01 + runbook §6; wt802 retest amendments):
 ///  * All timings are real wall-clock while the live app renders real frames
 ///    (fullyLive frame policy). No fake clocks, no invented numbers.
 ///  * Product behaviours (post-skip landing route, missing example markers,
 ///    register tap bounce) are recorded as findings, not papered over;
-///    harness breakage is a failure. O3-family register bounce triggers the
-///    disclosed API-register + UI-login fallback which is EXCLUDED from the
-///    ≤3min claim (runbook §6-2, `register_ui_bounce=true`).
+///    harness breakage is a failure.
+///  * wt802 (FIX-539/540 retest): the O3-family API-register + UI-login
+///    fallback is RETIRED — register goes through the REAL UI path only, now
+///    that FIX-539 gives the consent guard a scroll-to-cause + persistent
+///    inline error the driver can assert on (`consentInlineError`). A register
+///    bounce in this run is honest boundary evidence, not a fallback trigger.
 ///  * Any step timeout → screenshot `9x-<step>-timeout.png` + TEXTDUMP; no
 ///    run deletion, no silent retries that erase evidence.
 void main() {
@@ -122,17 +125,52 @@ void main() {
         } catch (_) {
           root = RendererBinding.instance.renderViews.first;
         }
+        // V3-FIX-543 (wt802 retest): the old probe took the FIRST
+        // RepaintBoundary in DFS order = the stack-BOTTOM route (login), so
+        // every register-time screenshot actually showed the login screen
+        // (harness evidence distortion — WT800-F539 notes 附带发现①). Anchor
+        // instead to the TOPMOST route boundary: Navigator/Overlay stack
+        // children are visited bottom→top, so among qualifying boundaries the
+        // LAST one in DFS order belongs to the current (topmost) route.
+        // Qualifying = FULL-VIEWPORT *and* its subtree renders visible text.
+        // The text clause is load-bearing: some pages (e.g. persona step-1)
+        // wrap their backdrop in its own full-viewport RepaintBoundary —
+        // geometry alone then captures a background-only image (observed on
+        // the px1 run of this retest: 05/06 identical background-only PNGs).
+        // Known fidelity limit: modal dialogs/bottom sheets smaller than the
+        // viewport are not "full-viewport" — J-02 canonical shots 01-16 are
+        // all plain full screens (acceptable, disclosed).
         RenderRepaintBoundary? boundary;
+        RenderRepaintBoundary? firstAny;
+        final view = testTester.view;
+        final screen = view.physicalSize / view.devicePixelRatio;
+        bool subtreeHasText(RenderObject ro) {
+          if (ro is RenderParagraph || ro is RenderEditable) return true;
+          var found = false;
+          ro.visitChildren((child) {
+            if (!found && subtreeHasText(child)) found = true;
+          });
+          return found;
+        }
+
         void walk(RenderObject ro) {
-          if (boundary != null) return;
           if (ro is RenderRepaintBoundary) {
-            boundary = ro;
-            return;
+            firstAny ??= ro;
+            if (!ro.debugNeedsPaint &&
+                ro.size.width >= screen.width * 0.9 &&
+                ro.size.height >= screen.height * 0.9 &&
+                subtreeHasText(ro)) {
+              boundary = ro; // keep walking — later qualifying wins (topmost)
+            }
           }
           ro.visitChildren(walk);
         }
 
         walk(root);
+        // Degraded fallback (disclosed in the artifact log): no full-viewport
+        // boundary — fall back to the first boundary rather than losing the
+        // screenshot entirely.
+        boundary ??= firstAny;
         if (boundary == null) throw StateError('no RepaintBoundary in tree');
         final image = await boundary!.toImage(pixelRatio: 2.0);
         final data = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -592,6 +630,27 @@ Future<void> legRRegistered({
   // bears the same text and burned J-01 for 7 runs; O3 residual risk).
   // Expected landing: /home SOFT WALL (Dashboard + OnboardingResumeCard),
   // NOT the old persona step-0 hard redirect (router_smoke, wt282). ----
+  // Pre-submit consent probe (wt802): with the r2 ensureVisible hardening the
+  // two tiles MUST both be checked before submit — recording the checkbox
+  // states pins attribution if a bounce still happens (all checked + bounce =
+  // beyond FIX-539; unchecked = harness visibility boundary).
+  bool? tileChecked(WidgetTester tester, Finder tiles, int i) {
+    try {
+      final cb = find.descendant(of: tiles.at(i), matching: find.byType(Checkbox));
+      if (cb.evaluate().isEmpty) return null;
+      return tester.widget<Checkbox>(cb.first).value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Reuse the R2 `tiles` finder (same function scope) — checkbox states are
+  // read straight from each CheckboxListTile's inner Checkbox widget.
+  final tileStatesPreSubmit = <bool?>[
+    for (var t = 0; t < tiles.evaluate().length; t++) tileChecked(tester, tiles, t),
+  ];
+  passData['tile_checked_states_pre_submit'] = tileStatesPreSubmit;
+
   var registeredToDashboard = false;
   final regBtn = sparkleButtonFinder('注册');
   if (regBtn.evaluate().isNotEmpty) {
@@ -600,6 +659,22 @@ Future<void> legRRegistered({
       await tester.pump(const Duration(milliseconds: 400));
     } catch (_) {}
     for (var attempt = 0; attempt < 2 && !registeredToDashboard; attempt++) {
+      // wt802: finders are lazy — between attempts the submit button can
+      // vanish because the FIRST tap already navigated (race seen live on the
+      // px1_rerun: attempt-2 tap on a gone button aborted the journey). A
+      // vanished button means navigation is in flight: wait out the landing
+      // instead of tapping a ghost. A consent bounce keeps the button present,
+      // so this hides nothing.
+      if (regBtn.evaluate().isEmpty) {
+        await waitUntil(
+          tester,
+          () => find.byType(DashboardScreen).evaluate().isNotEmpty,
+          timeout: const Duration(seconds: 12),
+        );
+        registeredToDashboard =
+            find.byType(DashboardScreen).evaluate().isNotEmpty;
+        break;
+      }
       clicks[0]++;
       await tester.tap(regBtn, warnIfMissed: false);
       await waitUntil(
@@ -628,32 +703,96 @@ Future<void> legRRegistered({
   markFn(passId, 'R', 't_registered', passT0);
 
   if (!registeredToDashboard) {
-    // O3 family (runbook §6-2): silent register bounce → honest evidence +
-    // disclosed fallback (real register API + UI login), EXCLUDED from the
-    // ≤3min claim and recorded as register_ui_bounce=true.
+    // wt802: distinguish "submit blocked (consent bounce)" from "submit
+    // SUCCEEDED but landed elsewhere" — the profile-tab landing (V3-FIX-541
+    // family; px1_rerun2 measured it live: registered user session on 我的,
+    // TEXTDUMP all-profile) left the register form and must NOT be recorded
+    // as a bounce. Walk the real-user 驾驶舱 tab (same recovery as Leg G),
+    // record the divergence as a finding, and continue to the soft wall.
+    final offRegister = find.text('确认密码').evaluate().isEmpty &&
+        find.byType(LoginScreen).evaluate().isEmpty &&
+        find.byType(RegisterScreen).evaluate().isEmpty;
+    if (offRegister) {
+      passData['post_register_landing'] = 'elsewhere';
+      passData['pure_ui_register'] = true;
+      // ignore: avoid_print
+      print(
+          'J02_FINDING pass=$passId UI register submitted and session is up, '
+          'but landing is NOT the dashboard (V3-FIX-541 family divergence, '
+          'recorded as measured) — walking the 驾驶舱 tab like a real user');
+      final homeTab = textAny(['驾驶舱', 'Home']);
+      if (homeTab != null) {
+        clicks[0]++;
+        await tester.tap(homeTab, warnIfMissed: false);
+        await waitUntil(
+          tester,
+          () => find.byType(DashboardScreen).evaluate().isNotEmpty,
+          timeout: const Duration(seconds: 20),
+        );
+      }
+      registeredToDashboard =
+          find.byType(DashboardScreen).evaluate().isNotEmpty;
+      recordStep(
+        'R',
+        'r3_register_submit',
+        registeredToDashboard,
+        'pure-UI register ok; landing=profile-tab (541 family); '
+            'dashboard_walked=$registeredToDashboard',
+      );
+    }
+  }
+  if (!registeredToDashboard) {
+    // wt802 retest semantics: the O3-family API-register fallback is RETIRED
+    // for this run (mandate: pure-UI register path). The FIX-539 fix leaves a
+    // PERSISTENT inline consent error (ValueKey consentInlineError) when the
+    // consent guard blocks — probe it (plus the toast-era error words) for
+    // direct attribution. A bounce here is honest evidence of the fix's
+    // boundary (widget-plane proof held; LiveTestWidgetsFlutterBinding
+    // end-to-end unproven — WT800-F539 notes §6).
+    final consentInline = find.byKey(const ValueKey('consentInlineError'));
+    String? consentInlineText;
+    if (consentInline.evaluate().isNotEmpty) {
+      final w = tester.widget<Text>(consentInline.first);
+      consentInlineText = w.data ?? w.textSpan?.toPlainText();
+    }
+    final tileStatesPostBounce = <bool?>[
+      for (var t = 0; t < tiles.evaluate().length; t++)
+        tileChecked(tester, tiles, t),
+    ];
     final errTexts = <String>[];
-    for (final f in ['注册失败', '失败', '已存在', '无效', '至少', '不匹配', '请输入', '请先']) {
+    for (final f in ['注册失败', '失败', '已存在', '无效', '至少', '不匹配', '请输入', '请先', '条款', '隐私']) {
       if (find.textContaining(f).evaluate().isNotEmpty) errTexts.add(f);
     }
     passData['register_ui_bounce'] = true;
+    passData['consent_inline_error_shown'] =
+        consentInline.evaluate().isNotEmpty;
+    passData['consent_inline_error_text'] = consentInlineText;
+    passData['tile_checked_states_post_bounce'] = tileStatesPostBounce;
     passData['register_error_markers'] = errTexts;
     // ignore: avoid_print
     print(
         'J02_FINDING pass=$passId UI register did not reach dashboard '
-        '(errors=${jsonEncode(errTexts)}) — O3 family, fallback engaged');
+        '(inline_error=${consentInlineText != null} '
+        'inline_text=$consentInlineText tiles=$tileStatesPostBounce '
+        'pre_submit_tiles=$tileStatesPreSubmit errors=${jsonEncode(errTexts)}) '
+        '— fallback RETIRED (wt802 pure-UI mandate), boundary evidence kept');
     await shot('$passId/04b-register-bounce.png');
-    failures.add('pass $passId: UI register silent bounce (O3 family)');
-    final ok = await fallbackApiRegisterAndUiLogin(tester, username, passData);
-    recordStep('R', 'r3_register_submit', false, 'bounce; fallback ok=$ok');
-    if (!ok) {
-      passData['t_route_done_fallback'] =
-          DateTime.now().difference(passT0).inMilliseconds;
-      failures.add('pass $passId: fallback register/login failed');
-      await shot('$passId/9x-r3-fallback-failed.png');
-      return;
-    }
+    failures.add(
+      'pass $passId: UI register silent bounce (pure-UI mandate; '
+      'inline_error=${consentInlineText != null}, '
+      'tiles=$tileStatesPostBounce)',
+    );
+    recordStep(
+      'R',
+      'r3_register_submit',
+      false,
+      'bounce; fallback retired (wt802); inline_error=$consentInlineText; '
+          'tiles=$tileStatesPostBounce',
+    );
+    return;
   } else {
     recordStep('R', 'r3_register_submit', true, 'soft wall reached');
+    passData['pure_ui_register'] = true;
   }
 
   // Soft-wall assertions: dashboard + resume card (title + CTA may require a
@@ -1317,8 +1456,31 @@ Future<String?> legUUpgrade({
     recordStep(leg, 'u2_upgrade_submit', false, 'field count mismatch');
     return null;
   }
+  // wt802: same FIX-539 hardening as the Leg-R r2 loop — ensure FULL tile
+  // visibility before each tap (desktop 800x600 fold-line) + pre/post-submit
+  // checkbox states and the persistent consentInlineError probe for direct
+  // attribution (fallback is retired for the upgrade leg too).
   final tiles = find.byType(CheckboxListTile);
+  bool? upgradeTileChecked(int i) {
+    try {
+      final cb = find.descendant(of: tiles.at(i), matching: find.byType(Checkbox));
+      if (cb.evaluate().isEmpty) return null;
+      return tester.widget<Checkbox>(cb.first).value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  final tileStatesPreSubmit = <bool?>[
+    for (var t = 0; t < tiles.evaluate().length; t++) upgradeTileChecked(t),
+  ];
+  // ignore: avoid_print
+  print('J02_DEBUG leg U pre-submit tile states: $tileStatesPreSubmit');
   for (var t = 0; t < tiles.evaluate().length; t++) {
+    try {
+      await tester.ensureVisible(tiles.at(t));
+      await tester.pump(const Duration(milliseconds: 400));
+    } catch (_) {}
     clicks[0]++;
     await tester.tap(tiles.at(t), warnIfMissed: false);
     await tester.pump(const Duration(milliseconds: 250));
@@ -1336,6 +1498,19 @@ Future<String?> legUUpgrade({
   var sawLoginDuringUpgrade = false;
   var backOnDashboard = false;
   for (var attempt = 0; attempt < 2 && !backOnDashboard; attempt++) {
+    // wt802: same stale-finder guard as the Leg-R loop — a vanished submit
+    // button means the first tap already navigated; wait out the landing.
+    if (regBtn.evaluate().isEmpty) {
+      await waitUntil(
+        tester,
+        () =>
+            find.byType(DashboardScreen).evaluate().isNotEmpty ||
+            find.byType(LoginScreen).evaluate().isNotEmpty,
+        timeout: const Duration(seconds: 15),
+      );
+      backOnDashboard = find.byType(DashboardScreen).evaluate().isNotEmpty;
+      break;
+    }
     clicks[0]++;
     await tester.tap(regBtn, warnIfMissed: false);
     await waitUntil(
@@ -1362,6 +1537,23 @@ Future<String?> legUUpgrade({
     registrationSource = user?.registrationSource ?? '';
     upgradedUsername = user?.username;
   } catch (_) {}
+  // wt802 attribution probe: persistent consent inline error + post-bounce
+  // tile states (FIX-539 face), so an upgrade submit block is attributable.
+  final consentInlineU = find.byKey(const ValueKey('consentInlineError'));
+  String? consentInlineUText;
+  if (consentInlineU.evaluate().isNotEmpty) {
+    final w = tester.widget<Text>(consentInlineU.first);
+    consentInlineUText = w.data ?? w.textSpan?.toPlainText();
+  }
+  final tileStatesPostBounce = <bool?>[
+    for (var t = 0; t < tiles.evaluate().length; t++) upgradeTileChecked(t),
+  ];
+  if (consentInlineUText != null) {
+    // ignore: avoid_print
+    print(
+        'J02_FINDING leg U upgrade submit blocked by consent guard '
+        '(inline_error=$consentInlineUText tiles=$tileStatesPostBounce)');
+  }
   final flippedInPlace = backOnDashboard &&
       !sawLoginDuringUpgrade &&
       registrationSource != 'guest';
@@ -1371,7 +1563,9 @@ Future<String?> legUUpgrade({
     flippedInPlace,
     'in_place=$flippedInPlace (dashboard=$backOnDashboard '
         'login_bounce=$sawLoginDuringUpgrade '
-        'registration_source=$registrationSource) — V3-FIX-205 family',
+        'registration_source=$registrationSource '
+        'consent_inline=$consentInlineUText tiles=$tileStatesPostBounce) '
+        '— V3-FIX-205 family',
   );
   if (!flippedInPlace) {
     failures.add(
@@ -1553,17 +1747,6 @@ Finder? textAny(List<String> texts) {
     if (f.evaluate().isNotEmpty) return f.first;
   }
   return null;
-}
-
-/// Matches Text by data OR rich-text span (SparkleButton label paths).
-Finder? textAnySmart(List<String> texts, {bool last = false}) {
-  final smart = find.byWidgetPredicate((w) {
-    if (w is! Text) return false;
-    final plain = w.data ?? w.textSpan?.toPlainText() ?? '';
-    return texts.any(plain.contains);
-  });
-  if (smart.evaluate().isEmpty) return null;
-  return last ? smart.last : smart.first;
 }
 
 /// SparkleButton-scoped finder for a label — dodges the AppBar-title trap
@@ -1749,111 +1932,6 @@ Future<bool> ensureAtLogin(
     }
   }
   return loggedOut && find.byType(LoginScreen).evaluate().isNotEmpty;
-}
-
-/// O3-family fallback (runbook §6-2): ensure the account exists via the REAL
-/// register API (fresh backend account), then walk back to login and log in
-/// through the UI; provider login as the last disclosed instrumentation. The
-/// fallback segment is EXCLUDED from the ≤3min claim.
-Future<bool> fallbackApiRegisterAndUiLogin(
-  WidgetTester tester,
-  String username,
-  Map<String, dynamic> passData,
-) async {
-  await tester.runAsync(() async {
-    try {
-      final client = HttpClient();
-      final req = await client.postUrl(
-        Uri.parse('http://localhost:8080/api/v1/auth/register'),
-      );
-      req.headers.contentType = ContentType.json;
-      req.write(
-        jsonEncode({
-          'username': username,
-          'email': '$username@example.com',
-          'password': j02Password,
-          'accepted_tos': true,
-          'accepted_privacy': true,
-          'agreed_locale': 'zh-CN',
-        }),
-      );
-      final res = await req.close();
-      final body = await res.transform(utf8.decoder).join();
-      passData['api_register_status'] = res.statusCode;
-      // ignore: avoid_print
-      print(
-          'J02_DEBUG api register status=${res.statusCode} '
-          'body=${body.length > 160 ? body.substring(0, 160) : body}');
-      client.close();
-    } catch (e) {
-      passData['api_register_error'] = e.toString();
-    }
-  });
-  // Walk the REAL user path back to login via the 已有账号？ ghost button.
-  if (find.text('确认密码').evaluate().isNotEmpty) {
-    final backBtn = sparkleButtonFinder('已有账号？');
-    if (backBtn.evaluate().isNotEmpty) {
-      try {
-        await tester.ensureVisible(backBtn);
-        await tester.pump(const Duration(milliseconds: 400));
-      } catch (_) {}
-      clicks[0]++;
-      await tester.tap(backBtn, warnIfMissed: false);
-      await waitUntil(
-        tester,
-        () =>
-            find.text('确认密码').evaluate().isEmpty &&
-            find.byType(TextFormField).evaluate().isNotEmpty,
-        timeout: const Duration(seconds: 10),
-      );
-    }
-  }
-  // UI login with the fresh account.
-  final loginFields = find.byType(TextFormField);
-  if (loginFields.evaluate().length >= 2) {
-    await tester.enterText(loginFields.at(0), username);
-    await tester.enterText(loginFields.at(1), j02Password);
-    await tester.pump(const Duration(milliseconds: 300));
-    var loginBtn = sparkleButtonFinder('登录');
-    if (loginBtn.evaluate().isEmpty) {
-      final loginText = textAnySmart(['登录'], last: true);
-      if (loginText == null) return false;
-      final ancestor = find
-          .ancestor(of: loginText, matching: find.byType(SparkleButton))
-          .first;
-      loginBtn = ancestor.evaluate().isNotEmpty ? ancestor : loginText;
-    }
-    try {
-      await tester.ensureVisible(loginBtn);
-      await tester.pump(const Duration(milliseconds: 400));
-    } catch (_) {}
-    clicks[0]++;
-    await tester.tap(loginBtn, warnIfMissed: false);
-  }
-  var logged = await waitUntil(
-    tester,
-    () => find.byType(DashboardScreen).evaluate().isNotEmpty,
-  );
-  if (!logged) {
-    // Last resort: provider login (INSTRUMENTED, disclosed in the report).
-    // ignore: avoid_print
-    print(
-        'J02_FINDING UI login tap also ineffective — provider login '
-        '(instrumented)');
-    try {
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(MaterialApp).first),
-      );
-      await container.read(authProvider.notifier).login(username, j02Password);
-      logged = await waitUntil(
-        tester,
-        () => find.byType(DashboardScreen).evaluate().isNotEmpty,
-      );
-    } catch (e) {
-      passData['provider_login_error'] = e.toString();
-    }
-  }
-  return logged;
 }
 
 /// WARM reset between in-process persona passes (J-01 semantics): product /

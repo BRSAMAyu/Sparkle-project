@@ -1,0 +1,2 @@
+{"run_id":"j02retest_macos_20260928_101701_wt802","lane":"macos","worker":"wt802","card":"J-02 补测批 (FIX-539/540/543 retest)","base_sha":"639aaa95","started_at":"2026-09-28T02:17:01Z"}
+{"run_id":"j02retest_macos_20260928_101701_wt802","finished_at":"2026-09-28T04:17:02Z","final_head":"4260f645","official_runs":6,"within_budget":6,"proposals_captured":5,"note":"final; see REPORT.md"}
