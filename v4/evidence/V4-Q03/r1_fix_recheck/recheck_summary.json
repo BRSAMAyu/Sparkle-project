@@ -1,0 +1,52 @@
+{
+  "task": "V4-Q03",
+  "kind": "rectification_recheck_summary",
+  "generated_at_utc": "2026-09-29T05:40:00+00:00",
+  "review_condition": "review_r1.md 终门条件 1（APPROVE_WITH_CONDITIONS）：F1 须在 U10 责任面修复，修复后复验本卡 S1④b（defect_F1_enter_stuck_from_example 检查项翻绿）",
+  "remediated_object": "agent/v4/q03（一审 receipt 94909b7c 之上续作；验收五件套原文与 review_r1.md 未动）",
+  "prescription_adjudication": {
+    "chosen": "A（request_independent_check 中间推进返回 None hold = 推进合法）",
+    "rejected": "B（enter_check 持久化门改判 decision.reason.startswith(\"OK.\")）",
+    "rationale": [
+      "缺陷本体是标注错误：next_scaffold_step 对 example→attempt 给出 reason=OK.advance_user_chose_with_evidence（证据明明支持），request_independent_check 却把它改标 HOLD.evidence_not_supported——封闭 HOLD 词表被注入假语义。方案 A 在标注源头修，方案 B 在消费侧绕过标注、让假 HOLD 继续出口到客户端载荷（同一响应内 persisted=true 与 hold_reason=HOLD.evidence_not_supported 并存，自相矛盾）",
+      "方案 A 保持服务层持久化门 `hold_reason is None` 的单一书面写条件（learning_journey_service 模块 docstring「写路径只有一个」继续为真）；方案 B 需在服务层复制 reason 前缀字符串判定，制造第二真源",
+      "MASTER_DESIGN §5/§6 语义：人必须完成理解/尝试/独立检验，示例→自己做→检查是设计旅程——中间推进应可达且诚实标注；「是否放行出题」与「脚手架是否暂缓」分立后，出题仍被服务层 stage 门（decision.stage == independent_check + 题面在）拦住，submit 判分门（未到段 HOLD.scaffold_not_at_check）与 I07 红化红线零放松"
+    ]
+  },
+  "code_changes": [
+    "backend/app/core/learning_journey.py（request_independent_check：OK.* 裁决一律 hold_reason=None；HOLD.evidence_not_supported 只留给真实不支持的裁决）",
+    "backend/app/services/learning_journey_service.py（CheckEnterResult docstring 三结局口径；持久化门/check_available 逻辑零改动）"
+  ],
+  "s1_4b_recheck": {
+    "probe": "v4/evidence/V4-Q03/probes/test_f1_recheck_s1_4b.py（复用验收剧本同一场景设定 _make_mastery_task：example 默认起点 + 真实 ErrorRecord review_count=2 证据 + 服务端 guide_json 判分权威；真实 REST 面）",
+    "raw_records": "v4/evidence/V4-Q03/r1_fix_recheck/recheck_records.jsonl（独立整改记录，不追加验收 raw_records）",
+    "result": "PASS — enter#1 合法中间推进落库（scaffold_persisted=true，stage=attempt，check_available=false，无误报 HOLD，不出题）→ enter#2 放行出题（independent_check，check_available=true）→ DB 权威位两跳写回 independent_check → 到段判分 correct=true 且响应零答案材料",
+    "counter_case_no_evidence": "PASS — example + 无证据仍 HOLD.evidence_not_supported、不推进不落库（整改未放宽证据门）",
+    "single_hop_regression_guard": "PASS — attempt 起点带外写后单跳 enter 即 check_available=true + persisted（既有行为不变，与 S1④c 同构）",
+    "submit_gate": "PASS — 中间推进后（attempt）提交仍 HOLD.scaffold_not_at_check 拒判分；I07 判分权威 answer 原地保留服务端",
+    "original_defect_probe_after_fix": "原剧本探针 S1（test_q03_acceptance.py::test_s1_example_isolation_and_hint_fading）在修复后翻红于缺陷存在性断言本体：line 318 `assert ok.scaffold_persisted is False, \"F1：合法推进未持久化（缺陷本体）\"` → AssertionError: assert True is False（exit 1）——缺陷不再复现的直接证据；其 ①②③④a（隔离/投影/渐隐/无证据门）修复后仍全过。复跑追加的 raw_records 行已按一审同法 git checkout 还原，S1 raw_records sha256=1b21c464497663ed95856daa515bd7d040daa454920e2f36303103d9e99ebbdb 与 run_manifest 封存值一致"
+  },
+  "mutation_self_proof": {
+    "method": "git stash 还原 request_independent_check 修法（回到恒 HOLD 旧实现）→ 复跑新增用例 → 复原",
+    "observed": "3 failed（test_request_check_from_example_intermediate_advance_is_not_a_hold / test_request_check_example_reaches_check_in_two_legal_hops / test_enter_check_from_example_reaches_check_in_two_persisted_hops）、1 passed（无证据反例——HOLD 路径本就不该受修法影响）；stash pop 复原后全绿"
+  },
+  "test_counts": {
+    "before": {"u10_core": 19, "u10_services": 11, "u10_api": 4, "u10_total": 34, "i07_hybrid_policy": 31, "baseline_10_files": 174},
+    "after": {"u10_core": 22, "u10_services": 13, "u10_api": 4, "u10_total": 39, "i07_hybrid_policy": 31, "baseline_10_files": 176},
+    "delta": "+3 core（中间推进非 HOLD 正例 / example 无证据 HOLD 反例保持 / 两跳纯函数可达）+2 services（两跳全链+持久化写回+判分门不放宽 / example 无证据反例保持）；基线 10 文件命令不含 tests/core/test_learning_journey.py 故 174→176",
+    "command_form": "见 run_manifest.commands_and_exit_codes 勘误后口径（cwd=wtQ03/backend，共享 .venv 绝对路径解释器，SECRET_KEY=… ENVIRONMENT=test）"
+  },
+  "regression_surface": [
+    "tests/unit/test_hybrid_policy.py（I07 权威 31）— 全绿，转移表零改动",
+    "tests/core/test_learning_journey.py + tests/services/test_learning_journey_service.py + tests/api/test_learning_journey_api.py（U10 责任面）— 全绿；单跳 attempt→check 既有用例不改一字通过",
+    "基线 10 文件（U10/U04/I07/D04 + 结算面，manifest 勘误口径）— 176 passed",
+    "scripts/check_openapi_contract.py — PASS（行为变化未触 API 契约面，快照零漂移；无新路由）",
+    "ruff：4 个改动/新增 backend 文件 All checks passed；black --line-length 120：4 文件 clean（零新增口径）"
+  ],
+  "out_of_scope_observation": "移动端 learning_journey_provider.dart:99 对 available=false 且无 hold_reason 的响应有客户端兜底文案 'HOLD.evidence_not_supported'——中间推进一跳后旅程页若立即弹检验面板会短暂显示该兜底文案。后端契约已不再说谎（无 hold_reason 键=非暂缓，check_available=false + scaffold.reason=OK.advance_* 为权威路由面）；该展示兜底属 U10 移动面后续项，不在本次后端责任面整改内扩面，登记供 owner 参考。",
+  "honesty_notes": [
+    "验收五件套（diff_or_evidence_only.md / limitations.md / run_manifest.json 主体 / test_results.json / probe_run_transcript.txt）与 review_r1.md 原文未改写；run_manifest.json 仅按一审授权做 N-r1-1/N-r1-2 两处记录面勘误（勘误说明内嵌于文件 r1_errata 节，历史结果数字不改）",
+    "原剧本探针文件 test_q03_acceptance.py 与 conftest.py 零改动（sha256 与 manifest 封存值一致）",
+    "本复验为 L1 服务/REST 面（与验收同层）；真人/L3 面保持 review_r1 与 limitations 的 NOT_MEASURED 口径，不因整改翻新"
+  ]
+}

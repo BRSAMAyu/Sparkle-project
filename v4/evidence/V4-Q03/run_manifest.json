@@ -1,0 +1,133 @@
+{
+  "task": "V4-Q03",
+  "title": "人机分工与学习迁移护栏验收（mastery/deliverable/mixed 独立任务旅程；模拟器行为与真人认知分别标记）",
+  "kind": "verification_run",
+  "generated_at_utc": "2026-09-29T04:55:00+00:00",
+  "evaluated_source_sha": "a8f466508c70eaae04a07e0924e3a27766620df5",
+  "evaluated_source_note": "评测运行发生时工作区 HEAD=main 最新 a8f46650（含 24c176cb 的 U04/U05/U01/U07/Q02/F 线/I05 收口 + fleet 状态行提交）；本卡新增文件仅为验收剧本/探针/证据（零产品代码改动），被评对象=该 SHA 的产品路径",
+  "branch": "agent/v4/q03",
+  "worktree": "../wtQ03",
+  "build_id": "L1_CONTROLLABLE_SERVICE_SIMULATION@a8f46650+q03-acceptance-probes",
+  "stack": {
+    "db": "sqlite+aiosqlite in-memory（StaticPool 单连接；探针自带独立引擎，与主检出示例库零接触——TEST-DBGUARD 纪律：无 .env、无 DATABASE_URL）",
+    "cache": "进程默认（ENVIRONMENT=test；事件总线 publish 为记录桩，Redis/PG 广播面被替换或认证失败即短路，零外部写入）",
+    "clock": "真实墙钟（单测进程；无控制钟）",
+    "llm": "零生产模型调用；j06 execute_check 起草段注入脚本化 LLM 并计数（_scripted_llm；prep 段为真实 sqlite 数据检索，非 mock/预录）",
+    "python": "backend/.venv 共享解释器（主检出 /Users/brsama/code/GitHub/Sparkle-project/backend/.venv，Python 3.11.15）",
+    "containers": "三容器只读邻近使用（sparkle_db/redis/minio Up 12h healthy；探针零连接成功——唯一观测到的外部接触为事件总线 DLQ 兜底对 PG 的认证失败尝试，零写入）",
+    "generated_code": "make proto-gen 已在 worktree 重跑（dockerized 失败后回落 host toolchain，输出同步 13 Python stubs；生成物 gitignored 未入库）"
+  },
+  "model_requested_vs_actual": {
+    "requested": "无（本卡 heavy_token_required=false）",
+    "actual": {
+      "llm_calls_production": 0,
+      "llm_calls_scripted_injection": "每旅程 1-2 次（脚本函数，非模型；S7 断线重放场景观测到 2 次脚本调用 = 缺陷 F2 证据）",
+      "llm_prompt_tokens": 0,
+      "llm_completion_tokens": 0,
+      "llm_cost": 0,
+      "note": "全部证据层为 L1（确定性服务模拟 + 真实 DB 行 + 真实 REST 面）；零真实模型请求发出"
+    }
+  },
+  "evidence_level": {
+    "this_run": "L1（可控服务模拟：真实服务层 + 真实 REST/TestClient + 真实 sqlite 行；无浏览器、无真机、无真实用户）",
+    "per_eval_protocol": "L1 全绿不能替 L3/L4；模拟器行为≠真人认知——真人学习迁移/真人效率保持 NOT_MEASURED_HUMAN（见 limitations）"
+  },
+  "scope_and_denominator": {
+    "goal_purposes_covered": ["mastery（S1/S2）", "deliverable（S3）", "mixed（S4）"],
+    "guardrails": {
+      "G1_agent_answer_no_human_mastery": ["S2", "S3（交付正面）", "S4（矩阵 12 组合）"],
+      "G2_example_answer_no_pollution": ["S1"],
+      "G3_mode_switch_cancel_reconnect_never_skip_human_step": ["S5（切模式）", "S6（取消）", "S7（重连）"],
+      "G4_efficiency_vs_independent_capability_separated_report": ["S2/S3 报表分离 + limitations unknown 标记"]
+    },
+    "scenario_pass_denominator": "7 场景（S1-S7）全 PASS；护栏 4 为报表纪律面（由 S2/S3 原始记录 + limitations 承载，无独立 pass/fail 分母）",
+    "raw_record_counts": {
+      "S1_example_isolation_hint_fading": 9,
+      "S2_agent_answer_no_mastery": 9,
+      "S3_deliverable_efficiency_vs_capability": 3,
+      "S4_mixed_attribution_matrix": 17,
+      "S5_mode_switch_human_step_kept": 5,
+      "S6_cancel_human_step_kept": 4,
+      "S7_reconnect_idempotent": 5
+    },
+    "baseline_regression": "依赖四卡（U10/U04/I07/D04）+ 结算面既有测试 10 文件 174 passed @ 本 SHA（BASELINE_EXIT=0）"
+  },
+  "commands_and_exit_codes": [
+    {
+      "command": "cd /Users/brsama/code/GitHub/Sparkle-project && git worktree add ../wtQ03 -b agent/v4/q03 main",
+      "purpose": "建验收 worktree（分支 agent/v4/q03 自 main a8f46650 开出）",
+      "exit_code": 0
+    },
+    {
+      "command": "make proto-gen",
+      "purpose": "worktree 生成 gitignored gRPC 代码（dockerized toolchain 失败→host 回落成功）",
+      "exit_code": 0
+    },
+    {
+      "command": "cd /Users/brsama/code/GitHub/wtQ03/backend && SECRET_KEY=… ENVIRONMENT=test /Users/brsama/code/GitHub/Sparkle-project/backend/.venv/bin/python -m pytest tests/unit/test_hybrid_policy.py tests/services/test_learning_journey_service.py tests/api/test_learning_journey_api.py tests/unit/test_capability_channel.py tests/services/galaxy/test_outcome_absorption_channels.py tests/unit/test_j06_hybrid_journey.py tests/unit/test_hybrid_run_steps.py tests/unit/test_hybrid_run_steps_api.py tests/test_plan_task_tools_production.py tests/unit/test_sprint_galaxy_mastery.py -q --no-header",
+      "purpose": "依赖卡基线回归（U10/U04/I07/D04 + 结算面）@ a8f46650（N-r1-1 勘误：路径口径改为自洽形式，真实 cwd=wtQ03/backend；结果数字为被评 SHA 原始记录）",
+      "exit_code": 0,
+      "result": "174 passed"
+    },
+    {
+      "command": "cd /Users/brsama/code/GitHub/wtQ03/backend && SECRET_KEY=… ENVIRONMENT=test /Users/brsama/code/GitHub/Sparkle-project/backend/.venv/bin/python -m pytest ../v4/evidence/V4-Q03/probes/test_q03_acceptance.py -q --no-header",
+      "purpose": "Q03 验收七场景（S1-S7；原始记录落 raw_records/，运行日志 raw_probe_run.log）（N-r1-1 勘误：同上路径口径）",
+      "exit_code": 0,
+      "result": "7 passed"
+    },
+    {
+      "command": "M1（cwd=wtQ03/backend）: sed task_service.py 'if settlement is not None and not settlement.allowed' → 'if False and …'；复跑 S2",
+      "purpose": "护栏1 突变自证：结算门被旁路 → S2 红（1 failed）",
+      "exit_code": 1,
+      "result": "RED；git checkout 还原后 S2 绿（1 passed）"
+    },
+    {
+      "command": "M2（cwd=wtQ03/backend）: sed hybrid_policy.py redact 剥除分支 → 'if False and …'；复跑 S1",
+      "purpose": "护栏2 突变自证：答案键不剥除 → S1 红（1 failed）",
+      "exit_code": 1,
+      "result": "RED；还原后 S1 绿"
+    },
+    {
+      "command": "M3（cwd=wtQ03/backend）: sed agent_run_service.py complete_agent_step owner 检查 → 'if False and …'；复跑 S5",
+      "purpose": "护栏3 突变自证：owner 纪律失效（agent 可完成 human 步）→ S5 红（1 failed）",
+      "exit_code": 1,
+      "result": "RED；还原后 S5+S1 绿（2 passed）"
+    }
+  ],
+  "r1_errata": {
+    "review": "review_r1（APPROVE_WITH_CONDITIONS）次要问题 N-r1-1 / N-r1-2 的记录面勘误（2026-09-29 整改；原文见本文件 @ 94909b7c）",
+    "n_r1_1": "commands_and_exit_codes 中 pytest 命令的路径口径修正为自洽形式：真实 cwd=/Users/brsama/code/GitHub/wtQ03/backend，解释器=主检出共享 .venv 绝对路径（wtQ03 无本地 .venv）。审查侧已按该口径从 wtQ03/backend 复现成功；本节历史结果数字（174/7 passed 等）为被评 SHA a8f46650 的原始记录，不随勘误改写",
+    "n_r1_2": "line_anchors.F1_defect 的持久化门行幅勘误为 learning_journey_service.py:329-333（原文误写 322-333；limitations.md 的 330-333 与探针注释属五件套/哈希封存件，原文保留不改，以本勘误为准）；该锚描述被评 SHA，整改后行幅已随修复位移"
+  },
+  "artifacts_sha256": {
+    "probes/conftest.py": "507aab742da43a2330cbafb6b943717c99768862ccc40f8d1ac664e552ae63a4",
+    "probes/test_q03_acceptance.py": "7e0651ef91edd68bd7c905c86544a5c62d66d8a891f970b009c9e7e3a5f662e9",
+    "probe_run_transcript.txt": "b0df0f396269a80d3d80808f3624b5c71ae5a8a09070371ec271e62fac83c6c3",
+    "raw_records/S1_example_isolation_hint_fading.jsonl": "1b21c464497663ed95856daa515bd7d040daa454920e2f36303103d9e99ebbdb",
+    "raw_records/S2_agent_answer_no_mastery.jsonl": "7f5e58756e3b90022befa795c7f82cc339cd2d477ae47ca305fb33e105b25eb2",
+    "raw_records/S3_deliverable_efficiency_vs_capability.jsonl": "d6a0fcfca3278b78895494593a926ef1b09384b1fdb2eed1fd63ce1992c821af",
+    "raw_records/S4_mixed_attribution_matrix.jsonl": "f9db9053f798de9aefe7731a612b4e3f49b74e973bf176763f9d2b40de669e54",
+    "raw_records/S5_mode_switch_human_step_kept.jsonl": "9a9e1af1cf08805233a467cf900384860815287d5c79385880e4fefcb66afcdf",
+    "raw_records/S6_cancel_human_step_kept.jsonl": "e06d4c57b34f92d83ed54784373361838a8fdbba79e16d9df072c1c491c50e3a",
+    "raw_records/S7_reconnect_idempotent.jsonl": "b40422636917190ce83c23a161def62d94cab3c2644612e1833ddce19676933a"
+  },
+  "line_anchors": {
+    "G1_settlement_gate": "backend/app/services/task_service.py:820-841（settlement_for_task_row 前置门 + BLOCK WARN）；backend/app/core/hybrid_policy.py:311-342（human_mastery_settlement）",
+    "G1_channel_non_human": "backend/app/services/galaxy/capability_channel.py:126-175（classify_outcome_channel：run_receipt 恒 NON_HUMAN）+ :178-202（fusion None=不融合）；backend/app/services/galaxy/outcome_absorption_service.py（吸收器分流）",
+    "G2_redaction": "backend/app/core/hybrid_policy.py:126-140（INDEPENDENT_CHECK_ANSWER_KEYS 封闭键集含 leaf 键 correct）+ :468-501（redact/探针）；backend/app/services/learning_journey_service.py:214-218（出口探针）+ :355-386（判分零写零答案）",
+    "G3_owner_discipline": "backend/app/services/agent_run_service.py:1354-1357（agent 只完成 agent-owned）+ :1466-1470（用户步 owner 白名单）；幂等=backend/app/api/v1/runs.py:544-601（complete 幂等强制 422/replay）",
+    "F1_defect": "backend/app/core/learning_journey.py:262-283（request_independent_check：非直达 check 的合法推进也返回 HOLD.evidence_not_supported）× backend/app/services/learning_journey_service.py:329-333（enter_check 持久化门 `hold_reason is None`；N-r1-2 勘误：原文 322-333 行幅偏差，语义所指无误；整改后行幅已随修复位移）",
+    "F2_defect": "backend/app/services/hybrid_journey_service.py:713（重放路径无条件 _execute_and_check）+ :728-745（无条件落 execute_check 产物行）"
+  },
+  "probe_file_disposition": "验收剧本与探针保留于 v4/evidence/V4-Q03/probes/（供双审复现）；未加入 backend/tests/ 生产测试树（用后即删语义=不进生产套件），复现命令见 commands_and_exit_codes",
+  "not_measured": ["真人学习迁移", "真人交付效率", "移动端真机/模拟器 UI 旅程（L3）", "真实模型出题/判分（本卡零 LLM）"],
+  "verdict_summary": {
+    "guardrail_1_agent_answer_no_mastery": "PASS",
+    "guardrail_2_no_answer_pollution": "PASS（全部可达面零答案材料）",
+    "guardrail_3_human_steps_never_skipped": "PASS（附缺陷 F2：重放重复 LLM/产物，不越人类步）",
+    "guardrail_4_separated_report_unknown_marked": "PASS（本报告 + limitations）",
+    "check_journey_reachability": "FAIL_F1（example 起点经 check/enter 不可达检验段；单跳 attempt→check 正常）",
+    "implementation": "COMPLETE（被评实现收口于 a8f46650）",
+    "value_verdict": "PASS_WITH_FINDINGS（F1 需 U10 责任面修复后复验；F2 登记不阻断人类步护栏）"
+  }
+}

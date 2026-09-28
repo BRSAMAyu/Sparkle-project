@@ -88,6 +88,39 @@ def test_request_check_without_evidence_holds_and_never_reaches_check():
     assert hold == CHECK_REASON_HOLD_EVIDENCE
 
 
+def test_request_check_from_example_intermediate_advance_is_not_a_hold():
+    # Q03 一审 F1 整改（处方 A）：example 起点 + 证据支持 → 合法中间推进
+    # （example→attempt，reason=OK.advance_user_chose_with_evidence）不是 HOLD
+    # ——hold_reason=None（=推进合法），持久化门据此写回中间步；「是否出题」
+    # 归服务层 stage 门，不在契约层谎报 HOLD.evidence_not_supported。
+    decision, hold = request_independent_check(
+        stage=SCAFFOLD_STAGE_EXAMPLE, hint_level=HINT_FULL, evidence_supported=True
+    )
+    assert decision.stage == SCAFFOLD_STAGE_ATTEMPT
+    assert decision.reason == "OK.advance_user_chose_with_evidence"
+    assert hold is None
+
+
+def test_request_check_from_example_without_evidence_still_holds():
+    # 反例保持（整改不放宽证据门）：example 起点 + 无证据 → 原地 + HOLD，
+    # 绝不推进、绝不放行检验。
+    decision, hold = request_independent_check(
+        stage=SCAFFOLD_STAGE_EXAMPLE, hint_level=HINT_FULL, evidence_supported=False
+    )
+    assert decision.stage == SCAFFOLD_STAGE_EXAMPLE
+    assert hold == CHECK_REASON_HOLD_EVIDENCE
+
+
+def test_request_check_example_reaches_check_in_two_legal_hops():
+    # 设计旅程（MASTER_DESIGN §6 示例→自己做→检查）：两跳合法推进可达检验段。
+    first, hold1 = request_independent_check(
+        stage=SCAFFOLD_STAGE_EXAMPLE, hint_level=HINT_FULL, evidence_supported=True
+    )
+    assert hold1 is None and first.stage == SCAFFOLD_STAGE_ATTEMPT
+    second, hold2 = request_independent_check(stage=first.stage, hint_level=first.hint_level, evidence_supported=True)
+    assert hold2 is None and second.stage == SCAFFOLD_STAGE_INDEPENDENT_CHECK
+
+
 # ---------------------------------------------------------------------------
 # 验收2 面：判分与答案泄漏
 # ---------------------------------------------------------------------------

@@ -126,7 +126,14 @@ class JourneyBuildResult:
 
 @dataclass(frozen=True)
 class CheckEnterResult:
-    """一次「检验」入口结果（放行带题面 / 或类型化暂缓 reason）。"""
+    """一次「检验」入口结果（三种互斥结局，Q03-F1 整改后口径）。
+
+    - 放行：脚手架已到检验段 + 题面在 → ``check_available=True`` + ``question``；
+    - 中间推进：证据支持的合法单点推进（如 example→attempt）落库
+      （``scaffold_persisted=True``）但未到检验段 → ``check_available=False``、
+      **无** ``hold_reason``（推进合法不是暂缓；用户回练习段亲自完成后再点检验）；
+    - 类型化暂缓：证据不支持 → 原地不动 + ``hold_reason=HOLD.evidence_not_supported``。
+    """
 
     view: dict[str, Any]
     scaffold_persisted: bool

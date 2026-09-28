@@ -220,6 +220,68 @@ async def test_enter_check_with_review_evidence_advances_and_serves_question(db_
     assert task.guide_json[GOAL_PURPOSE_BLOCK_KEY]["independent_check"]["answer"] == _CHECK_ANSWER
 
 
+async def test_enter_check_from_example_reaches_check_in_two_persisted_hops(db_session):
+    """Q03 一审 F1 整改复验面（服务层全链）：example 起点（默认态）经两次显式
+    选择可达独立检验段——中间推进落库（持久化门写回 DB 权威位）、不出题、
+    不误报 HOLD；单跳 attempt→check 既有行为不变。"""
+    user = await _make_user(db_session)
+    node_id = uuid4()
+    task = await _make_task(db_session, user, guide_json=_guide_with_check(stage="example"), node_id=node_id)
+    await _add_error(db_session, task, node_id=node_id, review_count=2)
+    service = LearningJourneyService(db_session)
+
+    # 第一跳：合法中间推进（example→attempt）持久化写回；未到检验段不出题、
+    # 无 hold_reason（推进合法 ≠ 证据不支持）。
+    first, reason = await service.enter_check(user_id=user.id, task_id=task.id)
+    assert reason == "ok"
+    assert first is not None
+    assert first.scaffold_persisted is True
+    assert first.view["check_available"] is False
+    assert "hold_reason" not in first.view, "合法推进不得误报 HOLD.evidence_not_supported"
+    assert "question" not in first.view, "中间步不携带题面（出题仍被 stage 门拦住）"
+    assert first.view["scaffold"]["stage"] == "attempt"
+    assert first.view["scaffold"]["reason"] == "OK.advance_user_chose_with_evidence"
+    await db_session.refresh(task)
+    assert task.guide_json[GOAL_PURPOSE_BLOCK_KEY]["scaffold"]["stage"] == "attempt"  # 持久化写回断言
+
+    # 中间推进后（尚未到检验段）提交仍被判分位置门拒——整改不放宽 submit 门。
+    early_payload, _ = await service.grade_check(user_id=user.id, task_id=task.id, submitted=_CHECK_ANSWER)
+    assert early_payload is not None
+    assert early_payload["graded"] is False and early_payload["correct"] is None
+    assert early_payload["reason"] == "HOLD.scaffold_not_at_check"
+
+    # 第二跳：attempt→independent_check，放行出题（与整改前单跳行为一致）。
+    second, _reason2 = await service.enter_check(user_id=user.id, task_id=task.id)
+    assert second is not None
+    assert second.scaffold_persisted is True
+    assert second.view["check_available"] is True
+    assert second.view["question"] == _CHECK_QUESTION
+    assert "answer" not in second.view
+    await db_session.refresh(task)
+    assert task.guide_json[GOAL_PURPOSE_BLOCK_KEY]["scaffold"]["stage"] == "independent_check"
+    # 判分权威原地保留在服务端（I07 红线不因旅程推进松动）。
+    assert task.guide_json[GOAL_PURPOSE_BLOCK_KEY]["independent_check"]["answer"] == _CHECK_ANSWER
+
+
+async def test_enter_check_from_example_without_evidence_still_holds(db_session):
+    """反例保持（Q03-F1 整改不放宽证据门）：example 起点无复习证据 → 仍
+    HOLD.evidence_not_supported、不推进不落库——检验段不可达面不放开。"""
+    user = await _make_user(db_session)
+    node_id = uuid4()
+    task = await _make_task(db_session, user, guide_json=_guide_with_check(stage="example"), node_id=node_id)
+    await _add_error(db_session, task, node_id=node_id, review_count=0)
+
+    result, reason = await LearningJourneyService(db_session).enter_check(user_id=user.id, task_id=task.id)
+    assert reason == "ok"
+    assert result is not None
+    assert result.view["check_available"] is False
+    assert result.view["hold_reason"] == "HOLD.evidence_not_supported"
+    assert result.scaffold_persisted is False
+    assert "question" not in result.view
+    await db_session.refresh(task)
+    assert task.guide_json[GOAL_PURPOSE_BLOCK_KEY]["scaffold"]["stage"] == "example"
+
+
 # ---------------------------------------------------------------------------
 # 验收2：判分响应零答案材料
 # ---------------------------------------------------------------------------

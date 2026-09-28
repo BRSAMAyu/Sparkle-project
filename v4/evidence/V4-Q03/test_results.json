@@ -1,0 +1,140 @@
+{
+  "task": "V4-Q03",
+  "kind": "verification_results",
+  "generated_at_utc": "2026-09-29T04:55:00+00:00",
+  "source_sha": "a8f466508c70eaae04a07e0924e3a27766620df5",
+  "scenario_denominator": 7,
+  "scenarios": [
+    {
+      "id": "S1_example_isolation_hint_fading",
+      "guardrails": ["G2"],
+      "goal_purpose": "mastery",
+      "level": "L1",
+      "result": "PASS_WITH_DEFECT_F1",
+      "checks": {
+        "get_example_stage_no_question_no_answer": "PASS",
+        "chat_projection_strips_answer_keys_removed_paths_4": "PASS",
+        "hint_fading_chain_8_transitions_stage_monotonic": "PASS",
+        "enter_gate_no_evidence_holds": "PASS",
+        "enter_from_example_two_hop": "FAIL_F1（推进被误标 HOLD、持久化门不写回——检验段不可达）",
+        "enter_single_hop_attempt_to_check": "PASS",
+        "submit_paraphrase_graded_incorrect": "PASS（确定性判分不放宽）",
+        "submit_exact_graded_correct_zero_answer_material": "PASS"
+      }
+    },
+    {
+      "id": "S2_agent_answer_no_mastery",
+      "guardrails": ["G1"],
+      "goal_purpose": "mastery",
+      "level": "L1",
+      "result": "PASS",
+      "checks": {
+        "settlement_verdict_agent_human_required_BLOCK": "PASS（BLOCK.agent_completed_human_required_mastery）",
+        "settlement_verdict_agent_mastery_BLOCK": "PASS（BLOCK.agent_completed_mastery_step）",
+        "agent_complete_task_completed_but_sprint_mastery_0": "PASS（+0.0）",
+        "settlement_block_warn_logged": "PASS（loguru WARN 含 reason）",
+        "run_receipt_channel_NON_HUMAN": "PASS",
+        "receipt_absorption_action_non_human_no_unlock_mastery_0": "PASS（spark 解锁=活动足迹，mastery 红线 0）",
+        "receipt_upgraded_ACTUAL_still_NON_HUMAN_fusion_None": "PASS",
+        "user_complete_settlement_plus25": "PASS（OK.human_authored_settlement，+25.0）",
+        "quiz_verified_lit_channel_verified_mastery_gt0": "PASS（action=lit）"
+      }
+    },
+    {
+      "id": "S3_deliverable_efficiency_vs_capability",
+      "guardrails": ["G1", "G4"],
+      "goal_purpose": "deliverable",
+      "level": "L1",
+      "result": "PASS",
+      "checks": {
+        "deliverable_agent_settlement_OK_no_manual_redo": "PASS（OK.deliverable_delegation_settlement，完成面 +25）",
+        "galaxy_capability_channel_NON_HUMAN_not_lit": "PASS（完成面与能力面分立）",
+        "efficiency_report_simulator_only_real_human_unknown": "PASS（agent 12min vs 估计 60min；real_human_efficiency=unknown_not_measured）"
+      }
+    },
+    {
+      "id": "S4_mixed_attribution_matrix",
+      "guardrails": ["G1"],
+      "goal_purpose": "mixed",
+      "level": "L1",
+      "result": "PASS",
+      "checks": {
+        "resolve_step_purpose_4_rows": "PASS（human_required 恒 mastery；delegated 准备步 mixed）",
+        "settlement_matrix_2x3x2_full": "PASS（user 6/6 OK；agent 4 BLOCK + 2 OK.deliverable）",
+        "legacy_derivation_x02_aligned": "PASS"
+      }
+    },
+    {
+      "id": "S5_mode_switch_human_step_kept",
+      "guardrails": ["G3"],
+      "goal_purpose": "mastery（j06 hybrid 旅程）",
+      "level": "L1",
+      "result": "PASS",
+      "checks": {
+        "agent_bypass_on_human_judgment_rejected_owner_discipline": "PASS（ValueError; judgment 完成戳 None）",
+        "mode_reentry_same_run_awaiting_judgment": "PASS（同 run 回放不另开不跳步）",
+        "user_judgment_only_path_advances": "PASS",
+        "cold_state_replay_same_run": "PASS"
+      }
+    },
+    {
+      "id": "S6_cancel_human_step_kept",
+      "guardrails": ["G3"],
+      "goal_purpose": "generic X-07 run + j06 旅程",
+      "level": "L1",
+      "result": "PASS",
+      "checks": {
+        "cancel_leaves_human_step_uncompleted_user_cancelled": "PASS",
+        "late_confirm_409_with_terminal_reason": "PASS",
+        "journey_cancel_judgment_never_stamped_submit_rejected": "PASS",
+        "restart_new_attempt_from_judgment_no_revive": "PASS（旧 run 保持 CANCELLED；新 run 判断步从头等用户）"
+      }
+    },
+    {
+      "id": "S7_reconnect_idempotent",
+      "guardrails": ["G3"],
+      "goal_purpose": "generic X-07 run + j06 旅程",
+      "level": "L1",
+      "result": "PASS_WITH_DEFECT_F2",
+      "checks": {
+        "x07_confirm_key_double_fire_step_replay_true": "PASS（同 key+换 key 均重放）",
+        "resume_events_exactly_1": "PASS",
+        "missing_idempotency_key_422": "PASS",
+        "cold_reopen_completion_stamp_persisted": "PASS",
+        "judgment_replay_never_skips_human_step": "PASS（judgment_replay=true；不越过 outcome 确认步）",
+        "judgment_replay_llm_and_artifact": "DEFECT_F2（LLM 2 次调用 + execute_check 产物行重复）",
+        "confirm_outcome_replay_no_double_complete_task": "PASS（任务完成恰 1 行）"
+      }
+    }
+  ],
+  "mutations": [
+    {"id": "M1", "target": "task_service.settlement gate", "scenario": "S2", "observed": "RED(1 failed) → revert → GREEN"},
+    {"id": "M2", "target": "hybrid_policy.redact_independent_check strip branch", "scenario": "S1", "observed": "RED(1 failed) → revert → GREEN"},
+    {"id": "M3", "target": "agent_run_service.complete_agent_step owner check", "scenario": "S5", "observed": "RED(1 failed) → revert → GREEN(S5+S1)"}
+  ],
+  "baseline_regression": {"files": 10, "passed": 174, "failed": 0, "exit_code": 0, "sha": "a8f466508c70eaae04a07e0924e3a27766620df5"},
+  "defects_filed": [
+    {
+      "id": "F1",
+      "severity": "B（核心旅程不可达——检验段从默认起点无法经 API 到达；判分/隔离面本身不漏）",
+      "owner_suggestion": "U10 责任面（learning-journey）",
+      "summary": "request_independent_check 对 example→attempt 的合法中间推进返回 HOLD.evidence_not_SUPPORTED，enter_check 的持久化门 `hold_reason is None` 因此永不写回：example 起点（默认 ScaffoldState）经旅程 API 永远无法到达独立检验段；单跳 attempt→check 正常",
+      "anchors": ["backend/app/core/learning_journey.py:262-283", "backend/app/services/learning_journey_service.py:322-333"],
+      "repro": "SECRET_KEY=… python -m pytest ../v4/evidence/V4-Q03/probes/test_q03_acceptance.py::test_s1_example_isolation_and_hint_fading -q（defect_F1_enter_stuck_from_example 记录）"
+    },
+    {
+      "id": "F2",
+      "severity": "C（成本/工件卫生；不越人类步骤、不伪造成功）",
+      "owner_suggestion": "U04/j06 责任面（hybrid-journey）",
+      "summary": "submit_judgment 幂等重放（judgment 已有完成戳）仍无条件重跑 _execute_and_check（LLM 二次调用）并无条件新增 execute_check 产物行；判断戳不重复、run 不进 SUCCEEDED、交付确认仍留待用户",
+      "anchors": ["backend/app/services/hybrid_journey_service.py:713", "backend/app/services/hybrid_journey_service.py:728-745"],
+      "repro": "SECRET_KEY=… python -m pytest ../v4/evidence/V4-Q03/probes/test_q03_acceptance.py::test_s7_reconnect_idempotent_confirm -q（defect_F2_judgment_replay_recalculates 记录）"
+    }
+  ],
+  "unknown_and_not_measured": {
+    "real_human_learning_transfer": "NOT_MEASURED_HUMAN（本 run 无真人；L1 模拟器行为不外推真人认知）",
+    "real_human_delivery_efficiency": "NOT_MEASURED_HUMAN（S3 效率数字为模拟器口径：agent 路径分钟数 vs 任务估计基线）",
+    "mobile_ui_journey_L3": "NOT_RUN（U04 已交 widget 级截图证据；本卡未重复真机/模拟器交互）",
+    "real_model_question_generation": "NOT_RUN（零 LLM；判分权威为服务端 guide_json 预置）"
+  }
+}
