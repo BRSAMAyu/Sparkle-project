@@ -15,6 +15,65 @@ class ActionProposalRepository {
 
   final ApiClient _apiClient;
 
+  /// V4-U02 · recovery sheet 生成「本次约束 → 行动调整」提案.
+  ///
+  /// 仍走 X-03 统一 command path（`POST /action-proposals`，所有入口共用、
+  /// 仅 source 不同）——diff 由服务端 `prepare()` 权威计算后随投影返回，
+  /// 客户端只渲染不重算（无第二 diff 权威）。本卡封闭用例：
+  /// `task.update_fields`（白名单字段，见后端 TASK_FIELD_WHITELIST）。
+  /// 返回**原始投影**（含权威 receipt 本体；回执门解析在消费方 fail-closed
+  /// 进行——经卡模型中转会丢 receipt 本体）。
+  Future<Map<String, dynamic>> createAdjustmentProposal({
+    required String taskId,
+    required Map<String, dynamic> fields,
+    required String idempotencyKey,
+    String? summary,
+  }) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.actionProposals,
+      data: <String, dynamic>{
+        'command_type': 'task.update_fields',
+        'payload': <String, dynamic>{'task_id': taskId, 'fields': fields},
+        'source': 'recovery_sheet',
+        'idempotency_key': idempotencyKey,
+        if (summary != null && summary.isNotEmpty) 'summary': summary,
+      },
+    );
+    final data = ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'createActionProposal',
+    );
+    return _unwrapProposal(data, action: 'createActionProposal');
+  }
+
+  /// 按 id 取提案详情（冲突恢复「重新查看」面；返回最新权威投影，原始形态）.
+  Future<Map<String, dynamic>?> getProposal(String proposalId) async {
+    try {
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.actionProposal(proposalId),
+      );
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getActionProposal',
+      );
+      return _unwrapProposal(data, action: 'getActionProposal');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  /// `ProposalMutationResponse{proposal: …}` → 投影 map（缺失按错误处理，
+  /// 不渲染半份）.
+  Map<String, dynamic> _unwrapProposal(
+    Map<String, dynamic> data, {
+    required String action,
+  }) {
+    final proposal = data['proposal'];
+    if (proposal is Map) return Map<String, dynamic>.from(proposal);
+    throw StateError('action-proposals $action: proposal projection missing');
+  }
+
   /// 某个 subject（如任务）名下的 proposal 收件箱（可按状态过滤）.
   Future<List<ActionProposalCardData>> listForSubject(
     String subjectId, {

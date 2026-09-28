@@ -29835,6 +29835,159 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stuckHelpJourneyCta => 'Let Sparkle walk through it with me';
 
   @override
+  String get recoveryCalibrationSectionTitle => 'Say it once, adjust this run';
+
+  @override
+  String get recoveryCalibrationHint =>
+      'For example: it\'s not that I can\'t do it — I only have fifteen minutes today';
+
+  @override
+  String get recoveryCalibrationSubmit => 'Use this correction';
+
+  @override
+  String recoveryCalibrationConstraintChip(String text) {
+    return 'Your correction: $text';
+  }
+
+  @override
+  String get recoveryCalibrationScopeHeader =>
+      'How should this be used? Two separate things, one cannot replace the other:';
+
+  @override
+  String get recoveryCalibrationThisTimeTitle => 'This time only';
+
+  @override
+  String get recoveryCalibrationThisTimeDesc =>
+      'Adjust this one action only; long-term habits unchanged';
+
+  @override
+  String get recoveryCalibrationThisTimeCta => 'Adjust this action';
+
+  @override
+  String get recoveryCalibrationPreferenceTitle => 'Save as preference';
+
+  @override
+  String get recoveryCalibrationPreferenceDesc =>
+      'Applied to similar situations later; the current task is not modified';
+
+  @override
+  String get recoveryCalibrationPreferenceCta => 'Save preference';
+
+  @override
+  String get recoveryCalibrationSkip => 'Neither for now';
+
+  @override
+  String get recoveryCalibrationAdjustNeedsTask =>
+      'Adjusting this time needs a concrete task as the anchor; this entry has no task anchor — you can still save a preference or just close';
+
+  @override
+  String get recoveryCalibrationMinutesLabel =>
+      'Estimated duration adjustment (readable diff)';
+
+  @override
+  String recoveryCalibrationMinutesValue(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get recoveryCalibrationMinutesDecrease => 'Five minutes less';
+
+  @override
+  String get recoveryCalibrationMinutesIncrease => 'Five minutes more';
+
+  @override
+  String get recoveryCalibrationAdjustNote =>
+      'Creating the diff does not change the task yet; it only takes effect after you confirm';
+
+  @override
+  String get recoveryCalibrationCreateProposal => 'Create the diff';
+
+  @override
+  String get recoveryCalibrationBack => 'Back';
+
+  @override
+  String get recoveryCalibrationDiffHeader => 'Before → After';
+
+  @override
+  String get recoveryCalibrationDiffEmpty => 'This diff has no changes to show';
+
+  @override
+  String get recoveryCalibrationFieldEstimatedMinutes =>
+      'Estimated duration (min)';
+
+  @override
+  String recoveryCalibrationDiffFieldLabel(String field) {
+    return '$field: ';
+  }
+
+  @override
+  String recoveryCalibrationDiffValues(String before, String after) {
+    return '$before → $after';
+  }
+
+  @override
+  String get recoveryCalibrationConfirm => 'Confirm adjustment';
+
+  @override
+  String get recoveryCalibrationConfirming => 'Committing…';
+
+  @override
+  String get recoveryCalibrationConfirmNote =>
+      'After confirming we wait for the real receipt; no success notice before it arrives';
+
+  @override
+  String get recoveryCalibrationCancelProposal => 'Don\'t adjust';
+
+  @override
+  String get recoveryCalibrationCommitted => 'Committed with this constraint';
+
+  @override
+  String recoveryCalibrationReceipt(String receiptId) {
+    return 'Receipt $receiptId';
+  }
+
+  @override
+  String get recoveryCalibrationDone => 'Got it';
+
+  @override
+  String get recoveryCalibrationConflictTitle =>
+      'The task changed meanwhile; this diff is out of date';
+
+  @override
+  String get recoveryCalibrationConflictRecover =>
+      'Re-adjust from the latest state';
+
+  @override
+  String get recoveryCalibrationConflictCancel => 'Cancel this adjustment';
+
+  @override
+  String get recoveryCalibrationUnknownTitle =>
+      'Outcome unknown — no receipt received; not treated as success';
+
+  @override
+  String get recoveryCalibrationUnknownRefresh => 'Check the result again';
+
+  @override
+  String get recoveryCalibrationPreferenceSaved =>
+      'Preference saved; it only affects future suggestions — the current task was not modified';
+
+  @override
+  String get recoveryCalibrationPreferenceFailed =>
+      'The preference was not saved; you can retry';
+
+  @override
+  String get recoveryCalibrationNetworkFailed =>
+      'No connection — nothing took effect this time';
+
+  @override
+  String get recoveryCalibrationDefaultClaim => 'How stuck moments are handled';
+
+  @override
+  String recoveryCalibrationClaim(String anchor) {
+    return 'Stuck-point judgment: $anchor';
+  }
+
+  @override
   String get goalIntentTitle => 'Tell me what you want to achieve';
 
   @override

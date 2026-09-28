@@ -9,6 +9,8 @@ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/recovery/data/models/stuck_journey_models.dart';
 import 'package:sparkle/features/recovery/presentation/providers/stuck_journey_provider.dart';
+import 'package:sparkle/features/recovery/presentation/widgets/recovery_calibration_section.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 
 /// J-05 ·「我卡住了」旗舰恢复旅程——全产品统一恢复入口的承载面。
 ///
@@ -21,6 +23,12 @@ import 'package:sparkle/features/recovery/presentation/providers/stuck_journey_p
 /// ② 主 intervention：中性方向文案（l10n），uncertain 时如实标注
 ///    best-guess；「照这个方向试试」携真实 context 深链 chat；
 /// ③ 纠正：「不是这个原因」→ correct 落库反馈环，纠正后输出立即可见。
+///
+/// V4-U02 增量：校准区（[RecoveryCalibrationSection]）**恒渲染**于载荷区
+/// 之后——abstain（无提案/系统不干预）与旅程错误态下纠正入口原样在场；
+/// 本次约束/持久偏好分离呈现、可读 action diff、回执之后才成功反馈
+/// （语义见校准区与控制器头注）。三宿主（home/goal/action）同一组件
+/// 同一语义，无宿主特化分支。
 Future<void> showStuckJourneySheet(
   BuildContext context, {
   required String surface,
@@ -61,30 +69,65 @@ class StuckJourneySheetBody extends ConsumerWidget {
     final state = ref.watch(stuckJourneyProvider(request));
     final l10n = context.l10n;
 
-    return AnimatedSwitcher(
-      duration: context.reduceMotion ? Duration.zero : DS.quick,
-      child: switch (state.status) {
-        StuckJourneyStatus.loading => Padding(
-            padding: const EdgeInsets.symmetric(vertical: DS.spacing32),
-            child: Center(
-              child: ExcludeSemantics(
-                child: LoadingIndicator.circular(size: 28),
+    // V4-U02：校准区恒渲染（载荷 loading/error/ready 皆在场）；仅本次
+    // 调整的基线值从任务列表客户端投影解析（无锚点 = 区内如实说明）。
+    final baselineMinutes = _resolveBaselineMinutes(ref);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AnimatedSwitcher(
+          duration: context.reduceMotion ? Duration.zero : DS.quick,
+          child: switch (state.status) {
+            StuckJourneyStatus.loading => Padding(
+                key: const ValueKey('stuck-journey-loading'),
+                padding: const EdgeInsets.symmetric(vertical: DS.spacing32),
+                child: Center(
+                  child: ExcludeSemantics(
+                    child: LoadingIndicator.circular(size: 28),
+                  ),
+                ),
               ),
-            ),
-          ),
-        StuckJourneyStatus.error => _ErrorPane(
-            message: l10n.stuckJourneyLoadFailed,
-            retryLabel: l10n.stuckJourneyRetry,
-            onRetry: () =>
-                ref.read(stuckJourneyProvider(request).notifier).retry(),
-          ),
-        StuckJourneyStatus.ready => _ReadyPane(
-            request: request,
-            payload: state.payload,
-            busy: state.busy,
-          ),
-      },
+            StuckJourneyStatus.error => _ErrorPane(
+                key: const ValueKey('stuck-journey-error'),
+                message: l10n.stuckJourneyLoadFailed,
+                retryLabel: l10n.stuckJourneyRetry,
+                onRetry: () =>
+                    ref.read(stuckJourneyProvider(request).notifier).retry(),
+              ),
+            StuckJourneyStatus.ready => _ReadyPane(
+                key: const ValueKey('stuck-journey-ready'),
+                request: request,
+                payload: state.payload,
+                busy: state.busy,
+              ),
+          },
+        ),
+        const SizedBox(height: DS.spacing16),
+        RecoveryCalibrationSection(
+          request: request,
+          journey: state.status == StuckJourneyStatus.ready
+              ? state.payload
+              : null,
+          baselineMinutes: baselineMinutes,
+        ),
+        const SizedBox(height: DS.spacing24),
+      ],
     );
+  }
+
+  /// 锚点任务当前预计时长（任务列表客户端投影；无 id / 找不到 = null）。
+  int? _resolveBaselineMinutes(WidgetRef ref) {
+    final taskId = request.taskId;
+    if (taskId == null || taskId.isEmpty) return null;
+    final tasksState = ref.watch(taskListProvider);
+    for (final task in tasksState.tasks) {
+      if (task.id == taskId) return task.estimatedMinutes;
+    }
+    for (final task in tasksState.todayTasks) {
+      if (task.id == taskId) return task.estimatedMinutes;
+    }
+    return null;
   }
 }
 
@@ -93,6 +136,7 @@ class _ReadyPane extends ConsumerWidget {
     required this.request,
     required this.payload,
     required this.busy,
+    super.key,
   });
 
   final StuckJourneyRequest request;
@@ -347,6 +391,7 @@ class _ErrorPane extends StatelessWidget {
     required this.message,
     required this.retryLabel,
     required this.onRetry,
+    super.key,
   });
 
   final String message;
