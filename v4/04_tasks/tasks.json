@@ -1237,9 +1237,9 @@
       "depends_on": [
         "V4-B06"
       ],
-      "status": "READY",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS",
       "kind": "implementation",
       "required_locks": [
         "ai-fast-lane"
@@ -1289,7 +1289,7 @@
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
       "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
-      "review": "REVIEW_READY（本 commit：48 新用例 + 271 受影响面全绿 + mypy 基线零漂移 + ruff 清；待未参与会话在本 commit SHA 独立审查后销账）"
+      "review": "R1 PASS_WITH_CHALLENGES@37aaf532 + C1/C2 处置@dcacbee6（C1 措辞+挂点登记/C2 正则收紧+回归测/C3 info 留档）"
     },
     {
       "id": "V4-I10",
