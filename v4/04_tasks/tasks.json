@@ -1543,9 +1543,9 @@
       "depends_on": [
         "V4-D02"
       ],
-      "status": "in_progress",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "PENDING_REVIEW",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "APPROVE_X2",
       "kind": "implementation",
       "required_locks": [
         "evidence-retraction"
@@ -1596,7 +1596,13 @@
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
       "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
-      "implementation_note": "wtD03 @ agent/v4/d03 base 150bc205：撤回三分类冻结契约(retraction.recompute.v1)+登记/栅栏重算/读门服务面；持久墓碑(effect_kind=retracted)+既有 memory_epoch 复用+retraction.registered 注册；34 新测+突变 M1/M2/M3 红转绿字节级还原；services 全量 1047 passed 零回归；mypy 55/77 零新增；risk=high 待双审（审查挑战点已预登记 review_receipt.json）"
+      "implementation_note": "wtD03 @ agent/v4/d03 base 150bc205：撤回三分类冻结契约(retraction.recompute.v1)+登记/栅栏重算/读门服务面；持久墓碑(effect_kind=retracted)+既有 memory_epoch 复用+retraction.registered 注册；34 新测+突变 M1/M2/M3 红转绿字节级还原；services 全量 1047 passed 零回归；mypy 55/77 零新增；risk=high 待双审（审查挑战点已预登记 review_receipt.json）",
+      "review": {
+        "r1": "7995e3f3 APPROVE 零挑战（10 栅栏反例+M1 实际 4 红）",
+        "r2": "051583fe APPROVE 零挑战（11 探针+三 crash 点收敛+epoch 单调性证明+108 组合穷举无分裂态）",
+        "c1_sharpened": "R2 量化：窄窗口 capability 读门系统性漏检（时点序语义）——修复优先级改「读门接 epoch 为主+commit 前重读为辅」移交消费卡",
+        "integration_reverify": "合并后 34 passed"
+      }
     },
     {
       "id": "V4-D04",
