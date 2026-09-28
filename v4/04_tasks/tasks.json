@@ -2528,9 +2528,9 @@
     "V4-F04",
     "V4-D01"
    ],
-   "status": "in_progress",
-   "implementation_state": "REVIEW_READY",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "APPROVE_CLOSED",
    "kind": "implementation",
    "required_locks": [
     "ui-community"
@@ -2578,7 +2578,13 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "9710fe93 APPROVE（C1-C5 全过：授权面服务端真源核+S16 复现 404；声效=假 affordance 移除；双账号 DB 级实证三行+软删时间线自洽；多实例机制锚+S19/S20 重跑；量纲 mutation 注入恰 1 red；20/20 自起双 uvicorn 全量重跑+白名单双视角 10 禁词零命中；mutation 4 组实测红）",
+    "r2": "ebe7c72f APPROVE（勘误 3/3 复核属实：arb 每语言恰 6 键+生成 80 行/终态 ecda5a5d N9 亲跑 PASS/卡库 PENDING=收口动作；终态复验全绿 14+100+60+33；隐私实查 11 词零命中+schema 19 键白名单；量纲 mutation 复放；双账号 DB 抽核 4/4+全 20 步双实例重跑再 20 PASS；merge-tree 0 冲突+键集与 Q03 零交集；无一审遗漏阻断面）",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑",
+    "stale_numbers": "manifest/limitations 陈旧数字（7 键/83 行）以 review_r2.md §1 为准（6 键/80 行）"
+   }
   },
   {
    "id": "V4-U12",
