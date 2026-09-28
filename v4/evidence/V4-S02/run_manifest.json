@@ -1,0 +1,137 @@
+{
+  "task": "V4-S02",
+  "title": "音频焦点、合法音轨与静音fallback",
+  "date": "2026-09-29",
+  "executor": "wtS02（worktree /Users/brsama/code/GitHub/wtS02，分支 agent/v4/s02，自 main@dce840da 开出）",
+  "source_sha_base": "dce840da2709da33e2211588813105434fa9b6ad",
+  "source_sha_head": "见台账（evidence 提交后的分支头；本文件所在提交即证据面）",
+  "no_push": true,
+  "risk": "high",
+  "required_locks": ["audio-policy"],
+  "locks": {
+    "note": "sparkle-coordination-v2 远端未配置于本机（git remote 无此远端，与 U14/F06 同状），租约登记 NOT_RUN；冲突面自证：diff 不含 RF-06 三冲突面（dashboard_screen/compact_status_bar/task_execution_screen）、不含 app/routes.dart、不含 tokens_v2/theme 通道、不含 bgm_service.dart（BGM 既有 releaseApproved 运行时面原样引用不重写）；触达面 = 新增 audio_focus_controller/audio_asset_gate 两文件 + SensoryFeedbackService/TtsService/AudioRecordingService 三既有音频服务 + 统一设置屏 + l10n arb/gen + 测试，与在航会话无文件交集（音量/偏好持久键仍全部归 SensoryFeedbackService 单源，未造第二权威）。本机 main 在作业期间由他机推进至 b5872ce4（state/fleet 心跳族），本分支不追不并，集成裁决归派发方"
+  },
+  "toolchain": {
+    "flutter": "3.41.3 stable (revision 48c32af034, 2026-02-27)",
+    "host": "darwin 26.6.2 arm64 (macOS 26.6.2)",
+    "python_guards": "3.14.3",
+    "gen_note": "mobile/lib/gen、backend/app/gen、gateway/gen 为 gitignored 实体目录：自主检出 cp -RL 复制进 worktree（U14/J-05/wt369 同处置）；本卡 l10n 变更经 arb 源 + flutter gen-l10n 再生（diff = 恰好 1 新键 sensorySfxVolumeTitle ×3 生成文件 + 2×arb 4 行纯增量，无漂移），arb 纪律：纯增量不删键"
+  },
+  "model_usage": {
+    "llm_used": true,
+    "model": "GLM（会话模型 GLM-5.3-Flash，ZCode 代理会话）",
+    "token_count": "NOT_EXPOSED（宿主未暴露 token 计数接口，如实登记不伪造）",
+    "pricing_source": "账户侧计费，本卡无独立可引用价目（与 U14 同口径）"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtS02 -b agent/v4/s02 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "依赖解析（新 worktree 无 .dart_tool）",
+      "command": "cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "2 packages discontinued（既有口径）；pubspec.lock 零改动（无新增依赖——音频能力全部复用既有 audioplayers/flutter_tts/record 三插件与 vendored fork 面，未加平台通道）"
+    },
+    {
+      "id": 3,
+      "purpose": "复制 gitignored 生成目录（mobile/lib/gen + backend/app/gen + gateway/gen）",
+      "command": "cp -RL 主检出对应 gen 目录 → worktree",
+      "exit_code": 0,
+      "note": "U14/J-05/wt369 先例；AQ/BG 守卫的 worktree 环境项"
+    },
+    {
+      "id": 4,
+      "purpose": "l10n 增量键再生（arb 源 + 官方生成器，非手改）",
+      "command": "cd mobile && flutter gen-l10n",
+      "exit_code": 0,
+      "note": "生成文件 diff = sensorySfxVolumeTitle 1 新键 ×3 生成文件，逐字可再生"
+    },
+    {
+      "id": 5,
+      "purpose": "静态检查",
+      "command": "cd mobile && flutter analyze --no-pub",
+      "exit_code": 0,
+      "note": "No issues found!（全库零 issue；最终态）"
+    },
+    {
+      "id": 6,
+      "purpose": "本卡新测试（40 用例：三验收面每面一正一反 + 反例钉）",
+      "command": "cd mobile && flutter test test/core/services/audio_focus_controller_s02_test.dart test/core/services/audio_asset_gate_s02_test.dart test/core/services/sensory_feedback_service_s02_test.dart",
+      "exit_code": 0,
+      "note": "+40 全绿（focus 状态机 22 / 资产门对账 5 / 服务面集成 13）；分套实录见 test_results.json"
+    },
+    {
+      "id": 7,
+      "purpose": "S02 触达面全量（新测 + U14 既有 + 默认断言更新套件 + 设置面）",
+      "command": "cd mobile && flutter test test/core/services/audio_focus_controller_s02_test.dart test/core/services/audio_asset_gate_s02_test.dart test/core/services/sensory_feedback_service_s02_test.dart test/core/services/sensory_feedback_service_u14_test.dart test/core/services/sensory_feedback_service_p2_10_test.dart test/core/services/sensory_feedback_service_test.dart test/widget/unified_settings_sfx_volume_test.dart test/widget/unified_settings_ambient_toggle_test.dart",
+      "exit_code": 0,
+      "note": "+68 全绿"
+    },
+    {
+      "id": 8,
+      "purpose": "消费方回归：录音服务/聊天组件/社区/场景音/J6 链/BGM 设置面",
+      "command": "cd mobile && flutter test test/features/chat/data/services/audio_recording_service_test.dart test/features/chat/presentation/widgets/assistant_citation_honesty_test.dart test/features/chat/presentation/widgets/collapsible_widget_wrapper_test.dart test/features/chat/presentation/widgets/u07_evidence_capture_test.dart test/features/community/presentation/screens/squad_detail_screen_test.dart test/widget/j6_additional_chains_test.dart test/widget/unified_settings_bgm_test.dart",
+      "exit_code": 0,
+      "note": "+33 全绿"
+    },
+    {
+      "id": 9,
+      "purpose": "消费方回归：F03 适配器/聊天 provider/BGM 服务全量",
+      "command": "cd mobile && flutter test test/core/experience/ test/features/chat/presentation/providers/ test/core/services/bgm_service_test.dart test/core/services/bgm_service_p2_10_test.dart",
+      "exit_code": 0,
+      "note": "+133 全绿（注：batch 内误带了不存在的 scene_audio_policy_test.dart 路径产生一次 load 假红，剔除后全绿——该文件本就不存在，非回归）"
+    },
+    {
+      "id": 10,
+      "purpose": "消费方回归：tools 全量 + 聊天输入 + U14 语音权限",
+      "command": "cd mobile && flutter test test/features/tools/ test/features/chat/presentation/widgets/chat_input_correction_test.dart test/features/chat/presentation/widgets/chat_input_echo_guard_test.dart test/features/chat/presentation/providers/voice_input_provider_u14_test.dart",
+      "exit_code": 0,
+      "note": "+12 全绿"
+    },
+    {
+      "id": 11,
+      "purpose": "消费方回归：design 全量 + q03 视觉 QA harness",
+      "command": "cd mobile && flutter test test/core/design/ test/goldens/q03_visual_qa/",
+      "exit_code": 0,
+      "note": "+265 全绿；q03 harness 运行会刷新 v3-output/WT401-Q03-VISUAL/ 探针 JSON 的时钟类字段（测试自落盘机制），本卡原样 checkout 还原不入提交（非本卡面，Q03 owner 所有）"
+    },
+    {
+      "id": 12,
+      "purpose": "域全量：core/services + widget + features/user",
+      "command": "cd mobile && flutter test test/core/services/ test/widget/ test/features/user/",
+      "exit_code": 0,
+      "note": "+663 passed / ~4 skipped（既有 skip）"
+    },
+    {
+      "id": 13,
+      "purpose": "域全量：features/chat",
+      "command": "cd mobile && flutter test test/features/chat/",
+      "exit_code": 0,
+      "note": "+265 全绿"
+    },
+    {
+      "id": 14,
+      "purpose": "全仓治理守卫",
+      "command": "bash scripts/run_all_rule_guards.sh",
+      "exit_code": 0,
+      "note": "88 rules 全 PASS（过程项：AQ/BG 为 worktree 缺 gitignored gen 的环境项，按 U14/J-05 先例 cp -RL 主仓 gen 补齐后过；SPACING-RHYTHM 一次真 FAIL——本卡设置面新增 1 处 DS.spacing10 半步档超基线 17→18，改用基栅格 DS.spacing12 后 ratchet 恢复 holds，无基线更新无豁免标记）"
+    },
+    {
+      "id": 15,
+      "purpose": "全量套件（分母口径）",
+      "command": "cd mobile && flutter test",
+      "exit_code": null,
+      "note": "结果见 test_results.json 末批（后台执行实录）"
+    }
+  ],
+  "evidence_scope": {
+    "simulator_call_level": "音频焦点状态机/两独立音量/资产门全部为调用级断言（audioplayers 平台接口假体逐调用记账 + SystemSound 平台通道计数 + SharedPreferences 键级对账 + 账本原文逐键对账），符合卡验收3「模拟器只认调用与录制证据」",
+    "device_unverified": "真扬声器听感、系统来电 OS 中断、耳机拔出 OS 事件未实测——真机面归 Q06，全部如实标注 DEVICE_UNVERIFIED（见 limitations.md L1-L3）"
+  },
+  "artifacts_sha256_note": "本目录五件套与分支头的对应关系由集成台账记录；五件套自身 sha256 于 evidence 提交后可由 `git hash-object` 复算（内容寻址，不另造哈希清单第二权威）"
+}

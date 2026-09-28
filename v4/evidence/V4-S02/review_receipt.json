@@ -1,0 +1,38 @@
+{
+  "task": "V4-S02",
+  "review_state": "NOT_RUN",
+  "independent_reviewers_required": 2,
+  "note": "高风险卡：需 2 份独立未参与会话审查 + 集成 SHA 可失败复验后才能销账。本文件为占位，R1/R2 receipt 由审查会话另行落盘（review_r1.md/review_r2.md），审查结论回写本文件 review_state。",
+  "pre_registered_challenges": [
+    {
+      "id": "R1-C1",
+      "challenge": "默认值翻转是否构成「删断言凑绿」？（p2_10 defaults-on 断言被改）",
+      "defense": "V4 规格（MOTION §声音设计「默认环境声与提示音关闭」+ 卡验收1「未明确点播无声音」）显式要求默认关闭，改断言=规格变更落地而非规避；反例面（显式开启后发声）由 s02 新测正向钉死；两处断言更新均留锚点注释指向证据文件。审查可核卡规格原文与 diff 语境。"
+    },
+    {
+      "id": "R1-C2",
+      "challenge": "资产门常量 kLicensedAudioAssets 是否第二权威？",
+      "defense": "唯一权威=asset_ledger.json（S04 产物）；门是消费镜像，audio_asset_gate_s02_test 读账本原文逐键双向对账（缺键红/私货红/数量红）——单边漂移即红，与 F03 文案表镜像 backend 表同一仓内既定模式。S04 守卫 L003/L004 仍是打包面权威拦截。"
+    },
+    {
+      "id": "R1-C3",
+      "challenge": "来电/耳机拔出没有真实 OS 事件源，状态机是否空转冒充？",
+      "defense": "未冒充：limitations L2/L3 如实标注 DEVICE_UNVERIFIED 且事件源未接线（无插件不擅引）；状态机语义（含恢复惯例与不自续）全部调用级可失败钉死，真机接线面归 Q06 且零重构可直呼。验收3 明示模拟器只认调用级证据。"
+    },
+    {
+      "id": "R1-C4",
+      "challenge": "录音接线的三入口覆盖是否完整？有无漏网的第四播放/录音路径？",
+      "defense": "AudioRecordingService 是仓库唯一 record 插件消费点（grep 实证），三 UI 入口（voice_input_button/voice_input_provider/unified_omni_bar）全部经其实例；TTS 唯一服务面=TtsService（breathing_tool 消费）。审查可复核 grep 面。"
+    },
+    {
+      "id": "R1-C5",
+      "challenge": "ambient 缺省 false 是否破坏 U14 已过审语义/存量用户？",
+      "defense": "U14 的显式键优先与「重开不自动续播」原样保留（U14 测试 10/10 过）；被替换的仅是「键未落时继承提示音开关」这一兼容缺省——绝对 false 是其保护意图（老用户不被升级悄悄打开）的强化，且 U14 测试原断言在 false 缺省下依然成立。存量用户影响如实登记 limitations L4。"
+    },
+    {
+      "id": "R1-C6",
+      "challenge": "两独立音量是否只是加了一个键？sfx 音量在 native fallback 路径是否失效？",
+      "defense": "native SystemSound fallback 路径确实不经过 AudioPlayer.setVolume（系统点击无音量参数，平台限制，debug 期行为）；sfx 音量的生效路径是 pool 路径（真机/profile 即此路径），调用级测试钉 setVolume=0.22×用户音量。审查可核 _playSound 合成点位置。"
+    }
+  ]
+}
