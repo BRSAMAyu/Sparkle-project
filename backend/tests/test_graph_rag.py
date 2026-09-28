@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from app.config import settings
 from app.orchestration.graph_rag import (
     GraphRAGResult,
     GraphRAGRetriever,
@@ -56,26 +57,34 @@ class TestGraphRAGRetriever:
 
     @pytest.mark.asyncio
     async def test_graph_search(self, retriever):
-        """测试图搜索"""
-        # 模拟图搜索结果
-        with patch.object(retriever.age_client, "execute_cypher", new_callable=AsyncMock) as mock_cypher:
-            mock_cypher.return_value = [
-                {
-                    "start_id": str(uuid.uuid4()),
-                    "start_name": "Root Node",
-                    "id": str(uuid.uuid4()),
-                    "name": "Related Node",
-                    "description": "desc",
-                    "relation_type": "KNOWLEDGE",
-                    "strength": 0.92,
+        """测试图搜索（V4-D06：旧行为面归回滚开关——关门时 AGE-always 路径保留）"""
+        # 时效门关闭 → 旧契约：直查 AGE，结果 source="graph"
+        with patch.object(settings, "GRAPH_INDEX_WATERMARK_GATE_ENABLED", False):
+            # 模拟图搜索结果
+            with patch.object(retriever.age_client, "execute_cypher", new_callable=AsyncMock) as mock_cypher:
+                mock_cypher.return_value = [
+                    {
+                        "start_id": str(uuid.uuid4()),
+                        "start_name": "Root Node",
+                        "id": str(uuid.uuid4()),
+                        "name": "Related Node",
+                        "description": "desc",
+                        "relation_type": "KNOWLEDGE",
+                        "strength": 0.92,
+                    }
+                ]
+
+                result, relationships = await retriever.graph_search(entities=["Root Node"], depth=2)
+
+                assert len(result) == 1
+                assert len(relationships) == 1
+                assert relationships[0]["relation_type"] == "KNOWLEDGE"
+                assert result[0]["source"] == "graph"
+                assert retriever.last_graph_index == {
+                    "state": "gate_disabled",
+                    "mode": "age",
+                    "reason": "gate_disabled",
                 }
-            ]
-
-            result, relationships = await retriever.graph_search(entities=["Root Node"], depth=2)
-
-            assert len(result) == 1
-            assert len(relationships) == 1
-            assert relationships[0]["relation_type"] == "KNOWLEDGE"
 
     @pytest.mark.asyncio
     async def test_retrieve(self, retriever, mock_knowledge_service):

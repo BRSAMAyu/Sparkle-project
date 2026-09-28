@@ -105,15 +105,19 @@ class GraphSyncWorker:
         except Exception as e:
             logger.debug(f"graph sync pending reclaim skipped: {e}")
             return
+        covered: str | None = None
         for msg_id, msg_data in messages:
             try:
-                await self._process_message(msg_id, msg_data)
+                covered = await self._process_message(msg_id, msg_data) or covered
             except Exception as e:
                 logger.warning(
                     "graph sync pending reclaim failed (message stays pending): id={} error={}",
                     msg_id,
                     e,
                 )
+        # V4-D06：回收批处理成功且已无积压 → 也可推进覆盖水位（同保守规则）。
+        if covered is not None:
+            await self._advance_age_watermark(covered)
 
     async def _consume(self):
         """消费消息"""
@@ -123,6 +127,8 @@ class GraphSyncWorker:
             try:
                 # 先回收 stale pending（崩溃/失败遗留），再读新消息（与 EventBus 一致）
                 await self._recover_pending()
+
+                covered_watermarks: list[str] = []
 
                 # 读取消息（阻塞 5 秒）
                 messages = await self.redis.xreadgroup(
@@ -139,13 +145,20 @@ class GraphSyncWorker:
                 for _stream, msg_list in messages:
                     for msg_id, msg_data in msg_list:
                         try:
-                            # 处理消息
-                            await self._process_message(msg_id, msg_data)
+                            # 处理消息（返回消息携带的关系型水位，V4-D06）
+                            covered = await self._process_message(msg_id, msg_data)
+                            if covered:
+                                covered_watermarks.append(covered)
                         except Exception as e:
                             # EVENT-ACK：失败不 ack（消息留在 PEL），由
                             # _recover_pending 的 XAUTOCLAIM 认领重试
                             # （at-least-once；不引入额外死信设施）。
                             logger.warning(f"处理消息失败（留 pending 待回收） {msg_id}: {e}")
+
+                # V4-D06：本批全部处理成功且有消息携带水位 → 尝试推进 AGE
+                # 覆盖水位（仅当流内零积压；保守不越权声称覆盖未处理消息）。
+                if covered_watermarks:
+                    await self._advance_age_watermark(covered_watermarks[-1])
 
             except asyncio.CancelledError:
                 logger.info("Worker 被取消")
@@ -166,11 +179,29 @@ class GraphSyncWorker:
             return value.decode("utf-8")
         return str(value)
 
-    async def _process_message(self, msg_id: bytes, msg_data: dict[Any, Any]):
-        """处理单条消息"""
+    @staticmethod
+    def _read_optional_field(msg_data: dict[Any, Any], field: str) -> str | None:
+        """Optional variant of :meth:`_read_field`（缺字段不抛）。"""
+        value = msg_data.get(field)
+        if value is None:
+            value = msg_data.get(field.encode("utf-8"))
+        if value is None:
+            return None
+        if isinstance(value, bytes):
+            return value.decode("utf-8")
+        return str(value)
+
+    async def _process_message(self, msg_id: bytes, msg_data: dict[Any, Any]) -> str | None:
+        """处理单条消息。
+
+        Returns:
+            消息携带的关系型水位（V4-D06：node/relation 写入方在入队时附上
+            入队事务内算得的 watermark）；消息无水位或处理失败返回 None。
+        """
         # 解析消息
         msg_type = self._read_field(msg_data, "type")
         data = json.loads(self._read_field(msg_data, "data"))
+        covered_watermark = self._read_optional_field(msg_data, "watermark")
 
         logger.debug(f"处理消息: {msg_type} - {data.get('id', 'N/A')}")
 
@@ -197,6 +228,31 @@ class GraphSyncWorker:
             logger.error(f"处理消息 {msg_type} 失败: {e}")
             # 不确认消息，稍后重试
             raise
+        return covered_watermark
+
+    async def _advance_age_watermark(self, covered_watermark: str) -> None:
+        """推进 AGE 覆盖水位（V4-D06 保守规则）。
+
+        仅当消费组当前零积压（XPENDING==0）才记录——流内还有更早的未确认
+        消息时不得声称"AGE 已覆盖到该水位"，宁可保持 stale 走关系型真源。
+        """
+        if not self.redis or not covered_watermark:
+            return
+        try:
+            pending = await self.redis.xpending(self.stream_key, self.group_name)
+            pending_count = int(pending.get("pending", 0)) if isinstance(pending, dict) else -1
+        except Exception as e:  # noqa: BLE001 — 积压状态未知按不推进处理
+            logger.warning(f"读取图同步积压状态失败（不推进覆盖水位）: {e}")
+            return
+        if pending_count != 0:
+            logger.debug(f"图同步仍有积压（pending={pending_count}），不推进覆盖水位")
+            return
+
+        from app.services.graph_index_watermark import GraphIndexWatermark
+
+        recorded = await GraphIndexWatermark(None).record_age_coverage(covered_watermark)
+        if recorded:
+            logger.debug(f"AGE 覆盖水位已推进: {covered_watermark}")
 
     async def _handle_node_created(self, data: dict[str, Any]):
         """处理节点创建"""

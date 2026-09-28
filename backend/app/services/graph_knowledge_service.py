@@ -30,6 +30,7 @@ from app.core.cache import cache_service
 from app.models.galaxy import KnowledgeNode, NodeRelation
 from app.models.graph_models import KnowledgeVertex
 from app.services.expansion_service import ExpansionService
+from app.services.graph_index_watermark import GraphIndexWatermark
 from app.services.knowledge_service import KnowledgeService
 from app.services.node_sector_service import dominant_sector_from_weights
 
@@ -205,26 +206,29 @@ class GraphKnowledgeService:
         self.db.add(node)
         await self.db.flush()
 
-        # 2. 异步写入 AGE（通过 Redis 队列）
+        # 2. 异步写入 AGE（通过 Redis 队列）。V4-D06：入队携带本事务的关系型
+        # 水位（worker 成功消费且零积压后推进 AGE 覆盖水位 → 新资料有明确
+        # 版本/索引中状态；写失败/无 Redis 不带水位，保守不声称覆盖）。
         if self.redis:
-            await self.redis.xadd(
-                "stream:graph_sync",
-                {
-                    "type": "node_created",
-                    "data": json.dumps(
-                        {
-                            "id": str(node.id),
-                            "name": node.name,
-                            "description": node.description,
-                            "sector": node.dominant_sector_code,
-                            "importance": node.importance_level,
-                            "keywords": ",".join(node.keywords),
-                            "source_type": node.source_type,
-                            "created_at": node.created_at.isoformat(),
-                        }
-                    ),
-                },
-            )
+            sync_watermark = await GraphIndexWatermark(self.db).relational_watermark()
+            stream_fields: dict[str, str] = {
+                "type": "node_created",
+                "data": json.dumps(
+                    {
+                        "id": str(node.id),
+                        "name": node.name,
+                        "description": node.description,
+                        "sector": node.dominant_sector_code,
+                        "importance": node.importance_level,
+                        "keywords": ",".join(node.keywords),
+                        "source_type": node.source_type,
+                        "created_at": node.created_at.isoformat(),
+                    }
+                ),
+            }
+            if sync_watermark:
+                stream_fields["watermark"] = sync_watermark
+            await self.redis.xadd("stream:graph_sync", stream_fields)  # type: ignore[arg-type]  # redis-py 桩值联合含 bytes；str 键值本就是合法子集
             logger.debug(f"节点 {node.id} 已加入同步队列")
 
         await self.db.commit()
@@ -257,23 +261,24 @@ class GraphKnowledgeService:
         self.db.add(relation)
         await self.db.flush()
 
-        # 2. 异步写入 AGE
+        # 2. 异步写入 AGE（V4-D06：入队携带本事务关系型水位，同 node_created）
         if self.redis:
-            await self.redis.xadd(
-                "stream:graph_sync",
-                {
-                    "type": "relation_created",
-                    "data": json.dumps(
-                        {
-                            "source": str(source_node_id),
-                            "target": str(target_node_id),
-                            "type": relation_type,
-                            "strength": strength,
-                            "created_by": created_by,
-                        }
-                    ),
-                },
-            )
+            sync_watermark = await GraphIndexWatermark(self.db).relational_watermark()
+            stream_fields = {
+                "type": "relation_created",
+                "data": json.dumps(
+                    {
+                        "source": str(source_node_id),
+                        "target": str(target_node_id),
+                        "type": relation_type,
+                        "strength": strength,
+                        "created_by": created_by,
+                    }
+                ),
+            }
+            if sync_watermark:
+                stream_fields["watermark"] = sync_watermark
+            await self.redis.xadd("stream:graph_sync", stream_fields)  # type: ignore[arg-type]  # 同上：redis-py 桩不变型误报
             logger.debug(f"关系已加入同步队列: {source_node_id} → {target_node_id}")
 
         return relation
@@ -474,7 +479,15 @@ class GraphKnowledgeService:
             offset += batch_size
             logger.info(f"已同步 {offset} 条关系...")
 
-        logger.info("全量同步完成")
+        # V4-D06：全量重建后推进覆盖水位——AGE 此时确实覆盖关系型当前真源
+        # （重建失败的行会被 _sync_*_to_age 逐条 warning，水位仍推进的前提是
+        # 本方法不抛；重建是修复工具，消费方为运维面）。
+        covered = await GraphIndexWatermark(self.db).relational_watermark()
+        if covered:
+            await GraphIndexWatermark(self.db).record_age_coverage(covered)
+            logger.info(f"全量同步完成，覆盖水位已推进: {covered}")
+        else:
+            logger.info("全量同步完成（覆盖水位不可得，未推进）")
 
     async def _sync_node_to_age(self, node: KnowledgeNode):
         """同步单个节点到 AGE"""
