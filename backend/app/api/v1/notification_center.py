@@ -299,6 +299,9 @@ async def record_suggestion_action(
     - ``ignore_today``（今天不再看）→ 该建议类型 24h 冷却（拒绝后 cooldown）。
     - ``mute_type``（不再提醒此类）→ 持久静音该建议类型。
 
+    V4-P01: 反馈同时升格为跨渠道 subject 抑制（plan/task/goal）——用户在
+    任一渠道拒绝/静音后，其他渠道不得就同一 subject 补发同一提示。
+
     校验通知归属；反馈即已读；抑制态真实落库，nudge 生成路径据此抑制。
     """
     service = NotificationCenterService(db)
@@ -329,6 +332,18 @@ async def record_suggestion_action(
             suppression = await feedback.record_ignore_today(current_user.id, suggestion_type)
         else:
             suppression = await feedback.record_mute(current_user.id, suggestion_type)
+
+        # V4-P01: 跨渠道 subject 抑制写入口。写失败同样 503——跨渠道保证
+        # 不静默丢失（与类型级抑制同一诚实性契约）。
+        from app.aurora.proactive.unified_budget import record_cross_channel_suppression
+
+        subject_suppression = await record_cross_channel_suppression(
+            db,
+            current_user.id,
+            notification.data if isinstance(notification.data, dict) else {},
+            persistent=request.action == "mute_type",
+            source_type=suggestion_type,
+        )
     except ProactiveSuggestionFeedbackError as exc:
         # WT378-02 诚实性：抑制态未落库时绝不谎报成功——503 让客户端可重试，
         # 而非 200「Suggestion feedback recorded」背后零落库、nudge 照发。
@@ -341,14 +356,16 @@ async def record_suggestion_action(
     await service.mark_notification_read(current_user.id, notification_id, "system")
 
     logger.info(
-        "Suggestion feedback recorded: user={} type={} action={}",
+        "Suggestion feedback recorded: user={} type={} action={} subjects={}",
         current_user.id,
         suggestion_type,
         request.action,
+        sorted(subject_suppression),
     )
     return {
         "message": f"Suggestion feedback recorded: {request.action}",
         "suppression": suppression,
+        "subject_suppression": subject_suppression,
     }
 
 

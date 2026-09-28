@@ -36,6 +36,7 @@ __all__ = [
     "ProactiveSuggestionFeedbackService",
     "ProactiveSuggestionFeedbackError",
     "IGNORE_TODAY_COOLDOWN_HOURS",
+    "SUBJECT_COOLDOWN_HOURS",
     "build_suggestion_elements",
     "resolve_comeback_destination",
 ]
@@ -43,8 +44,19 @@ __all__ = [
 #: 「今天不再看」冷却窗口（小时）。语义：拒绝后 24h 内同类型建议不再生成。
 IGNORE_TODAY_COOLDOWN_HOURS = 24
 
+#: V4-P01 跨渠道 subject 抑制的缺省冷却窗口（小时）。「今天不再看」带出的
+#: subject 级抑制与类型级冷却同窗（24h），不引入第二种时长语义。
+SUBJECT_COOLDOWN_HOURS = IGNORE_TODAY_COOLDOWN_HOURS
+
 _MUTE_KEY = "proactive_suggestion_muted"
 _IGNORE_KEY = "proactive_suggestion_ignored_until"
+
+#: V4-P01 subject 级抑制命名空间（与上面两键同在 explicit JSONB，键集不相交）。
+#: 结构：``{subject_key: {"reason": "cooldown"|"muted", "until": iso?|
+#: "source_type": str, "recorded_at": iso}}``。subject_key 是渠道无关的
+#: 因果对象键（如 ``plan:<uuid>`` / ``task:<uuid>`` / ``goal:<uuid>``）——
+#: 用户在任一渠道拒绝/静音某建议后，其他渠道不得就同一 subject 补发。
+_SUBJECT_KEY = "proactive_subject_suppressed"
 
 #: 版本守卫合并的bounded重试上限（冲突连续超限 → 诚实报错，不静默丢写）
 _MAX_MERGE_ATTEMPTS = 3
@@ -116,6 +128,115 @@ class ProactiveSuggestionFeedbackService:
             lambda current: {**current, suggestion_type: _iso(moment)},
         )
         return {"reason": "muted"}
+
+    # -- V4-P01：subject 级跨渠道抑制（与类型级同存储、同权威） --------------
+
+    async def record_subject_suppression(
+        self,
+        user_id: str | UUID,
+        subject_key: str,
+        *,
+        persistent: bool,
+        source_type: str = "",
+        now: datetime | None = None,
+    ) -> dict[str, str]:
+        """记录 subject 级抑制（V4-P01 跨渠道不补发的写入口）。
+
+        - ``persistent=False``（「今天不再看」带出）→ 24h 冷却，与类型级同窗；
+        - ``persistent=True``（「不再提醒此类」带出）→ 持久，直到用户恢复；
+        - **一次 effect 不叠加**：已存在且未过期的记录原样保留（先到先得，
+          重复拒绝同一 subject 不延长、不加重）——静音优先于冷却。
+        """
+        moment = now or _utcnow()
+        normalized = _clean_subject_key(subject_key)
+        if not normalized:
+            return {}
+
+        def _merge(current: dict[str, Any]) -> dict[str, Any]:
+            existing = current.get(normalized)
+            if isinstance(existing, Mapping):
+                reason = str(existing.get("reason") or "")
+                still_active = reason == "muted"
+                if not still_active:
+                    until_raw = str(existing.get("until") or "")
+                    if until_raw:
+                        try:
+                            still_active = datetime.fromisoformat(until_raw) > moment
+                        except ValueError:
+                            still_active = False
+                if still_active and (reason == "muted" or not persistent):
+                    # 一次 effect：先到记录原样保留（冷却不顺延、静音不被降级）。
+                    return current
+                # 其余情况（冷却在场 + 本次为静音）：允许向更保守方向升级。
+            record: dict[str, Any] = (
+                {"reason": "muted", "source_type": source_type, "recorded_at": _iso(moment)}
+                if persistent
+                else {
+                    "reason": "cooldown",
+                    "until": _iso(moment + timedelta(hours=SUBJECT_COOLDOWN_HOURS)),
+                    "source_type": source_type,
+                    "recorded_at": _iso(moment),
+                }
+            )
+            return {**current, normalized: record}
+
+        await self._update_explicit(user_id, _SUBJECT_KEY, _merge)
+        return await self.get_subject_suppression(user_id, normalized, now=moment) or {
+            "reason": "muted" if persistent else "cooldown"
+        }
+
+    async def get_subject_suppression(
+        self,
+        user_id: str | UUID,
+        subject_key: str,
+        *,
+        now: datetime | None = None,
+    ) -> dict[str, str] | None:
+        """读 subject 级抑制态；未抑制为 ``None``（V4-P01 跨渠道判定读面）。"""
+        moment = now or _utcnow()
+        normalized = _clean_subject_key(subject_key)
+        if not normalized:
+            return None
+        explicit = await self._read_explicit(user_id)
+        return _subject_suppression_from(explicit.get(_SUBJECT_KEY), normalized, moment)
+
+    async def get_suppression_with_subject(
+        self,
+        user_id: str | UUID,
+        suggestion_type: str,
+        subject_key: str,
+        *,
+        now: datetime | None = None,
+    ) -> tuple[dict[str, str] | None, dict[str, str] | None]:
+        """一次 explicit 读同时判类型级与 subject 级抑制（闸门组合读面）。
+
+        返回 ``(type_suppression, subject_suppression)``；两读合一保证抑制
+        检查路径的 DB 往返数与既有 P-03 单查一致（任务接线测试钉）。
+        """
+        moment = now or _utcnow()
+        explicit = await self._read_explicit(user_id)
+
+        if suggestion_type in (explicit.get(_MUTE_KEY) or {}):
+            type_suppression: dict[str, str] | None = {"reason": "muted"}
+        else:
+            type_suppression = None
+            ignored_until_raw = (explicit.get(_IGNORE_KEY) or {}).get(suggestion_type)
+            if isinstance(ignored_until_raw, str) and ignored_until_raw:
+                try:
+                    if datetime.fromisoformat(ignored_until_raw) > moment:
+                        type_suppression = {"reason": "cooldown", "until": ignored_until_raw}
+                except ValueError:
+                    logger.warning(
+                        "proactive suggestion ignored_until corrupt for user={} type={}",
+                        user_id,
+                        suggestion_type,
+                    )
+
+        normalized = _clean_subject_key(subject_key)
+        subject_suppression = (
+            _subject_suppression_from(explicit.get(_SUBJECT_KEY), normalized, moment) if normalized else None
+        )
+        return type_suppression, subject_suppression
 
     # -- read -------------------------------------------------------------
 
@@ -244,6 +365,49 @@ class ProactiveSuggestionFeedbackService:
             f"suggestion feedback not persisted after {_MAX_MERGE_ATTEMPTS} merge attempts "
             f"(user={user_id}, key={key})"
         )
+
+
+# ── V4-P01：subject 键与抑制态的纯函数辅助 ──────────────────────────────────
+
+
+def _clean_subject_key(subject_key: Any) -> str:
+    """subject 键规范化：``domain:id`` 小写、去空白；空/畸形返回空串。"""
+    text = str(subject_key or "").strip().lower()
+    if not text or ":" not in text:
+        return ""
+    domain, _, identifier = text.partition(":")
+    if domain not in {"plan", "task", "goal"} or not identifier.strip():
+        return ""
+    return text
+
+
+def _subject_suppression_from(
+    raw: Any,
+    subject_key: str,
+    moment: datetime,
+) -> dict[str, str] | None:
+    """从 explicit 命名空间读 subject 抑制态（过期/畸形记录按未抑制处理）。"""
+    if not isinstance(raw, Mapping):
+        return None
+    entry = raw.get(subject_key)
+    if not isinstance(entry, Mapping):
+        return None
+    reason = str(entry.get("reason") or "")
+    if reason == "muted":
+        return {"reason": "muted"}
+    if reason != "cooldown":
+        return None
+    until_raw = str(entry.get("until") or "")
+    if not until_raw:
+        return None
+    try:
+        until = datetime.fromisoformat(until_raw)
+    except ValueError:
+        logger.warning("proactive subject suppression until corrupt for key={}", subject_key)
+        return None
+    if until > moment:
+        return {"reason": "cooldown", "until": until_raw}
+    return None
 
 
 # ── 四要素 payload 构建（纯函数；事实性、零 guilt） ───────────────────────────

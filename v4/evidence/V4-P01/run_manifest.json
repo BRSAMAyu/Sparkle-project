@@ -1,0 +1,188 @@
+{
+  "card": "V4-P01",
+  "task": "主动建议与接续同策略同打扰预算（nudges/spine 渠道同一用户预算；触发基于合法事件/作用范围/quietHours；只在有具体帮助时出现）",
+  "agent": "wtP01",
+  "branch": "agent/v4/p01",
+  "base_sha": "17c14cea（state(fleet): U08 销账 39/58+P01 补位（Q07 链））",
+  "head_sha": "d0bd8d45c7eec8ce77711e1fe4c1dea43212580d",
+  "generated_at_local": "2026-09-28",
+  "kind": "implementation",
+  "product_code_changed": true,
+  "llm_usage": {
+    "real_model_calls": 0,
+    "note": "本卡为纯确定性闸门/抑制面（零 LLM），实现与测试均无模型调用，无模型用量与费用"
+  },
+  "environment": {
+    "worktree": "wtP01（git worktree add ../wtP01 -b agent/v4/p01 main @ 17c14cea；无 .env，测试自然落 sqlite/内存）",
+    "python": "3.11.15（venv 共享主检出 /Users/brsama/code/GitHub/Sparkle-project/backend/.venv）",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2 (compiled: yes)",
+    "ruff": "0.15.8",
+    "black": "26.3.1 (compiled: yes)",
+    "note": "backend/app/gen 由主检出复制进 worktree（gitignored，永不提交）；SECRET_KEY 以环境变量注入（隔离 worktree 无 .env）"
+  },
+  "commands": [
+    {
+      "purpose": "建 worktree",
+      "cmd": "git worktree add ../wtP01 -b agent/v4/p01 main",
+      "exit_code": 0
+    },
+    {
+      "purpose": "复制 gitignored 生成产物（测试需要，永不提交）",
+      "cmd": "cp -R /Users/brsama/code/GitHub/Sparkle-project/backend/app/gen /Users/brsama/code/GitHub/wtP01/backend/app/gen",
+      "exit_code": 0
+    },
+    {
+      "purpose": "现状盘点：两族渠道/预算/抑制面真源定位",
+      "cmd": "grep -rn \"budget\" backend/app/aurora/proactive backend/app/aurora/runtime_v1/notification_settings.py；sed -n '2100,2280p' backend/app/core/celery_tasks.py（comeback_nudge_task）；sed -n '2955,3040p' backend/app/core/celery_tasks.py（recall_notification_task）；cat backend/app/aurora/proactive/suppression.py",
+      "exit_code": 0,
+      "evidence": "结构事实亲证：nudge 渠道过 P-03 类型抑制 + P-06 evaluate_burden（quiet+真实账本日预算）；spine 渠道（recall_notification_task）只有自身 Redis per-trigger 冷却——不过 quiet、不占共享日预算、不认另一渠道拒绝（S16 §P.0-2 预判的缺口在 base 逐行证实）"
+    },
+    {
+      "purpose": "基线：受影响权威模块既有测试全绿（回退判据）",
+      "cmd": "pytest tests/unit/test_comeback_nudge_task.py tests/unit/test_comeback_nudge_burden_p06.py tests/api/test_notification_suggestion_action.py tests/aurora/test_notification_burden_p06.py tests/unit/test_proactive_suggestion_feedback_honesty.py tests/unit/spine/test_notification.py tests/aurora/test_proactive_event_pipeline.py tests/aurora/test_notification_burden_24h_clock.py tests/unit/test_signal_spine.py -q",
+      "exit_code": 0,
+      "evidence": "勘误（一审 C-2b，2026-09-29）：初版记录「242 passed in 71.74s」作 same-set 分母失实——base 同 9 文件集实收集/通过 1202（一审在 base 临时 worktree 亲测；head 同集亦 1202）。零回归结论不变：1219 = 1202（同集基线）+ 17（本卡新测）"
+    },
+    {
+      "purpose": "P01 闸门新测试（13 测，真实 DB：每验收面一正一反+反例钉）",
+      "cmd": "pytest tests/aurora/test_proactive_unified_budget.py -q",
+      "exit_code": 0,
+      "evidence": "13 passed in 8.34s"
+    },
+    {
+      "purpose": "P01 任务接线新测试（4 测：跨渠道补发任务级反例钉+两渠道信封钉+一次 effect 任务钉）",
+      "cmd": "pytest tests/unit/test_p01_budget_channel_wiring.py -q",
+      "exit_code": 0,
+      "evidence": "4 passed in 2.71s"
+    },
+    {
+      "purpose": "受影响面全量回归（改动后）",
+      "cmd": "pytest tests/unit/test_comeback_nudge_task.py tests/unit/test_comeback_nudge_burden_p06.py tests/api/test_notification_suggestion_action.py tests/aurora/test_notification_burden_p06.py tests/aurora/test_notification_burden_24h_clock.py tests/aurora/test_proactive_event_pipeline.py tests/unit/test_proactive_suggestion_feedback_honesty.py tests/unit/spine/test_notification.py tests/unit/test_signal_spine.py tests/aurora/test_proactive_unified_budget.py tests/unit/test_p01_budget_channel_wiring.py -q",
+      "exit_code": 0,
+      "evidence": "1219 passed in 135.78s（= 同集基线 1202 + 本卡新测 17，零回归；初版「基线 242」口径按一审 C-2b 勘误）；收口复跑 1202 passed（去重 test_signal_spine 单列后口径）"
+    },
+    {
+      "purpose": "突变注入①：跨渠道 subject 抑制失效（subject 检查永假）",
+      "cmd": "sed 突变 unified_budget.py subject_suppression 分支后 pytest tests/aurora/test_proactive_unified_budget.py::test_cross_channel_rejection_blocks_spine_nail tests/unit/test_p01_budget_channel_wiring.py::test_spine_recall_blocked_after_nudge_rejection_nail -q；随后还原",
+      "exit_code": 1,
+      "evidence": "2 failed（跨渠道补发反例钉闸门级+任务级齐红）→ 还原 17 passed"
+    },
+    {
+      "purpose": "突变注入②：一次 effect 去重失效（effect 去重分支禁用）",
+      "cmd": "sed 突变 if request.subject_key: → if False 后 pytest test_prompt_key_effect_window_nail test_comeback_nudge_blocked_by_effect_dedup_second_dispatch -q；随后还原",
+      "exit_code": 1,
+      "evidence": "2 failed（多端一次 effect 反例钉齐红）→ 还原 17 passed"
+    },
+    {
+      "purpose": "突变注入③：回归特权突变（comeback 渠道绕过负担闸门）",
+      "cmd": "sed 突变注入 nudge 渠道提前 allow 后 pytest test_regression_comeback_not_privileged_nail test_gate_writes_no_emotion_signals -q；随后还原",
+      "exit_code": 1,
+      "evidence": "1 failed（回归非特权钉红：cap=0 时 comeback 被放行即失败）；情绪零写入钉不受该突变影响（1 passed，该钉独立有效）→ 还原 diff 干净"
+    },
+    {
+      "purpose": "机械门：mypy（棘轮 ≤77，零新增）",
+      "cmd": "mypy app/aurora/proactive/unified_budget.py / app/services/proactive_suggestion_service.py / app/api/v1/notification_center.py / app/core/celery_tasks.py / app/aurora/proactive/config.py / app/aurora/proactive/metrics.py；对 main 主检出同命令基线对照",
+      "exit_code": 0,
+      "evidence": "六个文件逐个 0 error in file；入口文件总口径 33 errors in 31 files == main 基线同命令 33/31（全部在传递导入的既有文件，零新增）；未触棘轮"
+    },
+    {
+      "purpose": "机械门：ruff + black（本卡改动/新增文件）",
+      "cmd": "ruff check <本卡 8 文件> && black --check <本卡 8 文件>",
+      "exit_code": 0,
+      "evidence": "All checks passed!；black 仅剩 app/aurora/proactive/suppression.py 漂移——base 既有（main 主检出同命令同样报该文件），非本卡引入，未触碰"
+    },
+    {
+      "purpose": "机械门：OpenAPI 契约（触 backend/app/api/）",
+      "cmd": "pytest tests/contract/test_api_router_openapi_contract.py -q",
+      "exit_code": 0,
+      "evidence": "3 passed in 17.14s"
+    },
+    {
+      "purpose": "机械门：BA-ROUTES gateway↔engine 路由奇偶（触 backend/app/api/）",
+      "cmd": "python scripts/guards/check_rule_ba_routes_parity.py",
+      "exit_code": 0,
+      "evidence": "RULE BA-ROUTES OK: 621 gateway proxy routes ↔ 1015 engine routes, 61 catch-all groups, 169 ledgered diffs"
+    },
+    {
+      "purpose": "event_registry 核对（卡机械门条款）",
+      "cmd": "git diff 17c14cea --stat -- backend/app/core/event_registry.py backend/proto",
+      "exit_code": 0,
+      "evidence": "零改动（本卡零新事件名、零 proto 契约变更、零迁移——消费既有事件/读面，不造第二权威）"
+    }
+  ],
+  "remediation_r1": {
+    "date_local": "2026-09-29",
+    "scope": "一审 APPROVE_WITH_CONDITIONS 条件收口（C-1 行为 + C-2a/C-2b 文档）；commit SHA 见 review_r1.md 整改注记（整改 commit 后注记，避免自指）",
+    "c1_change_faces": [
+      "backend/app/core/celery_tasks.py recall_notification_task：spine_subject_refs 提取一次，gate/envelope/data 三处同源；data 盖 **{f\"{domain}_id\": ref}",
+      "backend/app/aurora/proactive/unified_budget.py subject_refs_from_payload：兼读 proactive_budget.subject 信封（顶层键后读优先）",
+      "backend/app/aurora/proactive/config.py + unified_budget.py：PROACTIVE_UNIFIED_BUDGET_ENABLED off 口径改为全关紧急开关（C-2a）",
+      "backend/tests/api/test_p01_cross_channel_suppression_e2e.py（新，2 测）：真实 API→提取→写库双向矩阵",
+      "backend/tests/unit/test_p01_budget_channel_wiring.py：spine 放行钉补 data 键断言（生产者半场钉）",
+      "backend/tests/aurora/test_proactive_unified_budget.py：提取钉补信封用例（提取面半场钉）+ knob docstring 口径"
+    ],
+    "commands": [
+      {
+        "purpose": "新端到端 + 两改测文件",
+        "cmd": "pytest tests/api/test_p01_cross_channel_suppression_e2e.py tests/unit/test_p01_budget_channel_wiring.py tests/aurora/test_proactive_unified_budget.py -q",
+        "exit_code": 0,
+        "evidence": "19 passed in 24.45s"
+      },
+      {
+        "purpose": "突变自验：摘 C-1 两处修复→新端到端应红→还原",
+        "cmd": "临时摘除信封读块与 data 键盖章行后 pytest tests/api/test_p01_cross_channel_suppression_e2e.py tests/unit/test_p01_budget_channel_wiring.py::test_spine_recall_allowed_stamps_budget_envelope tests/aurora/test_proactive_unified_budget.py::test_subject_refs_extraction_from_notification_payload -q；随后从留副本还原并复核",
+        "exit_code": 1,
+        "evidence": "3 failed（方向一端到端 + 生产者半场钉 + 提取面半场钉；方向二不受累保持绿）→ 还原 19 passed"
+      },
+      {
+        "purpose": "受影响面回归（原 1219 集单独复跑）",
+        "cmd": "pytest <原 11 文件集> -q",
+        "exit_code": 0,
+        "evidence": "1219 passed in 184.55s，零失败"
+      },
+      {
+        "purpose": "受影响面回归（含新 e2e 文件）",
+        "cmd": "pytest <原 11 文件集> tests/api/test_p01_cross_channel_suppression_e2e.py -q",
+        "exit_code": 0,
+        "evidence": "1221 passed in 170.52s（1219 + 新 2 测），零失败"
+      },
+      {
+        "purpose": "机械门：mypy 六入口（棘轮 ≤77 零新增）",
+        "cmd": "mypy app/aurora/proactive/unified_budget.py / app/core/celery_tasks.py / app/services/proactive_suggestion_service.py / app/api/v1/notification_center.py / app/aurora/proactive/config.py / app/aurora/proactive/metrics.py",
+        "exit_code": 0,
+        "evidence": "六入口各 33 errors in 31 files == 一审基线同数，零新增"
+      },
+      {
+        "purpose": "机械门：ruff + black（整改 6 文件）",
+        "cmd": "ruff check <6 文件> && black --check <6 文件>",
+        "exit_code": 0,
+        "evidence": "ruff All checks passed!；black 5 文件零漂移，celery_tasks.py 14 hunks 为 base 既有（与 71b81d9f 同 hunk 集、仅行位移 +8），零新增"
+      },
+      {
+        "purpose": "机械门：OpenAPI 契约",
+        "cmd": "pytest tests/contract/test_api_router_openapi_contract.py -q",
+        "exit_code": 0,
+        "evidence": "3 passed in 24.78s（零漂移：Notification.data 面非路由面）"
+      }
+    ]
+  },
+  "artifacts_sha256": {
+    "backend/app/aurora/proactive/unified_budget.py": "389c9b8c9a7426522cf66e1109dd264f3278be1d0c4881f41653bebb2a91fcb4",
+    "backend/app/aurora/proactive/config.py": "608d62f4044556ef12cbe04f55b8a492b7cb601f845dc83895a0ccc577f98630",
+    "backend/app/aurora/proactive/metrics.py": "19e94690ac9e74a61f84caaa3e6f3c4ec9d7d2858a2176725274fc1c31aa7226",
+    "backend/app/services/proactive_suggestion_service.py": "6d3857ce7aaec147ec554cb965a4210f9bd15f52884a42682d2be8595a6ea9eb",
+    "backend/app/core/celery_tasks.py": "c14b3c1670be29f7f5483798cb5d388b672d58c4839db00d26bb72e405808ad8",
+    "backend/app/api/v1/notification_center.py": "43c641acfc2b6941db360f80991b8074d5d58ba4cee44a40375773d7ab253a19",
+    "backend/tests/aurora/test_proactive_unified_budget.py": "7b4806603c0d12d5cd74d3b2e505dbe606be9202b102e66b5dd74ab3c0568817",
+    "backend/tests/unit/test_p01_budget_channel_wiring.py": "2c8068723c690e769410009514a72dd067a28614a248f63605c07d8e8801cb09"
+  },
+  "source_anchors": {
+    "nudge_channel": "backend/app/core/celery_tasks.py comeback_nudge_task（闸门替代散装 P-03+P-06 调用，信封盖 Notification.data）",
+    "spine_channel": "backend/app/core/celery_tasks.py recall_notification_task（闸门前置；被抑制时不消耗 spine 冷却）",
+    "budget_gate": "backend/app/aurora/proactive/unified_budget.py UnifiedProactiveBudgetService.evaluate（固定顺序：开关→抑制→过期 subject→effect 去重→负担）",
+    "suppression_authority": "backend/app/services/proactive_suggestion_service.py（P-03：类型级既有 + subject 级本卡扩展，同一 explicit JSONB 命名空间）",
+    "burden_authority": "backend/app/aurora/runtime_v1/notification_settings.py NotificationSettingsResolver.evaluate_burden（P-06，两渠道同一份）",
+    "record_face": "backend/app/api/v1/notification_center.py record_suggestion_action（反馈升格跨渠道 subject 抑制；task→plan 解析）"
+  }
+}

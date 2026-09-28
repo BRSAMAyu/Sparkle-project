@@ -2119,7 +2119,6 @@ def comeback_nudge_task(self, user_id: str):
     from app.schemas.notification import NotificationCreate
     from app.services.notification_service import NotificationService
     from app.services.proactive_suggestion_service import (
-        ProactiveSuggestionFeedbackService,
         build_suggestion_elements,
         resolve_comeback_destination,
     )
@@ -2152,56 +2151,85 @@ def comeback_nudge_task(self, user_id: str):
                 content=str(payload.get("message") or ""),
             )
 
-            # P-03: 用户拒绝回路——「今天不再看」冷却窗口内 / 「不再提醒此类」
-            # 静音中的类型，直接在生成源头抑制（真源不产新通知，非渲染遮蔽）。
-            suppression = await ProactiveSuggestionFeedbackService(
-                session
-            ).get_suppression(UUID(user_id), "comeback_nudge", now=reference_time)
-            if suppression is not None:
-                logger.debug(
-                    "comeback_nudge_task: suggestion suppressed for user {} ({})",
-                    user_id,
-                    suppression["reason"],
-                )
-                return {
-                    "status": "skipped",
-                    "reason": "suggestion_suppressed",
-                    "suppression": suppression,
-                    "plan_id": plan_id or None,
-                }
-
-            # P-06: 统一通知负担闸门（quiet hours / daily cap）——一处真源
-            # 解析（用户 quiet 窗 + daily cap + 低刺激档交集语义），在生成
-            # 源头抑制；读失败 fail-closed（宁可少发不可误发）。
-            from app.aurora.runtime_v1.notification_settings import (
-                NotificationSettingsResolver,
-                NotificationSettingsUnavailable,
+            # V4-P01: 统一主动预算闸门——nudges/spine 渠道同一用户预算。
+            # P-03 类型级抑制（既有语义）+ subject 级跨渠道抑制（另一渠道
+            # 拒绝/静音后不补发）+ 同 prompt_key 一次 effect + P-06 quiet/cap
+            # 透传。抑制在生成源头（真源不产新通知，非渲染遮蔽）。
+            from app.aurora.proactive.unified_budget import (
+                ProactiveBudgetRequest,
+                ProactiveChannel,
+                UnifiedProactiveBudgetService,
+                build_budget_envelope,
+                subject_refs_from_payload,
             )
 
-            resolver = NotificationSettingsResolver(session)
-            try:
-                burden = await resolver.evaluate_burden(UUID(user_id), now=reference_time)
-            except NotificationSettingsUnavailable as exc:
-                logger.warning(
-                    "comeback_nudge_task: notification settings unavailable, fail-closed user={} ({!r})",
-                    user_id,
-                    exc,
-                )
-                return {
-                    "status": "skipped",
-                    "reason": "notification_settings_unavailable",
-                    "plan_id": plan_id or None,
-                }
-            if not burden.allowed:
+            budget_request = ProactiveBudgetRequest(
+                user_id=user_id,
+                channel=ProactiveChannel.NUDGE,
+                suggestion_type="comeback_nudge",
+                subject_refs=subject_refs_from_payload(payload),
+                prompt_kind="comeback",
+                now=reference_time,
+            )
+            budget_decision = await UnifiedProactiveBudgetService(session).evaluate(budget_request)
+            if budget_decision.suppressed:
+                budget_reason = budget_decision.reason
+                if budget_reason == "suggestion_suppressed":
+                    suppression = dict(budget_decision.details.get("suppression") or {})
+                    logger.debug(
+                        "comeback_nudge_task: suggestion suppressed for user {} ({})",
+                        user_id,
+                        suppression.get("reason"),
+                    )
+                    return {
+                        "status": "skipped",
+                        "reason": "suggestion_suppressed",
+                        "suppression": suppression,
+                        "plan_id": plan_id or None,
+                    }
+                if budget_reason in ("quiet_hours", "daily_cap"):
+                    logger.debug(
+                        "comeback_nudge_task: notification burden suppressed for user {} ({})",
+                        user_id,
+                        budget_reason,
+                    )
+                    return {
+                        "status": "skipped",
+                        "reason": "notification_burden",
+                        "burden": {
+                            "allowed": False,
+                            "reason": budget_reason,
+                            "details": {
+                                key: value for key, value in budget_decision.details.items() if key != "decided_at"
+                            },
+                        },
+                        "plan_id": plan_id or None,
+                    }
+                if budget_reason == "budget_state_unavailable":
+                    logger.warning(
+                        "comeback_nudge_task: notification settings unavailable, fail-closed user={}",
+                        user_id,
+                    )
+                    return {
+                        "status": "skipped",
+                        "reason": "notification_settings_unavailable",
+                        "plan_id": plan_id or None,
+                    }
+                # cross_channel_suppressed / already_effected：跨渠道抑制与
+                # 一次 effect 去重（V4-P01 新增语义，原因原样可审计）。
                 logger.debug(
-                    "comeback_nudge_task: notification burden suppressed for user {} ({})",
+                    "comeback_nudge_task: budget suppressed for user {} ({})",
                     user_id,
-                    burden.reason,
+                    budget_reason,
                 )
                 return {
                     "status": "skipped",
-                    "reason": "notification_burden",
-                    "burden": burden.to_dict(),
+                    "reason": budget_reason,
+                    "budget": {
+                        "prompt_key": budget_decision.prompt_key,
+                        "subject": budget_request.subject_key,
+                        "suppression": dict(budget_decision.details.get("suppression") or {}),
+                    },
                     "plan_id": plan_id or None,
                 }
 
@@ -2245,6 +2273,12 @@ def comeback_nudge_task(self, user_id: str):
                         "deep_link": destination_route,
                         "goal_state": payload.get("goal_state") or {},
                         "stimulation_policy": policy.payload_tag,
+                        # V4-P01: 预算消耗与因果来源可追（与账本行同源）。
+                        "proactive_budget": build_budget_envelope(
+                            channel=ProactiveChannel.NUDGE,
+                            request=budget_request,
+                            decision=budget_decision,
+                        ),
                     },
                 ),
                 # 低刺激档：不主动推送，仅入应用内通知中心（用户回访时可见）。
@@ -2971,10 +3005,52 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
     parsed_context = json.loads(context) if isinstance(context, str) else context
 
     async def _run():
+        from app.aurora.proactive.unified_budget import (
+            ProactiveBudgetRequest,
+            ProactiveChannel,
+            UnifiedProactiveBudgetService,
+            build_budget_envelope,
+            subject_refs_from_payload,
+        )
         from app.core.cache import cache_service
         from app.signals.spine_orchestrator import get_spine_orchestrator
 
         redis = cache_service.redis
+
+        # V4-P01: 统一主动预算闸门——spine 渠道与 nudge 渠道同一用户预算。
+        # 跨渠道拒绝/静音（subject 级）、过期计划 subject、同 prompt_key
+        # 一次 effect、quiet hours/共享日预算——任一命中即在生成源头跳过
+        # （此前 spine 渠道只有自身 Redis 冷却，不过 quiet/cap、不认另一
+        # 渠道的拒绝）。与 spine 自身冷却的关系：本闸门在前，被抑制时不
+        # 消耗 spine 冷却状态（record_sent 不发生）。
+        spine_subject_refs = subject_refs_from_payload(parsed_context)
+        async with AsyncSessionLocal() as budget_session:
+            budget_decision = await UnifiedProactiveBudgetService(budget_session).evaluate(
+                ProactiveBudgetRequest(
+                    user_id=user_id,
+                    channel=ProactiveChannel.SPINE,
+                    suggestion_type="recall_notification",
+                    subject_refs=spine_subject_refs,
+                    prompt_kind=trigger_type,
+                )
+            )
+        if budget_decision.suppressed:
+            logger.debug(
+                "recall_notification_task: budget suppressed user={} trigger={} ({})",
+                user_id,
+                trigger_type,
+                budget_decision.reason,
+            )
+            return {
+                "status": "skipped",
+                "reason": budget_decision.reason,
+                "budget": {
+                    "prompt_key": budget_decision.prompt_key,
+                    "channel": "spine",
+                    "trigger_type": trigger_type,
+                },
+            }
+
         spine = get_spine_orchestrator(redis_client=redis)
 
         # V-14: Run signal pipeline first (generates directives + trace)
@@ -3017,6 +3093,25 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
                         "effort_estimate": message.effort_estimate,
                         "deadline_pressure_label": message.deadline_pressure_label,
                         "recall_score": message.recall_score,
+                        # V4-P01 一审 C-1: 上下文 subject 键直落 data——
+                        # suggestion-action 提取面（subject_refs_from_payload）
+                        # 读这些键升格跨渠道 subject 抑制；键不落 data 则
+                        # spine 卡拒绝/静音零写入、同 plan nudge 照常放行
+                        # （一审 F1 结构性失效，端到端钉
+                        # tests/api/test_p01_cross_channel_suppression_e2e.py）。
+                        **{f"{domain}_id": ref for domain, ref in spine_subject_refs.items()},
+                        # V4-P01: 预算消耗与因果来源可追（与账本行同源）。
+                        "proactive_budget": build_budget_envelope(
+                            channel=ProactiveChannel.SPINE,
+                            request=ProactiveBudgetRequest(
+                                user_id=user_id,
+                                channel=ProactiveChannel.SPINE,
+                                suggestion_type="recall_notification",
+                                subject_refs=spine_subject_refs,
+                                prompt_kind=trigger_type,
+                            ),
+                            decision=budget_decision,
+                        ),
                     },
                 ),
                 push_via_websocket=True,
