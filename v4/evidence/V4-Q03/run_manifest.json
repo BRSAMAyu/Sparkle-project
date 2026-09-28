@@ -64,36 +64,41 @@
       "exit_code": 0
     },
     {
-      "command": "SECRET_KEY=… backend/.venv/bin/python -m pytest tests/unit/test_hybrid_policy.py tests/services/test_learning_journey_service.py tests/api/test_learning_journey_api.py tests/unit/test_capability_channel.py tests/services/galaxy/test_outcome_absorption_channels.py tests/unit/test_j06_hybrid_journey.py tests/unit/test_hybrid_run_steps.py tests/unit/test_hybrid_run_steps_api.py tests/test_plan_task_tools_production.py tests/unit/test_sprint_galaxy_mastery.py -q --no-header",
-      "purpose": "依赖卡基线回归（U10/U04/I07/D04 + 结算面）@ a8f46650",
+      "command": "cd /Users/brsama/code/GitHub/wtQ03/backend && SECRET_KEY=… ENVIRONMENT=test /Users/brsama/code/GitHub/Sparkle-project/backend/.venv/bin/python -m pytest tests/unit/test_hybrid_policy.py tests/services/test_learning_journey_service.py tests/api/test_learning_journey_api.py tests/unit/test_capability_channel.py tests/services/galaxy/test_outcome_absorption_channels.py tests/unit/test_j06_hybrid_journey.py tests/unit/test_hybrid_run_steps.py tests/unit/test_hybrid_run_steps_api.py tests/test_plan_task_tools_production.py tests/unit/test_sprint_galaxy_mastery.py -q --no-header",
+      "purpose": "依赖卡基线回归（U10/U04/I07/D04 + 结算面）@ a8f46650（N-r1-1 勘误：路径口径改为自洽形式，真实 cwd=wtQ03/backend；结果数字为被评 SHA 原始记录）",
       "exit_code": 0,
       "result": "174 passed"
     },
     {
-      "command": "SECRET_KEY=… backend/.venv/bin/python -m pytest ../v4/evidence/V4-Q03/probes/test_q03_acceptance.py -q --no-header",
-      "purpose": "Q03 验收七场景（S1-S7；原始记录落 raw_records/，运行日志 raw_probe_run.log）",
+      "command": "cd /Users/brsama/code/GitHub/wtQ03/backend && SECRET_KEY=… ENVIRONMENT=test /Users/brsama/code/GitHub/Sparkle-project/backend/.venv/bin/python -m pytest ../v4/evidence/V4-Q03/probes/test_q03_acceptance.py -q --no-header",
+      "purpose": "Q03 验收七场景（S1-S7；原始记录落 raw_records/，运行日志 raw_probe_run.log）（N-r1-1 勘误：同上路径口径）",
       "exit_code": 0,
       "result": "7 passed"
     },
     {
-      "command": "M1: sed task_service.py 'if settlement is not None and not settlement.allowed' → 'if False and …'；复跑 S2",
+      "command": "M1（cwd=wtQ03/backend）: sed task_service.py 'if settlement is not None and not settlement.allowed' → 'if False and …'；复跑 S2",
       "purpose": "护栏1 突变自证：结算门被旁路 → S2 红（1 failed）",
       "exit_code": 1,
       "result": "RED；git checkout 还原后 S2 绿（1 passed）"
     },
     {
-      "command": "M2: sed hybrid_policy.py redact 剥除分支 → 'if False and …'；复跑 S1",
+      "command": "M2（cwd=wtQ03/backend）: sed hybrid_policy.py redact 剥除分支 → 'if False and …'；复跑 S1",
       "purpose": "护栏2 突变自证：答案键不剥除 → S1 红（1 failed）",
       "exit_code": 1,
       "result": "RED；还原后 S1 绿"
     },
     {
-      "command": "M3: sed agent_run_service.py complete_agent_step owner 检查 → 'if False and …'；复跑 S5",
+      "command": "M3（cwd=wtQ03/backend）: sed agent_run_service.py complete_agent_step owner 检查 → 'if False and …'；复跑 S5",
       "purpose": "护栏3 突变自证：owner 纪律失效（agent 可完成 human 步）→ S5 红（1 failed）",
       "exit_code": 1,
       "result": "RED；还原后 S5+S1 绿（2 passed）"
     }
   ],
+  "r1_errata": {
+    "review": "review_r1（APPROVE_WITH_CONDITIONS）次要问题 N-r1-1 / N-r1-2 的记录面勘误（2026-09-29 整改；原文见本文件 @ 94909b7c）",
+    "n_r1_1": "commands_and_exit_codes 中 pytest 命令的路径口径修正为自洽形式：真实 cwd=/Users/brsama/code/GitHub/wtQ03/backend，解释器=主检出共享 .venv 绝对路径（wtQ03 无本地 .venv）。审查侧已按该口径从 wtQ03/backend 复现成功；本节历史结果数字（174/7 passed 等）为被评 SHA a8f46650 的原始记录，不随勘误改写",
+    "n_r1_2": "line_anchors.F1_defect 的持久化门行幅勘误为 learning_journey_service.py:329-333（原文误写 322-333；limitations.md 的 330-333 与探针注释属五件套/哈希封存件，原文保留不改，以本勘误为准）；该锚描述被评 SHA，整改后行幅已随修复位移"
+  },
   "artifacts_sha256": {
     "probes/conftest.py": "507aab742da43a2330cbafb6b943717c99768862ccc40f8d1ac664e552ae63a4",
     "probes/test_q03_acceptance.py": "7e0651ef91edd68bd7c905c86544a5c62d66d8a891f970b009c9e7e3a5f662e9",
@@ -111,7 +116,7 @@
     "G1_channel_non_human": "backend/app/services/galaxy/capability_channel.py:126-175（classify_outcome_channel：run_receipt 恒 NON_HUMAN）+ :178-202（fusion None=不融合）；backend/app/services/galaxy/outcome_absorption_service.py（吸收器分流）",
     "G2_redaction": "backend/app/core/hybrid_policy.py:126-140（INDEPENDENT_CHECK_ANSWER_KEYS 封闭键集含 leaf 键 correct）+ :468-501（redact/探针）；backend/app/services/learning_journey_service.py:214-218（出口探针）+ :355-386（判分零写零答案）",
     "G3_owner_discipline": "backend/app/services/agent_run_service.py:1354-1357（agent 只完成 agent-owned）+ :1466-1470（用户步 owner 白名单）；幂等=backend/app/api/v1/runs.py:544-601（complete 幂等强制 422/replay）",
-    "F1_defect": "backend/app/core/learning_journey.py:262-283（request_independent_check：非直达 check 的合法推进也返回 HOLD.evidence_not_supported）× backend/app/services/learning_journey_service.py:322-333（enter_check 持久化门 `hold_reason is None`）",
+    "F1_defect": "backend/app/core/learning_journey.py:262-283（request_independent_check：非直达 check 的合法推进也返回 HOLD.evidence_not_supported）× backend/app/services/learning_journey_service.py:329-333（enter_check 持久化门 `hold_reason is None`；N-r1-2 勘误：原文 322-333 行幅偏差，语义所指无误；整改后行幅已随修复位移）",
     "F2_defect": "backend/app/services/hybrid_journey_service.py:713（重放路径无条件 _execute_and_check）+ :728-745（无条件落 execute_check 产物行）"
   },
   "probe_file_disposition": "验收剧本与探针保留于 v4/evidence/V4-Q03/probes/（供双审复现）；未加入 backend/tests/ 生产测试树（用后即删语义=不进生产套件），复现命令见 commands_and_exit_codes",

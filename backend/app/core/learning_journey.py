@@ -265,12 +265,23 @@ def request_independent_check(
     hint_level: str,
     evidence_supported: bool,
 ) -> tuple[ScaffoldDecision, str | None]:
-    """用户在旅程页点「检验」→ 是否放行进入检验段。
+    """用户在旅程页点「检验」→ 脚手架裁决 + 是否暂缓（hold_reason）。
 
     消费 I07 :func:`hybrid_policy.next_scaffold_step`（用户选择=True 的单点
-    转移）：证据支持 → 推进（返回新决策，``hold_reason=None``）；证据不支持
-    → 原地（返回当前态决策 + ``hold_reason=HOLD.evidence_not_supported``）。
-    已在检验段 → ``OK.independent_check_reached``（链终点，幂等放行）。
+    转移）。``hold_reason`` 语义 = **脚手架裁决本身是否暂缓**（Q03 一审 F1
+    整改后的收口口径），与「是否出题」分立——出题由服务层 stage 门
+    （未到 ``independent_check`` 不出题面）另行判定：
+
+    - 证据支持 + 用户选择 → 推进（``hold_reason=None``）：这一步正好落到
+      ``independent_check``（attempt 单跳）即放行出题；**合法中间推进**
+      （example→attempt，``OK.advance_user_chose_with_evidence``）同样不是
+      暂缓——MASTER_DESIGN §6「示例→自己做→检查」的设计旅程：用户点检验
+      而脚手架还在 example 时，正确语义是先落库推进到「自己做」（attempt，
+      旅程段 practice），绝不谎报 ``HOLD.evidence_not_supported``（证据明明
+      支持）。中间步不携带题面，用户须亲自完成练习，再点检验进入检验段。
+    - 证据不支持 → 原地 + ``hold_reason=HOLD.evidence_not_supported``
+      （HOLD 语义只留给真实不支持的裁决）。
+    - 已在检验段 → ``OK.independent_check_reached``（链终点，幂等放行）。
     """
     decision = next_scaffold_step(
         stage=stage,
@@ -279,6 +290,13 @@ def request_independent_check(
         evidence_supported=evidence_supported,
     )
     if decision.stage == SCAFFOLD_STAGE_INDEPENDENT_CHECK:
+        # 单跳正落检验段（或幂等在段）：放行。
+        return decision, None
+    if decision.reason.startswith("OK."):
+        # Q03-F1 整改（处方 A）：合法中间推进（reason=OK.advance_user_chose_
+        # with_evidence）返回 None hold = 推进合法，服务层持久化门
+        # （``hold_reason is None``）据此写回中间步；出题仍被服务层 stage 门
+        # 拦住（check_available=False），检验判分门不受影响。
         return decision, None
     return decision, CHECK_REASON_HOLD_EVIDENCE
 
