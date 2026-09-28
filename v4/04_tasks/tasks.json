@@ -653,9 +653,9 @@
         "V4-F03",
         "V4-F04"
       ],
-      "status": "IN_PROGRESS",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "SELF_CHECK_PASS",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS_WITH_CHALLENGES",
       "kind": "implementation",
       "required_locks": [
         "style-preview"
@@ -704,7 +704,12 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "review": {
+        "r1": "b29f3169 PASS_WITH_CHALLENGES 可销账（56 文件重采 byte-identical 超自报；6 组×4 档语义恒等亲算；C2 REJECT 重挂探针实证零重挂）",
+        "r1_c1a_c3a": "泛化非空守卫+时长勘误已落（41/41）",
+        "integration_reverify": "合并后 design 201 passed+analyze 归零"
+      }
     },
     {
       "id": "V4-F06",
