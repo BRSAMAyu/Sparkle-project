@@ -1,0 +1,32 @@
+{
+  "card": "V4-U08",
+  "risk": "normal",
+  "independent_reviewers_required": 1,
+  "implementation_state": "REVIEW_READY",
+  "evidence_verdict": "NOT_RUN",
+  "status": "PENDING",
+  "reviewer_instructions": "以卡面三条验收为准（必须可失败）：①四页面看到同 task/version；重复点击一次写入 ②改日程有键盘/按钮路径，不仅拖动 ③计划时长不作为完成证据，删除/放弃不同语义。逐条独立复跑（可失败性亲验：突变复放见 test_results.json mutation_replay——把 unified_calendar_provider 的 `?? 0` 改回 `?? estimatedMinutes` 应 +8 -1；删除 TaskNotifier._coalesceWrite 包装应 验收1 正反例变红）。红线清单见 diff_or_evidence_only.md §3（RF-06 三文件/classic/backend 零触碰、不造第二权威）。",
+  "pre_registered_challenges": [
+    {
+      "id": "CH-1",
+      "challenge": "「一次写入」的口径边界：合流键=操作:taskId，在飞窗口内第二次调用拿同一 Future（identical）。请审查者裁决：M6-03 已有的 retryCompleteTask 幂等（synced 后跳过）与本卡在飞合流是否构成互补而非重叠——两者叠加后是否还存在双写路径（如：在飞合流窗口恰好在乐观置位后、repo 返回前断网，OfflineEnqueuedException 与成功返回竞态时两次入队）？如是，请指出是否需要 outbox 侧按 taskId+op 去重（属后端/离线链，本卡未触碰）。"
+    },
+    {
+      "id": "CH-2",
+      "challenge": "「专注聚合只认实测」的行为变化面：合并后 unified 月聚合（热力/今日概要/月指标卡）对 actualMinutes=null 的完成任务计 0，数值可能整体低于旧口径（旧口径拿估时顶替）。请审查者裁决：这是「无数据不造进度」的正确落地，还是需要对用户可见的解释口径（如热力图例注明「专注=实测时长」）——如需，归视觉/文案另卡还是本卡整改。"
+    },
+    {
+      "id": "CH-3",
+      "challenge": "goal 页第二写入入口：GoalDetailNotifier.completeNextStep 保持自有 POST 链（J-08 注释声明不重建真源），本卡只给它同制在飞合流。请审查者裁决：「四页面唯一权威」的验收是否要求它并入 TaskListNotifier（合并奖励链/事件 source 归属变化），还是「同语义同制」即满足——并入是架构动作，本卡按保守侧未动并登记 limitations #2。"
+    },
+    {
+      "id": "CH-4",
+      "challenge": "改期入口的终态封禁：完成/放弃任务不渲染改期按钮（拖拽 DropTarget 侧仍不拦终态任务——DraggableTaskCard 来源侧状态不在本卡改动面）。请审查者复验：终态任务经拖拽路径落到新日期时服务端行为如何（接受/拒绝），是否需要在 _handleTaskDropped 侧补同面封禁——如是，一行守卫的本卡整改还是另卡。"
+    },
+    {
+      "id": "CH-5",
+      "challenge": "新增 widget 证据测试的 harness 强度：u08_evidence_test 直接挂 CalendarStatsScreen（override 五 provider + SilentApiClient 禁真网 + Hive 触点 stub）。请审查者对照 diff 确认：断言（按钮存在/语义名/终态无按钮/日期选择器打开/确认闭环）未被 harness 短路（CalendarDatePicker 是真实 showDatePicker 产物非 stub）；并评估该测试作为「键盘/按钮路径存在」的证据等级是否充分（对照拖拽路径无同等级 widget 测试的现状）。"
+    }
+  ],
+  "integration_reverify": "合并后需在集成 SHA 复跑：flutter test test/features/task/presentation/providers/unified_action_semantics_test.dart test/features/calendar/presentation/screens/u08_evidence_test.dart（+10）+ flutter test test/features/task/ test/features/calendar/ test/features/goal/ test/widget/（基线见 test_results.json）+ flutter analyze --no-pub lib test（零 issue）+ L10N/ui-tokens/spacing 三守卫"
+}
