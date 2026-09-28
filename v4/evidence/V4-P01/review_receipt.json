@@ -1,0 +1,32 @@
+{
+  "card": "V4-P01",
+  "status": "REVIEW_READY",
+  "implementation_state": "COMPLETE_AWAITING_REVIEW",
+  "evidence_verdict": "PASS_LOCAL",
+  "branch": "agent/v4/p01",
+  "head_sha": "d0bd8d45c7eec8ce77711e1fe4c1dea43212580d",
+  "base_sha": "17c14cea",
+  "independent_reviewers_required": 1,
+  "risk": "normal",
+  "review_scope": {
+    "commits": ["d0bd8d45 feat(v4): P01 主动建议与接续同策略同打扰预算", "<evidence commit>"],
+    "files_changed": [
+      "backend/app/aurora/proactive/unified_budget.py (new)",
+      "backend/app/aurora/proactive/config.py",
+      "backend/app/aurora/proactive/metrics.py",
+      "backend/app/services/proactive_suggestion_service.py",
+      "backend/app/core/celery_tasks.py",
+      "backend/app/api/v1/notification_center.py",
+      "backend/tests/aurora/test_proactive_unified_budget.py (new)",
+      "backend/tests/unit/test_p01_budget_channel_wiring.py (new)"
+    ]
+  },
+  "pre_registered_challenges": [
+    "CH-1 跨渠道补发反例钉的完备性：拒绝传播以 subject（plan/task/goal）为键——审查请尝试构造「拒绝后另一渠道仍能触达同主题」的反例（无 subject 的 scan 派发路径已在 limitations#1 如实声明，审查请裁决该缺口是否阻塞验收①）",
+    "CH-2 过期计划单侧抑制的卡面读法：subject_expired 仅作用于 spine 渠道（保守读法保 J-07 rescope）；请裁决「不再被另一渠道补发」是否要求双侧",
+    "CH-3 一次 effect 去重窗 24h 对 spine 带 subject 提示的收紧（task_missed 既有 8h 冷却 < 24h）：请裁决时长语义",
+    "CH-4 muted 单向升级（cooldown 可被静音覆写、静音不被冷却降级）与一次 effect 不叠加的并存语义",
+    "CH-5 mutation 演示的复原完整性：M1-M3 均以 sha256/17 passed 复原收口，请复核还原后 unified_budget.py 与 commit d0bd8d45 一致"
+  ],
+  "notes": "依赖 I01/D02/I04 已全合并；锁 proactive-policy 按本卡独占使用；tasks.json 已推进 in_progress → REVIEW_READY；不 push（本地银行领先 origin）"
+}

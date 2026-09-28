@@ -1,0 +1,85 @@
+{
+  "card": "V4-P01",
+  "base_sha": "17c14cea",
+  "head_sha": "d0bd8d45",
+  "generated_at_local": "2026-09-28",
+  "summary": {
+    "new_gate_tests": { "file": "backend/tests/aurora/test_proactive_unified_budget.py", "total": 13, "passed": 13, "failed": 0 },
+    "new_wiring_tests": { "file": "backend/tests/unit/test_p01_budget_channel_wiring.py", "total": 4, "passed": 4, "failed": 0 },
+    "affected_surface_regression": {
+      "cmd": "pytest tests/unit/test_comeback_nudge_task.py tests/unit/test_comeback_nudge_burden_p06.py tests/api/test_notification_suggestion_action.py tests/aurora/test_notification_burden_p06.py tests/aurora/test_notification_burden_24h_clock.py tests/aurora/test_proactive_event_pipeline.py tests/unit/test_proactive_suggestion_feedback_honesty.py tests/unit/spine/test_notification.py tests/unit/test_signal_spine.py tests/aurora/test_proactive_unified_budget.py tests/unit/test_p01_budget_channel_wiring.py -q",
+      "passed": 1219,
+      "failed": 0,
+      "duration_sec": 135.78,
+      "baseline_before_change_same_set_minus_new_files": 242,
+      "note": "零回归；P-01 事件管线 32 测、P-06 负担/24h 时钟、P-03 反馈诚实性、nudge/spine 投递面全部保持绿"
+    },
+    "contract_gates": {
+      "openapi": { "cmd": "pytest tests/contract/test_api_router_openapi_contract.py -q", "passed": 3 },
+      "ba_routes": { "cmd": "python scripts/guards/check_rule_ba_routes_parity.py", "result": "OK 621↔1015" }
+    }
+  },
+  "acceptance_coverage": [
+    {
+      "acceptance": "拒绝/静音/过期计划不再被另一渠道补发",
+      "positive": [
+        "test_cross_channel_rejection_blocks_spine_nail（nudge 渠道拒绝 plan X → spine 同 subject 被拦 cross_channel_suppressed；反向 task→plan 解析后同样成立；muted 优先不随 24h 自愈）",
+        "test_expired_plan_blocks_spine_only（过期计划 spine 被拦 subject_expired；nudge 渠道保留 J-07 rescope 不被误伤）",
+        "test_missing_plan_subject_blocks_spine（删除/缺失计划 subject 不复活）",
+        "test_type_suppression_still_blocks_own_channel（既有 P-03 类型级语义经闸门保持）"
+      ],
+      "negative": [
+        "test_subject_cooldown_expiry_releases（冷却到期真实放行——不过度抑制）"
+      ],
+      "nail": "跨渠道补发反例钉：闸门级 + 任务级（test_spine_recall_blocked_after_nudge_rejection_nail：spine 构建/trace/投递/冷却记录全部不发生）双钉；突变注入①演示可失败（2 failed → 还原绿）"
+    },
+    {
+      "acceptance": "回归不视为必须打扰，不改变主题推断情绪",
+      "positive": [
+        "test_regression_comeback_not_privileged_nail（cap=0 时 comeback 与任何触发同级被拦 daily_cap——无「刚回归必须打扰」豁免）",
+        "test_gate_writes_no_emotion_signals（闸门+抑制判定对 CognitiveFragment 零写入——回归是中性事件，不改变主题推断情绪的输入面）"
+      ],
+      "negative": [
+        "test_gate_allows_within_budget_with_auditable_envelope（预算内回归照常可达——不是一刀切禁言）"
+      ],
+      "nail": "突变注入③：给 comeback 渠道加预算绕过 → 回归非特权钉立红（1 failed → 还原绿）；情绪零写入钉独立于该突变通过"
+    },
+    {
+      "acceptance": "同一提示多端一次effect，预算与因果来源可追",
+      "positive": [
+        "test_prompt_key_effect_window_nail（同 prompt_key 第二次判定 already_effected；不同 subject 不受牵连）",
+        "test_gate_allows_within_budget_with_auditable_envelope（信封含 prompt_key/channel/suggestion_type/subject/daily_count/daily_cap/decided_at——与账本行同源）",
+        "test_comeback_nudge_stamps_budget_envelope / test_spine_recall_allowed_stamps_budget_envelope（两渠道放行路径通知 data 均盖同一审计形状）"
+      ],
+      "negative": [
+        "test_record_resolves_task_plan_and_never_stacks（重复拒绝一次 effect 不叠加——先到先得；静音允许单向升级）",
+        "test_subjectless_prompt_skips_effect_dedup_but_keeps_burden（无 subject 提示不启用去重，预算面仍在——不因去重误伤既有节奏）"
+      ],
+      "nail": "多端一次 effect 反例钉：闸门级 + 任务级（test_comeback_nudge_blocked_by_effect_dedup_second_dispatch：账本行信封匹配即拦）双钉；突变注入②演示可失败（2 failed → 还原绿）"
+    }
+  ],
+  "mutation_checks": [
+    {
+      "id": "M1-跨渠道抑制失效",
+      "mutation": "unified_budget.py subject_suppression 分支改为永假",
+      "expected": "跨渠道补发反例钉转红",
+      "observed": "2 failed（test_cross_channel_rejection_blocks_spine_nail + test_spine_recall_blocked_after_nudge_rejection_nail）",
+      "restored": "17 passed"
+    },
+    {
+      "id": "M2-一次effect去重失效",
+      "mutation": "if request.subject_key: → if False（effect 去重分支禁用）",
+      "expected": "多端一次 effect 反例钉转红",
+      "observed": "2 failed（test_prompt_key_effect_window_nail + test_comeback_nudge_blocked_by_effect_dedup_second_dispatch）",
+      "restored": "17 passed"
+    },
+    {
+      "id": "M3-回归特权突变",
+      "mutation": "nudge 渠道在负担闸门前无条件 allow（回归被当作必须打扰）",
+      "expected": "回归非特权钉转红",
+      "observed": "1 failed（test_regression_comeback_not_privileged_nail）；情绪零写入钉不受影响独立通过",
+      "restored": "diff 干净，17 passed"
+    }
+  ],
+  "verdict_note": "评测口径：本卡测试全绿 + 三突变可失败性演示；value 面的真人打扰指标未验证（无真实用户试验，见 limitations）"
+}
