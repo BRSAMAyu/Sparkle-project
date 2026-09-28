@@ -75,5 +75,5 @@ state 写必抛 Bad state」互为充要：无泄漏错误 ⇔ 未写 state。
 
 ## 6. 交付
 
-- commit：见分支 `agent/v4/fix547`（`fix(chat): FIX-547 sendMessage 续延 dispose 后活性守卫`），**未 push**。
+- fix commit：`db0916f6`（`fix(chat): FIX-547 sendMessage 续延 dispose 后活性守卫`，分支 `agent/v4/fix547`），**未 push**。台账状态列更新与本 receipt 补记为后续独立 commit（sha 不可自指）。
 - DYNAMIC_ISSUES.md V3-FIX-547 行（OPEN 行）状态列改 `FIXED@<sha>`。
