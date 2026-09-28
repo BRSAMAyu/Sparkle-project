@@ -2955,7 +2955,7 @@
         "review receipt"
       ],
       "completion": {
-        "evidence": "wt764 工程+wt282 增量（wt772 receipt 判 PARTIAL）+wt784 runbook+wt789 驱动+wt792 E3 实测（v3-output/WT792-J02-SIM/REPORT.md：A1b/A2/F2/F5/F3/W1 全绿核验，A1a 降级口径 2/6 跑实测 ≤3min 达标 121.7s/114.6s、5 跑 UI 注册 tap 走 O3 fallback 不计入主张；残留=FIX-540 修复后补测）；2026-09-28"
+        "evidence": "wt764 工程+wt282 增量（wt772 receipt 判 PARTIAL）+wt784 runbook+wt789 驱动+wt792 E3 实测（v3-output/WT792-J02-SIM/REPORT.md：A1b/A2/F2/F5/F3/W1 全绿核验，A1a 降级口径 2/6 跑实测 ≤3min 达标 121.7s/114.6s、5 跑 UI 注册 tap 走 O3 fallback 不计入主张；残留=FIX-540 修复后补测）；2026-09-28；**全量升级注记（2026-09-28 wt802 补测批）：A1a 6/6 全 ≤180s（99.7-102.2s）+FirstActionCard 6/6 浮现+纯 UI 注册 6/6（539/540 修法端到端实证）+截图重采集实证（543 闭）——降级口径解除，v3-output/WT802-J02-RETEST/REPORT.md**"
       }
     },
     {
