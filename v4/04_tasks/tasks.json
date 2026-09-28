@@ -1781,9 +1781,9 @@
       "depends_on": [
         "V4-D04"
       ],
-      "status": "in_progress",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "PENDING_REVIEW",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "APPROVE",
       "kind": "implementation",
       "required_locks": [
         "graph-retrieval"
@@ -1834,16 +1834,9 @@
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
       "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
       "review": {
-        "implementation": "agent/v4/d06（commit 见 git log；base=f9729cc5，main 前进至 3b96039f 产品代码零交集）",
-        "evidence_dir": "v4/evidence/V4-D06/",
-        "reviewers_required": 1,
-        "locks": [
-          "graph-retrieval"
-        ],
-        "new_tests": 19,
-        "mutation_tests": "M1 stale 门旁路 2 failed / M2 守卫旁路 1 failed / M3 积压规则旁路 1 failed——全部抓到后逐字节还原",
-        "regression": "graph 家族 60 + galaxy 178（D04 基线）+ retraction/worker 77 + grpc/shield 21 全绿",
-        "challenges_preregistered": "review_receipt.json review_challenges_preregistered（5 条：XPENDING 并发语义/水位等值比较/双读栅栏窗口/path-finder 未接门/写生产者空缺）"
+        "r1": "461aaf15 APPROVE 零阻塞（M1-M3 亲做还原；R2 等值水位三例实测边界；R4/R5 设计意图接受）",
+        "h_items": "H-1 等值水位硬化（单调 epoch/µs）/H-2 path-finder 冻结新增消费方/H-3 写生产者空缺=常态 stale 披露——随 receipt 立项待排",
+        "integration_reverify": "合并后 19+45 亲测绿（含 j06/j08/api D04 契约三测修复）"
       }
     },
     {
