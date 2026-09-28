@@ -1006,6 +1006,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
     } else {
       final guestService = _ref.read(guestServiceProvider);
       userId = await guestService.getGuestId();
+      // V4-FIX-547：getGuestId 是异步缺口——平台通道往返期间容器可能已
+      // 拆毁（页面卸载/测试 teardown）。续延恢复点按仓内取消传播惯例
+      // （本文件 flushPending.applyPending 同款 `_isDisposed` 门）退出，
+      // 不再触碰后续 provider 读与 state 写。
+      if (_isDisposed) return;
       nickname = guestService.getGuestNickname();
     }
 
@@ -1243,7 +1248,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
       bool isRetryable = false,
       bool restoreAttachments = false,
     }) {
-      if (!isCurrentRequest() || sawTerminalEvent) {
+      // V4-FIX-547：finalizeRun 是 sendMessage 全部收束路径（完成/失败/
+      // 中断）的唯一写收口，也是 dispose 竞态的最后写点（CI 29 真红钉 B
+      // 实录：catch → finalizeRun → state 写抛 Bad state 二次逃逸）。与
+      // 函数 finally 块既有 `mounted &&` 门同语义：notifier 已死即不写。
+      if (_isDisposed || !isCurrentRequest() || sawTerminalEvent) {
         return;
       }
       sawTerminalEvent = true;
@@ -1376,6 +1385,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     try {
       final token = await _ref.read(authRepositoryProvider).getAccessToken();
+      // V4-FIX-547：token await 是 sendMessage 最关键的异步缺口（真实现
+      // 走 secure storage/网络，秒级可达；CI 29 job 108772804580 真红链
+      // 即由此缺口伸入 chat_provider.dart:1388 的 subscriptionsProvider
+      // 读 → SubscriptionsNotifier 迟写回 Bad state）。续延恢复点先验
+      // 活性再触碰 provider 读/state 写——dispose 后即取消（cancel 传播），
+      // 正常路径（容器存活）零行为变化。
+      if (_isDisposed) return;
       final fileIds = state.attachedFiles.map((file) => file.id).toList();
       final useDocumentContext = state.documentRetrievalEnabled;
       state = state.copyWith(clearAttachments: true);
@@ -1481,7 +1497,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         );
 
         await for (final event in eventStream) {
-          if (!isCurrentRequest()) {
+          // V4-FIX-547：dispose 后容器（及其 provider 图）已死，事件循环
+          // 体内全是 _ref 读与 state 写；沿用 flushPending.applyPending
+          // 同款守卫（`_isDisposed || !isCurrentRequest()`）。
+          if (_isDisposed || !isCurrentRequest()) {
             break;
           }
           if (event is ErrorEvent && event.code == kChatFirstEventTimeoutCode) {
