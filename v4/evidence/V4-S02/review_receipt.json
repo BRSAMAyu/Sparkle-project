@@ -1,6 +1,6 @@
 {
   "task": "V4-S02",
-  "review_state": "R1_DONE: APPROVE_WITH_CONDITIONS (wtS02R1, see review_r1.md; awaiting R2)",
+  "review_state": "R1_DONE: APPROVE_WITH_CONDITIONS (wtS02R1, see review_r1.md); RECTIFIED: conditions D1/D2/C6 清偿于整改 commit ef0901a5（agent/v4/s02，D1/D2 均选修复路线非钉债；C6=limitations L10；次级建议 duck 值锚同 commit）——mutation 自验 3 红精确映射探针后还原全绿，受影响面 75+录音消费方 8 全绿、analyze 零；awaiting R2（R2 基线=ef0901a5）",
   "independent_reviewers_required": 2,
   "note": "高风险卡：需 2 份独立未参与会话审查 + 集成 SHA 可失败复验后才能销账。本文件为占位，R1/R2 receipt 由审查会话另行落盘（review_r1.md/review_r2.md），审查结论回写本文件 review_state。",
   "pre_registered_challenges": [
