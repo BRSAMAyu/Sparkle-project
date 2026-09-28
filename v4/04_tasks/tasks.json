@@ -2832,9 +2832,9 @@
    "depends_on": [
     "V4-F03"
    ],
-   "status": "in_progress",
-   "implementation_state": "REVIEW_READY",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "PASS_WITH_CHALLENGES",
    "kind": "implementation",
    "required_locks": [
     "motion-policy"
@@ -2883,7 +2883,13 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "55131e85 PASS_WITH_CHALLENGES（亲验全绿面 ×8 复跑：新套 23/23+design 237×3+消费面 56+analyze 零；乐谱↔预算窗逐字对齐+A- 变异判负×3；按压 100→80ms 18 消费文件抽 3 无本地覆盖；等价性更强口径独立重采 3132 字节 0 diff；merge 文件级交集为空）",
+    "remediation": "f8d3759c R1-1/R1-2 勘误（PNG 同 sha256=同 buffer 双写 artifact、真证据=独立双采集 RGBA 断言；验收③帧均值稀释注记）；零代码改动",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑",
+    "handoffs": "U15 repeat 清点以 49 为准（自述 48 少记 1）；三 implicit 组件接线归属→FIX-569"
+   }
   },
   {
    "id": "V4-S02",
