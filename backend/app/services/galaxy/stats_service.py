@@ -24,7 +24,6 @@ from app.services.galaxy.mastery_evidence import (
     MasteryBelief,
     MasteryEffectKind,
     MasteryEvidenceType,
-    capped_legacy_mastery,
     classify_audit_reason,
     encode_evidence_reason,
     encode_observation_payload,
@@ -137,6 +136,14 @@ class GalaxyStatsService:
         G-01 evidence-aware: 当提供 outcome evidence（测验/任务质量）时，
         mastery 由贝叶斯证据融合产生；否则走 legacy 时间公式，但被
         LEGACY_TIME_MASTERY_CAP 封顶——纯时长永远无法凭空推到"已掌握"。
+
+        V4-D04 降级：纯时长路径不再产生任何掌握度增长——时长只留**活动痕迹**
+        （study_count / total_study_minutes / last_study_at / 解锁 / projection
+        审计行），掌握度后验只由有效 outcome（独立检验通过，V4-D04 能力通道
+        VERIFIED）推进——「只学习计时不显示掌握」。存量 mastery 不动（参与
+        足迹保留，展示面按证据状态加能力标签封顶，见 NodeWithStatus）。
+        legacy 时间公式（``_calculate_mastery_delta``/``capped_legacy_mastery``）
+        保留为 V3 兼容面，不再进入本写路径。
         """
         # 1. 获取或创建用户节点状态
         status = await self._get_or_create_status(user_id, node_id)
@@ -157,12 +164,10 @@ class GalaxyStatsService:
             # 证据融合路径：outcome（quiz/task 质量）驱动 mastery
             fused = fuse_mastery(prior_belief.mean, prior_belief.variance, [outcome])
             new_mastery = min(max(fused.mean, 0.0), self.MAX_MASTERY)
-            mastery_delta = new_mastery - old_mastery
         else:
-            # Legacy 时间路径：有界（时间不再点亮高段掌握度）
-            raw_delta = self._calculate_mastery_delta(study_minutes, node.importance_level)
-            new_mastery = capped_legacy_mastery(old_mastery, raw_delta)
-            mastery_delta = new_mastery - old_mastery
+            # V4-D04：纯时长 = 活动痕迹，掌握度零增长（时间不再推亮度）。
+            new_mastery = old_mastery
+        mastery_delta = new_mastery - old_mastery
 
         # 4. 更新状态
         status.mastery_score = new_mastery
@@ -192,12 +197,25 @@ class GalaxyStatsService:
 
         # 5.1. Audit log (align with update_node_mastery pipeline)
         try:
+            # GUID-typed bindparams（与 G-02 吸收器同款纪律）：asyncpg 原生绑
+            # UUID，aiosqlite 绑 str——无类型化绑定时 sqlite 测试纪方言语境
+            # 直接 ProgrammingError（此前该行在 sqlite 下恒降级 warning）。
+            from sqlalchemy import String, bindparam
             from sqlalchemy import text as sa_text
+
+            from app.models.base import GUID
+
+            audit_stmt = sa_text(
+                "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision, effect_kind) "
+                "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision, :effect_kind)"
+            ).bindparams(
+                bindparam("node_id", type_=GUID),
+                bindparam("user_id", type_=GUID),
+                bindparam("reason", type_=String),
+                bindparam("request_id", type_=String),
+            )
             await self.db.execute(
-                sa_text(
-                    "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision, effect_kind) "
-                    "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision, :effect_kind)"
-                ),
+                audit_stmt,
                 {
                     "node_id": node_id,
                     "user_id": user_id,
@@ -207,6 +225,7 @@ class GalaxyStatsService:
                     "request_id": str(task_id) if task_id else None,
                     "revision": getattr(status, "revision", 0),
                     # V3-FIX-299: 时长影子行——只留痕，重放跳过。
+                    # V4-D04: 纯时长零掌握增长后本行是纯活动痕迹。
                     "effect_kind": MasteryEffectKind.PROJECTION.value,
                 },
             )
@@ -217,10 +236,7 @@ class GalaxyStatsService:
             # anchor (V3-FIX-292) — keep recording the honest pre-fusion value.
             if outcome is not None:
                 await self.db.execute(
-                    sa_text(
-                        "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision, effect_kind) "
-                        "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision, :effect_kind)"
-                    ),
+                    audit_stmt,
                     {
                         "node_id": node_id,
                         "user_id": user_id,
@@ -742,6 +758,10 @@ class GalaxyStatsService:
 
         Powers the `legacy_estimate` flag in Galaxy graph responses: a node
         with zero real-evidence audit rows is rendering a legacy estimate.
+
+        V4-D04: 撤回后的行零贡献——effect_kind='retracted'（D-03 墓碑）与
+        'projection'（影子行）不再计入证据存在性（与 G-01 重放的存在语义同
+        口径：NULL kind=迁移前形状照旧、evidence/set_point 计入）。
         """
         from sqlalchemy import text as sa_text
 
@@ -749,14 +769,20 @@ class GalaxyStatsService:
 
         quiz_reasons = sorted(QUIZ_EVIDENCE_REASONS)
         placeholders = ", ".join(f":reason_{i}" for i in range(len(quiz_reasons)))
-        params: dict[str, object] = {"user_id": user_id}
+        params: dict[str, object] = {
+            "user_id": user_id,
+            "evidence_kind": MasteryEffectKind.EVIDENCE.value,
+            "set_point_kind": MasteryEffectKind.SET_POINT.value,
+        }
         for i, reason in enumerate(quiz_reasons):
             params[f"reason_{i}"] = reason
         try:
             result = await self.db.execute(
                 sa_text(
                     f"SELECT node_id, COUNT(*) AS n FROM mastery_audit_log "
-                    f"WHERE user_id = :user_id AND (reason LIKE 'evidence:%' OR reason IN ({placeholders})) "
+                    f"WHERE user_id = :user_id "
+                    f"AND (effect_kind IS NULL OR effect_kind IN (:evidence_kind, :set_point_kind)) "
+                    f"AND (reason LIKE 'evidence:%' OR reason IN ({placeholders})) "
                     f"GROUP BY node_id"
                 ),
                 params,
@@ -764,6 +790,45 @@ class GalaxyStatsService:
             rows = result.fetchall()
         except Exception as e:
             logger.warning(f"Failed to load evidence counts for user {user_id}: {e}")
+            return {}
+        return {row[0]: int(row[1]) for row in rows if row[0] is not None}
+
+    async def get_verified_evidence_counts_by_node(self, user_id: UUID) -> dict[UUID, int]:
+        """V4-D04: per-node count of *verification-grade* evidence rows (graph read path).
+
+        「独立检验通过」级 = quiz / task_outcome 证据行 + quiz 级 set-point 词
+        （error book / exam sprint 的独立检验面）。chat_signal / material_ref
+        与 legacy 时间存量**不在内**——它们是参与/弱证据面，不支撑能力标签。
+        Powers the graph face's capability channel + mastery-label cap:
+        「标签不能叫精通」——零检验级证据的节点不得展示 BRILLIANT/MASTERED。
+        """
+        from sqlalchemy import text as sa_text
+
+        from app.services.galaxy.capability_channel import NODE_VERIFIED_EVIDENCE_REASONS
+        from app.services.galaxy.mastery_evidence import EVIDENCE_REASON_PREFIX
+
+        reasons = sorted(NODE_VERIFIED_EVIDENCE_REASONS)
+        placeholders = ", ".join(f":reason_{i}" for i in range(len(reasons)))
+        params: dict[str, object] = {
+            "user_id": user_id,
+            "prefix": f"{EVIDENCE_REASON_PREFIX}{MasteryEvidenceType.QUIZ.value}",
+            "prefix_task": f"{EVIDENCE_REASON_PREFIX}{MasteryEvidenceType.TASK_OUTCOME.value}",
+        }
+        for i, reason in enumerate(reasons):
+            params[f"reason_{i}"] = reason
+        try:
+            result = await self.db.execute(
+                sa_text(
+                    f"SELECT node_id, COUNT(*) AS n FROM mastery_audit_log "
+                    f"WHERE user_id = :user_id AND effect_kind IN ('evidence', 'set_point') "
+                    f"AND (reason IN (:prefix, :prefix_task) OR reason IN ({placeholders})) "
+                    f"GROUP BY node_id"
+                ),
+                params,
+            )
+            rows = result.fetchall()
+        except Exception as e:
+            logger.warning(f"Failed to load verified evidence counts for user {user_id}: {e}")
             return {}
         return {row[0]: int(row[1]) for row in rows if row[0] is not None}
 

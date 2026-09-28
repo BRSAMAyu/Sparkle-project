@@ -2355,6 +2355,11 @@ class GalaxyService:
 
         # G-01: per-node real-evidence counts power the legacy_estimate flag
         evidence_counts = await self.stats.get_evidence_counts_by_node(user_id)
+        # V4-D04: per-node verification-grade evidence counts power the
+        # capability channel + mastery-label cap（标签不能叫精通）。
+        verified_evidence_counts = await self.stats.get_verified_evidence_counts_by_node(user_id)
+        # V4-D04: 撤回投影读门（节点/列表/insight 共用同一门 ⇒ 同 version）。
+        capability_read_state = await self._capability_read_state_info(user_id)
 
         # 6. Assemble with Flutter-compatible fields
         return GalaxyGraphResponse(
@@ -2367,6 +2372,7 @@ class GalaxyService:
                     goal_node_ids=goal_node_ids,
                     blocked_by_prerequisite_node_ids=blocked_prerequisites.get(node.id, []),
                     evidence_count=evidence_counts.get(node.id, 0),
+                    verified_evidence_count=verified_evidence_counts.get(node.id, 0),
                 )
                 for node, status in nodes_with_status
             ],
@@ -2374,6 +2380,31 @@ class GalaxyService:
             edges=edge_list,  # Flutter expects this field name
             user_stats=user_stats,
             user_flame_intensity=user_flame_intensity,  # Flutter expects 0.0-1.0
+            capability_read_state=capability_read_state,
+        )
+
+    async def _capability_read_state_info(self, user_id: UUID):
+        """用户级能力投影读门（D03 ``capability_user_read_state`` 的 schema 透传）。
+
+        读门查询失败只降级为 None（读面不因门故障拒绝服务——真源/账本/epoch
+        门仍是保证层）；不吞非预期异常以外的失败语义。
+        """
+        from app.schemas.galaxy import CapabilityReadStateInfo
+        from app.services.retraction_recompute_service import RetractionRecomputeService
+
+        try:
+            gate = await RetractionRecomputeService(self.db).capability_user_read_state(user_id=user_id)
+        except Exception as exc:  # noqa: BLE001 — 门查询降级（限制：读门不可用不阻断图面）
+            logger.debug("capability read state unavailable for {}: {}", user_id, exc)
+            return None
+        if gate.status == "fresh" and not gate.stale:
+            # 无撤回事件 ⇒ 门不适用（None，避免全量图面恒带 fresh 噪声）
+            return None
+        return CapabilityReadStateInfo(
+            stale=bool(gate.stale),
+            suggestions_allowed=bool(gate.suggestions_allowed),
+            ui_marker=gate.ui_marker,
+            status=str(gate.status),
         )
 
     async def _get_recent_error_counts_by_node(self, user_id: UUID, days: int = 14) -> dict[UUID, int]:
@@ -2652,7 +2683,26 @@ class GalaxyService:
         return await self.stats.spark_node(user_id, node_id, study_minutes, task_id, trigger_expansion, outcome)
 
     async def predict_next_node(self, user_id: UUID) -> NodeWithStatus | None:
+        """下一个最佳学习节点（insight/建议面）。
+
+        V4-D04：撤回投影读门 ``suggestions_allowed=False``（pending/世代落后）
+        ⇒ 不给建议——「重算中不继续旧建议」与 UI 过期标记是同一个门的两个出口
+        （D03 验收③）；节点/列表/insight 消费同一门 ⇒ 同 version。
+        """
+        gate = await self._capability_user_gate(user_id)
+        if gate is not None and not gate.suggestions_allowed:
+            return None
         return await self.stats.predict_next_node(user_id)
+
+    async def _capability_user_gate(self, user_id: UUID):
+        """用户级读门原始出口（None = 门查询降级/不适用——不阻断建议面）。"""
+        from app.services.retraction_recompute_service import RetractionRecomputeService
+
+        try:
+            return await RetractionRecomputeService(self.db).capability_user_read_state(user_id=user_id)
+        except Exception as exc:  # noqa: BLE001 — 门查询降级
+            logger.debug("capability read gate unavailable for {}: {}", user_id, exc)
+            return None
 
     async def get_heatmap_data(self, user_id: UUID) -> list[dict]:
         """Get forget curve heatmap data"""

@@ -1,0 +1,69 @@
+{
+  "card": "V4-D04",
+  "generated_at_local": "2026-09-28",
+  "environment": "wtD04 worktree / python 3.11.15 / pytest 9.0.2 / SECRET_KEY=ci-test-key DATABASE_URL=sqlite://（sqlite 纪律方言，不触 dev DB）",
+  "new_tests": {
+    "tests/unit/test_capability_channel.py": 22,
+    "tests/services/galaxy/test_outcome_absorption_channels.py": 7,
+    "tests/services/galaxy/test_spark_activity_trace_and_capability_labels.py": 7,
+    "tests/services/test_retraction_read_gate_epoch.py": 7,
+    "tests/services/test_community_share_no_capability.py": 3,
+    "total": 46,
+    "command": "pytest <5 files> -q",
+    "exit_code": 0,
+    "output_tail": "46 passed, 4 warnings in 25.47s"
+  },
+  "regression": {
+    "batch": "tests/services/galaxy/（178）+ D03 retraction（core 23 + service 11 + read_gate_epoch 7）+ outcome ledger/capture/x08 + I01 resume（service/unit/api/integration）+ WVPL（service+golden）+ hybrid J06 + wt598 backfill parity + wt392 shield + galaxy graph shield invalidation + outcome evidence adapter + community bridge 5 files + task_service + learning graph operational + galaxy grpc 4 files + node sector backfill + achievement 4 files",
+    "command": "pytest <batch> -q -p no:cacheprovider",
+    "exit_code": 0,
+    "output_tail": "470 passed, 21 warnings in 129.04s",
+    "extra": "tests/unit/test_task_service.py 单独批 16 passed；all-green 无 skip 差异"
+  },
+  "ratchet": {
+    "ruff": {
+      "cmd": "ruff check <all changed files + galaxy dir + related tests>",
+      "exit_code": 0,
+      "note": "All checks passed；--fix 清 10 处（import 排序/推导式），余 2 处手修（F841/C416）"
+    },
+    "black": {
+      "cmd": "black --check 新增文件；black --diff hunk 计数逐文件 worktree vs main",
+      "exit_code": 0,
+      "note": "capability_channel.py + retraction_recompute_service.py unchanged（clean）；存量漂移 hunk：absorber 1=1、stats_service 15=15、schemas 2=2、api galaxy 3=3、galaxy_service 6=6、community bridge 0=0——零新增（stats 一度 +1 为本卡格式 nit，已修回落）"
+    },
+    "mypy": {
+      "cmd": "mypy app --ignore-missing-imports --no-error-summary | grep -c error:",
+      "worktree": 56,
+      "baseline": 77,
+      "main_same_machine": 58,
+      "note": "56 ≤ 77 棘轮满足；本卡新增 1 处（int(Any|None)）已修，touched 文件余 3 处 main 既有逐同"
+    }
+  },
+  "mutations": [
+    {
+      "id": "M1",
+      "target": "absorber 通道门（if channel is not VERIFIED）",
+      "mutation": "if False and ...",
+      "result": "4 failed（practiced 面全红）",
+      "restored_sha256": ["1e9f77f554cc32879578b6604aff1f6ba5979b61a8387e112a3527df381618ba  outcome_absorption_service.py OK", "fef5d23e94d090d9105c5baf470940a7f0592c5da19cb8c934f20862deb237bd  retraction_recompute_service.py OK"]
+    },
+    {
+      "id": "M2",
+      "target": "读门 _pending_by_epoch 世代分支",
+      "mutation": "return False and ...",
+      "result": "0 failed——契约层 evaluate_read_gate epoch 比对第二道防御吸收（纵深防御实证，非测试空洞）"
+    }
+  ],
+  "existing_assertions_updated": {
+    "count": 15,
+    "files": [
+      "tests/services/galaxy/test_stats_service.py（1：时长 spark mastery>0→==0）",
+      "tests/services/galaxy/test_mastery_evidence.py（1：39 封顶 40→保持 39）",
+      "tests/services/galaxy/test_outcome_absorption.py（9：点亮机制测补 _add_quiz_pass 检验载体，数值/幂等/解析断言逐字节保留）",
+      "tests/services/galaxy/test_outcome_read_model_visibility.py（2：同上）",
+      "tests/services/galaxy/test_delete_correction_consistency.py（1：同上）",
+      "tests/services/galaxy/test_gj08 等 non-lit 断言（1：practice 路径溯源 label 不变自然通过，无改动）"
+    ],
+    "principle": "行为契约变更（卡面明确要求），非删断言凑绿；逐条对照表见 diff_or_evidence_only.md §5"
+  }
+}

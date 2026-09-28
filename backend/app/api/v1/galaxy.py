@@ -555,6 +555,11 @@ async def get_node_detail(
 
     # 构建 user_stats (top-level, matching Flutter KnowledgeUserStats)
     if user_status:
+        # V4-D04：节点详情面与图列表同源的能力区分字段——通道 = 是否有独立
+        # 检验级证据；投影版本透传（撤回重算 +1，节点/列表/insight 同 version）。
+        from app.services.galaxy.capability_channel import node_capability_channel
+
+        verified_counts = await galaxy_service.stats.get_verified_evidence_counts_by_node(UUID(user_id))
         user_stats = {
             "mastery_score": float(user_status.mastery_score or 0),
             "total_study_minutes": int(user_status.total_study_minutes or 0),
@@ -565,6 +570,11 @@ async def get_node_detail(
             "last_study_at": user_status.last_study_at.isoformat() if user_status.last_study_at else None,
             "next_review_at": user_status.next_review_at.isoformat() if user_status.next_review_at else None,
             "decay_paused": bool(user_status.decay_paused),
+            "capability_channel": node_capability_channel(
+                verified_evidence_count=verified_counts.get(node_id, 0),
+                unlocked=bool(user_status.is_unlocked),
+            ),
+            "projection_version": int(getattr(user_status, "revision", 0) or 0),
         }
     else:
         user_stats = {

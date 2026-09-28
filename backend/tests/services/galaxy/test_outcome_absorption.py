@@ -118,6 +118,24 @@ def _task_payload(task) -> dict:
     return build_outcome_recorded_payload(capture)
 
 
+async def _add_quiz_pass(db, user, node, task) -> None:
+    """V4-D04：独立测验物化面（D-02 quiz_feedback 源，meta source=quiz_passed）。
+
+    D04 通道分流后，只有 VERIFIED（独立检验）完成走点亮融合；点亮机制类
+    测试（融合数值/幂等门/节点解析）以 quiz 物化为检验证据载体。
+    """
+    from app.models.galaxy import ExpansionFeedback
+
+    db.add(
+        ExpansionFeedback(
+            user_id=user.id,
+            trigger_node_id=node.id,
+            meta_data={"source": "quiz_passed", "task_id": str(task.id)},
+        )
+    )
+    await db.commit()
+
+
 def _receipt_payload(run_status: str, task) -> dict:
     """Real X-08 producer: terminal run receipt → payload (NEUTRAL/POSITIVE/NEGATIVE)."""
     run = SimpleNamespace(
@@ -159,6 +177,9 @@ def _provenance_entries(status_row) -> list[dict]:
 async def test_gj05_positive_outcome_lights_node_via_evidence_fusion(absorber_env):
     db, user, node = absorber_env
     task = await _make_task(db, user, node)
+    # V4-D04：点亮 = 有效 outcome（独立检验）；无检验的点击完成归练习通道
+    # （练习过 ≠ 检验通过，见 test_outcome_absorption_channels.py）。
+    await _add_quiz_pass(db, user, node, task)
     payload = _task_payload(task)
 
     result = await GalaxyOutcomeAbsorber(db).absorb_outcome(payload)
@@ -208,6 +229,7 @@ async def test_gj08_graph_change_traceable_to_outcome_source(absorber_env):
 async def test_replay_same_outcome_does_not_double_light(absorber_env):
     db, user, node = absorber_env
     task = await _make_task(db, user, node)
+    await _add_quiz_pass(db, user, node, task)
     payload = _task_payload(task)
     absorber = GalaxyOutcomeAbsorber(db)
 
@@ -225,6 +247,7 @@ async def test_replay_same_outcome_does_not_double_light(absorber_env):
 async def test_same_task_receipt_outcome_does_not_double_fuse(absorber_env):
     db, user, node = absorber_env
     task = await _make_task(db, user, node)
+    await _add_quiz_pass(db, user, node, task)
     absorber = GalaxyOutcomeAbsorber(db)
 
     await absorber.absorb_outcome(_task_payload(task))
@@ -247,6 +270,8 @@ async def test_distinct_task_outcomes_each_fuse(absorber_env):
     db, user, node = absorber_env
     task_a = await _make_task(db, user, node, title="任务A")
     task_b = await _make_task(db, user, node, title="任务B")
+    await _add_quiz_pass(db, user, node, task_a)
+    await _add_quiz_pass(db, user, node, task_b)
     absorber = GalaxyOutcomeAbsorber(db)
 
     await absorber.absorb_outcome(_task_payload(task_a))
@@ -277,6 +302,9 @@ async def test_v3_fix_292_consecutive_absorptions_single_pass_replay_idempotent(
 
     task_a = await _make_task(db, user, node, title="V3-FIX-292 任务A")
     task_b = await _make_task(db, user, node, title="V3-FIX-292 任务B")
+    # V4-D04：点亮面以独立检验为载体（两任务各带 quiz 物化）
+    await _add_quiz_pass(db, user, node, task_a)
+    await _add_quiz_pass(db, user, node, task_b)
 
     first = await absorber.absorb_outcome(_task_payload(task_a))
     assert first.action == "lit"
@@ -349,6 +377,7 @@ async def test_neutral_outcome_recorded_only(absorber_env):
 async def test_negative_after_positive_flips_never_demote_never_relight(absorber_env):
     db, user, node = absorber_env
     task = await _make_task(db, user, node)
+    await _add_quiz_pass(db, user, node, task)
     absorber = GalaxyOutcomeAbsorber(db)
 
     await absorber.absorb_outcome(_task_payload(task))
@@ -378,6 +407,7 @@ async def test_node_resolution_falls_back_to_task_link(absorber_env):
     task = await _make_task(db, user, node=None)  # 任务无直接节点
     db.add(TaskKnowledgeLink(task_id=task.id, knowledge_node_id=node.id, relation_type="prerequisite"))
     await db.commit()
+    await _add_quiz_pass(db, user, node, task)  # V4-D04：点亮以独立检验为载体
 
     result = await GalaxyOutcomeAbsorber(db).absorb_outcome(_task_payload(task))
 
@@ -401,6 +431,7 @@ async def test_task_without_links_lights_exact_title_matched_star(absorber_env):
     """
     db, user, node = absorber_env
     task = await _make_task(db, user, node=None, title="贝叶斯定理")  # 与既有节点同名
+    await _add_quiz_pass(db, user, node, task)  # V4-D04：点亮以独立检验为载体
 
     result = await GalaxyOutcomeAbsorber(db).absorb_outcome(_task_payload(task))
 
@@ -421,6 +452,7 @@ async def test_task_without_links_ignites_deterministic_task_star(absorber_env):
     db, user, node = absorber_env
     title = "离子交换色谱入门 P1-5"
     task = await _make_task(db, user, node=None, title=title)
+    await _add_quiz_pass(db, user, node, task)  # V4-D04：点亮以独立检验为载体
     from app.services.galaxy_service import GalaxyService
 
     expected_anchor = GalaxyService.task_node_uuid(title)
@@ -527,6 +559,7 @@ class _SessionCtx:
 async def test_consumer_routes_only_outcome_recorded_events(absorber_env):
     db, user, node = absorber_env
     task = await _make_task(db, user, node)
+    await _add_quiz_pass(db, user, node, task)  # V4-D04：点亮以独立检验为载体
     consumer = OutcomeAbsorptionConsumer(session_factory=_SessionFactory(db), event_bus=None)
 
     # 非 outcome 事件：忽略（不建 status、不动节点）

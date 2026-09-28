@@ -104,6 +104,20 @@ async def _make_completed_task(db, user, node) -> Task:
     return task
 
 
+async def _add_quiz_pass(db, user, node, task) -> None:
+    """V4-D04：独立测验物化面（点亮机制类测试的检验证据载体）。"""
+    from app.models.galaxy import ExpansionFeedback
+
+    db.add(
+        ExpansionFeedback(
+            user_id=user.id,
+            trigger_node_id=node.id,
+            meta_data={"source": "quiz_passed", "task_id": str(task.id)},
+        )
+    )
+    await db.commit()
+
+
 def _task_payload(task) -> dict:
     """Real X-08 producer: terminal task → content-free outcome.recorded payload."""
     return build_outcome_recorded_payload(build_task_outcome_capture(task))
@@ -135,6 +149,7 @@ async def test_absorbed_outcome_visible_on_galaxy_graph_immediately(readmodel_en
     assert view_before.user_status is None, "前置：吸收前节点无个人状态"
 
     task = await _make_completed_task(db, user, node)
+    await _add_quiz_pass(db, user, node, task)  # V4-D04：点亮以独立检验为载体
     result = await GalaxyOutcomeAbsorber(db).absorb_outcome(_task_payload(task))
     assert result.action == "lit"
 
@@ -161,6 +176,7 @@ async def test_read_model_cache_really_invalidated_between_reads(readmodel_env):
     assert cached_keys, "前置：读面缓存必须已建立（本测试环境为本地兜底缓存）"
 
     task = await _make_completed_task(db, user, node)
+    await _add_quiz_pass(db, user, node, task)  # V4-D04：点亮以独立检验为载体
     await GalaxyOutcomeAbsorber(db).absorb_outcome(_task_payload(task))
 
     # 失效后：旧键必须已从缓存面消失

@@ -8,7 +8,15 @@
    ``GalaxyStatsService._load_prior_belief``），溯源面仍走
    ``UserNodeStatus.learning_path_snapshot.graph_event_sources``
    （``provenance.append_graph_event_source``）。零新表、零 schema 变更。
-2. **幂等是灵魂（acceptance「不重复点亮」）**：
+2. **V4-D04 能力通道分流（星图只接有效 outcome）**：POSITIVE 不再一律点亮——
+   先过 ``capability_channel.classify_outcome_channel``（D-02 真相面 × Agent
+   产物隔离）：VERIFIED（独立测验/已解析产物）才融合点亮；PRACTICED（自报/
+   focus 覆盖）只解锁+溯源（练习过 ≠ 检验通过，零掌握度效果）；NON_HUMAN
+   （run receipt / 纯 receipt 升格）与 TRACE_ONLY（demo/估计/行损坏）只留
+   溯源——Agent 产物不计人类能力。task 完成的真相面经 D-02 公共读面
+   ``OutcomeLedgerService.query`` 有界扫描取得（I01 last_valid_outcome 同款
+   边界），未命中 fail-closed 归 PRACTICED。
+3. **幂等是灵魂（acceptance「不重复点亮」）**：
    - POSITIVE 点亮的硬门 = mastery_audit_log 追加行的 ``request_id`` 内嵌
      ``outcome=<outc_id>`` 标记（与 X-08 账本幂等 id 同源，append-only、
      无界、重放安全）；同 outcome 重放直接跳过融合。
@@ -17,13 +25,13 @@
      证据），``task=<task_id>`` 标记让 receipt 事件只补溯源、不二次融合。
    - NEGATIVE 弱点标记天然幂等（keywords 集合语义）；溯源条目按
      (event_type, source_type, reference_id) 去重（provenance 既有语义）。
-3. **失败/撤销正确处理（卡面 work 3）**：NEGATIVE（ABANDONED / FAILED /
+4. **失败/撤销正确处理（卡面 work 3）**：NEGATIVE（ABANDONED / FAILED /
    TIMED_OUT receipt）**永不点亮**——不融合任何掌握度证据、不写 evidence
    行；只做可解释溯源 + ``signal:weak_at`` 弱点标记（供 Review now 消费）。
    **裁决：NEGATIVE 不做掌握度降级**——放弃/失败可能源于计划噪声而非知识
    回退，降级语义归错题路径（ErrorBookMasterySyncService）所有；NEUTRAL
    （PARTIAL/CANCELLED receipt）只留溯源，既不点亮也不标记。
-4. **撤销（同 id 极性翻转）**：任务 FSM 中 COMPLETED/ABANDONED 均为吸收态
+5. **撤销（同 id 极性翻转）**：任务 FSM 中 COMPLETED/ABANDONED 均为吸收态
    （``task_service._VALID_TRANSITIONS``），同一 outcome id 的极性翻转在上游
    结构性不可达；消费侧仍防御：检测到已吸收极性与新极性不一致时记录
    **纠正溯源**（不二次点亮、不降级），保证图谱与账本可对账。
@@ -52,6 +60,7 @@ import asyncio
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -59,12 +68,17 @@ from sqlalchemy import DateTime, String, bindparam, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import EventBus
+from app.core.outcome_ledger import OutcomeSource
 from app.core.request_coalescing import notify_read_view_invalidated
 from app.core.time_utils import utcnow as _utcnow
 from app.models.base import GUID
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.task import Task
 from app.models.task_resources import TaskKnowledgeLink
+from app.services.galaxy.capability_channel import (
+    CapabilityChannel,
+    classify_outcome_channel,
+)
 from app.services.galaxy.graph_evolution_service import GraphEvolutionService
 from app.services.galaxy.mastery_evidence import (
     EVIDENCE_REASON_PREFIX,
@@ -117,8 +131,11 @@ class OutcomeAbsorptionResult:
     node_ids: list[str] = field(default_factory=list)
     #: "lit" (POSITIVE fused) / "duplicate" (replay or same-cause receipt) /
     #: "flagged" (NEGATIVE weak-signal) / "recorded_only" (NEUTRAL) /
-    #: "corrected" (polarity flip defense) / "no_target" (nothing resolved)
+    #: "corrected" (polarity flip defense) / "no_target" (nothing resolved) /
+    #: V4-D04 capability channels: "practiced" (unlocked, never fused) /
+    #: "non_human" (agent artifact — trace only) / "trace_only" (demo/estimate)
     action: str = "no_target"
+    capability_channel: str | None = None
     mastery_by_node: dict[str, float] = field(default_factory=dict)
 
 
@@ -152,9 +169,14 @@ class GalaxyOutcomeAbsorber:
             result.action = "no_target"
             return result
 
+        # V4-D04：星图只接「有效 outcome」——先过能力通道分类（D-02 真相面 ×
+        # Agent 产物隔离），通道决定该 outcome 能否推进掌握度后验。
+        capability_channel = await self._resolve_capability_channel(user_id, payload)
+        result.capability_channel = capability_channel.value
+
         for node_id in node_ids:
             if polarity == "positive":
-                action, mastery = await self._absorb_positive(user_id, node_id, payload)
+                action, mastery = await self._absorb_positive(user_id, node_id, payload, capability_channel)
                 result.action = action if result.action == "no_target" else result.action
                 if mastery is not None:
                     result.mastery_by_node[str(node_id)] = mastery
@@ -178,8 +200,22 @@ class GalaxyOutcomeAbsorber:
 
     # -- polarity paths ----------------------------------------------------
 
-    async def _absorb_positive(self, user_id: UUID, node_id: UUID, payload: dict) -> tuple[str, float | None]:
-        """POSITIVE：证据融合点亮（幂等门 = append-only audit 行标记）。"""
+    async def _absorb_positive(
+        self,
+        user_id: UUID,
+        node_id: UUID,
+        payload: dict,
+        capability_channel: CapabilityChannel | None = None,
+    ) -> tuple[str, float | None]:
+        """POSITIVE：按能力通道分流（V4-D04）——只有 VERIFIED 融合点亮。
+
+        - VERIFIED（独立检验通过）：证据融合点亮（幂等门 = append-only audit 行
+          标记）——既有 G-02 路径原样；
+        - PRACTICED（练习过）：解锁（参与足迹可见）+ 溯源，**零融合零证据行**——
+          自报完成/时长型观察不显示掌握；
+        - NON_HUMAN（Agent 产物）/ TRACE_ONLY（demo/估计/行损坏）：只留溯源，
+          不解锁、不融合——Agent 产物不计人类能力。
+        """
         outcome_id = str(payload["outcome_id"])
         task_marker = _task_marker(payload)
 
@@ -195,6 +231,10 @@ class GalaxyOutcomeAbsorber:
             )
             _stamp_absorbed_marker(status, outcome_id, payload, action="duplicate")
             return "duplicate", float(status.mastery_score)
+
+        channel = capability_channel or CapabilityChannel.PRACTICED
+        if channel is not CapabilityChannel.VERIFIED:
+            return await self._absorb_positive_without_fusion(status, outcome_id, payload, channel)
 
         # G-01 ledger replay → prior belief → Kalman fusion (no legacy time path)
         prior = await self._stats._load_prior_belief(user_id, node_id, float(status.mastery_score))
@@ -275,6 +315,77 @@ class GalaxyOutcomeAbsorber:
             round(status.mastery_score, 2),
         )
         return "lit", float(status.mastery_score)
+
+    async def _absorb_positive_without_fusion(
+        self,
+        status: UserNodeStatus,
+        outcome_id: str,
+        payload: dict,
+        channel: CapabilityChannel,
+    ) -> tuple[str, float | None]:
+        """非 VERIFIED 通道的 POSITIVE：参与足迹/痕迹留存量，零掌握度效果。
+
+        - PRACTICED：解锁（「练习过」的星可见、可进参与统计），不点亮掌握度；
+        - NON_HUMAN / TRACE_ONLY：完全零状态效果（只有溯源快照行）。
+        幂等：非融合通道无 audit 行可作重放门，重放检出 = absorbed 标记
+        （``absorbed_outcomes`` 快照，action=通道值）；重放零重复溯源。
+        """
+        prior_action = _absorbed_marker_action(status, outcome_id)
+        replay = prior_action is not None
+        if channel is CapabilityChannel.PRACTICED:
+            status.is_unlocked = True
+            if status.first_unlock_at is None:
+                status.first_unlock_at = _utcnow()
+        append_graph_event_source(
+            status,
+            event_type=OUTCOME_RECORDED_EVENT,
+            source_type=OUTCOME_PROVENANCE_SOURCE_TYPE,
+            reference_id=outcome_id,
+            label=str(payload.get("polarity")),
+            payload=_provenance_payload(payload, replay=replay),
+        )
+        _stamp_absorbed_marker(status, outcome_id, payload, action=channel.value)
+        self.db.add(status)
+        if replay:
+            return "duplicate", float(status.mastery_score)
+        return channel.value, None
+
+    async def _resolve_capability_channel(self, user_id: UUID, payload: dict) -> CapabilityChannel:
+        """D-02 真相面 → 能力通道（公共读面有界扫描；I01 last_valid_outcome 同款）。
+
+        只对 task_completion 源查账本（非任务源是静态映射；run receipt 直接
+        NON_HUMAN，无账本行可查）。扫描未命中（任务已删/超出有界窗）→
+        fail-closed PRACTICED（参与可见、能力不声称）——分类器内聚该语义。
+        """
+        source = str(payload.get("source") or "")
+        entry = None
+        if source == OutcomeSource.TASK_COMPLETION.value:
+            entry = await self._ledger_task_entry(user_id, str(payload.get("outcome_id") or ""))
+        return classify_outcome_channel(source=source, entry=entry)
+
+    async def _ledger_task_entry(self, user_id: UUID, outcome_id: str) -> Any | None:
+        """D-02 公共读面有界扫描（3×100，I01 last_valid_outcome 同款边界）。"""
+        if not outcome_id:
+            return None
+        from app.core.outcome_ledger import OutcomeSource as _OS
+        from app.services.outcome_ledger_service import OutcomeLedgerService
+
+        service = OutcomeLedgerService(self.db)
+        cursor: str | None = None
+        for _page in range(3):
+            page = await service.query(
+                user_id=user_id,
+                source=_OS.TASK_COMPLETION,
+                limit=100,
+                cursor=cursor,
+            )
+            for entry in page.items:
+                if entry.outcome_id == outcome_id:
+                    return entry
+            cursor = page.next_cursor
+            if not cursor:
+                break
+        return None
 
     async def _absorb_negative(self, user_id: UUID, node_id: UUID, payload: dict) -> str:
         """NEGATIVE：永不点亮——弱点标记 + 可解释溯源（天然幂等）。"""
@@ -629,10 +740,12 @@ def _parse_occurred_at(raw) -> datetime | None:
 # NBP-4 · 读模型即时投影（写后失效；与吸收逻辑解耦的纯失效面）
 # ---------------------------------------------------------------------------
 
-#: 触发读面失效的吸收动作：``lit``（mastery/is_unlocked 变化——星图节点长大）
-#: 与 ``flagged``（弱点标记变化——图读 review_signal 可见）。duplicate /
-#: recorded_only / corrected / no_target 读面零变化，不产生失效流量。
-_READ_MODEL_VISIBLE_ACTIONS = frozenset({"lit", "flagged"})
+#: 触发读面失效的吸收动作：``lit``（mastery/is_unlocked 变化——星图节点长大）、
+#: ``flagged``（弱点标记变化——图读 review_signal 可见）与 ``practiced``
+#: （V4-D04：练习通道解锁——is_unlocked 变化，参与足迹可见）。duplicate /
+#: recorded_only / corrected / non_human / trace_only / no_target 读面零变化，
+#: 不产生失效流量。
+_READ_MODEL_VISIBLE_ACTIONS = frozenset({"lit", "flagged", "practiced"})
 
 
 async def invalidate_galaxy_graph_view_cache(user_id: UUID) -> int:

@@ -2,13 +2,13 @@
 Tests for GalaxyStatsService - spark_node and predict_next_node
 Using mock-based approach to avoid SQLite/JSONB compatibility issues
 """
-import pytest
-import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from app.services.galaxy.stats_service import GalaxyStatsService
+import pytest
+
 from app.schemas.galaxy import NodeWithStatus
+from app.services.galaxy.stats_service import GalaxyStatsService
 
 
 class TestMasteryCalculation:
@@ -111,7 +111,6 @@ class TestMasteryCalculation:
         service = MagicMock(spec=GalaxyStatsService)
         service._calculate_next_review = GalaxyStatsService._calculate_next_review.__get__(service)
 
-        from datetime import datetime
 
         # Low mastery = short review interval
         next_review_low = service._calculate_next_review(20)
@@ -185,7 +184,8 @@ class TestSparkNodeLogic:
                 assert result is not None
                 assert result.spark_event is not None
                 assert result.updated_status.is_unlocked is True
-                assert result.updated_status.mastery_score > 0
+                # V4-D04：纯时长零掌握增长（时长只留活动痕迹，不再封顶增长）
+                assert result.updated_status.mastery_score == 0
 
 
 class TestPredictNextNodeLogic:

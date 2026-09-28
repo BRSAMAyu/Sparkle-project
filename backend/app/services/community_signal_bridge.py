@@ -29,7 +29,6 @@ from app.models.user_settings import UserSettings
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.community_service import GroupTaskService
-from app.services.galaxy_service import GalaxyService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.signals.privacy_community_intelligence import PrivacyPreservingCommunityEngine
 
@@ -38,7 +37,9 @@ class CommunitySignalBridge:
     """Bridge selected group signals into personal growth systems."""
 
     GROUP_WEIGHT_FACTOR = 0.7
-    KNOWLEDGE_SHARE_BONUS = 5.0  # user_node_status.mastery_score uses 0-100 scale
+    # V4-D04：``KNOWLEDGE_SHARE_BONUS`` 已删除——跨用户分享不加个人能力
+    # （DATA_AND_GRAPH §星图权威：分享等参与行为只留活动痕迹，掌握度只由
+    # 有效 outcome 推进）。分享的参与留痕见 ``handle_resource_shared``。
     PRIVACY_WINDOW_PREFIX = "community-intelligence"
     AURORA_ALLOWED_SOCIAL_EVENT_KINDS = frozenset(
         {
@@ -206,6 +207,11 @@ class CommunitySignalBridge:
         if not node:
             return
 
+        # V4-D04：跨用户分享**不加个人能力**——分享是参与行为，不是学习成果；
+        # 掌握度只由有效 outcome（独立检验/证据融合）推进。分享只在已有节点
+        # 状态的参与足迹（溯源快照）留痕；不创建状态行（分享不证明任何学习），
+        # 不写掌握度、不写 mastery 审计行。成就/奖励面若要奖励分享，读
+        # community 自己的事件账本（本事件），不读星图掌握度。
         status_result = await self.db.execute(
             select(UserNodeStatus).where(
                 UserNodeStatus.user_id == user_id,
@@ -214,15 +220,22 @@ class CommunitySignalBridge:
         )
         status = status_result.scalar_one_or_none()
         old_mastery = float(status.mastery_score or 0.0) if status else 0.0
-        new_mastery = min(100.0, old_mastery + self.KNOWLEDGE_SHARE_BONUS)
+        if status is not None:
+            from app.services.galaxy.provenance import append_graph_event_source
 
-        galaxy_service = GalaxyService(self.db)
-        await galaxy_service.update_node_mastery(
-            user_id=user_id,
-            node_id=resource_id,
-            new_mastery=int(round(new_mastery)),
-            reason="community_knowledge_share_bonus",
-        )
+            append_graph_event_source(
+                status,
+                event_type="community.resource_shared",
+                source_type="community_share",
+                reference_id=str(share_id),
+                label="participation",
+                payload={
+                    "share_id": str(share_id),
+                    "group_id": str(target_group_id),
+                    "capability_effect": "none",
+                },
+            )
+            await self.db.commit()
 
         await event_bus.publish(
             "galaxy.node.updated",
@@ -231,9 +244,9 @@ class CommunitySignalBridge:
                 "user_id": str(user_id),
                 "node_id": str(resource_id),
                 "old_mastery": old_mastery,
-                "new_mastery": new_mastery,
-                "delta": new_mastery - old_mastery,
-                "reason": "community_knowledge_share_bonus",
+                "new_mastery": old_mastery,
+                "delta": 0.0,
+                "reason": "community_share_participation_trace",
                 "share_id": str(share_id),
                 "group_id": str(target_group_id),
                 "timestamp": _utcnow().isoformat(),
@@ -243,18 +256,17 @@ class CommunitySignalBridge:
         await SystemUpdateService(self.redis).enqueue(
             user_id,
             build_system_update(
-                update_type="knowledge_share_bonus_applied",
+                update_type="knowledge_share_participation_recorded",
                 category="evolution",
-                title="知识分享已回流",
-                description=f"你分享了「{node.name}」，这个知识点的掌握度已获得小幅提升。",
+                title="知识分享已记录",
+                description=f"你分享了「{node.name}」，参与足迹已记录。分享不影响掌握度——掌握只来自独立检验。",
                 priority="low",
                 metadata={
                     "evolution_kind": "highlight",
-                    "highlight": f"你分享了「{node.name}」，这个知识点的掌握度提升了一些。",
+                    "highlight": f"你分享了「{node.name}」，参与足迹已记录（不含掌握度变化）。",
                     "source": "community_signal_bridge",
                     "node_id": str(resource_id),
-                    "old_mastery": old_mastery,
-                    "new_mastery": new_mastery,
+                    "capability_effect": "none",
                 },
             ),
         )
