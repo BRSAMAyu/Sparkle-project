@@ -41,11 +41,6 @@ cd backend && pytest tests_e2e/test_chat_e2e.py -v
 cd backend && pytest tests_e2e/test_plan_lifecycle_e2e.py -v
 ```
 
-### 知识星图测试
-```bash
-cd backend && pytest tests_e2e/test_galaxy_e2e.py -v
-```
-
 ### 离线同步测试
 ```bash
 cd backend && pytest tests_e2e/test_offline_sync_e2e.py -v

@@ -35,6 +35,9 @@ REDIS_CONTAINER="${REDIS_CONTAINER:-sparkle_redis}"
 MINIO_CONTAINER="${MINIO_CONTAINER:-sparkle_minio}"
 MINIO_DATA_PATH="${MINIO_DATA_PATH:-/data}"
 STRICT_SCHEMA="${STRICT_SCHEMA:-0}"
+# V3-FIX-532①：REDIS_PASSWORD 必须有缺省——set -u 下未导出时 `${REDIS_PASSWORD}`
+# 本身即 unbound 崩溃（与下方空数组展开同属无密码路径断链）。
+REDIS_PASSWORD="${REDIS_PASSWORD:-}"
 
 # 从仓库根 .env 提取单键值（只取值、不 source；与 backup_prod_data.sh 同法）。
 # 当前用于未来需要凭据的恢复路径；保持与 backup 侧同一解析语义。
@@ -53,6 +56,18 @@ env_get() {
   printf '%s' "${val}"
 }
 # shellcheck disable=SC2317  # env_get 预留给需要凭据的恢复路径
+
+# redis-cli 容器执行器（与 backup_prod_data.sh 的 redis_cli 同形）。
+# V3-FIX-532①：旧实现 `_redis_cli_args=()` 空数组后 `"${_redis_cli_args[@]}"`
+# 展开，在 bash<4.4 且 set -u 下空数组即 unbound 崩溃（本机 bash 3.2.57 实测：
+# PG 恢复完成后中止——最脆弱时点断链）。按密码有无显式分支，不使用数组展开。
+redis_cli_exec() {
+  if [[ -n "${REDIS_PASSWORD}" ]]; then
+    docker exec -e "REDISCLI_AUTH=${REDIS_PASSWORD}" "${REDIS_CONTAINER}" redis-cli "$@"
+  else
+    docker exec "${REDIS_CONTAINER}" redis-cli "$@"
+  fi
+}
 
 verify_checksums() {
   if [[ ! -f "${BACKUP_DIR}/sha256sums.txt" ]]; then
@@ -111,11 +126,7 @@ if [[ -f "${BACKUP_DIR}/redis.rdb" ]]; then
   # redis-stack-server 的持久化 dir 是 /var/lib/redis-stack 而非 /data
   # （演练容器实测：写 /data/dump.rdb 后重启零加载——静默无效恢复，V3-FIX-505）。
   # 恢复目标路径必须取自目标服务器自身 CONFIG GET dir。
-  _redis_cli_args=()
-  if [[ -n "${REDIS_PASSWORD}" ]]; then
-    _redis_cli_args=(-e "REDISCLI_AUTH=${REDIS_PASSWORD}")
-  fi
-  _redis_dir="$(docker exec "${_redis_cli_args[@]}" "${REDIS_CONTAINER}" redis-cli --no-auth-warning CONFIG GET dir 2>/dev/null | tail -n 1 | tr -d '\r')"
+  _redis_dir="$(redis_cli_exec --no-auth-warning CONFIG GET dir 2>/dev/null | tail -n 1 | tr -d '\r')"
   _redis_dir="${_redis_dir:-/data}"
   echo "[restore] redis persistence dir=${_redis_dir}"
   docker cp "${BACKUP_DIR}/redis.rdb" "${REDIS_CONTAINER}:${_redis_dir}/dump.rdb"

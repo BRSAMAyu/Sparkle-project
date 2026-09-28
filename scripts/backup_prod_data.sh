@@ -78,12 +78,14 @@ echo "[backup] archiving minio..."
 # 改为容器无关通路：docker cp 拷出数据面目录 → 宿主机 tar 打包（产物文件名
 # minio-data.tar.gz 不变，restore 侧兼容）。注意这是对运行中服务的尽力一致
 # 快照（demo 量级 MB 级 + 低峰 cron 03:15）；强一致窗口需停写或卷快照，见 notes。
+_MINIO_ARCHIVED=0
 if docker exec "${MINIO_CONTAINER}" sh -lc "test -d ${MINIO_DATA_PATH}" 2>/dev/null; then
   rm -rf "${TARGET_DIR}/minio-data"
   mkdir -p "${TARGET_DIR}/minio-data"
   docker cp "${MINIO_CONTAINER}:${MINIO_DATA_PATH}/." "${TARGET_DIR}/minio-data/"
   tar -C "${TARGET_DIR}/minio-data" -czf "${TARGET_DIR}/minio-data.tar.gz" .
   rm -rf "${TARGET_DIR}/minio-data"
+  _MINIO_ARCHIVED=1
 else
   echo "[backup] WARNING: minio data path ${MINIO_DATA_PATH} missing in ${MINIO_CONTAINER}; skipping minio archive" >&2
 fi
@@ -91,7 +93,16 @@ fi
 echo "[backup] writing checksums..."
 (
   cd "${TARGET_DIR}"
-  checksum_file postgres.sql.gz redis.rdb minio-data.tar.gz > sha256sums.txt
+  # V3-FIX-532②：MinIO skip 分支与 checksum 步对齐——旧实现无条件对
+  # minio-data.tar.gz 求和，缺文件时 sha256sum/shasum 非零退出，set -e 当场
+  # 中止整个备份（manifest/config 永不产出），与 skip 分支的降级语义自相矛盾。
+  # 缺文件时只对实际归档产物求和；restore 侧按 bundle 内实际文件分派，兼容。
+  if [[ "${_MINIO_ARCHIVED}" == "1" ]]; then
+    checksum_file postgres.sql.gz redis.rdb minio-data.tar.gz > sha256sums.txt
+  else
+    echo "[backup] checksum: minio archive skipped; checksumming postgres+redis only" >&2
+    checksum_file postgres.sql.gz redis.rdb > sha256sums.txt
+  fi
 )
 
 # ---- config 覆盖面：环境配置是恢复 staging 的前提（DEPLOYMENT.md：config 不进
