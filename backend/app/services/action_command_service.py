@@ -379,6 +379,11 @@ class ActionCommandService:
             transition.details = {"effects": effects.effects}
         await self.db.commit()  # 领域服务已 commit 时为 no-op 安全网
         await self.db.refresh(proposal)
+        # V4-F03 呈现适配挂点：committed 权威回执 → experience_event.v1（韧性壳：
+        # 投影失败只留痕，commit 链路永不被动；event_bus 随 consumer 形态注入）。
+        from app.services.experience_presentation_adapter import project_action_receipt_safe
+
+        await project_action_receipt_safe(self.db, None, proposal)
         return ProposalMutationResult(
             proposal=proposal,
             applied=True,
@@ -518,6 +523,12 @@ class ActionCommandService:
             )
         if rows:
             await self.db.commit()
+            # V4-F03 呈现适配挂点：expired 终态 → terminal_failed 呈现事件
+            # （错误面，永不成功视觉；韧性壳——清扫链路永不被动）。
+            from app.services.experience_presentation_adapter import project_action_receipt_safe
+
+            for proposal in rows:
+                await project_action_receipt_safe(self.db, None, proposal)
         return len(rows)
 
     # ------------------------------------------------------------------
