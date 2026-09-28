@@ -7,6 +7,8 @@
 | 条目 | 用途 | 说明 |
 |---|---|---|
 | `landing/` | 扫码落地页（D-LANDING 卡交付） | 单文件静态页 + 海报文案稿，见下 |
+| `smoke_gj01.sh` | O-01 GJ01 远端设备视角验收探针 | 公网 staging HTTPS 证书/健康端点/WSS 握手/401 形态/client bundle AK 泄露扫描（`LTAI[0-9A-Za-z]+` 零命中断言）；`--mode http` 为本地栈降级干跑形态。用法见脚本头注 |
+| `ROLLBACK.md` | 生产/Staging 回滚程序（O-01 验收面） | 应用层蓝绿回滚（`scripts/deploy-prod.sh` 旧 tag 重跑）、数据面 restore（卷保留策略 + Alembic 纪律）、整机重建、回滚后验证清单；所有命令以仓库真实脚本接口为准 |
 
 ## landing/ — 扫码落地页 + 海报文案
 
