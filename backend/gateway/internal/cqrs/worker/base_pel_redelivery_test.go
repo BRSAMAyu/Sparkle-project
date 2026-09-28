@@ -88,22 +88,27 @@ func claimAndAbandon(t *testing.T, rdb *redis.Client, streamKey, group, consumer
 
 func waitForEvent(t *testing.T, ch chan event.DomainEvent) event.DomainEvent {
 	t.Helper()
+	// V3-FIX-551（CI 负载敏感测试族，同 FIX-544 形态）：这里给的是等待预算而非
+	// 固定 deadline——事件到达即返回，健康路径时长不受预算影响；与 FIX-544 同包
+	// 同依赖（miniredis+worker 回环、go-redis 池 dial 重试吃预算），CI 负载下
+	// 真实到达可能晚于 5s，放宽只消假阴性：5s → 30s。
 	select {
 	case evt := <-ch:
 		return evt
-	case <-time.After(5 * time.Second):
-		t.Fatal("handler was not called within 5s: abandoned PEL entry never redelivered")
+	case <-time.After(30 * time.Second):
+		t.Fatal("handler was not called within 30s: abandoned PEL entry never redelivered")
 		return event.DomainEvent{}
 	}
 }
 
 func waitForEventID(t *testing.T, ch chan string) string {
 	t.Helper()
+	// V3-FIX-551：同 waitForEvent，等待成立即返回，预算放宽只消负载假阴性。
 	select {
 	case id := <-ch:
 		return id
-	case <-time.After(5 * time.Second):
-		t.Fatal("expected delivery not observed within 5s")
+	case <-time.After(30 * time.Second):
+		t.Fatal("expected delivery not observed within 30s")
 		return ""
 	}
 }
@@ -111,9 +116,11 @@ func waitForEventID(t *testing.T, ch chan string) string {
 func drainWorker(t *testing.T, cancel context.CancelFunc, runResult chan error) {
 	t.Helper()
 	cancel()
+	// V3-FIX-551：Run 退出要等在途 XReadGroup/命令级超时收尾，负载 runner 上
+	// 可能晚于 5s（FIX-544 同根因）；等待成立即返回，5s → 30s。
 	select {
 	case <-runResult:
-	case <-time.After(5 * time.Second):
+	case <-time.After(30 * time.Second):
 		t.Fatal("Run did not return after context cancel")
 	}
 }
@@ -166,7 +173,10 @@ func TestRunRedeliversAbandonedPendingEventAfterCrash(t *testing.T) {
 	// 成功重放后 ack 是 handler→markProcessed→XAck 的异步收尾；-race 下测试侧
 	// cancel 可抢在 XAck 前（461 设计语义：取消态 XAck 失败留 PEL 待重启重放），
 	// 故先轮询 PEL 归零再关停，消除 cancel-vs-ack 赛跑（层19，run 36334268606 双 shard 复现）。
-	deadline := time.Now().Add(2 * time.Second)
+	//
+	// V3-FIX-551：轮询本身是相对等待（成立即返回），2s 是预算；-race + 负载下
+	// 异步 XAck 收尾可能晚于 2s，放宽到 10s 只消假阴性（轮询间隔 10ms 不变）。
+	deadline := time.Now().Add(10 * time.Second)
 	for {
 		poll, err := rdb.XPending(context.Background(), streamKey, group).Result()
 		if err != nil {
@@ -176,7 +186,7 @@ func TestRunRedeliversAbandonedPendingEventAfterCrash(t *testing.T) {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("PEL count = %d after successful replay, want 0 (acked within 2s)", poll.Count)
+			t.Fatalf("PEL count = %d after successful replay, want 0 (acked within 10s)", poll.Count)
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -238,10 +248,11 @@ func TestRunDrainsPendingBeforeNewMessages(t *testing.T) {
 	}()
 	t.Cleanup(func() { cancel() })
 
+	// V3-FIX-551：两事件都到位即返回，5s → 30s（同 waitForEvent 预算语义）。
 	select {
 	case <-done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("handler did not observe evt-new-late within 5s")
+	case <-time.After(30 * time.Second):
+		t.Fatal("handler did not observe evt-new-late within 30s")
 	}
 
 	drainWorker(t, cancel, runResult)

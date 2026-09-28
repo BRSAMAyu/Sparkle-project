@@ -33,9 +33,13 @@ func TestStartDetachedRebuildContextSurvivesCallerReturn(t *testing.T) {
 		close(started)
 	})
 
+	// V3-FIX-553（CI 负载敏感测试族，同 FIX-544 形态）：select 等的是后台
+	// goroutine 首次被调度，等待成立即返回——预算放宽不影响健康路径时长。
+	// 2s 是全清单最紧的固定预算（wt805 候选表），CPU 饱和 runner 上 goroutine
+	// 调度延迟可超 2s，放宽只消假阴性：2s → 10s。
 	select {
 	case <-started:
-	case <-time.After(2 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("detached rebuild never started")
 	}
 
@@ -45,14 +49,17 @@ func TestStartDetachedRebuildContextSurvivesCallerReturn(t *testing.T) {
 		"rebuild context must be alive while the work runs (handler frame already returned)")
 
 	// (2) bounded by projectionRebuildTimeout.
+	// 下界余量 1min ≫ 本测试全部等待预算（10s 级），预算放宽不触及该断言。
 	require.True(t, hasDeadline, "rebuild context must carry a deadline")
 	require.Greater(t, time.Until(deadline), projectionRebuildTimeout-time.Minute,
 		"deadline should be roughly projectionRebuildTimeout away")
 	require.LessOrEqual(t, time.Until(deadline), projectionRebuildTimeout)
 
 	// (3) released after the work returns.
+	// V3-FIX-553：Eventually 本就是相对等待（成立即返回），窗口 2s → 10s
+	// 只消负载假阴性；轮询间隔 5ms 不变（远小于窗口，匹配）。
 	require.Eventually(t, func() bool {
 		return inner.Err() == context.Canceled
-	}, 2*time.Second, 5*time.Millisecond,
+	}, 10*time.Second, 5*time.Millisecond,
 		"rebuild context must be canceled after the work function returns")
 }

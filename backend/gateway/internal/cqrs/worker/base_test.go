@@ -69,15 +69,20 @@ func TestRunGracefulShutdownLogsNoError(t *testing.T) {
 		runResult <- w.Run(ctx, noopHandler)
 	}()
 
-	waitForLogEntry(t, observed, "Worker started", 2*time.Second)
+	// 同上（V3-FIX-544/552）：负载 runner 下 goroutine 启动与首次日志落表也被
+	// 拖慢，2s 预算同族收紧；等待成立即返回，放宽只消假阴性。
+	waitForLogEntry(t, observed, "Worker started", 10*time.Second)
 	cancel()
 
+	// V3-FIX-552（CI 负载敏感测试族）：Run 退出要等在途 XReadGroup/命令级超时
+	// 收尾（go-redis 池 dial 重试吃预算，FIX-544 实录机制），负载下可能晚于 5s。
+	// 等待成立即返回，预算放宽不影响健康路径时长，只消假阴性：5s → 30s。
 	select {
 	case err := <-runResult:
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("Run() = %v, want context.Canceled", err)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(30 * time.Second):
 		t.Fatal("Run did not return after context cancel")
 	}
 
