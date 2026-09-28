@@ -1,0 +1,122 @@
+{
+  "card": "V4-D06",
+  "task": "GraphRAG时效与关系型fallback（watermark 时效门 + 显式关系型降级 + 同题双源可复算）",
+  "agent": "wtD06",
+  "branch": "agent/v4/d06",
+  "base_sha": "f9729cc5fc63c37e0f07b2706a2eeaa50e1e9fbd",
+  "generated_at_local": "2026-09-29",
+  "kind": "implementation",
+  "product_code_changed": true,
+  "main_advanced_during_execution": {
+    "main_at_finish": "3b96039f（心跳#11：CI39 词表钉 DoD + F05 收口）",
+    "intersection_with_changed_files": "零交集（git diff --name-only f9729cc5..main 与本卡 8 个变更文件无重叠；v4/04_tasks/tasks.json 有交集，合并销账时按流程解决）"
+  },
+  "environment": {
+    "worktree": "wtD06（git worktree add ../wtD06 -b agent/v4/d06 main，exit 0）",
+    "python": "3.11.15（venv 共享主检出 /Users/brsama/code/GitHub/Sparkle-project/backend/.venv）",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2 (compiled: yes)",
+    "ruff": "0.15.8",
+    "black": "26.3.1 (compiled: yes)",
+    "age_runtime": "本机无 Apache AGE 实例——AGE 面全部以 mock 契约面测试（与仓内既有 AGE 测试模式一致），真实 AGE 往返留集成环境验证",
+    "note": "backend/app/gen 由主检出 cp -R 实体复制进 worktree（非 symlink；.gitignore 已忽略，不入库不入 commit）"
+  },
+  "changed_artifacts_sha256": {
+    "backend/app/services/graph_index_watermark.py": "2def5853ecaf3f5ce37bf33e615a5240b53a608e5c783a9bc7c7c810b9a30d29",
+    "backend/app/orchestration/graph_rag.py": "b90315ddc22f9ac22f3ed5ce5e5dbb2d3936fcada45fec9a5a51b1462aab759a",
+    "backend/app/workers/graph_sync_worker.py": "926e8a4fde6aef034ea6122c19d0c5c65e33d0d2a3257f53af9328ddb7c7ce53",
+    "backend/app/services/graph_knowledge_service.py": "c1e0c29a6e3ed8c296e0862964d8741fe5045f4667b3acbad835874a8f20c950",
+    "backend/app/config/settings.py": "193b34d394301b862d11bcd836cb095eeed44500e0b302fa504d0534d91ebe8c",
+    "backend/app/core/metrics.py": "6ebfabcc1ab17de27592304cd03f0a74a8ab4f0a07813b631dd9d36c64ea68a1",
+    "backend/tests/unit/test_graph_index_freshness_fallback.py": "733fca85dc413af06da64bee4850487187d7a916faae1cd2d9e1e62609eb74db",
+    "backend/tests/test_graph_rag.py": "72e58c4348276dd4b8130d15f64c15bce12f3df712624361bbfe85e489329cba"
+  },
+  "commands": [
+    {
+      "purpose": "建 worktree + 复制 gitignored 生成产物",
+      "cmd": "git -C /Users/brsama/code/GitHub/Sparkle-project worktree add ../wtD06 -b agent/v4/d06 main && cp -R backend/app/gen → wtD06/backend/app/gen",
+      "exit_code": 0,
+      "evidence": "HEAD=f9729cc5fc63c37e0f07b2706a2eeaa50e1e9fbd"
+    },
+    {
+      "purpose": "现状盘点（缺口定位）：sync 流无 delete/update 消息、graph_search 吞异常、无 watermark",
+      "cmd": "grep -rn 'stream:graph_sync' backend/app --include='*.py'；sed -n '/class NodeRelation/,/class UserNodeStatus/p' backend/app/models/galaxy.py；sed -n '1640,1800p' backend/app/services/galaxy_service.py（草稿评审硬删面）；grep -n 'watermark' backend/app -r",
+      "exit_code": 0,
+      "evidence": "DATA_AND_GRAPH §星图权威为设计真源；三类同步消息清单、软删/硬删路径、零 watermark 全部定位"
+    },
+    {
+      "purpose": "D06 新测试·全量（水位判定面 6 + graph_search 时效门 7 + worker 覆盖推进 3 + 双源复算 3）",
+      "cmd": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// pytest tests/unit/test_graph_index_freshness_fallback.py -q",
+      "exit_code": 0,
+      "evidence": "19 passed in 6.61s（sqlite 真关系型 + mock AGE 契约面）"
+    },
+    {
+      "purpose": "突变注入 M1：stale 判定旁路（可失败性·验收1/2）",
+      "cmd": "graph_index_watermark.py 注入 `if True:` 替换 `if age == relational:` 后 pytest 全文件；反 replacing 精确还原",
+      "exit_code": 1,
+      "evidence": "2 failed（test_resolve_state_stale_on_mismatch + test_stale_age_rows_cannot_override_relational_delete）→ 还原后 shasum 恒等（c64ef2df… 为还原后快照）"
+    },
+    {
+      "purpose": "突变注入 M2：fresh 面存在性/软删守卫旁路（可失败性·验收2 纵深）",
+      "cmd": "graph_rag.py _guard_age_rows 注入恒透传后 pytest 守卫+stale 两用例；cp 备份还原",
+      "exit_code": 1,
+      "evidence": "1 failed（test_soft_deleted_node_dropped_by_fresh_guard）；还原后 sha256=cd0b3044…（与备份逐字节恒等）"
+    },
+    {
+      "purpose": "突变注入 M3：worker 零积压规则旁路（可失败性·覆盖水位保守性）",
+      "cmd": "graph_sync_worker.py 注入 `if False:` 替换 `if pending_count != 0:` 后 pytest 积压用例；cp 备份还原",
+      "exit_code": 1,
+      "evidence": "1 failed（test_worker_holds_watermark_while_backlog）；还原后 sha256=926e8a4f…（与备份逐字节恒等）"
+    },
+    {
+      "purpose": "回归·GraphRAG 全家族（retriever/hybrid/cache_key/trace_store/monitor probes/monitor face removed）",
+      "cmd": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// pytest tests/test_graph_rag.py tests/unit/test_graphrag_hybrid_retrieval.py tests/unit/test_graphrag_cache_key.py tests/unit/test_graphrag_trace_store.py tests/test_graph_monitor_probes.py tests/api/test_graphrag_monitor_face_removed.py -q",
+      "exit_code": 0,
+      "evidence": "60 passed in 3.73s"
+    },
+    {
+      "purpose": "回归·D04 基线 galaxy 全目录（178 必跑）",
+      "cmd": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// pytest tests/services/galaxy/ -q",
+      "exit_code": 0,
+      "evidence": "178 passed in 51.51s（与 D04 销账基线同数）"
+    },
+    {
+      "purpose": "回归·D03 撤回面 + worker 可靠性 + expansion + FF 收敛",
+      "cmd": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// pytest tests/core/test_retraction_recompute.py tests/services/test_retraction_recompute_service.py tests/services/test_retraction_read_gate_epoch.py tests/unit/test_event_ack_reliability.py tests/core/test_ff_convergence_sites.py tests/services/test_expansion_service.py -q",
+      "exit_code": 0,
+      "evidence": "77 passed in 16.03s"
+    },
+    {
+      "purpose": "回归·galaxy grpc + 图盾失效面",
+      "cmd": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// pytest tests/unit/test_galaxy_grpc_*.py tests/api/test_galaxy_graph_shield_invalidation.py tests/api/test_wt392_r2v3_galaxy_shield_gaps.py tests/services/test_galaxy_learning_graph_operational.py -q",
+      "exit_code": 0,
+      "evidence": "21 passed in 22.19s"
+    },
+    {
+      "purpose": "终态合并自证：新测试 + graph_rag 家族 + galaxy 178 单批全绿",
+      "cmd": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// pytest tests/unit/test_graph_index_freshness_fallback.py tests/test_graph_rag.py tests/services/galaxy/ -q",
+      "exit_code": 0,
+      "evidence": "236 passed in 150.95s（=19+39+178）"
+    },
+    {
+      "purpose": "棘轮：ruff（全部 8 变更文件）",
+      "cmd": "ruff check app/services/graph_index_watermark.py app/orchestration/graph_rag.py app/workers/graph_sync_worker.py app/services/graph_knowledge_service.py app/config/settings.py app/core/metrics.py tests/unit/test_graph_index_freshness_fallback.py tests/test_graph_rag.py",
+      "exit_code": 0,
+      "evidence": "All checks passed（--fix 清 1 处新测试文件 import 排序）"
+    },
+    {
+      "purpose": "棘轮：black（新增文件必须 clean；存量文件 hunk 数对 main 不增）",
+      "cmd": "black --check <2 新文件>；black --diff 逐文件 hunk 计数 worktree vs main",
+      "exit_code": 0,
+      "evidence": "新增 2 文件 black 后 clean；存量漂移 hunk：graph_rag 16=16、worker 6=6（另一口径 8=8）、其余 0=0——零新增漂移"
+    },
+    {
+      "purpose": "棘轮：mypy（4 个变更源文件 vs main 同文件基线）",
+      "cmd": "mypy app/orchestration/graph_rag.py app/workers/graph_sync_worker.py app/services/graph_knowledge_service.py app/services/graph_index_watermark.py；同命令在主检出（main）复跑取基线",
+      "exit_code": 0,
+      "evidence": "变更文件命中错误恰为 main 基线 3 处（worker str-bytes-safe、knowledge_service attr-defined×2，行号平移）——新增错误 0（修掉本卡引入的 no-redef×2；xadd 不变型误报按仓内判例加定点 ignore[arg-type] 注释）"
+    }
+  ],
+  "llm_usage": "无模型调用（本卡零 LLM 面改动，测试全程 mock/mock 契约面，无价格来源可报）",
+  "ui": "无 UI 变更（metadata[\"graph_index\"] 为后端检索元数据面，消费方可视化挂账 limitations）"
+}

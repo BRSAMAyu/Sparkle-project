@@ -229,6 +229,17 @@ RETRIEVAL_ERROR_TOTAL = get_or_create_metric(
     Counter, "sparkle_retrieval_error_total", "Total retrieval errors", ["source", "stage"]
 )
 
+# V4-D06：图索引时效门显式降级计数（降级可观测，不静默）。
+# reason: watermark_mismatch | index_uncovered | resolution_failed |
+#         concurrent_write_detected | staleness_guard_error |
+#         age_entity_error | relational_query_error
+GRAPH_INDEX_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_graph_index_fallback_total",
+    "GraphRAG explicit fallbacks to relational truth source by reason",
+    ["reason"],
+)
+
 ACTIVE_WEBSOCKET_CONNECTIONS = get_or_create_metric(
     Gauge, "sparkle_websocket_connections", "Number of active WebSocket connections"
 )

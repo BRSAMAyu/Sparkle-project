@@ -27,7 +27,12 @@ from app.core.age_client import get_age_client
 from app.core.agent_profiles import AgentRole, TaskType
 from app.core.cache import cache_service
 from app.core.cost_controller import is_rag_within_budget, record_rag_cost
-from app.core.metrics import CACHE_HIT_COUNT, RAG_RETRIEVAL_LATENCY, RETRIEVAL_TIMEOUT_TOTAL
+from app.core.metrics import (
+    CACHE_HIT_COUNT,
+    GRAPH_INDEX_FALLBACK_TOTAL,
+    RAG_RETRIEVAL_LATENCY,
+    RETRIEVAL_TIMEOUT_TOTAL,
+)
 from app.core.redis_search_client import redis_search_client
 from app.orchestration.capability_lane import MEMORY_CLASS_INSTRUCTION, classify_memory_class_message
 from app.services.context_retrieval_pipeline import (
@@ -36,6 +41,15 @@ from app.services.context_retrieval_pipeline import (
 )
 from app.services.embedding_service import embedding_service
 from app.services.galaxy.rag_router import RagRouter
+from app.services.graph_index_watermark import (
+    AGE_ONE_HOP_CYPHER,
+    STATE_FRESH,
+    STATE_STALE,
+    STATE_UNKNOWN,
+    GraphIndexState,
+    GraphIndexWatermark,
+    relational_one_hop,
+)
 from app.services.graphrag_trace_store import cache_trace
 from app.services.group_file_service import GroupFileService
 from app.services.knowledge_service import KnowledgeService
@@ -701,6 +715,9 @@ class GraphRAGRetriever:
         self.knowledge_service = knowledge_service
         self.max_depth = 2
         self.min_strength = 0.3
+        # V4-D06：最近一次 graph_search 的图索引时效快照（retrieve() 并入
+        # metadata["graph_index"]；实例按请求构造，无跨请求共享）。
+        self.last_graph_index: dict[str, Any] | None = None
 
     def _normalize_query(self, query: str) -> str:
         return " ".join(query.strip().lower().split())
@@ -1901,8 +1918,15 @@ Return ONLY a JSON array of entity names."""
         depth: int = 2,
         user_id: str | None = None,
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        """
-        图检索（结构关联）
+        """图检索（结构关联）——关系型主真源优先，AGE 仅在索引覆盖证明新鲜时作答。
+
+        V4-D06 时效门（DATA_AND_GRAPH §星图权威）：
+        - fresh（AGE 覆盖水位==关系型当前水位，双读栅栏防并发写窗口）→ AGE
+          一跳作答，并过关系型存在性/软删守卫（已删除节点不复活）。
+        - stale/uncovered/unknown → 显式降级关系型一跳查询（软删安全），
+          降级原因/水位/失败原文写入 ``self.last_graph_index``（retrieve()
+          并入 metadata["graph_index"]）并计 GRAPH_INDEX_FALLBACK_TOTAL，
+          不静默、不用旧 AGE 数据冒充当前事实。
 
         Args:
             entities: 实体列表
@@ -1914,37 +1938,161 @@ Return ONLY a JSON array of entity names."""
         Returns:
             (节点检索结果, 关系列表)
         """
+        self.last_graph_index = None
         if not entities:
             return [], []
 
-        results = []
-        relationships = []  # 新增：收集关系信息
+        if not settings.GRAPH_INDEX_WATERMARK_GATE_ENABLED:
+            # 回滚开关（卡面 rollback：既有 off/shadow/live 开关）：关门 →
+            # 旧 AGE-always 路径原样保留，不做时效判定。
+            logger.debug("graph index watermark gate disabled; legacy AGE path")
+            legacy_results, legacy_relationships, _age_errors = await self._graph_search_via_age(entities)
+            self.last_graph_index = {"state": "gate_disabled", "mode": "age", "reason": "gate_disabled"}
+            return await self._finalize_graph_results(legacy_results, legacy_relationships, user_id)
+
+        index_state = await self._resolve_graph_index_state()
+        self.last_graph_index = index_state.to_metadata()
+
+        results: list[dict[str, Any]] = []
+        relationships: list[dict[str, Any]] = []
+        fallback_triggered = index_state.state != STATE_FRESH
+
+        if not fallback_triggered:
+            # fresh：AGE 覆盖证明与关系型一致 → 派生索引作答。
+            self.last_graph_index["mode"] = "age"
+            results, relationships, age_failures = await self._graph_search_via_age(entities)
+            if age_failures:
+                self.last_graph_index["age_errors"] = [f"{f['entity']}: {f['error']}" for f in age_failures]
+                GRAPH_INDEX_FALLBACK_TOTAL.labels(reason="age_entity_error").inc(amount=len(age_failures))
+                # 逐实体 AGE 失败可见（失败保留），且失败实体本轮由关系型补答。
+                filled = await self._fill_failed_entities_from_relational(results, relationships, age_failures)
+                if filled:
+                    self.last_graph_index["relational_filled_entities"] = filled
+            results, relationships, guard_dropped, guard_error = await self._guard_age_rows(results, relationships)
+            if guard_dropped:
+                self.last_graph_index["stale_guard_dropped"] = guard_dropped
+            if guard_error is not None:
+                # 存在性守卫查询失败 fail-closed：丢弃 AGE 行（删除不复活优先）。
+                fallback_triggered = True
+                self._record_fallback("staleness_guard_error", [guard_error])
+                results, relationships = [], []
+            else:
+                # 双读栅栏（D03 epoch 栅栏同型）：读后重算关系型水位，不等 ⇒
+                # AGE 查询窗口内落到并发写 → 旧索引快照不可作答。
+                watermark_after = await self._relational_watermark()
+                if watermark_after is not None and watermark_after != index_state.relational_watermark:
+                    self.last_graph_index["relational_watermark"] = watermark_after
+                    self.last_graph_index["state"] = STATE_STALE
+                    fallback_triggered = True
+                    self._record_fallback("concurrent_write_detected", [])
+                    results, relationships = [], []
+
+        if fallback_triggered:
+            self.last_graph_index["mode"] = "relational_fallback"
+            if self.last_graph_index.get("fallback_reason") is None:
+                reason = "resolution_failed" if index_state.state == STATE_UNKNOWN else index_state.reason
+                self._record_fallback(reason, self.last_graph_index.get("age_errors") or [])
+            rel_results, rel_relationships, rel_errors = await self._graph_search_relational(entities)
+            if rel_errors:
+                self.last_graph_index["relational_errors"] = rel_errors
+                GRAPH_INDEX_FALLBACK_TOTAL.labels(reason="relational_query_error").inc()
+            self.last_graph_index["relational_result_count"] = len(rel_results)
+            # 关系型作答（含空）即本轮事实：不回退旧 AGE 数据冒充当前真源。
+            results, relationships = rel_results, rel_relationships
+
+        logger.debug(
+            f"图检索: {len(results)} 条结果, {len(relationships)} 个关系, "
+            f"index_state={index_state.state}, mode={self.last_graph_index.get('mode')}"
+        )
+        return await self._finalize_graph_results(results, relationships, user_id)
+
+    async def _relational_watermark(self) -> str | None:
+        """读后栅栏用：重算关系型水位（失败 → None → 栅栏放行，watermark 判定
+        本身已由读前解析承担；失败原文不掩盖）。"""
+        db: AsyncSession | None = getattr(self.knowledge_service, "db", None)
+        if db is None:
+            return None
+        try:
+            return await GraphIndexWatermark(db).relational_watermark()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"读后关系型水位重算失败（栅栏放行）: {e}")
+            return None
+
+    async def _fill_failed_entities_from_relational(
+        self,
+        results: list[dict[str, Any]],
+        relationships: list[dict[str, Any]],
+        age_failures: list[dict[str, str]],
+    ) -> list[str]:
+        """fresh 面逐实体 AGE 失败的关系型补答（合并去重；补答失败原文保留）。"""
+        failed_entities = [f["entity"] for f in age_failures]
+        seen_ids = {str(r.get("id") or "") for r in results}
+        rel_results, rel_relationships, rel_errors = await self._graph_search_relational(failed_entities)
+        if rel_errors:
+            self.last_graph_index.setdefault("relational_errors", []).extend(rel_errors)  # type: ignore[union-attr]
+            GRAPH_INDEX_FALLBACK_TOTAL.labels(reason="relational_query_error").inc()
+        for item in rel_results:
+            item_id = str(item.get("id") or "")
+            if item_id and item_id in seen_ids:
+                continue
+            if item_id:
+                seen_ids.add(item_id)
+            results.append(item)
+        relationships.extend(rel_relationships)
+        return failed_entities if rel_results else []
+
+    async def _finalize_graph_results(
+        self,
+        results: list[dict[str, Any]],
+        relationships: list[dict[str, Any]],
+        user_id: str | None,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """公共出口：租户隔离后过滤（R5-P0-6），两种作答面共用。"""
+        if user_id and results:
+            results, relationships = await self._filter_graph_results_by_access(results, relationships, user_id)
+        elif results and not user_id:
+            logger.warning(
+                "graph_search called without user_id; tenant isolation skipped — "
+                "callers should pass user_id"
+            )
+        return results, relationships
+
+    def _record_fallback(self, reason: str, errors: list[str]) -> None:
+        """登记一次显式降级（metadata + 指标 + warning，不静默）。"""
+        assert self.last_graph_index is not None
+        self.last_graph_index["fallback_reason"] = reason
+        if errors:
+            self.last_graph_index["age_errors"] = errors
+        GRAPH_INDEX_FALLBACK_TOTAL.labels(reason=reason).inc()
+        logger.warning(f"graph_search 显式降级关系型真源: reason={reason} errors={errors}")
+
+    async def _resolve_graph_index_state(self) -> GraphIndexState:
+        """解析图索引时效态；解析链路任何失败 → unknown（保守回关系型）。"""
+        db = getattr(self.knowledge_service, "db", None)
+        if db is None:
+            return GraphIndexState(state=STATE_UNKNOWN, reason="resolution_failed", detail="no db session")
+        try:
+            return await GraphIndexWatermark(db).resolve_state()
+        except Exception as e:  # noqa: BLE001 — 解析失败显式 unknown
+            return GraphIndexState(state=STATE_UNKNOWN, reason="resolution_failed", detail=str(e))
+
+    async def _graph_search_via_age(
+        self,
+        entities: list[str],
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, str]]]:
+        """AGE 一跳邻接作答（覆盖证明新鲜时）。逐实体失败不再静默——
+        失败按实体结构化收集返回（原文保留，由调用方裁决补答）。"""
+        results: list[dict[str, Any]] = []
+        relationships: list[dict[str, Any]] = []
+        age_failures: list[dict[str, str]] = []
         seen_result_ids: set[str] = set()
         seen_relationship_keys: set[tuple[str | None, str | None, str | None]] = set()
 
         for entity in entities:
             try:
                 # AGE 对复杂路径列表过滤支持较弱，这里优先使用稳定的一跳关联查询。
-                cypher = """
-                MATCH (start:KnowledgeNode {name: $entity})
-                -[rel]-(related:KnowledgeNode)
-                WHERE toFloat(rel.strength) > $min_strength
-                RETURN {
-                    start_id: start.id,
-                    start_name: start.name,
-                    id: related.id,
-                    name: related.name,
-                    description: related.description,
-                    relation_type: type(rel),
-                    strength: toFloat(rel.strength),
-                    sector: related.sector
-                } as result
-                ORDER BY toFloat(rel.strength) DESC
-                LIMIT 10
-                """
-
                 result = await self.age_client.execute_cypher(
-                    cypher, {"entity": entity, "min_strength": self.min_strength}
+                    AGE_ONE_HOP_CYPHER, {"entity": entity, "min_strength": self.min_strength}
                 )
 
                 # 添加元数据并收集关系
@@ -1979,21 +2127,119 @@ Return ONLY a JSON array of entity names."""
                     )
 
             except Exception as e:
+                age_failures.append({"entity": entity, "error": f"{type(e).__name__}: {e}"})
                 logger.warning(f"图检索失败 for {entity}: {e}")
 
-        # R5-P0-6: tenant isolation — drop nodes the calling user cannot access.
-        if user_id and results:
-            results, relationships = await self._filter_graph_results_by_access(
-                results, relationships, user_id
-            )
-        elif results and not user_id:
-            logger.warning(
-                "graph_search called without user_id; tenant isolation skipped — "
-                "callers should pass user_id"
-            )
+        return results, relationships, age_failures
 
-        logger.debug(f"图检索: {len(results)} 条结果, {len(relationships)} 个关系")
-        return results, relationships
+    async def _guard_age_rows(
+        self,
+        results: list[dict[str, Any]],
+        relationships: list[dict[str, Any]],
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int, str | None]:
+        """关系型存在性/软删守卫（fresh 面）：AGE 行的任一端节点已删除或不
+        存在即丢弃（删除不复活；关系删除由水位不等覆盖）。守卫查询失败时
+        fail-closed（error 返回给调用方裁决），不用未验证的 AGE 行冒充。"""
+        db: AsyncSession | None = getattr(self.knowledge_service, "db", None)
+        if db is None:
+            return results, relationships, 0, "no db session on knowledge_service"
+
+        raw_ids: set[str] = set()
+        for r in results:
+            for key in ("id", "start_id"):
+                v = r.get(key)
+                if v:
+                    raw_ids.add(str(v))
+
+        node_uuids: list[uuid.UUID] = []
+        for rid in raw_ids:
+            try:
+                node_uuids.append(uuid.UUID(rid))
+            except (ValueError, TypeError):
+                continue
+
+        if not node_uuids:
+            return results, relationships, 0, None
+
+        from app.models.galaxy import KnowledgeNode
+
+        try:
+            alive_rows = await db.execute(
+                select(KnowledgeNode.id).where(
+                    KnowledgeNode.id.in_(node_uuids),
+                    KnowledgeNode.deleted_at.is_(None),
+                )
+            )
+            alive = {str(row[0]) for row in alive_rows}
+        except Exception as e:  # noqa: BLE001 — fail closed
+            return results, relationships, 0, f"staleness guard DB error: {type(e).__name__}: {e}"
+
+        kept_results = [
+            r
+            for r in results
+            if (str(r.get("id") or "") in alive or not r.get("id"))
+            and (str(r.get("start_id") or "") in alive or not r.get("start_id"))
+        ]
+        kept_node_ids = {str(r.get(k)) for r in kept_results for k in ("id", "start_id") if r.get(k)}
+        kept_relationships = [
+            rel
+            for rel in relationships
+            if str(rel.get("from_id") or "") in kept_node_ids and str(rel.get("to_id") or "") in kept_node_ids
+        ]
+        return kept_results, kept_relationships, len(results) - len(kept_results), None
+
+    async def _graph_search_relational(
+        self,
+        entities: list[str],
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+        """关系型真源一跳作答（stale/uncovered/unknown/AGE 故障的显式降级面）。
+
+        结果形状与 AGE 路对齐（同题可复算），``source="graph_relational"``
+        标记作答来源；查询失败逐实体保留错误原文（失败保留，不冒充成功）。
+        租户隔离由 _finalize_graph_results 统一处理。
+        """
+        db: AsyncSession | None = getattr(self.knowledge_service, "db", None)
+        results: list[dict[str, Any]] = []
+        relationships: list[dict[str, Any]] = []
+        errors: list[str] = []
+        if db is None:
+            return results, relationships, ["no db session on knowledge_service"]
+
+        seen_result_ids: set[str] = set()
+        seen_relationship_keys: set[tuple[str | None, str | None, str | None]] = set()
+
+        for entity in entities:
+            try:
+                rows = await relational_one_hop(db, entity, min_strength=self.min_strength)
+                for item in rows:
+                    item_id = str(item.get("id") or "")
+                    if item_id and item_id in seen_result_ids:
+                        continue
+                    if item_id:
+                        seen_result_ids.add(item_id)
+                    item["source"] = "graph_relational"
+                    item["query_entity"] = entity
+                    results.append(item)
+
+                    relationship_key = (item.get("start_id"), item.get("id"), item.get("relation_type"))
+                    if relationship_key in seen_relationship_keys:
+                        continue
+                    seen_relationship_keys.add(relationship_key)
+                    relationships.append(
+                        {
+                            "from_id": item.get("start_id"),
+                            "from_name": item.get("start_name", entity),
+                            "to_id": item.get("id"),
+                            "to_name": item.get("name"),
+                            "relation_type": item.get("relation_type"),
+                            "strength": item.get("strength"),
+                        }
+                    )
+            except Exception as e:
+                errors.append(f"{entity}: {type(e).__name__}: {e}")
+                logger.warning(f"关系型图检索失败 for {entity}: {e}")
+
+        return results, relationships, errors
 
     async def _filter_graph_results_by_access(
         self,
@@ -2188,7 +2434,8 @@ Return ONLY a JSON array of entity names."""
                 part += f" [强度: {strength}]"
 
             part += f"\n{desc}"
-            if source == "graph":
+            # V4-D06：关系型 fallback 作答同属图谱面（来源标记区分，标签同权）。
+            if source in ("graph", "graph_relational"):
                 part += "\n[来自图谱]"
 
             context_parts.append(part)
@@ -2436,6 +2683,9 @@ Return ONLY a JSON array of entity names."""
             "timing": timing,
             "multi_hop": multi_hop_metadata,
             "group_scope": resolved_group_scope,
+            # V4-D06：图索引时效快照（新资料立即有明确版本/索引中状态；
+            # 降级原因/水位/失败原文可观测，不静默）。
+            "graph_index": self.last_graph_index,
         }
 
         # 7. 构建检索追踪信息（用于前端可视化）

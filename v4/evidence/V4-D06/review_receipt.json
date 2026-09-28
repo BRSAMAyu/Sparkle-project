@@ -1,0 +1,60 @@
+{
+  "card": "V4-D06",
+  "branch": "agent/v4/d06",
+  "base_sha": "f9729cc5fc63c37e0f07b2706a2eeaa50e1e9fbd",
+  "status": "REVIEW_READY",
+  "reviewers_required": 1,
+  "risk": "normal",
+  "generated_at_local": "2026-09-29",
+  "implementation_agent": "wtD06",
+  "implementation_complete": true,
+  "locks": ["graph-retrieval"],
+  "integration_sha_recheck": "PENDING_REVIEWER（base=f9729cc5；main 执行期间前进至 3b96039f，产品代码零交集已验证；v4/04_tasks/tasks.json 有交集需合并时解决——本卡只改 V4-D06 条目）",
+  "test_counts": {
+    "new_freshness_fallback_tests": 19,
+    "existing_graph_family_regression": 60,
+    "galaxy_d04_baseline_regression": 178,
+    "retraction_worker_faces_regression": 77,
+    "grpc_shield_regression": 21,
+    "final_combined_batch": "236 passed in 150.95s",
+    "existing_assertions_updated_not_deleted": 1,
+    "mutation_tests": {
+      "M1_stale_gate_bypass": "2 failed → 精确反 replacing 还原",
+      "M2_fresh_guard_bypass": "1 failed → cp 备份还原 sha256 恒等",
+      "M3_worker_backlog_hold_bypass": "1 failed → cp 备份还原 sha256 恒等"
+    }
+  },
+  "ratchets": {
+    "ruff": "0 新增（All checks passed）",
+    "black": "新增 2 文件 clean；存量漂移 hunk 计数逐文件与 main 持平，零新增",
+    "mypy": "变更文件命中恰为 main 基线 3 处（行号平移），新增 0"
+  },
+  "acceptance_map": [
+    {
+      "acceptance": "新资料立即有明确版本/索引中状态",
+      "verdict": "PASS",
+      "positive": "关系型写即翻水位（计数进版）；uncovered/stale 时关系型立即作答，metadata graph_index 携带 state/relational_watermark/fallback_reason，AGE 零调用",
+      "negative": "M1 突变（绕过 stale 判定假称 fresh）→ 2 用例失败；空库水位恰为 gtsms:0:n0:r0 的坑由 stale 用例钉死（先造数据再录旧水位）"
+    },
+    {
+      "acceptance": "AGE旧数据不能压过更新/删除的关系型事实",
+      "verdict": "PASS",
+      "positive": "水位不等→AGE 不作答（test_stale_age_rows…）；fresh 面守卫丢弃已删节点行（test_soft_deleted…stale_guard_dropped=1）；守卫查询失败 fail-closed 降级关系型",
+      "negative": "M2 突变（守卫旁路）→ 1 用例失败（软删节点复活被抓）；M1 突变同时击穿 stale 拦截"
+    },
+    {
+      "acceptance": "对同题关系型/AGE来源可复算，失败保留",
+      "verdict": "PASS",
+      "positive": "recompute_graph_sources 双源同型一跳语义并列复算，一致 match=True；两路各自失败原文保留（age_error/relational_error，match=None）",
+      "negative": "AGE 故障/关系型故障分别注入 → 失败原文在 report 中保留、另一路不受牵连；graph_search 解析失败面空结果必带 relational_errors（非静默）"
+    }
+  ],
+  "review_challenges_preregistered": [
+    "R1 worker 覆盖水位的 XPENDING==0 规则是组级保守判定：多 consumer 下不会误推进（未 ack 即有积压），但回收重放窗口内水位可能长期停在旧值（保守方向的代价）——请审 _advance_age_watermark 并发语义与 _recover_pending 的覆盖推进路径",
+    "R2 水位串为等值比较（非序比较）：同毫秒并发写靠计数翻转区分；跨节点时钟回拨场景未建库内单调序列——请评估是否需要升级为单调 epoch（本卡按最小增量未做）",
+    "R3 双读栅栏把并发写窗口缩到水位重算间隔（毫秒级）但不为零；窗口内新关系本轮缺失、下轮自愈——请判定是否满足'新资料立即'口径（关系型主真源路径不受此窗影响）",
+    "R4 find_learning_path/find_related_concepts 仍直查 AGE 未接本门（消费方少、同类缺口）——已挂账 limitations，请裁决是否单独卡收口",
+    "R5 覆盖水位仅由 GraphKnowledgeService 双写路径与 sync_all_to_age 推进；expansion_service 等直写关系表的生产者不入队（B02 在案既有缺口）→ 这些写入使水位长期 stale、常态走关系型作答。这是设计意图（关系型主真源）但意味着 AGE 派生索引收益需补齐写生产者后才兑现"
+  ],
+  "rollback": "GRAPH_INDEX_WATERMARK_GATE_ENABLED=False 一键恢复旧 AGE-always 路径（有测试钉住该路径）；旧格式同步消息（无 watermark 字段）不推进覆盖，向后兼容；无 DB 迁移、无 proto 变更"
+}

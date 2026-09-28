@@ -1097,6 +1097,9 @@ class Settings(BaseSettings):
     ENABLE_GRAPHRAG_FASTPATH: bool = False
     GRAPHRAG_CACHE_TTL_SECONDS: int = 120
     GRAPHRAG_FASTPATH_TIMEOUT_SECONDS: float = 2.5
+    # V4-D06：图索引时效门（关系型主真源优先；AGE 仅覆盖证明新鲜时作答）。
+    # False = 回滚开关：恢复旧 AGE-always 路径（不做水位判定）。
+    GRAPH_INDEX_WATERMARK_GATE_ENABLED: bool = True
 
     # HyDE (Hypothetical Document Embeddings) pre-retrieval query expansion
     ENABLE_HYDE: bool = True

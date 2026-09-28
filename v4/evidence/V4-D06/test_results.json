@@ -1,0 +1,83 @@
+{
+  "card": "V4-D06",
+  "generated_at_local": "2026-09-29",
+  "environment": "wtD06 worktree / python 3.11.15 / pytest 9.0.2 / SECRET_KEY=ci-test-key DATABASE_URL=sqlite://（sqlite 纪律方言，不触 dev DB；AGE 无实例，AGE 面 mock 契约）",
+  "new_tests": {
+    "file": "tests/unit/test_graph_index_freshness_fallback.py",
+    "total": 19,
+    "command": "pytest tests/unit/test_graph_index_freshness_fallback.py -q",
+    "exit_code": 0,
+    "output_tail": "19 passed in 6.61s",
+    "by_surface": {
+      "水位判定面": {
+        "test_relational_watermark_changes_on_new_relation": "正：新资料立即翻版本（含双表计数）",
+        "test_relational_watermark_changes_on_delete_of_non_latest_row": "正：删非最新行（max(updated_at) 不变）仍翻版本（E-05 判例）",
+        "test_resolve_state_uncovered_without_coverage": "无覆盖记录→uncovered 不假称 fresh",
+        "test_resolve_state_stale_on_mismatch": "覆盖落后→stale/watermark_mismatch",
+        "test_resolve_state_fresh_when_covered": "覆盖==当前→fresh",
+        "test_resolve_state_unknown_when_db_absent": "反：解析失败→unknown 保守"
+      },
+      "graph_search时效门": {
+        "test_new_relation_answered_immediately_with_index_status": "验收1 正：uncovered 即关系型作答+版本串+原因，AGE 零调用",
+        "test_stale_age_rows_cannot_override_relational_delete": "验收2 反例面：已删关系+AGE 旧行→旧行不出现、state=stale",
+        "test_soft_deleted_node_dropped_by_fresh_guard": "验收2 纵深：水位窗口内软删被守卫丢弃（stale_guard_dropped=1）",
+        "test_age_outage_in_fresh_mode_falls_back_explicitly": "AGE 故障→关系型补答+age_errors 原文保留",
+        "test_resolution_failure_degrades_without_silent_success": "反：解析失败+关系型不可用→空但 relational_errors 保留（非静默）",
+        "test_gate_disabled_restores_legacy_age_path": "回滚开关：关门恢复旧 AGE-always 路径",
+        "test_relational_one_hop_is_soft_delete_safe": "关系型作答面软删安全（节点/关系两向）"
+      },
+      "worker覆盖推进": {
+        "test_worker_returns_and_records_watermark_when_no_backlog": "正：零积压推进覆盖水位",
+        "test_worker_holds_watermark_while_backlog": "反：有积压不推进（保守不越权）",
+        "test_legacy_message_without_watermark_records_nothing": "旧格式消息不推进（向后兼容）"
+      },
+      "同题双源复算": {
+        "test_recompute_graph_sources_match": "验收3 正：两路一致 match=True",
+        "test_recompute_graph_sources_keeps_age_failure": "验收3 反：AGE 故障原文保留 match=None",
+        "test_recompute_graph_sources_keeps_relational_failure": "验收3 反：关系型失败同样原文保留"
+      }
+    }
+  },
+  "updated_existing_tests": {
+    "file": "tests/test_graph_rag.py",
+    "count": 1,
+    "note": "test_graph_search 旧行为面显式归回滚开关路径（settings.GRAPH_INDEX_WATERMARK_GATE_ENABLED=False），断言不削弱、追加 last_graph_index 断言"
+  },
+  "regression": {
+    "batch_1_graph_family": {
+      "command": "pytest tests/test_graph_rag.py tests/unit/test_graphrag_hybrid_retrieval.py tests/unit/test_graphrag_cache_key.py tests/unit/test_graphrag_trace_store.py tests/test_graph_monitor_probes.py tests/api/test_graphrag_monitor_face_removed.py -q",
+      "exit_code": 0,
+      "output_tail": "60 passed in 3.73s"
+    },
+    "batch_2_galaxy_178_d04_baseline": {
+      "command": "pytest tests/services/galaxy/ -q",
+      "exit_code": 0,
+      "output_tail": "178 passed in 51.51s"
+    },
+    "batch_3_retraction_worker_faces": {
+      "command": "pytest tests/core/test_retraction_recompute.py tests/services/test_retraction_recompute_service.py tests/services/test_retraction_read_gate_epoch.py tests/unit/test_event_ack_reliability.py tests/core/test_ff_convergence_sites.py tests/services/test_expansion_service.py -q",
+      "exit_code": 0,
+      "output_tail": "77 passed in 16.03s"
+    },
+    "batch_4_grpc_shield": {
+      "command": "pytest tests/unit/test_galaxy_grpc_*.py tests/api/test_galaxy_graph_shield_invalidation.py tests/api/test_wt392_r2v3_galaxy_shield_gaps.py tests/services/test_galaxy_learning_graph_operational.py -q",
+      "exit_code": 0,
+      "output_tail": "21 passed in 22.19s"
+    },
+    "final_combined": {
+      "command": "pytest tests/unit/test_graph_index_freshness_fallback.py tests/test_graph_rag.py tests/services/galaxy/ -q",
+      "exit_code": 0,
+      "output_tail": "236 passed in 150.95s（=19+39+178）"
+    }
+  },
+  "mutation_tests": {
+    "M1_stale_gate_bypass": "resolve_state 恒 fresh → 2 failed（stale 判定 + stale AGE 旧行拦截）→ 精确反 replacing 还原",
+    "M2_fresh_guard_bypass": "_guard_age_rows 恒透传 → 1 failed（软删节点复活被抓）→ cp 备份还原 sha256 恒等（cd0b3044…）",
+    "M3_worker_backlog_hold_bypass": "零积压规则 `if False` → 1 failed（积压下误推进被抓）→ cp 备份还原 sha256 恒等（926e8a4f…）"
+  },
+  "ratchet": {
+    "ruff": {"exit_code": 0, "note": "All checks passed（--fix 清 1 处 import 排序）"},
+    "black": {"exit_code": 0, "note": "新增 2 文件 clean；存量漂移 hunk 计数逐文件与 main 持平（16=16/6=6/0=0），零新增"},
+    "mypy": {"exit_code": 0, "note": "变更文件命中恰为 main 基线 3 处（行号平移），新增 0；本卡曾引入 no-redef×2 已改名修掉，xadd 桩不变型误报按仓内判例定点 ignore[arg-type]"}
+  }
+}
