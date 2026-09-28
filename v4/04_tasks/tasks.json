@@ -516,9 +516,9 @@
         "V4-F02",
         "V4-B05"
       ],
-      "status": "in_progress",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS_X2",
       "kind": "implementation",
       "required_locks": [
         "experience-presenter"
@@ -569,7 +569,14 @@
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
       "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
       "evidence_summary": "真实状态驱动的反馈呈现适配器：backend 回执→experience_event.v1 生产流（approve 成功/过期清扫/approve 错误面三挂点，全韧性壳 additive）+ F03 冻结文案表（B05 §3 R1-C5 owner 落点，17 键冻结+禁词扫描）+ C-1 闭合（project_terminal_reason/project_error_state 接生产调用方，INVALID_COMMAND fail-loud 生产可达）+ C-2 闭合（mark_seen 挂点降级 reason 可观测）；mobile 统一呈现适配器（event_id 去重/replay 抑制/当前对象 version 校验/subject 语义分层路由，成功视觉唯一经 PixelSuccessBadge，unknown 不借成功视觉）。backend 17 新测+144 回归（X-03 服务 32+API 16+D01 44+f507 9+邻接 46）全绿；mobile 18 新测+160 design 回归+39 app 壳全绿；analyze/ruff/black/四棘轮守卫全过；零模型调用、零 proto/迁移/生成文件改动。source_sha=71553984（base）；待 2 位独立审查（high）+集成 SHA 复验（review_receipt.json PENDING，挑战点预登记 5 条）",
-      "progress_note": "2026-09-28 wtF03：REVIEW_READY 交付（worktree wtF03，分支 agent/v4/f03，未 push）。WS Frame 契约 owner 位评估：本会话纪律禁触 proto + 卡面『契约由单一 owner 单独合并』→ frame proto 增量单独移交合并（消费面已 transport-ready，见 limitations #1）；C-1/C-2 属本卡卡面已落。已知边界如实登记：mobile 屏幕消费方切换（F04 耦合）、memory:// scheme 缺位、挂点 event_bus=None 同 D01 生产形态——见 v4/evidence/V4-F03/limitations.md（8 条限制 + 5 条审查挑战预登记）。"
+      "progress_note": "2026-09-28 wtF03：REVIEW_READY 交付（worktree wtF03，分支 agent/v4/f03，未 push）。WS Frame 契约 owner 位评估：本会话纪律禁触 proto + 卡面『契约由单一 owner 单独合并』→ frame proto 增量单独移交合并（消费面已 transport-ready，见 limitations #1）；C-1/C-2 属本卡卡面已落。已知边界如实登记：mobile 屏幕消费方切换（F04 耦合）、memory:// scheme 缺位、挂点 event_bus=None 同 D01 生产形态——见 v4/evidence/V4-F03/limitations.md（8 条限制 + 5 条审查挑战预登记）。",
+      "review": {
+        "r1": "86e2189d PASS（六拒绝路径+重放抑制+unknown 无成功视觉全实测）",
+        "r2": "2a4f46d4 PASS（对抗 16/16：重放风暴/乱序/版本回退；跨端 17 键逐字一致）",
+        "leader_actions": "CH-1/C-1' 数字勘误+CH-3 跨端 sha256 互钉已落（Dart 侧钉值补正一次）",
+        "open_items": "CH-2 WS ExperienceEventFrame proto 增量无任务面承接——协调面登记：待 contract-owner 卡（F05/F06 或独立小卡）认领；CH-4 真实性由认证传输承担——U 线接线守门（事件只经认证 WS 通道）",
+        "integration_reverify": "合并后 backend 18+mobile pixel 34+experience 19 passed"
+      }
     },
     {
       "id": "V4-F04",
