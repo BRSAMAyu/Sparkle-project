@@ -950,6 +950,13 @@ class Settings(BaseSettings):
     # 默认关（release_flags 同族模式：权威在本 Settings 单例）：关闭时既有
     # 真模型链路零变化。
     ENABLE_DETERMINISTIC_FAST_LANE: bool = False
+    # V4-I03：受限语义选择器（orchestration/semantic_selector.py）——复杂表达
+    # （多否定/时间约束/材料不足）结构探针 + 受限词表语义选择 + 同输入规则臂/
+    # 语义臂对照。off = 零行为；shadow = 影子对照记录（context_data +
+    # metrics），永不改变路由；live 的裁决语义归下游消费卡（V4-I04/I07），
+    # 本卡 live 在聊天流内与 shadow 同义（只记录不裁决）。未知值按 off 处理
+    # （fail-closed，不猜）。
+    SEMANTIC_SELECTOR_MODE: str = "off"
     COMPACTION_RECENT_WINDOW: int = 6
     COMPACTION_KEY_MESSAGE_CAP_TOKENS: int = 220
     # C-06：knowledge JIT（core/knowledge_jit.py）——大知识源只注入

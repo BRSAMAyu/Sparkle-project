@@ -1,0 +1,88 @@
+{
+  "task": "V4-I03",
+  "captured_at": "2026-09-28",
+  "python": "3.11.15",
+  "env": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite://",
+  "summary": {
+    "new_tests": 77,
+    "new_tests_file": "backend/tests/unit/test_semantic_selector.py",
+    "regression_suites_run": 5,
+    "regression_all_green": true,
+    "quality_gates": {
+      "ruff": "pass (5 改动文件)",
+      "black": "pass (新文件+非漂移文件，line-length 120)",
+      "mypy_changed_files": "0 errors",
+      "mypy_ratchet": "71 / baseline 77 (≤ baseline，零新增)"
+    }
+  },
+  "suites": [
+    {
+      "purpose": "新增：受限语义选择器（验收①②③）",
+      "cmd": "pytest tests/unit/test_semantic_selector.py -q",
+      "exit_code": 0,
+      "result": "77 passed",
+      "coverage_map": {
+        "acceptance_1_probe": [
+          "TestProbePositives (11 tests: 每形态正例 + 多形态并存优先级)",
+          "TestProbeSingleKeywordNoFlip (14 tests: 单关键词零判定力反例族)",
+          "TestProbeOperatorRemovalFlips (6 tests: 去算子翻转 + 缓解词作废 + 空输入)"
+        ],
+        "acceptance_2_refusal": [
+          "TestWhitelistConstruction (4 tests: 白名单构造 fail-loud + 词表复用断言)",
+          "TestUnknownRefAndToolRefusal (8 tests: 未知ref/目录外tool/scheme外ref/词表外干预/白名单外干预/非法模式/拒绝结局结构零声明/全拒绝码成功话术扫描)"
+        ],
+        "acceptance_3_arm_comparison": [
+          "TestSchemaValidationAndRepair (14 tests: 正常选择/一次修复/修复后仍败拒绝/未知键/缺失变量/惰性干预/abstain 封闭词表/proposer缺位与异常的诚实成本/unknown→None/sub_calls)",
+          "TestArmComparison (9 tests: 双臂判定+成本+失败形态保留/失败形态透传/proposer缺位生产影子形态/确定性id/audit json 往返/agreement 映射 7 例/disagree)"
+        ],
+        "wiring_and_regression": [
+          "TestShadowMode (6 tests: off 零行为/未知 mode fail-closed/shadow 落账不裁决/router shadow 路由逐项一致/影子失败不阻塞路由)",
+          "TestFastLaneUntouched (2 tests: 复杂表达永不落 I09 快路 + flag 默认 off)"
+        ]
+      }
+    },
+    {
+      "purpose": "I09 快路回归（不推翻 I09 词表）",
+      "cmd": "pytest tests/unit/test_deterministic_lane.py -q",
+      "exit_code": 0,
+      "result": "49 passed"
+    },
+    {
+      "purpose": "受影响面回归（I09 同款面全集 + 新文件）",
+      "cmd": "pytest tests/unit/test_semantic_selector.py tests/unit/test_deterministic_lane.py tests/unit/test_capability_lane.py tests/unit/test_review_skip_logic.py tests/unit/test_review_error_skips_reflection.py tests/unit/test_standard_workflow_generation_routing.py tests/unit/test_q06_resilience_fastfail.py tests/unit/test_stage_events_e03.py tests/unit/test_generation_reasoning_progress.py tests/unit/test_v4_i10_metering_truth.py tests/orchestration/test_response_builder_semantic_meta.py tests/orchestration/test_orchestrator_process_stream_integration.py -q",
+      "exit_code": 0,
+      "result": "300 passed, 29 warnings"
+    },
+    {
+      "purpose": "orchestration 全量",
+      "cmd": "pytest tests/orchestration -q",
+      "exit_code": 0,
+      "result": "208 passed, 7 warnings"
+    },
+    {
+      "purpose": "agents 面 + 相邻",
+      "cmd": "pytest tests/agents tests/unit/test_q06_resilience_fastfail.py tests/unit/test_stage_events_e03.py -q",
+      "exit_code": 0,
+      "result": "29 passed"
+    },
+    {
+      "purpose": "效用门/计量/计费/配额相邻面",
+      "cmd": "pytest tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py tests/unit/test_metering_model_attribution.py tests/unit/test_billing_worker.py tests/unit/test_llm_quota.py tests/unit/test_ai_ops_dashboard.py -q",
+      "exit_code": 0,
+      "result": "87 passed"
+    },
+    {
+      "purpose": "契约全量（干预目录 17 项/aurora_decision/action_plan 冻结面未被本卡改动破坏）",
+      "cmd": "pytest tests/contract -q",
+      "exit_code": 0,
+      "result": "304 passed, 100 warnings"
+    }
+  ],
+  "probe_corpus_snapshot": {
+    "file": "v4/evidence/V4-I03/probe_corpus_snapshot.json",
+    "entries": 23,
+    "all_match": true
+  },
+  "known_failures": [],
+  "existing_failures_out_of_scope": []
+}

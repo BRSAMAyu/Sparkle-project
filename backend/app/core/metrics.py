@@ -770,6 +770,25 @@ LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL = get_or_create_metric(
     ["stage"],
 )
 
+# V4-I03 受限语义选择器：同输入规则臂/语义臂对照计数。agreement ∈
+# {agree, disagree, not_comparable}；rule_decision / semantic_verdict 为
+# 封闭枚举（semantic_selector.RuleArmDecisionKind / SelectionVerdict）。
+SEMANTIC_SELECTOR_COMPARISON_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_semantic_selector_comparison_total",
+    "Restricted semantic selector rule-vs-semantic arm comparisons per turn",
+    ["agreement", "rule_decision", "semantic_verdict"],
+)
+
+# V4-I03 受限语义选择器：封闭拒绝码计数（未知 ref / 目录外 tool 等 fail-loud
+# 出口的可观测面；见 semantic_selector.RefusalCode）。
+SEMANTIC_SELECTOR_REFUSAL_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_semantic_selector_refusal_total",
+    "Restricted semantic selector refusals by closed refusal code",
+    ["refusal_code"],
+)
+
 RUN_LEDGER_EVENT_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_run_ledger_event_total",

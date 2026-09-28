@@ -1,0 +1,15 @@
+{
+  "task": "V4-I03",
+  "status": "PENDING",
+  "required_reviewers": 2,
+  "risk": "high",
+  "note": "按舰队验收模型，由未参与实现会话在集成 SHA 独立审查；本文件由实现会话如实标 PENDING，不自签通过。",
+  "implementation_commit": "TO_BE_FILLED_AT_COMMIT",
+  "review_challenges_preregistered": [
+    "R1: 探针结构模式的覆盖/误判边界——冻结语料仅 23 条自造样本；审查可追加真实分布样本验证「单关键词不翻转」机制是否在未预见形态下成立（尤其材料不足缓解词表的「但我+替代方案」缺口，见 limitations §7）",
+    "R2: 拒绝话术冻结表的完备性——SUCCESS_TALK_MARKERS 扫描只覆盖已列标记；审查可检验是否存在未列成功话术变体（中英混合/隐式成功暗示）能穿过 render_refusal",
+    "R3: 对照成本的诚实口径——ArmCost.merged 在 usage_source 不一致时置 None 的合并规则、proposer 异常路径「tokens=None 不冒充」是否覆盖所有中间态（部分完成调用+异常）",
+    "R4: 影子接线面——router_node 影子钩子每轮全消息跑正则探针的延迟/开销是否可忽略；context_data['semantic_selector'] 是否存在意外消费者误当裁决语义",
+    "R5: 词表封闭性——SelectionRequest 构造期校验是否遗漏绕过路径（如 refs 大小写/空白变体、tool 前后空白）"
+  ]
+}
