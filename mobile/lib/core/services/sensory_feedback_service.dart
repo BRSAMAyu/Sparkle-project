@@ -177,10 +177,20 @@ class SensoryFeedbackService {
   // ── Preferences keys ──────────────────────────────────────────────────────
   static const _soundEnabledKey = 'sensory_feedback.sound_enabled';
   static const _hapticEnabledKey = 'sensory_feedback.haptic_enabled';
+  static const _ambientEnabledKey = 'sensory_feedback.ambient_enabled';
   static const _ambientVolumeKey = 'sensory_feedback.ambient_volume';
   static const _ambientSceneKey = 'sensory_feedback.ambient_scene';
   static const _auroraLinkageEnabledKey =
       'sensory_feedback.aurora_linkage_enabled';
+
+  // ── U14 音频诚实降级状态 ───────────────────────────────────────────────────
+  // 「系统拒绝播放时降级静音并保持任务正常」（MOTION_AUDIO_HAPTICS 声音设计）：
+  // 连续播放失败（渠道/系统拒绝，缺资产另有静默清单）达到阈值后置降级位——
+  // 后续提示音不再逐事件重试（不连锁蜂鸣），触觉与视觉不受影响；任务流
+  // 恒不受影响（本服务从不向调用方抛播放异常）。用户重新开启提示音即重试。
+  static const int _audioDegradationThreshold = 2;
+  static int _audioPlaybackFailureStreak = 0;
+  static bool _audioPlaybackDegraded = false;
 
   // ── Player pool ───────────────────────────────────────────────────────────
   static const int _poolSize = 3;
@@ -244,6 +254,38 @@ class SensoryFeedbackService {
   static Future<void> setHapticEnabled(bool enabled) async =>
       (await _getPrefs()).setBool(_hapticEnabledKey, enabled);
 
+  /// U14：背景声独立开关。
+  ///
+  /// 卡验收 1（动效/背景声/提示音/触觉独立偏好）：背景声不再寄生于提示音
+  /// 开关。键未落时向后兼容地继承既有「提示音开关」对背景声的事实门控
+  /// （老用户关了提示音，背景声保持静音，不被升级悄悄打开）；用户首次
+  /// 显式切换背景声后即独立。开启本开关**不自动续播**（默认不自动播放；
+  /// 播放仍只由用户显式选场景/开始专注触发）。
+  static Future<bool> isAmbientEnabled() async {
+    final prefs = await _getPrefs();
+    final saved = prefs.getBool(_ambientEnabledKey);
+    if (saved != null) return saved;
+    return isSoundEnabled();
+  }
+
+  static Future<void> setAmbientEnabled(bool enabled) async {
+    await (await _getPrefs()).setBool(_ambientEnabledKey, enabled);
+    if (!enabled) {
+      await stopAmbient();
+    }
+    // enabled=true 不自动续播：尊重「默认不自动播放；重开不自行续播」。
+  }
+
+  /// U14：音频播放是否已处于降级（静音）态（设置页诚实呈现用）。
+  static bool get audioPlaybackDegraded => _audioPlaybackDegraded;
+
+  @visibleForTesting
+  // ignore: use_setters_to_change_properties
+  static void debugSetAudioPlaybackDegraded(bool degraded) {
+    _audioPlaybackDegraded = degraded;
+    _audioPlaybackFailureStreak = degraded ? _audioDegradationThreshold : 0;
+  }
+
   static Future<bool> isAuroraLinkageEnabled() async {
     try {
       final saved = (await _getPrefs()).getBool(_auroraLinkageEnabledKey);
@@ -265,17 +307,18 @@ class SensoryFeedbackService {
   static Future<void> _setSoundEnabled(bool enabled) async {
     await (await _getPrefs()).setBool(_soundEnabledKey, enabled);
     if (enabled) {
-      final scene = await getSavedAmbientScene();
-      if (scene != AmbientScene.none) {
-        await playAmbient(scene);
-      }
+      // U14：用户显式重开提示音 = 显式重试 → 清降级位。
+      _audioPlaybackDegraded = false;
+      _audioPlaybackFailureStreak = 0;
+      // U14：提示音与背景声独立——开启提示音不再连带续播背景声；
+      // 背景声由其独立开关与用户显式的场景/专注动作决定。
       return;
     }
     for (final player in _pool) {
       await player.stop();
     }
-    await _ambientPlayer?.stop();
-    _currentScene = AmbientScene.none;
+    // U14：关提示音只停 UI 提示音池，不再强制停掉背景声（独立偏好）。
+    // 若用户想一并静音背景声，用背景声独立开关（setAmbientEnabled(false)）。
   }
 
   static Future<double> getAmbientVolume() async =>
@@ -325,7 +368,8 @@ class SensoryFeedbackService {
   }) async {
     if (!_shouldEmit(event)) return;
 
-    final soundAllowed = enableSound && await isSoundEnabled();
+    final soundAllowed =
+        enableSound && await isSoundEnabled() && !_audioPlaybackDegraded;
     final hapticAllowed = enableHaptic && await isHapticEnabled();
 
     if (soundAllowed &&
@@ -448,7 +492,8 @@ class SensoryFeedbackService {
     final path = scene.assetPath;
     if (path == null) return;
 
-    if (!await isSoundEnabled()) return;
+    // U14：背景声只受其独立开关门控（提示音开关不再连带背景声）。
+    if (!await isAmbientEnabled()) return;
 
     final volume = await getAmbientVolume();
     if (previousScene != AmbientScene.none) {
@@ -492,6 +537,8 @@ class SensoryFeedbackService {
     _missingSoundAssets.clear();
     _prefs = null;
     _auroraLinkageEnabledCache = true;
+    _audioPlaybackDegraded = false;
+    _audioPlaybackFailureStreak = 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -696,6 +743,8 @@ class SensoryFeedbackService {
         volume: spec.volume,
         mode: PlayerMode.lowLatency,
       );
+      // U14：播放成功 → 清降级计数（能力恢复）。
+      _audioPlaybackFailureStreak = 0;
     } catch (e, st) {
       final isMissingAsset = e.toString().contains('Unable to load asset');
       if (isMissingAsset) {
@@ -704,6 +753,14 @@ class SensoryFeedbackService {
       if (kDebugMode && !isMissingAsset) {
         debugPrint('SensoryFeedback sound error: $e');
         debugPrintStack(stackTrace: st);
+      }
+      if (!isMissingAsset) {
+        // U14 诚实降级：渠道/系统拒绝（非缺资产）→ 计入连续失败，
+        // 达阈值后置降级位（后续事件不再逐次重试，不连锁蜂鸣）。
+        _audioPlaybackFailureStreak++;
+        if (_audioPlaybackFailureStreak >= _audioDegradationThreshold) {
+          _audioPlaybackDegraded = true;
+        }
       }
       // Graceful fallback to system sound
       try {

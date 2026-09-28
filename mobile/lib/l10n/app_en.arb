@@ -40,7 +40,7 @@
   "sensoryFeedbackSectionSubtitle": "Control interaction sounds, achievement feedback, and haptics in one place",
   "sensoryFeedbackLoadingSubtitle": "Loading sensory feedback preferences...",
   "sensorySoundTitle": "Sound Feedback",
-  "sensorySoundSubtitle": "Turn off all Sensory sounds and ambient audio",
+  "sensorySoundSubtitle": "Mute interaction and confirmation cue sounds (ambient sound has its own switch)",
   "sensoryHapticTitle": "Haptic Feedback",
   "sensoryHapticSubtitle": "Turn off haptics for achievements, star map interactions, and more",
   "sensoryAuroraLinkTitle": "Aurora Sensory Link",
@@ -11971,7 +11971,6 @@
     }
   },
   "calNoTimeSet": "No time set",
-  "calRescheduleAction": "Reschedule",
   "calHeatView": "Heat",
   "calNoHeatData": "No heat data available",
   "calStreakDetail": "Keep your achievement rhythm",
@@ -13552,50 +13551,6 @@
       }
     }
   },
-  "galaxyCapabilitySectionTitle": "Capability evidence & sources",
-  "galaxyCapabilityVerifiedLabel": "Independently verified",
-  "galaxyCapabilityVerifiedCopy": "Mastery is supported by independent checks (e.g., quizzes).",
-  "galaxyCapabilityPracticedLabel": "Practiced · not verified",
-  "galaxyCapabilityPracticedCopy": "Real participation is recorded; mastery has not passed an independent check yet — not a mastery claim.",
-  "galaxyCapabilityTraceOnlyLabel": "Activity trace only",
-  "galaxyCapabilityTraceOnlyCopy": "Only participation records (e.g., study time); they do not count toward mastery.",
-  "galaxyCapabilityNonHumanLabel": "Agent-produced",
-  "galaxyCapabilityNonHumanCopy": "This work was done by an agent; it does not count as personal capability.",
-  "galaxyCapabilityUnknownLabel": "Evidence channel unknown",
-  "galaxyCapabilityUnknownCopy": "Current data has no verification info; no mastery progress is shown here.",
-  "galaxyCapabilitySourceEmpty": "No source records yet",
-  "galaxyCapabilityProjectionVersion": "Projection v{version}",
-  "@galaxyCapabilityProjectionVersion": {
-    "placeholders": {
-      "version": {
-        "type": "int"
-      }
-    }
-  },
-  "galaxyCapabilityProjectionUnknown": "Projection version unknown",
-  "galaxyCapabilitySourceFallback": "Source · {code}",
-  "@galaxyCapabilitySourceFallback": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
-  "galaxyCapabilitySourceOutcome": "Outcome record",
-  "galaxyCapabilitySourceQuiz": "Independent quiz",
-  "galaxyCapabilitySourceTask": "Task completion",
-  "galaxyCapabilitySourceDocument": "Study material",
-  "galaxyCapabilitySourceError": "Error notebook",
-  "galaxyCapabilitySourceTranslation": "Translation",
-  "galaxyCapabilitySourceFocus": "Study-time log",
-  "galaxyCapabilitySourceCommunity": "Community share",
-  "galaxyCapabilitySourceChat": "Conversation",
-  "galaxyCapabilitySourceGraph": "Graph building",
-  "galaxyA11yChannelVerified": "independently verified",
-  "galaxyA11yChannelPracticed": "practiced, not verified",
-  "galaxyA11yChannelTraceOnly": "activity trace only",
-  "galaxyA11yChannelNonHuman": "agent-produced",
-  "galaxyA11yChannelUnknown": "verification unknown",
   "intentSuggestedActionLabel": "A low-cost first step",
   "intentCorrectionLabel": "Or I got it wrong —",
   "intentConfidenceLabel": "{band, select, high{I'm fairly confident} medium{I'm somewhat confident} low{I'm not quite sure yet} other{Confidence}} ({percent}%)",
@@ -14390,25 +14345,6 @@
       }
     }
   },
-  "homeResumeEyebrow": "Pick up where you left off",
-  "homeResumeLastStep": "Last time: {step}",
-  "@homeResumeLastStep": {
-    "placeholders": {
-      "step": {
-        "type": "String"
-      }
-    }
-  },
-  "homeResumeNextStep": "Next: {step}",
-  "@homeResumeNextStep": {
-    "placeholders": {
-      "step": {
-        "type": "String"
-      }
-    }
-  },
-  "homeResumeStaleLine": "Your last progress info may be out of date — recalibrate in the task before continuing",
-  "homeResumeContinueCta": "Continue this step",
   "dashboardEstimatedMinutes": "{minutes} min",
   "@dashboardEstimatedMinutes": {
     "placeholders": {
@@ -16353,6 +16289,70 @@
   "learningSourceBadgeLabel": "Source {id} version {version}",
   "learningSourceTapSemantics": "View source fragment {label}",
   "learningSourceCompactLabel": "Source version {version}",
+  "calRescheduleAction": "Reschedule",
+  "galaxyCapabilitySectionTitle": "Capability evidence & sources",
+  "galaxyCapabilityVerifiedLabel": "Independently verified",
+  "galaxyCapabilityVerifiedCopy": "Mastery is supported by independent checks (e.g., quizzes).",
+  "galaxyCapabilityPracticedLabel": "Practiced · not verified",
+  "galaxyCapabilityPracticedCopy": "Real participation is recorded; mastery has not passed an independent check yet — not a mastery claim.",
+  "galaxyCapabilityTraceOnlyLabel": "Activity trace only",
+  "galaxyCapabilityTraceOnlyCopy": "Only participation records (e.g., study time); they do not count toward mastery.",
+  "galaxyCapabilityNonHumanLabel": "Agent-produced",
+  "galaxyCapabilityNonHumanCopy": "This work was done by an agent; it does not count as personal capability.",
+  "galaxyCapabilityUnknownLabel": "Evidence channel unknown",
+  "galaxyCapabilityUnknownCopy": "Current data has no verification info; no mastery progress is shown here.",
+  "galaxyCapabilitySourceEmpty": "No source records yet",
+  "galaxyCapabilityProjectionVersion": "Projection v{version}",
+  "@galaxyCapabilityProjectionVersion": {
+    "placeholders": {
+      "version": {
+        "type": "int"
+      }
+    }
+  },
+  "galaxyCapabilityProjectionUnknown": "Projection version unknown",
+  "galaxyCapabilitySourceFallback": "Source · {code}",
+  "@galaxyCapabilitySourceFallback": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "galaxyCapabilitySourceOutcome": "Outcome record",
+  "galaxyCapabilitySourceQuiz": "Independent quiz",
+  "galaxyCapabilitySourceTask": "Task completion",
+  "galaxyCapabilitySourceDocument": "Study material",
+  "galaxyCapabilitySourceError": "Error notebook",
+  "galaxyCapabilitySourceTranslation": "Translation",
+  "galaxyCapabilitySourceFocus": "Study-time log",
+  "galaxyCapabilitySourceCommunity": "Community share",
+  "galaxyCapabilitySourceChat": "Conversation",
+  "galaxyCapabilitySourceGraph": "Graph building",
+  "galaxyA11yChannelVerified": "independently verified",
+  "galaxyA11yChannelPracticed": "practiced, not verified",
+  "galaxyA11yChannelTraceOnly": "activity trace only",
+  "galaxyA11yChannelNonHuman": "agent-produced",
+  "galaxyA11yChannelUnknown": "verification unknown",
+  "homeResumeEyebrow": "Pick up where you left off",
+  "homeResumeLastStep": "Last time: {step}",
+  "@homeResumeLastStep": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "homeResumeNextStep": "Next: {step}",
+  "@homeResumeNextStep": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "homeResumeStaleLine": "Your last progress info may be out of date — recalibrate in the task before continuing",
+  "homeResumeContinueCta": "Continue this step",
   "workbenchTitle": "Run Workbench",
   "workbenchActiveRunsHeader": "Active runs",
   "workbenchRunCount": "{count} runs in progress",
@@ -16390,5 +16390,14 @@
   "journeyEntryResumeLabel": "Continue together",
   "journeyEntryStartLabel": "Do it with Sparkle",
   "journeyEntryHint": "Prepare · you decide · confirm delivery together; every step says who does it.",
-  "journeyEntryFailed": "Cannot reach the server right now, try again later"
+  "journeyEntryFailed": "Cannot reach the server right now, try again later",
+  "sensoryAmbientEnabledTitle": "Ambient Sound",
+  "sensoryAmbientEnabledSubtitle": "Independent from cue sounds; never autoplays — plays only when you pick a scene or start focus",
+  "sensorySoundDegradedNotice": "The system rejected audio playback; cue sounds are muted. Tasks and reminders are unaffected.",
+  "objectUnavailableMissingTitle": "Deleted or unavailable",
+  "objectUnavailableMissingBody": "The content this notification pointed to may have been deleted, or the link has expired. Your other data is unaffected.",
+  "objectUnavailableOfflineTitle": "Can't verify right now",
+  "objectUnavailableOfflineBody": "The network is unavailable or the service can't be reached, so this item can't be opened yet. Try again later.",
+  "objectUnavailableGoTasks": "Open task list",
+  "objectUnavailableBackHome": "Back to home"
 }

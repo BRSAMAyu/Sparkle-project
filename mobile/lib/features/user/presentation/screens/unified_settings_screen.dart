@@ -102,6 +102,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _soundEnabled = true;
   bool _hapticEnabled = true;
   bool _auroraSensoryLinkEnabled = true;
+  // U14：背景声独立开关与音频降级面（诚实呈现，不造进度）。
+  bool _ambientEnabled = true;
+  bool _audioDegraded = false;
   bool _sensoryReady = false;
   bool _growthChronicleHidden = false;
   bool _memoryHidden = false;
@@ -182,6 +185,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         await SensoryFeedbackService.isAuroraLinkageEnabled();
     final ambientScene = await SensoryFeedbackService.getSavedAmbientScene();
     final ambientVolume = await SensoryFeedbackService.getAmbientVolume();
+    final ambientEnabled = await SensoryFeedbackService.isAmbientEnabled();
     if (!mounted) {
       return;
     }
@@ -191,6 +195,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       _auroraSensoryLinkEnabled = auroraLinkEnabled;
       _ambientScene = ambientScene;
       _ambientVolume = ambientVolume;
+      _ambientEnabled = ambientEnabled;
+      _audioDegraded = SensoryFeedbackService.audioPlaybackDegraded;
       _sensoryReady = true;
     });
   }
@@ -425,7 +431,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   }
 
   Future<void> _setSoundEnabled(bool value) async {
-    setState(() => _soundEnabled = value);
+    setState(() {
+      _soundEnabled = value;
+      // U14：重开提示音 = 显式重试 → 降级位清除（与服务层同步呈现）。
+      if (value) _audioDegraded = false;
+    });
     await SensoryFeedbackService.setSoundEnabled(value);
     if (value) {
       await SensoryFeedbackService.emit(
@@ -433,6 +443,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         enableHaptic: false,
       );
     }
+  }
+
+  /// U14：背景声独立开关（不再寄生于提示音开关；关闭即停，开启不自动续播）。
+  Future<void> _setAmbientEnabled(bool value) async {
+    setState(() => _ambientEnabled = value);
+    await SensoryFeedbackService.setAmbientEnabled(value);
   }
 
   Future<void> _setHapticEnabled(bool value) async {
@@ -593,6 +609,47 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 : null,
                             activeThumbColor: DS.primaryBase,
                           ),
+                          // U14 诚实降级面：系统拒绝音频播放时如实呈现，
+                          // 不伪造「一切正常」，也不打断任务流。
+                          if (_audioDegraded) ...[
+                            const SizedBox(height: DS.spacing4),
+                            Row(
+                              key: const ValueKey(
+                                'sensory-audio-degraded-notice',
+                              ),
+                              children: [
+                                Icon(
+                                  Icons.volume_off_rounded,
+                                  size: 18,
+                                  color: DS.warning,
+                                ),
+                                const SizedBox(width: DS.spacing8),
+                                Expanded(
+                                  child: Text(
+                                    l10n.sensorySoundDegradedNotice,
+                                    style: DS.labelSmall.copyWith(
+                                      color: DS.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: DS.spacing4),
+                          ],
+                          // U14：背景声独立开关（验收 1：动效/背景声/提示音/
+                          // 触觉独立偏好）。
+                          SwitchListTile(
+                            key: const ValueKey('sensory-ambient-toggle'),
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.sensoryAmbientEnabledTitle),
+                            subtitle: Text(l10n.sensoryAmbientEnabledSubtitle),
+                            value: _ambientEnabled,
+                            onChanged: _sensoryReady
+                                ? (value) =>
+                                    unawaited(_setAmbientEnabled(value))
+                                : null,
+                            activeThumbColor: DS.primaryBase,
+                          ),
                           SwitchListTile(
                             contentPadding: EdgeInsets.zero,
                             title: Text(l10n.sensoryHapticTitle),
@@ -631,7 +688,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                     label: scene.label,
                                     tone: PillTone.neutral,
                                     selected: _ambientScene == scene,
-                                    onTap: _sensoryReady
+                                    // U14：背景声关闭时场景选择一并置灰
+                                    // （选中但不播是不诚实的中间态）。
+                                    onTap: _sensoryReady && _ambientEnabled
                                         ? () =>
                                             unawaited(_setAmbientScene(scene))
                                         : null,
@@ -652,11 +711,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 child: Slider(
                                   value: _ambientVolume,
                                   divisions: 10,
-                                  onChanged: _sensoryReady && _soundEnabled
+                                  // U14：背景声场景/音量只随背景声独立开关
+                                  // （不再随提示音开关置灰）。
+                                  onChanged: _sensoryReady && _ambientEnabled
                                       ? (value) =>
                                           setState(() => _ambientVolume = value)
                                       : null,
-                                  onChangeEnd: _sensoryReady && _soundEnabled
+                                  onChangeEnd: _sensoryReady && _ambientEnabled
                                       ? (value) =>
                                           unawaited(_setAmbientVolume(value))
                                       : null,

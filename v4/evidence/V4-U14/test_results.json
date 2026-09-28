@@ -1,0 +1,79 @@
+{
+  "task": "V4-U14",
+  "date": "2026-09-29",
+  "head": "198d8a093a9a414bf805f89907a913b5cdad03bb",
+  "analyzer": {
+    "command": "cd mobile && flutter analyze --no-pub",
+    "exit_code": 0,
+    "result": "No issues found!（全库零 issue；含本卡新增 4 测试文件与全部改动面）"
+  },
+  "new_tests": {
+    "total": 19,
+    "files": [
+      {
+        "path": "mobile/test/core/services/sensory_feedback_service_u14_test.dart",
+        "cases": 9,
+        "covers": "验收1：背景声独立偏好（独立性正/反演、向后兼容继承/显式键优先、重开保持、场景保留）+ 验收2机制面：音频诚实降级（降级位/emit 恒安全/显式重试清位/不吞触觉开关）",
+        "result": "9 passed"
+      },
+      {
+        "path": "mobile/test/features/chat/presentation/providers/voice_input_provider_u14_test.dart",
+        "cases": 3,
+        "covers": "验收2：录音权限拒绝只降该能力（授权正；本次拒绝非永久反；永久拒绝如实上浮+provider 可复位）",
+        "result": "3 passed"
+      },
+      {
+        "path": "mobile/test/core/design/widgets/object_unavailable_surface_test.dart",
+        "cases": 2,
+        "covers": "统一异常面：missing 面标题/解释/主动作/恒在回首页出口 + 回首页真实路由；反：无主动作不渲染空按钮位",
+        "result": "2 passed"
+      },
+      {
+        "path": "mobile/test/features/task/presentation/screens/task_execution_deep_link_gate_test.dart",
+        "cases": 5,
+        "covers": "验收3：快路径零仓储调用透传；服务端确证命中设 active（落真实对象）；404 确证→已删除面且不渲染残留任务不空白；网络类→可重试面（不凭空宣布已删除）且重试回环；已删面出口语义可读",
+        "result": "5 passed"
+      },
+      {
+        "path": "mobile/test/widget/unified_settings_ambient_toggle_test.dart",
+        "cases": 2,
+        "covers": "验收1 UI 面：背景声开关可见且关闭落持久层、提示音独立性；反：降级位诚实提示行（不假成功）",
+        "result": "2 passed"
+      }
+    ]
+  },
+  "regression_batches": [
+    {
+      "scope": "sensory 服务既有（service + p2_10）+ 统一设置既有（bgm + no_fake_confirm）",
+      "command": "flutter test test/core/services/sensory_feedback_service_test.dart test/core/services/sensory_feedback_service_p2_10_test.dart test/widget/unified_settings_bgm_test.dart test/widget/unified_settings_no_fake_confirm_test.dart",
+      "result": "+17 passed"
+    },
+    {
+      "scope": "task 域全量（widget/task + features/task）",
+      "command": "flutter test test/widget/task/ test/features/task/",
+      "result": "+101 passed"
+    },
+    {
+      "scope": "推送导航 + 全路由覆盖 + 错误词典单源",
+      "command": "flutter test test/core/services/push_navigation_service_test.dart test/widget/full_route_coverage_test.dart test/core/display/lexicon/",
+      "result": "+63 passed"
+    },
+    {
+      "scope": "settings 域（providers + screens + goldens）",
+      "command": "flutter test test/features/settings/",
+      "result": "+11 passed ~1 skipped（既有 skip）"
+    },
+    {
+      "scope": "chat providers（voice 所在域）+ experience 适配器（F03 copy 跨端互钉）",
+      "command": "flutter test test/features/chat/presentation/providers/ test/core/experience/",
+      "result": "+109 passed"
+    }
+  ],
+  "full_suite": {
+    "command": "cd mobile && flutter test",
+    "exit_code": 0,
+    "result": "+2970 passed, 23 skipped, All other tests passed!",
+    "skip_note": "23 skips 为既有基线（与本卡无关，未新增未删除）；无既有失败被本卡改动翻转，无断言删除"
+  },
+  "denominator_note": "分母 = 全量 2970 通过 + 23 既有 skip；本卡新增 19 用例全部为可失败断言（含反例），无 Mock 冒充模型结果、无人工改库"
+}

@@ -40,7 +40,7 @@
   "sensoryFeedbackSectionSubtitle": "统一控制操作音效、成就反馈和触觉回馈",
   "sensoryFeedbackLoadingSubtitle": "正在读取感官反馈偏好...",
   "sensorySoundTitle": "音效反馈",
-  "sensorySoundSubtitle": "关闭后，所有 Sensory 音效与环境音将静默",
+  "sensorySoundSubtitle": "关闭后，操作与确认提示音将静默（背景声有独立开关）",
   "sensoryHapticTitle": "触控反馈",
   "sensoryHapticSubtitle": "关闭后，成就、星图等所有触感反馈都会停止",
   "sensoryAuroraLinkTitle": "Aurora 感官联动",
@@ -12002,7 +12002,6 @@
     }
   },
   "calNoTimeSet": "未安排时间",
-  "calRescheduleAction": "改期",
   "calHeatView": "热力",
   "calNoHeatData": "暂无热力数据",
   "calStreakDetail": "保持你的成就节奏",
@@ -13569,50 +13568,6 @@
       }
     }
   },
-  "galaxyCapabilitySectionTitle": "能力证据与来源",
-  "galaxyCapabilityVerifiedLabel": "独立检验通过",
-  "galaxyCapabilityVerifiedCopy": "掌握度由独立检验（测验等）支撑。",
-  "galaxyCapabilityPracticedLabel": "练习过 · 未独立检验",
-  "galaxyCapabilityPracticedCopy": "有真实参与记录；掌握度尚未通过独立检验，不代表已掌握。",
-  "galaxyCapabilityTraceOnlyLabel": "仅活动痕迹",
-  "galaxyCapabilityTraceOnlyCopy": "只有学习时长等参与记录，不计入能力掌握。",
-  "galaxyCapabilityNonHumanLabel": "Agent 产物",
-  "galaxyCapabilityNonHumanCopy": "这项工作由 Agent 完成，不计入个人能力。",
-  "galaxyCapabilityUnknownLabel": "证据通道未知",
-  "galaxyCapabilityUnknownCopy": "当前数据没有能力检验信息；这里不显示掌握进度。",
-  "galaxyCapabilitySourceEmpty": "暂无来源记录",
-  "galaxyCapabilityProjectionVersion": "投影版本 v{version}",
-  "@galaxyCapabilityProjectionVersion": {
-    "placeholders": {
-      "version": {
-        "type": "int"
-      }
-    }
-  },
-  "galaxyCapabilityProjectionUnknown": "投影版本未知",
-  "galaxyCapabilitySourceFallback": "来源 · {code}",
-  "@galaxyCapabilitySourceFallback": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
-  "galaxyCapabilitySourceOutcome": "学习成果记录",
-  "galaxyCapabilitySourceQuiz": "独立测验",
-  "galaxyCapabilitySourceTask": "任务完成",
-  "galaxyCapabilitySourceDocument": "学习资料",
-  "galaxyCapabilitySourceError": "错题",
-  "galaxyCapabilitySourceTranslation": "翻译",
-  "galaxyCapabilitySourceFocus": "学习时长记录",
-  "galaxyCapabilitySourceCommunity": "社区分享",
-  "galaxyCapabilitySourceChat": "对话",
-  "galaxyCapabilitySourceGraph": "知识图谱构建",
-  "galaxyA11yChannelVerified": "已独立检验",
-  "galaxyA11yChannelPracticed": "练习过，未检验",
-  "galaxyA11yChannelTraceOnly": "仅活动痕迹",
-  "galaxyA11yChannelNonHuman": "Agent产物",
-  "galaxyA11yChannelUnknown": "检验状态未知",
   "intentSuggestedActionLabel": "我建议先这样做",
   "intentCorrectionLabel": "或者我猜错了——",
   "intentConfidenceLabel": "{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）",
@@ -14400,25 +14355,6 @@
       }
     }
   },
-  "homeResumeEyebrow": "接着上次",
-  "homeResumeLastStep": "上次：{step}",
-  "@homeResumeLastStep": {
-    "placeholders": {
-      "step": {
-        "type": "String"
-      }
-    }
-  },
-  "homeResumeNextStep": "下一步：{step}",
-  "@homeResumeNextStep": {
-    "placeholders": {
-      "step": {
-        "type": "String"
-      }
-    }
-  },
-  "homeResumeStaleLine": "上次的进度信息可能已经过期，进任务重新校准后再继续",
-  "homeResumeContinueCta": "继续这一步",
   "dashboardEstimatedMinutes": "{minutes} 分钟",
   "@dashboardEstimatedMinutes": {
     "placeholders": {
@@ -16165,6 +16101,70 @@
   "learningSourceBadgeLabel": "来源 {id} 版本 {version}",
   "learningSourceTapSemantics": "查看来源片段 {label}",
   "learningSourceCompactLabel": "来源 · 版本 {version}",
+  "calRescheduleAction": "改期",
+  "galaxyCapabilitySectionTitle": "能力证据与来源",
+  "galaxyCapabilityVerifiedLabel": "独立检验通过",
+  "galaxyCapabilityVerifiedCopy": "掌握度由独立检验（测验等）支撑。",
+  "galaxyCapabilityPracticedLabel": "练习过 · 未独立检验",
+  "galaxyCapabilityPracticedCopy": "有真实参与记录；掌握度尚未通过独立检验，不代表已掌握。",
+  "galaxyCapabilityTraceOnlyLabel": "仅活动痕迹",
+  "galaxyCapabilityTraceOnlyCopy": "只有学习时长等参与记录，不计入能力掌握。",
+  "galaxyCapabilityNonHumanLabel": "Agent 产物",
+  "galaxyCapabilityNonHumanCopy": "这项工作由 Agent 完成，不计入个人能力。",
+  "galaxyCapabilityUnknownLabel": "证据通道未知",
+  "galaxyCapabilityUnknownCopy": "当前数据没有能力检验信息；这里不显示掌握进度。",
+  "galaxyCapabilitySourceEmpty": "暂无来源记录",
+  "galaxyCapabilityProjectionVersion": "投影版本 v{version}",
+  "@galaxyCapabilityProjectionVersion": {
+    "placeholders": {
+      "version": {
+        "type": "int"
+      }
+    }
+  },
+  "galaxyCapabilityProjectionUnknown": "投影版本未知",
+  "galaxyCapabilitySourceFallback": "来源 · {code}",
+  "@galaxyCapabilitySourceFallback": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "galaxyCapabilitySourceOutcome": "学习成果记录",
+  "galaxyCapabilitySourceQuiz": "独立测验",
+  "galaxyCapabilitySourceTask": "任务完成",
+  "galaxyCapabilitySourceDocument": "学习资料",
+  "galaxyCapabilitySourceError": "错题",
+  "galaxyCapabilitySourceTranslation": "翻译",
+  "galaxyCapabilitySourceFocus": "学习时长记录",
+  "galaxyCapabilitySourceCommunity": "社区分享",
+  "galaxyCapabilitySourceChat": "对话",
+  "galaxyCapabilitySourceGraph": "知识图谱构建",
+  "galaxyA11yChannelVerified": "已独立检验",
+  "galaxyA11yChannelPracticed": "练习过，未检验",
+  "galaxyA11yChannelTraceOnly": "仅活动痕迹",
+  "galaxyA11yChannelNonHuman": "Agent产物",
+  "galaxyA11yChannelUnknown": "检验状态未知",
+  "homeResumeEyebrow": "接着上次",
+  "homeResumeLastStep": "上次：{step}",
+  "@homeResumeLastStep": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "homeResumeNextStep": "下一步：{step}",
+  "@homeResumeNextStep": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "homeResumeStaleLine": "上次的进度信息可能已经过期，进任务重新校准后再继续",
+  "homeResumeContinueCta": "继续这一步",
   "workbenchTitle": "运行工作台",
   "workbenchActiveRunsHeader": "进行中的运行",
   "workbenchRunCount": "{count} 段运行进行中",
@@ -16202,5 +16202,14 @@
   "journeyEntryResumeLabel": "继续一起推进",
   "journeyEntryStartLabel": "和 Sparkle 一起推进",
   "journeyEntryHint": "备料 · 你研判 · 一起确认交付；每一步由谁做都写清楚。",
-  "journeyEntryFailed": "暂时连不上，稍后再试"
+  "journeyEntryFailed": "暂时连不上，稍后再试",
+  "sensoryAmbientEnabledTitle": "背景声",
+  "sensoryAmbientEnabledSubtitle": "独立于提示音；不自动播放，仅在你选择场景或开始专注时播放",
+  "sensorySoundDegradedNotice": "系统拒绝了音频播放，提示音已静音降级；任务与提醒不受影响",
+  "objectUnavailableMissingTitle": "内容已删除或不存在",
+  "objectUnavailableMissingBody": "这个通知指向的内容可能已被删除，或链接已过期。你的其他数据不受影响。",
+  "objectUnavailableOfflineTitle": "暂时无法确认",
+  "objectUnavailableOfflineBody": "网络不可用或服务暂时无法访问，还不能打开这个对象。可以稍后重试。",
+  "objectUnavailableGoTasks": "查看任务列表",
+  "objectUnavailableBackHome": "回到首页"
 }

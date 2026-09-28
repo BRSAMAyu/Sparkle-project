@@ -2711,9 +2711,9 @@
     "V4-F04",
     "V4-F06"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "PASS_WITH_CHALLENGES",
    "kind": "implementation",
    "required_locks": [
     "ui-settings"
@@ -2764,7 +2764,12 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "5cab258e PASS_WITH_CHALLENGES（C1-C5 全过：对照表 probe 4 行绿+404 链路全亲核（字符串耦合真实但 fallback 落诚实保守侧）+isSoundEnabled 4 处单点新门；mutation×3 红；全量 2970 分母核实（3 败=widget_bench 负载 flaky 单跑绿）；merge-tree 与实况一致）",
+    "remediation": "0fbe8e9b 勘误：新测实数 21 非自述 19（少报非夸大）+CH-3 锚失同步补注；CH-1 路由接线无测试钉/CH-2 playAmbient 门拒后 _currentScene 残留（基线同构 release-only）→FIX-570",
+    "integration_reverify": "本 commit 即合并态（arb 五文件三方并集解+gen-l10n 再生+analyze 零+settings/sensory/task 套件绿）"
+   }
   },
   {
    "id": "V4-U15",

@@ -1,0 +1,31 @@
+{
+  "task": "V4-U14",
+  "status": "REVIEWED_R1",
+  "note": "一审由独立会话 wtU14R1 完成（未参与实现）。本文件覆写实现侧占位；全文裁决与可复现锚见同目录 review_r1.md。",
+  "reviewer": "wtU14R1（独立审查会话，模型 GLM / GLM-5.3-Flash）",
+  "reviewed_sha": "7a16956e（agent/v4/u14 头；基线 9b5e614d）",
+  "verdict": "PASS_WITH_CHALLENGES",
+  "review_date": "2026-09-28",
+  "pre_registered_challenges_rulings": {
+    "R1-C1": "PASS——升级对照表亲构造 probe 4 行复验（无键继承 sound_enabled 双向、显式键优先、停播保场景、重开不自动续播）；基线 playAmbient 门为 isSoundEnabled（9b5e614d:451），升级前后 sound=off+rain 场景均静音，行为等价。",
+    "R1-C2": "PASS——id=对象身份；新鲜度归执行屏既有 5s 轮询与任务域；远端删除/改写经首个服务端写动作显式报错+离线队列入队语义，非静默假成功；闸自查会造第二新鲜度权威。",
+    "R1-C3": "PASS（今日成立）——全链亲核：tasks.py:240 'Task not found' → main.py:1089 message 字段 → 网关 ReverseProxy 仅改头体透传 → 客户端 data['message'] → lexicon 'not found' 命中。脆弱点真实（_handleDioError 丢弃 status 码），但 fallback 落「无法确认」诚实保守侧；建议后续类型化 status（TypedUiError）。",
+    "R1-C4": "PASS——pill 显示持久化场景偏好（重开保持验收要求其存活），置灰表达当前不播；清除显示反而使 UI 与持久层不一致（更不诚实）。",
+    "R1-C5": "PASS——全库 grep 4 处 isSoundEnabled（定义/ambient 继承/emit 提示音门/设置屏读开关），无第三处门控背景声；背景声全经 playAmbient 单点（isAmbientEnabled 门）。"
+  },
+  "key_verifications": [
+    "no_duplicate 抽查 2/4：F05 flag 门（app_constants:44 + style_preview_page:45）、F06 叠加律（app.dart:136-139 + composition test 4 例）均存在且本卡零触碰",
+    "深链闸 mutation ×3 亲证可证伪：404→unreachable 红 2 例；快路径走仓储红 1 例；降级提示行抑制红 1 例（均已还原）",
+    "新测实数 21（9+3+2+5+2）非 19——erratum 以 review_r1.md §5 为准（实现方 breakdown 自求和即 21，少报非夸大）",
+    "全量亲跑：净树 +2967 ~23 -3，3 败全为 test/performance/widget_bench_test.dart 计时基线（单跑 +9 全绿，负载型 flaky）；2967+3=2970 与证据 claimed 精确吻合",
+    "arb +9 键 +1 文案订正纯增量；flutter gen-l10n 再生零 diff（零漂移）",
+    "merge-tree(HEAD, main@dc991183 领先 41)：冲突恰 5 个 l10n 文件（L9 机械解预告一致）；tasks.json 自动合并；RF-06 三文件与 U14 代码触碰面双向零交集"
+  ],
+  "challenges_non_blocking": [
+    "CH-1 路由接线（task_routes→gate）无测试钉，还原接线无测试变红——建议补路由级断言",
+    "CH-2 playAmbient 在 ambient 门之前写 _currentScene 的状态残留（基线同构非本卡引入；release 懒初始化后可达，同场景显式重放被早退吞）——建议门拒绝时回滚 previousScene",
+    "CH-3 run_manifest 的 limitations.md sha256 未随 L9 提交刷新（时点核对一致，锚失同步）",
+    "CH-4 降级恢复仅靠提示音开关 off→on 往返；auth 类并 offline 可重试面（L4 已披露，接受）"
+  ],
+  "gate_unlock": "S02/S03→Q06 链解锁键放行（本审通过）；按验收模型走独立审查 + 集成 SHA 可失败测试流程"
+}

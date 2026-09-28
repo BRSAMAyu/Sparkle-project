@@ -1,0 +1,106 @@
+{
+  "task": "V4-U14",
+  "title": "设置、通知与所有异常表面",
+  "date": "2026-09-29",
+  "executor": "wtU14（worktree /Users/brsama/code/GitHub/wtU14，分支 agent/v4/u14，自 main@9b5e614d 开出）",
+  "source_sha_base": "9b5e614d82bfefe97ac222ab91d2534653ce6d10",
+  "source_sha_head": "198d8a093a9a414bf805f89907a913b5cdad03bb（test_results/evidence 提交前的实现头；证据提交 SHA 见台账）",
+  "no_push": true,
+  "toolchain": {
+    "flutter": "3.41.3 stable (revision 48c32af034, 2026-02-27)",
+    "host": "darwin 25.6.0 arm64",
+    "gen_note": "mobile/lib/gen 为 gitignored 实体目录：自主检出 cp -R 复制进 worktree（F06 同处置）；本卡 l10n 变更经 arb 源 + flutter gen-l10n 再生（生成文件 diff = 恰好 9 新键 + 1 文案订正 ×3 生成文件，无 -90 行漂移现象），arb 纪律：纯增量不删键"
+  },
+  "locks": {
+    "required": [
+      "ui-settings"
+    ],
+    "note": "sparkle-coordination-v2 远端未配置于本机（git remote 无此远端，与 F06 同状），租约登记 NOT_RUN；冲突面自证：diff 不含 RF-06 三文件（dashboard_screen/compact_status_bar/task_execution_screen）、不含 app/routes.dart、不含 tokens_v2/theme 通道；触达面 = settings 服务/设置屏/任务路由接线/新建统一面组件/l10n，与在航会话（wtD05 wtQ04 wtU01 wtU04 wtU05，见 git worktree list）卡面无文件交集，由派发方（协调者）按 ui-settings 键裁决"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtU14 -b agent/v4/u14 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "依赖解析（新 worktree 无 .dart_tool）",
+      "command": "cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "Got dependencies! 2 packages discontinued（既有口径）；pubspec.lock 仅 permission_handler_platform_interface dependency 标记 transitive→direct dev（版本/哈希不变，4.3.0）"
+    },
+    {
+      "id": 3,
+      "purpose": "复制 gitignored 生成目录（自主检出无 gen/，analyze 全量报 gen 相关既有 error）",
+      "command": "cp -R Sparkle-project/mobile/lib/gen wtU14/mobile/lib/gen",
+      "exit_code": 0
+    },
+    {
+      "id": 4,
+      "purpose": "l10n 增量键再生（arb 源 + 官方生成器，非手改）",
+      "command": "cd mobile && flutter gen-l10n",
+      "exit_code": 0,
+      "note": "生成文件 diff = 9 新键 + sensorySoundSubtitle 文案订正，逐字可再生"
+    },
+    {
+      "id": 5,
+      "purpose": "静态检查（零 issue 口径）",
+      "command": "cd mobile && flutter analyze --no-pub",
+      "exit_code": 0,
+      "note": "No issues found!（全库零 issue；过程中 gen 缺失导致的既有 error 在 cp gen 后归零；过程 lint 全部修复：require_trailing_commas/unnecessary_non_null_assertion/directives_ordering/avoid_redundant_argument_values）"
+    },
+    {
+      "id": 6,
+      "purpose": "本卡新测试（19 用例：三验收面每面一正一反 + 兼容/降级分支）",
+      "command": "cd mobile && flutter test test/core/services/sensory_feedback_service_u14_test.dart test/features/chat/presentation/providers/voice_input_provider_u14_test.dart test/core/design/widgets/object_unavailable_surface_test.dart test/features/task/presentation/screens/task_execution_deep_link_gate_test.dart test/widget/unified_settings_ambient_toggle_test.dart",
+      "exit_code": 0,
+      "note": "+19 全绿（sensory_u14 9 / voice_u14 3 / surface 2 / gate 5 / settings_ambient 2）；分套实录见 test_results.json"
+    },
+    {
+      "id": 7,
+      "purpose": "受影响域回归：sensory 服务 + 统一设置（bgm/无假确认）",
+      "command": "cd mobile && flutter test test/core/services/sensory_feedback_service_test.dart test/core/services/sensory_feedback_service_p2_10_test.dart test/widget/unified_settings_bgm_test.dart test/widget/unified_settings_no_fake_confirm_test.dart",
+      "exit_code": 0,
+      "note": "+17 全绿（既有口径原样）"
+    },
+    {
+      "id": 8,
+      "purpose": "受影响域回归：task 域全量（provider/widgets/screens + 本卡闸）",
+      "command": "cd mobile && flutter test test/widget/task/ test/features/task/",
+      "exit_code": 0,
+      "note": "+101 全绿"
+    },
+    {
+      "id": 9,
+      "purpose": "受影响域回归：推送导航路由 + 全路由覆盖 + 错误词典单源",
+      "command": "cd mobile && flutter test test/core/services/push_navigation_service_test.dart test/widget/full_route_coverage_test.dart test/core/display/lexicon/",
+      "exit_code": 0,
+      "note": "+63 全绿（词典判定单源未被绕开：闸只做类别→面纯绑定）"
+    },
+    {
+      "id": 10,
+      "purpose": "全量套件（analyze+test 双侧过口径；后台运行，实录见 test_results.json）",
+      "command": "cd mobile && flutter test",
+      "exit_code": 0,
+      "note": "+2970 passed, 23 skipped（既有基线），All other tests passed!；exit 0"
+    }
+  ],
+  "evidence_required_coverage": {
+    "source_sha": "本文件 source_sha_base/head + 提交 SHA（commit 后见台账）",
+    "build_id": "flutter 3.41.3 stable revision 48c32af034；worktree wtU14@agent/v4/u14",
+    "commands_and_exit_codes": "本文件 commands[]",
+    "scope_and_denominator": "test_results.json（新测 19 用例分套实录 + 受影响域回归计数 + 全量套件结果）",
+    "artifacts_sha256": {
+      "diff_or_evidence_only.md": "f20255d5762d570de63c5dea4f404a5de592700d693e3f946b1fd81c01931447",
+      "test_results.json": "31783ffec5258d30930d83dbb2ddb35c3bfbed340fe29a78ae5ef840751d1355",
+      "review_receipt.json": "759d90c9eb88da44390c148847411055e4dca1e2837df6148902499b2e99d32a",
+      "limitations.md": "ca0f17d810e7f682881d393ed04f8474af226f2e37b50bbd2724531349e46bec",
+      "run_manifest.json": "self-referential：本文件定稿后不可自哈希；以其提交对象 SHA 为锚（git show V4-U14 证据提交）"
+    },
+    "actual_model_and_usage_if_llm": "executor 模型 = GLM（account:bigmodel-individual-coding-plan，GLM-5.3-Flash reasoning agent，ZCode 会话）；精确 token 计数未暴露给会话，如实记 NOT_EXPOSED，不臆造数字",
+    "screenshots_video_and_semantics_if_ui": "本卡 UI 面为设置开关行与失效替代页：语义以 widget 测试断言（中文文案/键值定位）代替截图语义 dump（同 F06 语义文本等价口径）；真机截图未采（无接入设备），记 limitations",
+    "physical_device_scope_if_sensory": "无真实设备：音频降级/触觉/背景声只测到调用与偏好持久层，硬件舒适度/真实系统拒绝行为记 DEVICE_UNVERIFIED（MOTION 允许口径，不阻止推进）"
+  }
+}

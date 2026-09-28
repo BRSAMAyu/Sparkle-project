@@ -9,7 +9,7 @@ import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/task/presentation/screens/task_create_screen.dart';
 import 'package:sparkle/features/task/presentation/screens/task_detail_screen.dart';
-import 'package:sparkle/features/task/presentation/screens/task_execution_screen.dart';
+import 'package:sparkle/features/task/presentation/screens/task_execution_deep_link_gate.dart';
 import 'package:sparkle/features/task/presentation/screens/task_list_screen.dart';
 
 class TaskRoutes {
@@ -72,11 +72,15 @@ class TaskRoutes {
           },
         ),
         // Task execution (modal-like, full-screen)
+        // U14：深链闸——路由此前忽略 :id，通知深链落到已删任务时渲染
+        // activeTaskProvider 残留快照（错误任务）或泛化空面。闸解析 :id 后
+        // 才进执行屏；已删/离线/未确认各落可理解替代面（卡验收 3）。
         GoRoute(
           path: taskExecution,
           name: 'taskExecution',
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) {
+            final taskId = state.pathParameters['id']!;
             final origin = state.uri.queryParameters['origin'];
             final interventionId = state.uri.queryParameters['intervention_id'];
             return buildSparkleTransitionPage(
@@ -87,9 +91,12 @@ class TaskRoutes {
                   trackOverride: BgmTrack.focusDeep,
                   useSavedAmbient: true,
                 ),
-                child: TaskExecutionScreen(
+                child: TaskExecutionDeepLinkGate(
+                  taskId: taskId,
                   origin: origin,
                   interventionId: interventionId,
+                  // missingReplacementRoute 缺省即 '/tasks'（=TaskRoutes.home），
+                  // 显式传参会触发 avoid_redundant_argument_values，故省略。
                 ),
               ),
               type: SharedAxisTransitionType.scaled,

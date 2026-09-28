@@ -129,7 +129,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sensorySoundTitle => '音效反馈';
 
   @override
-  String get sensorySoundSubtitle => '关闭后，所有 Sensory 音效与环境音将静默';
+  String get sensorySoundSubtitle => '关闭后，操作与确认提示音将静默（背景声有独立开关）';
 
   @override
   String get sensoryHapticTitle => '触控反馈';
@@ -26220,9 +26220,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calNoTimeSet => '未安排时间';
 
   @override
-  String get calRescheduleAction => '改期';
-
-  @override
   String get calHeatView => '热力';
 
   @override
@@ -29203,100 +29200,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyCapabilitySectionTitle => '能力证据与来源';
-
-  @override
-  String get galaxyCapabilityVerifiedLabel => '独立检验通过';
-
-  @override
-  String get galaxyCapabilityVerifiedCopy => '掌握度由独立检验（测验等）支撑。';
-
-  @override
-  String get galaxyCapabilityPracticedLabel => '练习过 · 未独立检验';
-
-  @override
-  String get galaxyCapabilityPracticedCopy => '有真实参与记录；掌握度尚未通过独立检验，不代表已掌握。';
-
-  @override
-  String get galaxyCapabilityTraceOnlyLabel => '仅活动痕迹';
-
-  @override
-  String get galaxyCapabilityTraceOnlyCopy => '只有学习时长等参与记录，不计入能力掌握。';
-
-  @override
-  String get galaxyCapabilityNonHumanLabel => 'Agent 产物';
-
-  @override
-  String get galaxyCapabilityNonHumanCopy => '这项工作由 Agent 完成，不计入个人能力。';
-
-  @override
-  String get galaxyCapabilityUnknownLabel => '证据通道未知';
-
-  @override
-  String get galaxyCapabilityUnknownCopy => '当前数据没有能力检验信息；这里不显示掌握进度。';
-
-  @override
-  String get galaxyCapabilitySourceEmpty => '暂无来源记录';
-
-  @override
-  String galaxyCapabilityProjectionVersion(int version) {
-    return '投影版本 v$version';
-  }
-
-  @override
-  String get galaxyCapabilityProjectionUnknown => '投影版本未知';
-
-  @override
-  String galaxyCapabilitySourceFallback(String code) {
-    return '来源 · $code';
-  }
-
-  @override
-  String get galaxyCapabilitySourceOutcome => '学习成果记录';
-
-  @override
-  String get galaxyCapabilitySourceQuiz => '独立测验';
-
-  @override
-  String get galaxyCapabilitySourceTask => '任务完成';
-
-  @override
-  String get galaxyCapabilitySourceDocument => '学习资料';
-
-  @override
-  String get galaxyCapabilitySourceError => '错题';
-
-  @override
-  String get galaxyCapabilitySourceTranslation => '翻译';
-
-  @override
-  String get galaxyCapabilitySourceFocus => '学习时长记录';
-
-  @override
-  String get galaxyCapabilitySourceCommunity => '社区分享';
-
-  @override
-  String get galaxyCapabilitySourceChat => '对话';
-
-  @override
-  String get galaxyCapabilitySourceGraph => '知识图谱构建';
-
-  @override
-  String get galaxyA11yChannelVerified => '已独立检验';
-
-  @override
-  String get galaxyA11yChannelPracticed => '练习过，未检验';
-
-  @override
-  String get galaxyA11yChannelTraceOnly => '仅活动痕迹';
-
-  @override
-  String get galaxyA11yChannelNonHuman => 'Agent产物';
-
-  @override
-  String get galaxyA11yChannelUnknown => '检验状态未知';
-
-  @override
   String get intentSuggestedActionLabel => '我建议先这样做';
 
   @override
@@ -30446,25 +30349,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String todayCockpitRunOngoingDetailed(String detail) {
     return 'Aurora 正在推进：$detail';
   }
-
-  @override
-  String get homeResumeEyebrow => '接着上次';
-
-  @override
-  String homeResumeLastStep(String step) {
-    return '上次：$step';
-  }
-
-  @override
-  String homeResumeNextStep(String step) {
-    return '下一步：$step';
-  }
-
-  @override
-  String get homeResumeStaleLine => '上次的进度信息可能已经过期，进任务重新校准后再继续';
-
-  @override
-  String get homeResumeContinueCta => '继续这一步';
 
   @override
   String dashboardEstimatedMinutes(int minutes) {
@@ -33559,6 +33443,122 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get calRescheduleAction => '改期';
+
+  @override
+  String get galaxyCapabilitySectionTitle => '能力证据与来源';
+
+  @override
+  String get galaxyCapabilityVerifiedLabel => '独立检验通过';
+
+  @override
+  String get galaxyCapabilityVerifiedCopy => '掌握度由独立检验（测验等）支撑。';
+
+  @override
+  String get galaxyCapabilityPracticedLabel => '练习过 · 未独立检验';
+
+  @override
+  String get galaxyCapabilityPracticedCopy => '有真实参与记录；掌握度尚未通过独立检验，不代表已掌握。';
+
+  @override
+  String get galaxyCapabilityTraceOnlyLabel => '仅活动痕迹';
+
+  @override
+  String get galaxyCapabilityTraceOnlyCopy => '只有学习时长等参与记录，不计入能力掌握。';
+
+  @override
+  String get galaxyCapabilityNonHumanLabel => 'Agent 产物';
+
+  @override
+  String get galaxyCapabilityNonHumanCopy => '这项工作由 Agent 完成，不计入个人能力。';
+
+  @override
+  String get galaxyCapabilityUnknownLabel => '证据通道未知';
+
+  @override
+  String get galaxyCapabilityUnknownCopy => '当前数据没有能力检验信息；这里不显示掌握进度。';
+
+  @override
+  String get galaxyCapabilitySourceEmpty => '暂无来源记录';
+
+  @override
+  String galaxyCapabilityProjectionVersion(int version) {
+    return '投影版本 v$version';
+  }
+
+  @override
+  String get galaxyCapabilityProjectionUnknown => '投影版本未知';
+
+  @override
+  String galaxyCapabilitySourceFallback(String code) {
+    return '来源 · $code';
+  }
+
+  @override
+  String get galaxyCapabilitySourceOutcome => '学习成果记录';
+
+  @override
+  String get galaxyCapabilitySourceQuiz => '独立测验';
+
+  @override
+  String get galaxyCapabilitySourceTask => '任务完成';
+
+  @override
+  String get galaxyCapabilitySourceDocument => '学习资料';
+
+  @override
+  String get galaxyCapabilitySourceError => '错题';
+
+  @override
+  String get galaxyCapabilitySourceTranslation => '翻译';
+
+  @override
+  String get galaxyCapabilitySourceFocus => '学习时长记录';
+
+  @override
+  String get galaxyCapabilitySourceCommunity => '社区分享';
+
+  @override
+  String get galaxyCapabilitySourceChat => '对话';
+
+  @override
+  String get galaxyCapabilitySourceGraph => '知识图谱构建';
+
+  @override
+  String get galaxyA11yChannelVerified => '已独立检验';
+
+  @override
+  String get galaxyA11yChannelPracticed => '练习过，未检验';
+
+  @override
+  String get galaxyA11yChannelTraceOnly => '仅活动痕迹';
+
+  @override
+  String get galaxyA11yChannelNonHuman => 'Agent产物';
+
+  @override
+  String get galaxyA11yChannelUnknown => '检验状态未知';
+
+  @override
+  String get homeResumeEyebrow => '接着上次';
+
+  @override
+  String homeResumeLastStep(String step) {
+    return '上次：$step';
+  }
+
+  @override
+  String homeResumeNextStep(String step) {
+    return '下一步：$step';
+  }
+
+  @override
+  String get homeResumeStaleLine => '上次的进度信息可能已经过期，进任务重新校准后再继续';
+
+  @override
+  String get homeResumeContinueCta => '继续这一步';
+
+  @override
   String get workbenchTitle => '运行工作台';
 
   @override
@@ -33653,4 +33653,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get journeyEntryFailed => '暂时连不上，稍后再试';
+
+  @override
+  String get sensoryAmbientEnabledTitle => '背景声';
+
+  @override
+  String get sensoryAmbientEnabledSubtitle => '独立于提示音；不自动播放，仅在你选择场景或开始专注时播放';
+
+  @override
+  String get sensorySoundDegradedNotice => '系统拒绝了音频播放，提示音已静音降级；任务与提醒不受影响';
+
+  @override
+  String get objectUnavailableMissingTitle => '内容已删除或不存在';
+
+  @override
+  String get objectUnavailableMissingBody =>
+      '这个通知指向的内容可能已被删除，或链接已过期。你的其他数据不受影响。';
+
+  @override
+  String get objectUnavailableOfflineTitle => '暂时无法确认';
+
+  @override
+  String get objectUnavailableOfflineBody => '网络不可用或服务暂时无法访问，还不能打开这个对象。可以稍后重试。';
+
+  @override
+  String get objectUnavailableGoTasks => '查看任务列表';
+
+  @override
+  String get objectUnavailableBackHome => '回到首页';
 }

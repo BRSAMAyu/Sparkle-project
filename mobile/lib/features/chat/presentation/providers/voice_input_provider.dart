@@ -28,10 +28,16 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
   int _recordingDuration = 0;
   String _currentTranscription = '';
   String _errorMessage = '';
+  bool _permanentlyDenied = false;
+
+  /// U14：系统设置层面永久拒绝（「去系统设置」才可恢复），区别于本次
+  /// 未授权（下次请求可弹系统授权框）。设置页/入口据此选引导面。
+  bool get isPermanentlyDenied => _permanentlyDenied;
 
   /// 检查麦克风权限
   Future<bool> checkPermissions() async {
     final status = await Permission.microphone.request();
+    _permanentlyDenied = status.isPermanentlyDenied;
     if (status.isPermanentlyDenied) {
       return false;
     }
@@ -135,6 +141,7 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
     _recordingDuration = 0;
     _currentTranscription = '';
     _errorMessage = '';
+    _permanentlyDenied = false;
     state = VoiceInputState.idle;
   }
 
