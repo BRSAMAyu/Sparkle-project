@@ -153,7 +153,7 @@ void main() {
       // Node 0 ↔ Node 1（双向展开）：Node 0 的标签读出「连接：Node 1」。
       expect(
         find.bySemanticsLabel(
-          RegExp('科技 Node 0（已解锁，掌握度 42 分，已学习 3 次，重要度.+）?，连接：Node 1'),
+          RegExp('科技 Node 0（已解锁，掌握度 42 分，检验状态[^，]*，已学习 3 次，重要度.+）?，连接：Node 1'),
         ),
         findsOneWidget,
         reason: '节点 Node 0 的读屏标签必须含连接子句「，连接：Node 1」',
@@ -198,7 +198,7 @@ void main() {
       );
       expect(
         node0.getSemanticsData().label,
-        '科技 Node 0（已解锁，掌握度 42 分，已学习 3 次，重要度基础）',
+        '科技 Node 0（已解锁，掌握度 42 分，检验状态未知，已学习 3 次，重要度基础）',
         reason: '无边图标签须与 V3 既有口径逐字相等',
       );
       container.dispose();

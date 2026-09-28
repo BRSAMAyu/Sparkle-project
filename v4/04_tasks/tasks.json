@@ -2172,7 +2172,7 @@
    "review": {
     "r1": "ff6a8dc1 PASS_WITH_CHALLENGES（D04 通道红线三重证实：唯一判定点 capability_channel.dart:49+painter 三调用点+M1 独立重放 7 失败；验收三条过；CH-1~6 全裁决；合并树语义组合亲验成立——a11y 播报序 mastery→通道后缀→F06 连接子句）",
     "remediation": "544ff1e4 R1-C1 接线测试钉（galaxy_screen_sheet_wiring +1=193；M3 突变自验红+字节恒等双验证）+R1-C2 三处订正（M2 不可复现对改记 _historyBody 掐断 1 失败/M1 7 失败/limitations #3 proto 子块措辞）",
-    "integration_reverify": "本 commit 即合并态，复验随合并后跑"
+    "integration_reverify": "4785f8b9+契约更新 commit：analyze 零+galaxy 189+1skip 全绿+gen-l10n 再生零漂移；跨卡契约演进=F06 冻结标签断言随 U05 通道后缀契约更新（位序 mastery→通道→学习次数，fail-closed 无数据=检验状态未知）——U05R1 预验的播报序组合在此落地，F06 测试字节口径随新契约更新（同 CI40 跨卡测试契约更新模式）"
    }
   },
   {
