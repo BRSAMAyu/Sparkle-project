@@ -46,8 +46,8 @@ log "Running health checks..."
 
 # ── Docker services ──
 check "docker_daemon"       "docker info >/dev/null 2>&1"
-check "postgres_connect"    "docker exec sparkle-db pg_isready -U ${POSTGRES_USER:-brsama} >/dev/null 2>&1"
-check "redis_ping"          "docker exec sparkle-redis redis-cli ping >/dev/null 2>&1"
+check "postgres_connect"    "docker exec sparkle_db pg_isready -U ${POSTGRES_USER:-brsama} >/dev/null 2>&1"
+check "redis_ping"          "docker exec sparkle_redis redis-cli ping >/dev/null 2>&1"
 
 # MinIO — check if container is running and bucket is accessible
 check "minio_running"       "docker ps --format '{{.Names}}' | grep -q 'minio'"
