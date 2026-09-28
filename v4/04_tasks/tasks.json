@@ -1367,8 +1367,8 @@
         "V4-B01",
         "V4-B05"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
+      "status": "in_progress",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
       "kind": "implementation",
       "required_locks": [

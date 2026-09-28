@@ -1,0 +1,36 @@
+{
+  "card": "V4-D01",
+  "risk": "high",
+  "independent_reviewers_required": 2,
+  "review_status": "R1_APPROVED_PENDING_R2",
+  "reviews": [
+    {
+      "reviewer": "wtD01R1",
+      "verdict": "APPROVE",
+      "reviewed_commit": "8a6a5048bd8dc49f13601cd6a54537c1d6b5532d",
+      "reviewed_at_local": "2026-09-28",
+      "opinion_file": "review_r1.md",
+      "challenged": null,
+      "note": "一审通过。CHALLENGED 无。提请二审复核 2 项裁定/边界：R1-RULING-1（kind=state_confirmed × receipt_ref=intervention_lifecycle 的 commit_state 真源解释，实现方自报挑战点 1 的裁定）；G1 边界（D-05 exposed 锚点仍按交付时刻落账，delivered/rendered 分账 = detail 标注 + 新事件流双层承载，limitations #7 已声明）。"
+    },
+    {
+      "reviewer": "wtD01R2",
+      "verdict": "APPROVE",
+      "reviewed_commit": "8a6a5048bd8dc49f13601cd6a54537c1d6b5532d",
+      "reviewed_at_local": "2026-09-28",
+      "opinion_file": "review_r2.md",
+      "challenged_non_blocking": 4,
+      "note": "二审通过。独立复跑 44/44 新测 + f507 wiring 9/9 抽样 + 3 条独立边缘探针（乱序 CREATED→SEEN / SEEN→DELIVERED 均 fail-loud 零事件；跨用户回执 I3 拒绝）。CHALLENGED 4 项均非阻塞：C-1 project_terminal_reason/project_error_state 无生产调用方（契约层事实，引用证据须限定表述）；C-2 降级可观测仅 logger.info 且挂点丢弃返回值（与 FIX-507 判例同形）；C-3 diff_or_evidence_only.md『进程内 EventBus』措辞与 Redis stream 实现不符；C-4 复跑需 SECRET_KEY 环境变量未在 run_manifest 登记。一审移交 2 项（R1-RULING-1、G1 边界）独立复核均维持成立（review_r2.md §6.1）。"
+    }
+  ],
+  "note": "本卡 risk=high，验收要求 2 位独立未参与会话审查（接力机制/AGENTS.md 验收模型）。实现会话（wtD01）不得自审自签；本文件是审查登记位——审查完成后由审查会话追加 reviews[] 条目（reviewer 会话标识、判定 APPROVE/REJECT、审查 SHA、意见文件名），两审齐前本卡不得置 DONE_REVIEWED。当前实现状态 = REVIEW_READY（自测全绿、证据齐、待审）。",
+  "review_inputs": {
+    "commit_scope": "backend/app/core/experience_event.py, backend/app/services/experience_event_service.py, backend/app/services/intervention_lifecycle_wiring.py, backend/app/services/intervention_record_service.py, backend/tests/core/test_experience_event.py, backend/tests/services/test_experience_event_service.py",
+    "contract_source": "v4/evidence/V4-B05/contract_receipt_min.md §3/§6（DONE_REVIEWED，双审齐）",
+    "suggested_challenge_points": [
+      "kind=state_confirmed 用于真实呈现回执的词表适配是否成立（B05 七元 kind 中唯一 committed+receipt 双要求成员）；若判不成立，替代面是 kind 词表 v1.x bump（contract-owner 决策），不得在本卡内私扩",
+      "mark_seen 挂点对 notification center 无 bus 形态（event_bus=None）的重放兜底是否满足 WS 下发面（本卡只落服务面记录，WS Frame 归 contract-owner）",
+      "exposure_basis=delivered 仅入 detail JSON（无迁移）是否足以支撑读侧 delivered/rendered 分账；若需列级拆分须走 Alembic 单 owner 迁移卡"
+    ]
+  }
+}

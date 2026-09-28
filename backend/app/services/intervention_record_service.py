@@ -141,10 +141,33 @@ class InterventionRecordService:
             await record_delivery_exposure(self.db, record)
         return record
 
-    async def mark_seen(self, record_id: uuid.UUID) -> InterventionRecord | None:
-        return await self._transition_acceptance(
-            record_id, InterventionAcceptanceStatus.SEEN
-        )
+    async def mark_seen(
+        self,
+        record_id: uuid.UUID,
+        *,
+        rendered_surface: str = "visual",
+    ) -> InterventionRecord | None:
+        """SEEN 转场 = 客户端确认真实渲染（或等价无障碍曝光）。
+
+        V4-D01 增量：真实转场发生时把「真实呈现」落成 experience_event.v1
+        （receipt_ref 必指 D-05 权威 exposed 回执；幂等内容寻址；回执缺失可观测
+        降级）。仅真实转场挂勾——重复 mark_seen（已 SEEN）短路，不重复曝光；
+        下发路径（mark_delivered）永不进此面——不可见/后台下发不算看到。
+        韧性壳在 experience_event_service 侧：投影失败只留痕，不拖垮转场。
+        """
+        prior = await self._get_record(record_id)
+        already_seen = prior is not None and prior.acceptance_status == InterventionAcceptanceStatus.SEEN
+        record = await self._transition_acceptance(record_id, InterventionAcceptanceStatus.SEEN)
+        if record is not None and not already_seen:
+            from app.services.experience_event_service import record_rendered_exposure_safe
+
+            await record_rendered_exposure_safe(
+                self.db,
+                self.event_bus,
+                record,
+                rendered_surface=rendered_surface,
+            )
+        return record
 
     async def mark_dismissed(self, record_id: uuid.UUID) -> InterventionRecord | None:
         record = await self._transition_acceptance(
