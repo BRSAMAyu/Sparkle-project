@@ -6743,8 +6743,8 @@ abstract class AppLocalizations {
   /// No description provided for @squadSharedErrorRetractFailed.
   ///
   /// In zh, this message translates to:
-  /// **'撤回失败：{error}'**
-  String squadSharedErrorRetractFailed(Object error);
+  /// **'撤回失败，请稍后重试'**
+  String get squadSharedErrorRetractFailed;
 
   /// No description provided for @bonfireLevelBadge.
   ///

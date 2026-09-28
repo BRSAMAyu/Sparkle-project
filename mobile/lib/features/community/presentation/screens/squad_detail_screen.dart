@@ -908,10 +908,12 @@ class _SharedErrorCard extends ConsumerWidget {
         );
       }
     } catch (error) {
+      // N9/N15：技术细节不直达用户面——固定人话文案，原始异常只进日志。
+      debugPrint('[SquadDetail] retract shared error failed: $error');
       if (context.mounted) {
         AppFeedback.error(
           context,
-          context.l10n.squadSharedErrorRetractFailed(error),
+          context.l10n.squadSharedErrorRetractFailed,
         );
       }
     }

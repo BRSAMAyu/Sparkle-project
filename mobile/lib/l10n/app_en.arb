@@ -1342,14 +1342,7 @@
   "squadSharedErrorRetractConfirmTitle": "Retract this shared error?",
   "squadSharedErrorRetractConfirmBody": "Squad members will no longer see this error card. You can share it again from the error book later.",
   "squadSharedErrorRetractSuccess": "Shared error retracted",
-  "squadSharedErrorRetractFailed": "Retract failed: {error}",
-  "@squadSharedErrorRetractFailed": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
+  "squadSharedErrorRetractFailed": "Retract failed. Please try again.",
   "bonfireLevelBadge": "Bonfire Lv.{level}",
   "@bonfireLevelBadge": {
     "placeholders": {

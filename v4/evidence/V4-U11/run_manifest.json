@@ -1,0 +1,145 @@
+{
+  "task": "V4-U11",
+  "title": "小队、火堆与分享边界风格",
+  "date": "2026-09-29",
+  "executor": "wtU11（worktree /Users/brsama/code/GitHub/wtU11，分支 agent/v4/u11，自 main@dd74bae9 开出）",
+  "source_sha_base": "dd74bae9（state(fleet): V4 心跳#18——D 线 6/6 全收 37/58+U11 补位）",
+  "source_sha_head_impl": "f2608836（feat(u11) 实现头；证据提交 SHA 见台账）",
+  "no_push": true,
+  "toolchain": {
+    "flutter": "3.41.3 stable（worktree 内 flutter analyze/test 实测）",
+    "python": "主检出 backend/.venv（websockets 16.0 / httpx 0.28.1 / mypy 1.20.2）",
+    "host": "darwin 25.6.0 arm64",
+    "gen_note": "mobile/lib/gen 与 backend/app/gen 为 gitignored 实体目录：自主检出 cp -R 复制进 worktree（F06/U14 同处置）；本卡 l10n 变更经 arb 源 + flutter gen-l10n 再生（+7 键纯增量，零删键）"
+  },
+  "locks": {
+    "required": [
+      "ui-community"
+    ],
+    "note": "sparkle-coordination-v2 远端未配置于本机（git remote 无此远端，与 F06/U14 同状），租约登记 NOT_RUN；冲突面自证：diff 不含 RF-06 三文件（dashboard_screen/compact_status_bar/task_execution_screen）、不含 app/routes.dart、不含 tokens_v2/theme 通道、不含 backend/app/api（撤回端点 D-COMM-5 已存在，OpenAPI/BA-ROUTES 门不触发）；触达面 = community 模块 6 文件 + l10n + api_endpoints + devtools 脚本，与在航会话（wtQ03 wtQ04 wtS01 wtU08 wtU14，见主检出 git worktree list）卡面无文件交集，由派发方（协调者）按 ui-community 键裁决"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtU11 -b agent/v4/u11 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "会话本地环境补齐（gitignored 实体：l10n/grpc 生成物 + .env）",
+      "command": "cp -R Sparkle-project/mobile/lib/gen wtU11/mobile/lib/gen && cp -R Sparkle-project/backend/app/gen wtU11/backend/app/gen && cp Sparkle-project/backend/.env wtU11/backend/.env",
+      "exit_code": 0,
+      "note": ".env 会话本地修正：DATABASE_URL 密码与 sparkle_db 卷初始化值不符（sparkle_dev_pg_2026→change-me，POSTGRES_PASSWORD 仅首初始化生效）；仅 gitignored 本地文件，零入库"
+    },
+    {
+      "id": 3,
+      "purpose": "依赖解析（新 worktree 无 .dart_tool）",
+      "command": "cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "Got dependencies! 2 packages discontinued（既有口径）"
+    },
+    {
+      "id": 4,
+      "purpose": "l10n 增量键再生（arb 源 + 官方生成器，非手改）",
+      "command": "cd mobile && flutter gen-l10n",
+      "exit_code": 0,
+      "note": "生成文件 diff = 6 新键（撤回动作/确认/成功/失败固定文案 + 火堆徽标）106 行纯增，逐字可再生"
+    },
+    {
+      "id": 5,
+      "purpose": "静态检查（零 issue 口径）",
+      "command": "cd mobile && flutter analyze --no-pub",
+      "exit_code": 0,
+      "note": "No issues found!（全库零 issue；过程中 3 条新测试 lint 全修复：require_trailing_commas/only_throw_errors/no_leading_underscores_for_local_identifiers）"
+    },
+    {
+      "id": 6,
+      "purpose": "本卡新测试（14 用例：撤回一正三反/火堆一正一反/边界钉 8）",
+      "command": "cd mobile && flutter test test/features/community/presentation/screens/squad_shared_error_retract_u11_test.dart test/features/community/presentation/widgets/bonfire_widget_u11_test.dart test/features/community/data/squad_boundary_u11_test.dart",
+      "exit_code": 0,
+      "note": "+14 全绿；分套实录见 test_results.json"
+    },
+    {
+      "id": 7,
+      "purpose": "受影响域回归：移动端社区域全套",
+      "command": "cd mobile && flutter test test/features/community/ test/widget/community_remaining_closure_test.dart",
+      "exit_code": 0,
+      "note": "100 passed（含既有 squad/provider/dialog 套件原样全绿——bonfire 移除假开关与撤回接线零回归）"
+    },
+    {
+      "id": 8,
+      "purpose": "后端受影响回归（社区单测四套，含 S-02 隐私边界 18 用例）",
+      "command": "cd backend && pytest tests/unit/test_community_shared_errors.py tests/unit/test_community_squad_mvp.py tests/unit/test_community_context_privacy_boundary.py tests/unit/test_community_study_room.py -q",
+      "exit_code": 0,
+      "note": "60 passed（.env 移出运行防演示库误写——conftest 守卫口径；SECRET_KEY=test）"
+    },
+    {
+      "id": 9,
+      "purpose": "后端受影响回归（S05 双账号 E2E + WS 生命周期）",
+      "command": "cd backend && pytest tests/api/test_s05_community_reconnect_retract_two_account_e2e.py tests/unit/test_community_ws_session_lifecycle.py -q",
+      "exit_code": 0,
+      "note": "33 passed"
+    },
+    {
+      "id": 10,
+      "purpose": "mypy 棘轮门（≤77 零新增）",
+      "command": "cd backend && mypy app --ignore-missing-imports --no-error-summary | grep 'error:' | wc -l",
+      "exit_code": 0,
+      "note": "59 / baseline 77（本卡 backend/app 零触碰，git diff dd74bae9..f2608836 -- backend/app 为空；计数与主检出同源）"
+    },
+    {
+      "id": 11,
+      "purpose": "真服双实例起服（本仓 make api-server 同款命令，非 emulate）",
+      "command": "uvicorn app.main:app --host 127.0.0.1 --port 8211 --env-file .env ｜ uvicorn ... --port 8212（第二实例）",
+      "exit_code": 0,
+      "note": "/health 双双 healthy；WebSocket Redis Pub/Sub initialized（sparkle_redis 实连）；三容器 sparkle_db/redis/minio 运行中只读复用（FIX-557 口径）"
+    },
+    {
+      "id": 12,
+      "purpose": "双真实账号场景（分享/撤回/重连+单人行动+单/多实例边界）",
+      "command": ".venv/bin/python scripts/devtools/v4_u11_two_account_scenario.py --base http://127.0.0.1:8211 --base2 http://127.0.0.1:8212 --out /tmp/u11_scenario.json",
+      "exit_code": 0,
+      "note": "20 PASS / 0 FAIL（S01–S20）；实录副本 = v4/evidence/V4-U11/two_account_scenario.json；过程含一次 2 FAIL→脚本修正（打卡每日一次限额改 WS typing 广播路径，非产品改动）复跑全绿"
+    },
+    {
+      "id": 13,
+      "purpose": "全量套件（analyze+test 双侧过口径）",
+      "command": "cd mobile && flutter analyze --no-pub && flutter test",
+      "exit_code": 0,
+      "note": "analyze：No issues found!；test：+3035/-1（唯一 fail=q03 goldens tearDownAll 环境性网络抖动，单测复跑 9/9 全绿，与本卡零文件交集）"
+    },
+    {
+      "id": 14,
+      "purpose": "治理守卫 N9 合规修正后复跑",
+      "command": "scripts/guards/check_n9_raw_exception_leak.py",
+      "exit_code": 0,
+      "note": "过程事实：初版撤回失败文案带 {error} 模板被 BG N9-LEAK 守卫红（新技术细节不直达用户面）——改为固定人话文案+debugPrint 日志，守卫 PASS（arb {error} 258/260 棘轮持平）；零 baseline 更新"
+    },
+    {
+      "id": 15,
+      "purpose": "全量守卫基线（88 规则）",
+      "command": "bash scripts/run_all_rule_guards.sh --jobs 4",
+      "exit_code": 0,
+      "note": "all rule guards passed (88 rules)；BG 首跑红为 worktree 缺 gitignored gateway/gen（主检出 cp -R 补齐后 PASS，非代码回归）"
+    }
+  ],
+  "full_suite_tail": "+3035 passed, ~23 skipped（既有基线）, -1 failed = test/goldens/q03_visual_qa/q03_visual_qa_longtail_test.dart (tearDownAll)——环境性网络抖动：该测试单独复跑 9/9 全绿（其依赖 10.0.2.2:8080 网关 live 调用，与全量跑时长并发态相关）；与本卡 diff 零文件交集（本卡触达面见 commands[实现提交]，q03 goldens 测试属在航 Q03 卡面）",
+  "evidence_required_coverage": {
+    "source_sha": "本文件 source_sha_base/head_impl + 证据提交 SHA（台账）",
+    "build_id": "flutter 3.41.3 stable；worktree wtU11@agent/v4/u11；引擎进程 = 本仓 backend 代码 uvicorn :8211/:8212",
+    "commands_and_exit_codes": "本文件 commands[]",
+    "scope_and_denominator": "test_results.json（新测 14 + 受影响回归 100/60/33 + 全量套件 + mypy 59/77）",
+    "artifacts_sha256": {
+    "diff_or_evidence_only.md": "36fbfe83b10809d48a9c30a1f9561adb1764f4c9419086f95552f26041412685",
+    "test_results.json": "5675fa4e7ef1675ab5faee9b285e631bd5dc7e31850c49d35a04556ee01accbd",
+    "review_receipt.json": "b0b5f46b0f8f7fb8c0a6d9f11a918ff7584224f91b8d6cce50135435f1d7fc87",
+    "limitations.md": "aedef1330c2d398f862fbfe1eabe96b82b708229ef390209c0952a85cbc791ba",
+    "two_account_scenario.json": "7950e081c98372daecf6795b637c3904f1e301e1727eb72085965df4d12e4f6d",
+    "run_manifest.json": "self-referential：本文件定稿后不可自哈希；以其提交对象 SHA 为锚"
+},
+    "actual_model_and_usage_if_llm": "executor 模型 = GLM（account:bigmodel-individual-coding-plan，GLM-5.3-Flash reasoning agent，ZCode 会话）；精确 token 计数未暴露给会话，如实记 NOT_EXPOSED；本卡零 LLM 推理调用（场景走 register/squad/error/checkin 真实端点，不触模型面）",
+    "screenshots_video_and_semantics_if_ui": "UI 面为小队详情撤回动作与火堆徽标：语义以 widget 测试断言（中文文案/ValueKey 定位）代替截图语义 dump（F06/U14 同等语义文本口径）；真机截图未采（无接入设备），记 limitations",
+    "physical_device_scope_if_sensory": "本卡零触觉/音频面改动（假声效开关为移除非接线）；无真实设备，记 DEVICE_UNVERIFIED 不适用口径"
+  }
+}

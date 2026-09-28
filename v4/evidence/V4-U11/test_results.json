@@ -1,0 +1,96 @@
+{
+  "task": "V4-U11",
+  "date": "2026-09-29",
+  "denominator_note": "计数口径：新测=本卡新增测试文件内可失败用例（14）；受影响域回归=社区域移动端全套+后端社区单测/API 面；全量=flutter test 全套；真服场景=双真实账号 HTTP+WS 步进判定（20 步）。",
+  "new_tests": {
+    "total": 14,
+    "suites": [
+      {
+        "file": "mobile/test/features/community/presentation/screens/squad_shared_error_retract_u11_test.dart",
+        "cases": 4,
+        "verdict": "PASS",
+        "maps_to": "验收1 分享/撤回可达（移动端撤回腿）",
+        "cases_detail": [
+          "own share shows inline retract; confirm calls DELETE with share id and refreshes list（正）",
+          "other member share exposes no retract action（反：授权面=分享者本人）",
+          "retract failure keeps the entry and surfaces honest error（反：不假成功不乐观删行）",
+          "cancelling the confirm dialog triggers no API call（反：零副作用）"
+        ]
+      },
+      {
+        "file": "mobile/test/features/community/presentation/widgets/bonfire_widget_u11_test.dart",
+        "cases": 2,
+        "verdict": "PASS",
+        "maps_to": "火堆呈现统一（假 affordance 移除 + l10n）",
+        "cases_detail": [
+          "level badge renders localized label（正：zh 文案『火堆等级 3』）",
+          "fake crackle/silent toggle is gone for every configuration（反：假声效开关不可再渲染）"
+        ]
+      },
+      {
+        "file": "mobile/test/features/community/data/squad_boundary_u11_test.dart",
+        "cases": 8,
+        "verdict": "PASS",
+        "maps_to": "验收2 量纲不串台 + 隐私红线移动端面 + demo 诚实",
+        "cases_detail": [
+          "entry parses completion fields from whitelist projection（正）",
+          "injected xp/photon/persona keys are silently dropped（反：验收2 注入反例）",
+          "source pin: squad model files never reference xp/photon/persona（结构钉，镜像后端 AST 断言）",
+          "ShareableContentType has no private-memory/profile kind（隐私红线：私人 Memory 不进群移动端词表钉）",
+          "shared error card model has no answer fields（fromJson 读取面钉 + 注入行为钉）",
+          "retract endpoint path is scoped per share（撤回端点形状）",
+          "demo squad list returns real empty state, no fabricated squads（demo 诚实空态）",
+          "mock community repo seeds are explicitly marked as demo（demo 标记不冒充真人）"
+        ]
+      }
+    ]
+  },
+  "affected_regression": [
+    {
+      "scope": "移动端社区域全套 + 剩余收口",
+      "cmd": "flutter test test/features/community/ test/widget/community_remaining_closure_test.dart",
+      "result": "100 passed, 0 failed",
+      "exit_code": 0
+    },
+    {
+      "scope": "后端社区受影响面（shared_errors/squad_mvp/隐私边界/study_room）",
+      "cmd": "pytest tests/unit/test_community_shared_errors.py tests/unit/test_community_squad_mvp.py tests/unit/test_community_context_privacy_boundary.py tests/unit/test_community_study_room.py -q",
+      "result": "60 passed",
+      "exit_code": 0,
+      "note": "含 S-02 隐私边界 18 用例（私人 memory/profile 泄露路径拦截=验收4 反例钉既有真源，差量引用不重写）"
+    },
+    {
+      "scope": "后端 S05 双账号 reconnect/retract E2E + WS 会话生命周期",
+      "cmd": "pytest tests/api/test_s05_community_reconnect_retract_two_account_e2e.py tests/unit/test_community_ws_session_lifecycle.py -q",
+      "result": "33 passed",
+      "exit_code": 0
+    }
+  ],
+  "full_suite": {
+    "cmd": "flutter analyze --no-pub && flutter test",
+    "analyze": "No issues found!（全库零 issue）",
+    "test": "见 run_manifest.json commands（本卡收尾实录）",
+    "exit_code": 0
+  },
+  "static_gates": {
+    "flutter_analyze": "0 issue",
+    "mypy": "59 errors / baseline 77（≤77，零新增；本卡 backend/app 零触碰，diff 为证）",
+    "openapi_ba_routes": "NOT_TRIGGERED（未触 backend/app/api/：git diff dd74bae9..f2608836 -- backend/app/api 为空，撤回端点 D-COMM-5 已存在）",
+    "gen_l10n": "arb 源 +6 键 → gen-l10n 再生，生成文件 106 行纯增零删键；BG N9-LEAK 守卫 PASS（撤回失败文案固定人话，不带 {error} 模板）"
+  },
+  "real_server_scenario": {
+    "file": "two_account_scenario.json",
+    "engines": "uvicorn app.main:app --env-file .env ×2（:8211/:8212），数据面=运行中容器 sparkle_db/sparkle_redis/sparkle_minio 只读复用（FIX-557 口径）",
+    "accounts": "u11_a_*/u11_b_* 真实注册（非 demo、非 mock）",
+    "steps_total": 20,
+    "passed": 20,
+    "failed": 0,
+    "coverage": {
+      "验收1_分享撤回重连": ["S08", "S09", "S10", "S11", "S12", "S13", "S14", "S15", "S16", "S17"],
+      "验收2_量纲不串台": "榜接口仅 completion 口径（S06 降级诚实；后端 AST+行为断言回归 60 绿内）",
+      "验收3_单人行动与demo标记": ["S03", "S04", "S05", "S06", "S07"],
+      "实时边界_单实例": ["S12"],
+      "实时边界_多实例": ["S19", "S20"]
+    }
+  }
+}

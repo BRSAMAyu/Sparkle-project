@@ -3774,9 +3774,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get squadSharedErrorRetractSuccess => 'Shared error retracted';
 
   @override
-  String squadSharedErrorRetractFailed(Object error) {
-    return 'Retract failed: $error';
-  }
+  String get squadSharedErrorRetractFailed =>
+      'Retract failed. Please try again.';
 
   @override
   String bonfireLevelBadge(int level) {

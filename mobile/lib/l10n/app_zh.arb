@@ -1342,14 +1342,7 @@
   "squadSharedErrorRetractConfirmTitle": "撤回这张错题分享？",
   "squadSharedErrorRetractConfirmBody": "撤回后小队成员将不再看到这张错题卡。之后你可以在错题本重新分享。",
   "squadSharedErrorRetractSuccess": "已撤回错题分享",
-  "squadSharedErrorRetractFailed": "撤回失败：{error}",
-  "@squadSharedErrorRetractFailed": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
+  "squadSharedErrorRetractFailed": "撤回失败，请稍后重试",
   "bonfireLevelBadge": "火堆等级 {level}",
   "@bonfireLevelBadge": {
     "placeholders": {

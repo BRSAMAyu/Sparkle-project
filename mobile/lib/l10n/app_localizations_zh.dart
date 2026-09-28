@@ -3611,9 +3611,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get squadSharedErrorRetractSuccess => '已撤回错题分享';
 
   @override
-  String squadSharedErrorRetractFailed(Object error) {
-    return '撤回失败：$error';
-  }
+  String get squadSharedErrorRetractFailed => '撤回失败，请稍后重试';
 
   @override
   String bonfireLevelBadge(int level) {
