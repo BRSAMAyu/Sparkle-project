@@ -1,0 +1,8 @@
+{
+ "client_t_ack_wall": "2026-09-28T09:44:10.232+08:00",
+ "client_t_tail_wall": "2026-09-28T09:44:10.232+08:00",
+ "engine_validation_failed_line_count": 1,
+ "engine_validation_failed_last_line": "2026-09-28 09:44:10.232 | ERROR    | app.orchestration.validation_engine:_validate_request:247 - Validation failed: Message exceeds max length 2000",
+ "ack_precedes_validation": false,
+ "ack_to_validation_gap_ms": -0.2
+}

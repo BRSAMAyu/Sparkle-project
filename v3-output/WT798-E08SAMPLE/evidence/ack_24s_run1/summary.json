@@ -1,0 +1,15 @@
+{
+ "generated_at": "2026-09-28T01:43:04.420518+00:00",
+ "n": 24,
+ "t_ack_p50_s": 0.0296,
+ "t_ack_p95_s": 0.0367,
+ "t_ack_min_s": 0.008,
+ "t_ack_max_s": 0.0379,
+ "t_ack_mean_s": 0.0287,
+ "t_tail_p50_s": 0.0301,
+ "t_tail_p95_s": 0.0369,
+ "first_frame_received": 24,
+ "first_frame_is_early_ack_true": 24,
+ "first_frame_stage_intake": 24,
+ "finish_reason_ERROR": 24
+}
