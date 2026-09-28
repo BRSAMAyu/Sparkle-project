@@ -1,0 +1,21 @@
+{
+  "schema_version": "experience_event.v1",
+  "event_id": "eev_01JBG9ERRSTATE00000000000",
+  "kind": "terminal_failed",
+  "receipt_ref": "action_command://ap_01JBG7PROPOSAL00000000",
+  "commit_state": "error",
+  "error_state": "version_conflict",
+  "subject": {
+    "type": "task",
+    "id": "3f2b9c1e-4d55-4a10-9e2a-112233445566",
+    "version_token": "t_v233_8ee7"
+  },
+  "presentation": {
+    "modalities": ["visual"],
+    "copy_key": "err.version_conflict",
+    "asset_ref": null
+  },
+  "dedupe_key": "1a2b3c4d5e6f70819a2b3c4d5e6f70819a2b3c4d5e6f70819a2b3c4d5e6f7081",
+  "issued_at": "2026-09-28T14:33:02+08:00",
+  "expires_at": "2026-09-28T15:03:02+08:00"
+}

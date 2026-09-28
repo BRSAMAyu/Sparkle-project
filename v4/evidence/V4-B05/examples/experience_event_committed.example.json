@@ -1,0 +1,21 @@
+{
+  "schema_version": "experience_event.v1",
+  "event_id": "eev_01JBG8COMMITTED0000000000",
+  "kind": "state_confirmed",
+  "receipt_ref": "action_command://ap_01JBG7PROPOSAL00000000",
+  "commit_state": "committed",
+  "error_state": null,
+  "subject": {
+    "type": "task",
+    "id": "3f2b9c1e-4d55-4a10-9e2a-112233445566",
+    "version_token": "t_v232_4cd1"
+  },
+  "presentation": {
+    "modalities": ["visual", "haptic"],
+    "copy_key": "task.step_committed",
+    "asset_ref": "tokens_v2/star_step_ok"
+  },
+  "dedupe_key": "b0c7f2a1e5d9c3a8f6e2b1d4c7a9f0e3d2c1b8a7f6e5d4c3b2a1f0e9d8c7b6a5",
+  "issued_at": "2026-09-28T14:32:11+08:00",
+  "expires_at": "2026-09-28T15:02:11+08:00"
+}

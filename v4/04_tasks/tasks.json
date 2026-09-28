@@ -263,7 +263,7 @@
       "title": "冻结呈现与上下文回执最小合同",
       "depends_on": [],
       "status": "READY",
-      "implementation_state": "NOT_STARTED",
+      "implementation_state": "IN_PROGRESS",
       "evidence_verdict": "NOT_RUN",
       "kind": "design",
       "required_locks": [
@@ -310,7 +310,9 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "evidence": "v4/evidence/V4-B05/contract_receipt_min.md (+examples/ x5, run_manifest.json, diff_or_evidence_only.md, limitations.md)",
+      "evidence_note": "design 交付于 wtB05@agent/v4/b05；独立审查 x2 未做，evidence_verdict 保持 NOT_RUN；不改产品码"
     },
     {
       "id": "V4-B06",

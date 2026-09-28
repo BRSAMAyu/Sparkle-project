@@ -1,0 +1,77 @@
+{
+  "_readme": "冻结反例（什么不是回执）。每个条目 violates 指向 contract_receipt_min.md 的不变量编号。实现卡与审查以此为准，判定失败不降阈值。",
+  "counterexamples": [
+    {
+      "name": "model_self_assessed_success",
+      "payload": { "kind": "state_confirmed", "commit_state": "committed", "receipt_ref": null, "text": "模型认为任务已完成" },
+      "violates": ["I2", "E1"],
+      "reason": "state_confirmed 无权威 receipt_ref；模型自评不是 committed 真源"
+    },
+    {
+      "name": "ws_transport_ack_as_receipt",
+      "payload": { "message_id": "m_123", "ack": true },
+      "violates": ["I2"],
+      "reason": "MessageAck 是传输层确认，不证明业务 committed"
+    },
+    {
+      "name": "accepted_but_not_committed",
+      "payload": { "proposal_status": "accepted", "commit_state": "committed" },
+      "violates": ["I2", "E1"],
+      "reason": "commit 唯一真源是 X-03 authoritative receipt；accepted≠committed"
+    },
+    {
+      "name": "error_state_mixed_with_committed",
+      "payload": { "commit_state": "committed", "error_state": "version_conflict" },
+      "violates": ["E2", "卡验收#3"],
+      "reason": "committed 与 error_state 互斥且覆盖完备"
+    },
+    {
+      "name": "cross_object_subject",
+      "payload": { "subject": { "type": "task", "id": "别人的 task_id" }, "receipt_ref": "run://他人 run_id" },
+      "violates": ["I3", "E4"],
+      "reason": "subject/ref 不属当前授权用户→拒绝并记安全遥测，不降级为通用成功动画"
+    },
+    {
+      "name": "experience_event_grants_permission",
+      "payload": { "kind": "state_confirmed", "grant": "task.write" },
+      "violates": ["I1", "E3"],
+      "reason": "事件无权限字段；消费端不得从事件推导任何写资格"
+    },
+    {
+      "name": "memory_save_presented_as_task_done",
+      "payload": { "receipt_ref": "memory://episodic/x", "kind": "state_confirmed", "subject": { "type": "task" } },
+      "violates": ["E1"],
+      "reason": "记忆域回执不证明任务域 committed"
+    },
+    {
+      "name": "evidence_registered_as_mastery",
+      "payload": { "truth_class": "self_reported", "presentation": { "copy_key": "mastery.achieved" } },
+      "violates": ["I2", "§5 last_valid_outcome 语义"],
+      "reason": "self_report 永不升 actual；不显示'练了N分钟所以精通'"
+    },
+    {
+      "name": "expired_resume_auto_continue",
+      "payload": { "schema_version": "episode_resume_view.v1", "expires_at": "2026-09-01T00:00:00+08:00", "auto_resume": true },
+      "violates": ["§5"],
+      "reason": "过期只允许说明不确定性，后台旧任务不得复活"
+    },
+    {
+      "name": "empty_candidates_rendered_as_has_evidence",
+      "payload": { "schema_version": "context_selection_receipt.v1", "candidates": [], "present_as": "已引用你的历史" },
+      "violates": ["C1", "§2 candidates unknown 语义"],
+      "reason": "selected 为空时正文不得声称引用了依据"
+    },
+    {
+      "name": "fabricated_ref_scheme",
+      "payload": { "candidates": [{ "ref": "astro://invented-id", "status": "selected" }] },
+      "violates": ["C1", "I3"],
+      "reason": "ref scheme 不在 ACTION_SOURCE_REF_SCHEMES 封闭集内；模型不能造 evidence_id"
+    },
+    {
+      "name": "why_now_without_basis",
+      "payload": { "why_now": { "statement": "现在做最好", "basis_refs": [] } },
+      "violates": ["§4"],
+      "reason": "statement 非空则 basis_refs ≥1；无依据的 why-now = 伪依据，契约层拒"
+    }
+  ]
+}

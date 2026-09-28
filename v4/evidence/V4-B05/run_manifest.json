@@ -1,0 +1,78 @@
+{
+  "card": "V4-B05",
+  "task": "冻结呈现与上下文回执最小合同",
+  "agent": "wtB05",
+  "branch": "agent/v4/b05",
+  "base_sha": "3c4618cc1d23b79792e330f87114484434a410ed",
+  "generated_at_local": "2026-09-28",
+  "kind": "design",
+  "product_code_changed": false,
+  "commands": [
+    {
+      "purpose": "建立 worktree",
+      "cmd": "git worktree add ../wtB05 -b agent/v4/b05",
+      "exit_code": 0
+    },
+    {
+      "purpose": "定位 X-01 why-now 缺口与 WT806 S4 口径 A 裁定原文",
+      "cmd": "grep -n \"why-now\\|口径 A\" v3-output/WT806-V32MEMO/memo.md v3-output/WT806-V32MEMO/notes.md",
+      "exit_code": 0
+    },
+    {
+      "purpose": "验证既有权威：ActionPlan 词表与版本常量",
+      "cmd": "grep -n \"ACTION_PLAN_SCHEMA_VERSION\\|EVIDENCE_KINDS\\|USEFUL_STEP_REASONS\\|ACTION_SOURCE_REF_SCHEMES\" backend/app/core/action_plan.py",
+      "exit_code": 0,
+      "evidence": "action_plan.py:68 ACTION_PLAN_SCHEMA_VERSION=action_plan.v1; :76 EVIDENCE_KINDS(7); :90 USEFUL_STEP_REASONS(6); :103 ACTION_SOURCE_REF_SCHEMES(11 scheme)"
+    },
+    {
+      "purpose": "验证 5 错误码词表（卡验收#3 的'5种错误状态'）",
+      "cmd": "grep -n \"ACTION_ERROR_CODES\" -A 8 backend/app/core/action_command.py",
+      "exit_code": 0,
+      "evidence": "action_command.py:164 五值 VERSION_CONFLICT/UNAUTHORIZED/NOT_PENDING/EXPIRED/NOT_FOUND；TerminalReason.committed 为唯一落账态（:126）"
+    },
+    {
+      "purpose": "验证 Aurora 侧既有 why_now（缺口对照面）",
+      "cmd": "sed -n '40,80p' backend/app/signals/aurora_core_session.py && sed -n '200,215p' backend/app/orchestration/plan_quality_contract.py",
+      "exit_code": 0,
+      "evidence": "aurora_core_session.py:59 AuroraCoreSessionEntryReason.why_now；plan_quality_contract.py:211 SECTION_GOAL_FRAME.why_now——均不在 ActionPlan/task 级输出契约内（X-01 REPORT §6.7 自证）"
+    },
+    {
+      "purpose": "验证校准回执/纠正载荷/干预生命周期三写面权威",
+      "cmd": "sed -n '1,50p' backend/app/aurora/calibration_receipt.py; grep -n \"record_exposure\\|record_response\" backend/app/services/intervention_lifecycle_service.py; sed -n '1,80p' backend/app/aurora/correction_types.py",
+      "exit_code": 0,
+      "evidence": "aurora_calibration_receipt.v1 四动作封闭词表+surfacing 门；FIX-507 三写面=交付面 record_exposure/record_response+spine hook+6h associate 扫描（FIXED@8e503cd8 记录见 v4/00_context/LATEST_ISSUE_EXCERPTS.md）"
+    },
+    {
+      "purpose": "验证 RF-06 交接「理解条目」移动端消费面",
+      "cmd": "grep -n \"_understanding_claim_payload\" -A 20 backend/app/api/v1/experience_readouts.py; ls mobile/lib/features/task/presentation/widgets/why_this_today_panel.dart",
+      "exit_code": 0,
+      "evidence": "experience_readouts.py:90 claim/confidence/confidence_label/evidence_summary/scope/user_can_correct；why_this_today_panel.dart + priority_reasoning.dart 为任务级 why 渲染既有面"
+    },
+    {
+      "purpose": "示例 JSON 语法自测",
+      "cmd": "for f in examples/*.json; do python3 -m json.tool \"$f\" > /dev/null; done",
+      "exit_code": 0,
+      "evidence": "5/5 OK（context_selection_receipt / experience_event_committed / experience_event_error / episode_resume_view / counterexamples）"
+    }
+  ],
+  "scope_and_denominator": {
+    "deliverables": [
+      "v4/evidence/V4-B05/contract_receipt_min.md",
+      "v4/evidence/V4-B05/examples/*.json (5)",
+      "v4/evidence/V4-B05/run_manifest.json",
+      "v4/evidence/V4-B05/diff_or_evidence_only.md",
+      "v4/evidence/V4-B05/limitations.md",
+      "v4/04_tasks/tasks.json (V4-B05 状态更新)"
+    ],
+    "product_source_touched": 0,
+    "acceptance_mapping": {
+      "每字段有来源/版本/unknown语义": "contract_receipt_min.md §1 权威映射表 + §2/§3/§4/§5 字段表第四列",
+      "事件不能授予权限": "不变量 I1/E3 + 反例 experience_event_grants_permission",
+      "新旧客户端双读用例与proto生成入口明确": "§8（双读断言进 B06+ 实现卡测试清单；WS 面 proto/websocket.proto oneof 入口 + make proto-gen）",
+      "5种错误状态不混committed": "§6 五值 1:1 复用 ACTION_ERROR_CODES + E2 互斥不变量 + 反例 error_state_mixed_with_committed",
+      "跨对象ID误用拒绝": "不变量 I3/E4 + 反例 cross_object_subject"
+    }
+  },
+  "llm_usage": "无模型调用（纯 design 卡，只读代码勘察 + 文档产出）",
+  "ui_evidence": "无 UI 变更，无截图义务"
+}

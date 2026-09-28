@@ -1,0 +1,28 @@
+{
+  "schema_version": "episode_resume_view.v1",
+  "goal_ref": "goal://7a1c9e02-88b1-4d2e-b3c4-998877665544",
+  "task_ref": "task://3f2b9c1e-4d55-4a10-9e2a-112233445566",
+  "run_ref": null,
+  "last_valid_outcome": {
+    "outcome_ref": "outcome://outc_9d41c2aa77bb00ff1122",
+    "truth_class": "actual",
+    "recorded_at": "2026-09-27T21:04:00+08:00"
+  },
+  "last_confirmed_step": {
+    "step_ref": "subtask://st_5566aabb",
+    "description": "完成「示例→自己做→检查」计划中的自己做步",
+    "confirmed_at": "2026-09-27T21:04:00+08:00",
+    "version_token": "t_v231_9ab2"
+  },
+  "pending_human_step": {
+    "description": "独立完成 1 道同型题并通过自查清单",
+    "cognitive_ownership": "user_core",
+    "execution_mode": "hybrid"
+  },
+  "expires_at": "2026-09-30T09:00:00+08:00",
+  "freshness": {
+    "context_receipt_ref": "context_selection://csr_01JBG7V4B05EXAMPLE000000",
+    "computed_at": "2026-09-28T08:55:00+08:00",
+    "memory_epoch_at_compute": 42
+  }
+}

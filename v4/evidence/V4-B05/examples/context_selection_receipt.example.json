@@ -1,0 +1,59 @@
+{
+  "schema_version": "context_selection_receipt.v1",
+  "receipt_id": "csr_01JBG7V4B05EXAMPLE000000",
+  "selection_role": "proposal_basis",
+  "decision_id": "aurora_dec_8f3c2a91",
+  "input_versions": {
+    "memory_epoch": 42,
+    "goal_version": "g_v17_3c9f",
+    "task_version": "t_v231_9ab2",
+    "policy_version": "a05_policy.v3",
+    "selector_version": "context_selector.l2_semantic.v4.1.0"
+  },
+  "candidates": [
+    {
+      "ref": "memory://episodic/mem_71d0e2",
+      "status": "selected",
+      "reason_code": null,
+      "note": null
+    },
+    {
+      "ref": "task://3f2b9c1e-4d55-4a10-9e2a-112233445566",
+      "status": "selected",
+      "reason_code": null,
+      "note": null
+    },
+    {
+      "ref": "memory://episodic/mem_99c1aa",
+      "status": "rejected",
+      "reason_code": "stale_epoch",
+      "note": "epoch 38 < current 42"
+    },
+    {
+      "ref": "memory://semantic/mem_44b7ff",
+      "status": "rejected",
+      "reason_code": "utility_gate_rejected",
+      "note": "与当前 blocker 无预期决策贡献"
+    },
+    {
+      "ref": "document://file_2f81cd",
+      "status": "unavailable",
+      "reason_code": "permission_denied",
+      "note": null
+    }
+  ],
+  "budget": {
+    "candidate_scan_limit": 24,
+    "selected_max": 8,
+    "clarifications_used": 0
+  },
+  "why_now": {
+    "statement": "上次已确认原理理解，卡点在第一步怎么开始；现在距目标检查点还剩 2 天，先给一个相近示例可立刻降低启动阻力。",
+    "basis_refs": [
+      "memory://episodic/mem_71d0e2",
+      "task://3f2b9c1e-4d55-4a10-9e2a-112233445566"
+    ],
+    "expires_at": "2026-09-29T23:59:00+08:00",
+    "confidence_band": "medium"
+  }
+}
