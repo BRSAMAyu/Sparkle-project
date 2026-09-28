@@ -1,0 +1,57 @@
+{
+  "task": "V4-I07",
+  "title": "学习/交付目标的人机权限与脚手架",
+  "kind": "implementation",
+  "risk": "high",
+  "required_independent_reviewers": 2,
+  "status_at_delivery": "REVIEW_READY",
+  "evidence_verdict": "NOT_RUN",
+  "branch": "agent/v4/i07",
+  "worktree": "wtI07",
+  "base_commit": "1063abb3",
+  "delivered_by": "V4-I07 实现会话（wtI07）",
+  "review_state": {
+    "r1": "PENDING（未做）",
+    "r2": "PENDING（未做）",
+    "note": "自称完成不算完成；双审通过前 evidence_verdict 保持 NOT_RUN。审查 receipt 落 review_r1.md / review_r2.md 后由销账卡更新本文件。"
+  },
+  "review_challenge_preregistration": [
+    {
+      "id": "C1",
+      "claim": "结算门覆盖完整性：仓库内「完成→人类掌握」写面只有 sprint pack 一处",
+      "challenge": "全仓 grep update_node_mastery / mastery 写点，找 agent 可触发的第二掌握结算路径（spark_node 活动面是否构成「冒充掌握」的呈现面）"
+    },
+    {
+      "id": "C2",
+      "claim": "legacy 行推导与 X-02 学习守卫同集不漂移",
+      "challenge": "独立核对 derive_goal_purpose 的 LEARNING/TRAINING/REFLECTION 集与 action_allocation_policy.LEARNING_TASK_TYPES 逐成员相等（测试钉死）；ERROR_FIX 归 mixed 是否合理"
+    },
+    {
+      "id": "C3",
+      "claim": "deliverable 解除 task_type 启发式不构成反学习后门",
+      "challenge": "构造声明 deliverable + learning_goal=True / user_core / human_required 各组合，验证守卫仍生效；显式声明 vs 系统推断的授权边界（谁能写 goal_purpose=deliverable）"
+    },
+    {
+      "id": "C4",
+      "claim": "独立检验答案红化面的覆盖与绕过",
+      "challenge": "找 chat 之外的 guide_json 模型可见入口（state_aggregator/gRPC/tools/entity_cards 等）验证无答案直通；构造嵌套/别名答案键攻击 INDEPENDENT_CHECK_ANSWER_KEYS 封闭集"
+    },
+    {
+      "id": "C5",
+      "claim": "脚手架转移表与「不把用户降级」",
+      "challenge": "逐条核对冻结转移表与 EXPERIENCE_AND_LEARNING 渐隐语义（失败→支持回升、阶段不回退、只在用户选择且证据支持时推进）；找脏状态/边界输入使转移越权"
+    },
+    {
+      "id": "C6",
+      "claim": "不另起第二权限真源",
+      "challenge": "核对 GOAL_PURPOSES 只在 core/hybrid_policy 定义、X-02 import 消费；ExecutionMode/CognitiveOwnership 未被复制；guide_json 策略块与 X-01 契约列无语义冲突（同为 human/agent 语义时谁优先）"
+    }
+  ],
+  "artifacts": {
+    "diff_or_evidence_only": "v4/evidence/V4-I07/diff_or_evidence_only.md",
+    "run_manifest": "v4/evidence/V4-I07/run_manifest.json",
+    "test_results": "v4/evidence/V4-I07/test_results.json",
+    "limitations": "v4/evidence/V4-I07/limitations.md",
+    "red_evidence": "stash 回退 service 接线 → test_complete_by_agent_does_not_settle_sprint_mastery 红；复绿确认"
+  }
+}

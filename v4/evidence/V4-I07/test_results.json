@@ -1,0 +1,118 @@
+{
+  "task": "V4-I07",
+  "captured_at": "2026-09-28",
+  "python": "3.11.15",
+  "env": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite://",
+  "summary": {
+    "new_tests": 29,
+    "new_tests_file": "backend/tests/unit/test_hybrid_policy.py",
+    "red_evidence": "回退 service 接线（git stash task_service.py+chat.py）单跑新增面：test_complete_by_agent_does_not_settle_sprint_mastery 1 failed（旧代码对 agent 完成照常触发掌握写面）→ 复原后全绿；核心模块在 base 1063abb3 不存在（ModuleNotFoundError 形态真红），I03 同口径",
+    "regression_suites_run": 7,
+    "regression_all_green": true,
+    "quality_gates": {
+      "ruff": "pass（6 改动文件，0 errors）",
+      "black": "pass（line-length 120；task_service.py 无关行的 black 漂移已手工还原，diff 仅保留本卡增量）",
+      "mypy_changed_files": "30 errors in 30 files — 与 base 主检出同 3 文件基线逐项一致（action_allocation_policy.py 同一既有 arg-type 错，仅行号随插入漂移 713→781），零新增；新模块 hybrid_policy.py 零错误",
+      "mypy_ratchet": "30 / baseline 30（≤ baseline，零新增；全仓棘轮 55/77 口径下本卡 0 贡献）"
+    }
+  },
+  "suites": [
+    {
+      "purpose": "新增：学习/交付目的的人机权限与脚手架（验收①②③+脚手架链）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_hybrid_policy.py -q",
+      "exit_code": 0,
+      "result": "29 passed in 10.47s",
+      "coverage_map": {
+        "acceptance_1_agent_answer_cannot_settle_mastery": [
+          "test_agent_on_human_required_mastery_step_cannot_settle（反例核心）",
+          "test_agent_on_mastery_goal_step_cannot_settle_even_unmarked",
+          "test_legacy_learning_task_agent_completion_blocked_by_derivation（X-02 同集推导）",
+          "test_complete_by_agent_does_not_settle_sprint_mastery（TaskService.complete 集成：任务完成/outcome 照常，掌握写面零触发）"
+        ],
+        "acceptance_1_positive_control": [
+          "test_user_completion_settles_human_mastery",
+          "test_complete_by_user_still_settles_sprint_mastery（集成正例：不误伤）",
+          "test_focus_timer_counts_as_user_source"
+        ],
+        "acceptance_2_deliverable_legal_delegation": [
+          "test_deliverable_delegation_settles_normally",
+          "test_deliverable_declared_block_agent_completion_settles",
+          "test_deliverable_with_declared_human_required_still_blocked（反例）",
+          "test_x02_mastery_purpose_blocks_agent_deliverable_allows（分配面 agent 可行）"
+        ],
+        "acceptance_3_check_answer_isolated_from_context": [
+          "test_independent_check_answer_redacted_from_projection（题面保留/答案剥净/服务端本体不改写）",
+          "test_answer_keys_outside_check_marker_untouched（非标记节点不受影响）",
+          "test_flagged_subtree_answers_removed_recursively",
+          "test_independent_check_answer_keys_frozen"
+        ],
+        "scaffold_chain_and_fading": [
+          "test_scaffold_advance_requires_user_choice_and_evidence（两反例+渐隐）",
+          "test_scaffold_chain_example_to_attempt_to_check",
+          "test_scaffold_failure_adds_local_support_without_demotion（失败加支持不降级）",
+          "test_scaffold_independent_check_is_terminal",
+          "test_scaffold_rejects_dirty_state",
+          "test_scaffold_vocab_frozen_and_apply_roundtrip"
+        ],
+        "guards_and_anti_drift": [
+          "test_settlement_reasons_frozen_exact_set",
+          "test_settlement_rejects_dirty_enum_input",
+          "test_policy_block_parse_roundtrip_and_failclosed",
+          "test_derive_goal_purpose_matches_x02_learning_types（防漂移钉死）",
+          "test_resolve_step_purpose_rules",
+          "test_goal_purpose_vocab_reused_not_copied",
+          "test_x02_human_required_step_never_agent（G5）",
+          "test_x02_version_bumped_for_v12"
+        ]
+      }
+    },
+    {
+      "purpose": "X-02 分配面回归（含冻结词表 v1.2 重冻结）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_action_allocation_policy.py tests/unit/test_action_allocation_guard.py tests/unit/test_action_allocation_eval.py -q",
+      "exit_code": 0,
+      "result": "112 passed in 1.08s（4 个冻结测试按冻结协议刻意更新：+G5 code、sha256 c4fc…→e4c3…、版本 v1.1→v1.2）"
+    },
+    {
+      "purpose": "X-01 契约面 + I01 接续视图 + I03 选择器 + 任务服务回归",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_hybrid_policy.py tests/unit/test_action_allocation_policy.py tests/unit/test_action_allocation_guard.py tests/unit/test_action_allocation_eval.py tests/unit/test_action_plan_contract.py tests/unit/test_episode_resume_view_contract.py tests/unit/test_semantic_selector.py -q",
+      "exit_code": 0,
+      "result": "277 passed in 11.74s"
+    },
+    {
+      "purpose": "快路/迁移相邻面",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_deterministic_lane.py tests/unit/test_action_plan_migration_sqlite.py -q",
+      "exit_code": 0,
+      "result": "52 passed in 1.43s"
+    },
+    {
+      "purpose": "契约测试全量（B05/干预目录/aurora_decision/action_plan 等冻结面）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/contract -q",
+      "exit_code": 0,
+      "result": "352 passed in 13.24s"
+    },
+    {
+      "purpose": "journey(J06)/outcome(X08/D-02)/补桥/exam-sprint 复盘回归",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_j06_hybrid_journey.py tests/unit/test_error_replan_bridge.py tests/unit/test_exam_sprint_review_service.py tests/unit/test_action_command_service.py tests/unit/test_x08_outcome_capture.py tests/unit/test_outcome_ledger_contract.py tests/services/test_j08_goal_trajectory.py tests/services/test_x08_outcome_ledger_gj.py -q",
+      "exit_code": 0,
+      "result": "122 passed in 299.71s"
+    },
+    {
+      "purpose": "chat 注入面回归（chat.py 改动受影响面）+ galaxy 耦合/任务服务",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/api/test_chat_legacy_user_context.py tests/unit/test_v3_fix53_chat_stream_route_sse.py tests/unit/test_v3_fix57_tool_continuation_empty_retry.py tests/unit/test_v3_fix166_length_truncation_family.py -q",
+      "exit_code": 0,
+      "result": "21 passed in 22.38s",
+      "note": "galaxy 耦合/任务服务 161 passed 含于 277/前批组合运行（tests/unit/test_task_galaxy_coupling.py + tests/unit/test_task_service.py 于第一轮回归批）"
+    },
+    {
+      "purpose": "结算门改动后的任务服务+新面终批",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_hybrid_policy.py tests/unit/test_task_service.py -q",
+      "exit_code": 0,
+      "result": "45 passed in 14.88s"
+    }
+  ],
+  "not_run": {
+    "flutter_mobile": "本卡零 mobile 改动（移动端消费面归 UI 卡；卡面无 UI 交付要求）",
+    "real_model_calls": "本卡零 LLM 调用（纯规则策略层；无模型费用面）",
+    "integration_reverify_at_merge": "待独立审查通过后合并时按接力机制执行（action_plan/I01/I03 面必跑已在本卡预演全绿）"
+  }
+}

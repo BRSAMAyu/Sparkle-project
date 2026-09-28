@@ -36,7 +36,8 @@ from app.services.action_allocation_policy import (
 )
 
 # sha256 of "|".join(sorted(ALLOCATION_REASONS)) captured at X-02 freeze.
-_FROZEN_REASONS_SHA256 = "c4fc32a943f11718ac8e3d1b19d4734dbc623dfd821e5534df31f58a407f6ffd"
+# v1.2 重冻结（2026-09-28 V4-I07，hybrid-policy 锁）：+G5.human_required_step_no_agent。
+_FROZEN_REASONS_SHA256 = "e4c38d4de125ee27ef807d253012b2ee0f10793707c7e359116bcd1f7d164610"
 
 
 def F(**kw) -> AllocationFactors:
@@ -74,6 +75,7 @@ def test_reason_vocabulary_is_frozen_exact_set():
         "T2.agent_slower_or_costlier",
         "G1.learning_guard_no_agent",
         "G2.learning_evidence_user_authored",
+        "G5.human_required_step_no_agent",
         "S1.semantic_refined",
         "S2.semantic_outside_feasible_rejected",
         "E1.degraded_to_rule_default",
@@ -599,7 +601,7 @@ def test_build_allocation_event_metadata_shape():
     assert view.user_id == "11111111-1111-1111-1111-111111111111"
     assert view.correlation["task_id"] == f"{'1' * 8}-{'2' * 4}-{'3' * 4}-{'4' * 4}-{'5' * 12}"
     assert metadata["allocation_decision"]["mode"] == decision.mode
-    assert metadata["allocation_decision"]["schema_version"] == "allocation.v1.1"
+    assert metadata["allocation_decision"]["schema_version"] == "allocation.v1.2"
     assert metadata["decision_id"].startswith("alloc_")
 
 
@@ -607,7 +609,7 @@ def test_decision_record_dict_is_jsonable_and_complete():
     factors = F(cognitive_ownership="shared", tool_advantage="high")
     decision = decide_allocation(factors)
     record = decision.to_dict()
-    assert record["schema_version"] == "allocation.v1.1"
+    assert record["schema_version"] == "allocation.v1.2"
     assert set(record) == {
         "schema_version",
         "mode",
