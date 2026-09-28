@@ -1,7 +1,7 @@
 {
   "card": "V4-U05",
   "generated_at": "2026-09-29T02:45:00+08:00",
-  "scope_note": "计数口径：新增 29 测（capability_channel_visual 17 / galaxy_a11y_channel_suffix 3 / node_detail_capability_section 6 / u05_evidence 3）；回归面 = galaxy 全套+受影响 widget 链 192、顶层 widget 467、其余 GalaxyNodeModel 消费面（goal/knowledge/design）222、insights/journey 24。全部为真实命令真实退出码（run_manifest.json），无删断言凑绿。",
+  "scope_note": "计数口径：新增 30 测（capability_channel_visual 17 / galaxy_a11y_channel_suffix 3 / node_detail_capability_section 6 / u05_evidence 3 / galaxy_screen_sheet_wiring 1——末项为一审 R1-C1 整改补钉）；回归面 = galaxy 全套+受影响 widget 链 192、顶层 widget 467、其余 GalaxyNodeModel 消费面（goal/knowledge/design）222、insights/journey 24。全部为真实命令真实退出码（run_manifest.json），无删断言凑绿。",
   "new_tests": [
     {
       "file": "mobile/test/features/galaxy/unit/capability_channel_visual_test.dart",
@@ -49,6 +49,15 @@
         "verified 抽屉真实渲染+截图+语义 dump",
         "practiced 抽屉真实渲染+截图+语义 dump（绝无已掌握声称）"
       ]
+    },
+    {
+      "file": "mobile/test/features/galaxy/widget/galaxy_screen_sheet_wiring_test.dart",
+      "count": 1,
+      "added_by": "一审 R1-C1 整改（2026-09-28）",
+      "faces": [
+        "R1-C1 接线钉：真实 GalaxyScreen 泵 → 触发节点点开（Enter 与画布点按/读屏 tap 同链路）→ 断言抽屉的节点身份/通道徽章/溯源行/投影版本与该节点 GalaxyNodeModel 快照一致，unknown 降级面（证据通道未知/暂无来源记录/投影版本未知）绝不出现",
+        "对「绕过 _openNodeDetailSheet 直接开 sheet / 丢 capability+graphEventSources」类突变必红（自验见 mutation_injections.M3）"
+      ]
     }
   ],
   "regression_suites": [
@@ -90,15 +99,39 @@
     {
       "id": "M1",
       "mutation": "resolveGalaxyStarVisualStyle 的 !verified 分支旁路（练习星放行掌握档）",
-      "caught_by": "capability_channel_visual_test 6 失败",
+      "caught_by": "capability_channel_visual_test 7 失败",
+      "correction_r1_c2": "一审独立重放（`if (!verified) {` → `if (false) {`，+10 -7 亲跑）实为 7 失败，实现自述误记 6；还原后文件 sha256 恒等 ab92ae25…（与 run_manifest 登记一致）",
       "restored": "还原后文件 sha256 恒等（ab92ae25…）"
     },
     {
       "id": "M2",
-      "mutation": "_openNodeDetailSheet 不传 graphEventSources（同源断链）",
-      "caught_by": "node_detail_capability_section_test verified 溯源行 2 失败"
+      "mutation": "sheet 内 _historyBody 掐断 graphEventSources: 透传（同源断链，可复现形式）",
+      "caught_by": "node_detail_capability_section_test verified 溯源行正例 1 失败",
+      "correction_r1_c2": "实现自述的突变对（「_openNodeDetailSheet 不传 graphEventSources 被 node_detail_capability_section_test 2 失败捕获」）不可复现：该测试直构 NodeDetailSheet、不经过 galaxy_screen，按自述字面突变后仍 6/6 全绿（一审亲放）；可复现的突变是 sheet 内 _historyBody 掐断透传，捕获为 1 失败（非自述 2）",
+      "restored": "还原后全绿"
+    },
+    {
+      "id": "M3",
+      "mutation": "_openNodeDetailSheet 同源接线旁路（capability: null + graphEventSources: const []，绕过 wiring 直接开 sheet）",
+      "caught_by": "galaxy_screen_sheet_wiring_test 1 失败（R1-C1 新测，抽屉退化为 unknown 面致「独立检验通过」断言红）",
+      "note": "R1-C1 整改自验（2026-09-28）：突变后新测必红，还原后 galaxy_screen.dart sha256 恒等 0cc8b42b…；此突变类此前零测试可捕获（即 R1-C1 缺口本体）",
+      "restored": "还原后新测全绿，实现文件 sha256 恒等"
     }
   ],
+  "r1_rectification": {
+    "date": "2026-09-28",
+    "source": "一审 review_r1.md PASS_WITH_CHALLENGES（R1-C1/R1-C2）",
+    "actions": [
+      "R1-C1：补真实 GalaxyScreen 泵开节点详情抽屉的接线测试（galaxy_screen_sheet_wiring_test，+1）",
+      "R1-C2：本文件 M1/M2 突变记录订正如上；limitations.md #3 「不带 user_status」措辞订正；diff_or_evidence_only.md §5 同批订正"
+    ],
+    "verification": {
+      "galaxy_suite": "flutter test test/features/galaxy/ test/widget/galaxy_node_preview_card_test.dart test/widget/error_card_galaxy_echo_test.dart test/widget/h5_cross_system_chains_test.dart → +193 ~1 All tests passed（192 基线 + 1 接线钉；~1 为既有 skip）",
+      "wiring_test_alone": "+1 All tests passed",
+      "analyze": "flutter analyze --no-pub lib test → No issues found!"
+    },
+    "mutation_selfcheck": "M3 自验一次（红）后还原，实现主逻辑与一审 receipt 未动"
+  },
   "failures_encountered_and_resolved": [
     "h5 chain A 初跑失败（sheet 内容变长致点按视口外目标）→ ensureVisible 适配后全绿（断言强度不减）",
     "worktree 缺 gitignored 生成物（mobile/lib/gen、backend gen）致 analyze/BG 守卫红 → 自主检出复制（非手改生成物）后全绿"

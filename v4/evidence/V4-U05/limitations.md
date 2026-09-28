@@ -4,7 +4,7 @@
 
 2. **证据截图为 Ahem 方块字形**（F04/U03 同先例）：测试环境无 CJK 字体，PNG 中文案为方块；真实文案由同帧语义 dump 逐行承载（`u05_sheet_*_semantics.txt` 含「练习过 · 未独立检验」「不代表已掌握」「投影版本 v7」原文与坐标）。是否满足卡面「顶层截图+语义」按 F04 先例口径裁决。
 
-3. **gateway gRPC 形状图响应无通道数据**：proto `GalaxyNode`（node_id/label/mastery）不带 `user_status`，该路径节点 fail-closed 渲染为未检验（虚线环、封顶 SHINING 档）。这是诚实降级而非回归；通道字段的 gRPC 透传属契约变更（proto owner 单独合并），本卡红线禁触 proto。
+3. **gateway gRPC 形状图响应无通道数据**：proto `GalaxyNode` 的 `user_status` 存在（GRAPH-GRPC-SHAPE 已补过 `GalaxyNodeUserStatus`），但**不含 `mastery_evidence` / `projection_version` 子块**（一审 R1-C2 措辞订正：原写「不带 user_status」不准）——通道与投影版本在 gRPC 路径无数据来源，该路径节点 fail-closed 渲染为未检验（虚线环、封顶 SHINING 档），净行为与原表述一致。这是诚实降级而非回归；通道字段的 gRPC 透传属契约变更（proto owner 单独合并），本卡红线禁触 proto。
 
 4. **J-08 成果证据行（既有面）的 verified 图标未在本卡改**：`_OutcomeEvidenceRow`（J-08 已 DONE 面）以 `Icons.verified_outlined`+success 色呈现「成果证据 · N 条」。该行的语义是「有 outcome 溯源行」而非「独立检验通过」，视觉上有潜在的强解读空间；因属 V3 已 DONE 任务面（证据不可重置），本卡只登记不动，建议接续卡裁决是否换中性图标。
 

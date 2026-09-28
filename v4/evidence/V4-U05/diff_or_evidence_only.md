@@ -47,7 +47,8 @@
 - **不碰 .env/proto/迁移/生成文件**：`mobile/lib/gen`、`backend/app/gen` 为 gitignored 实体复制（自主检出复制，未入库、未手改）。
 - **`tool/openclaw_connection_smoke.dart` 既有 analyze 报错**：main 同样存在（开卡前既有），本卡零触碰。
 
-## 5. 突变注入（可失败性实证）
+## 5. 突变注入（可失败性实证；一审 R1-C2 订正版）
 
-- **M1 通道门旁路**（`resolveGalaxyStarVisualStyle` 中 `!verified` 分支改恒 false，即练习星放行掌握档）：`capability_channel_visual_test.dart` 6 失败（practiced 92 封顶钉 + 四态逐一钉 + 无数据 99 分钉）——还原后全绿。
-- **M2 同源断链**（`_openNodeDetailSheet` 不传 `graphEventSources`）：`node_detail_capability_section_test` verified 正例「独立测验/学习成果记录」行 2 失败（溯源行退化为「暂无来源记录」）——同源关系可失败。
+- **M1 通道门旁路**（`resolveGalaxyStarVisualStyle` 中 `!verified` 分支改恒 false，即练习星放行掌握档）：`capability_channel_visual_test.dart` **7 失败**（practiced 92 封顶钉 + 四态逐一钉 + 无数据 99 分钉；实现自述误记 6，一审独立重放 +10 -7 亲跑 7）——还原后 sha256 恒等（ab92ae25…）全绿。
+- **M2 同源断链**（可复现形式 = sheet 内 `_historyBody` 掐断 `graphEventSources:` 透传）：`node_detail_capability_section_test` verified 正例溯源行 **1 失败**——还原后全绿。（订正：实现自述的「`_openNodeDetailSheet` 不传 `graphEventSources` 被该测 2 失败捕获」不可复现——该测直构 sheet 不经过 galaxy_screen，字面突变后仍 6/6 全绿；screen→sheet 接线缺口由 R1-C1 整改补钉。）
+- **M3 screen→sheet 同源接线旁路**（R1-C1 整改自验，2026-09-28：`_openNodeDetailSheet` 传 `capability: null` + `graphEventSources: const []`）：`galaxy_screen_sheet_wiring_test` **1 失败**（抽屉退化为 unknown 面，「独立检验通过」断言红）——还原后 galaxy_screen.dart sha256 恒等（0cc8b42b…），新测全绿。此突变类在补钉前无任何测试可捕获（即 R1-C1 缺口本体）。
