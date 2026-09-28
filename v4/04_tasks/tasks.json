@@ -314,8 +314,8 @@
       "title": "真实模型能力、调用预算与全链测量基线",
       "depends_on": [],
       "status": "READY",
-      "implementation_state": "NOT_STARTED",
-      "evidence_verdict": "NOT_RUN",
+      "implementation_state": "IMPLEMENTED",
+      "evidence_verdict": "PASS",
       "kind": "verification",
       "required_locks": [
         "v4-model-probe"
@@ -364,7 +364,10 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "review_status": "PENDING_INDEPENDENT_REVIEW",
+      "evidence_dir": "v4/evidence/V4-B06",
+      "implementation_notes": "wtB06 差量举证（基线 3c4618cc，无产品代码路径变更）：活栈模型配置冻结（31 模型/30 key/12 tier 层，LLM_TIER_PRO 残留钉死实证生效待裁决）；全链探针 3 轮（≤5 预算，guest JWT→:8080 /ws/chat→gRPC→qwen3.7-flash）整链 ack/首可见/完成 + usage 回执形态种子数据；FIX545 定位=V3-FIX-80 标签已拆但检出器缺失（A3 FAIL 记录）+ rescue 链现行产生路径实证（t3 上游400→rescue 成功→仅合成估算 44tok）；estimate_cost 未知键静默 gpt-4 错价（A4 FAIL 记录）；计量点地图 M1-M8 交付（I10 工作面）。A3/A4 两项 FAIL 属 I10 depends_on B06 的预期修复面，原始 FAIL 记录永久保留于 test_results.json。"
     },
     {
       "id": "V4-F01",

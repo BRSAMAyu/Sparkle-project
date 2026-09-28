@@ -1,0 +1,71 @@
+{
+  "task": "V4-B06 真实模型能力、调用预算与全链测量基线",
+  "agent": "wtB06 (agent/v4/b06)",
+  "captured_at_utc": "2026-09-28T09:00:00Z/09:40:00Z",
+  "source": {
+    "worktree": "/Users/brsama/code/GitHub/wtB06",
+    "branch": "agent/v4/b06",
+    "base_sha": "3c4618cc1d23b79792e330f87114484434a410ed",
+    "running_stack_source": "/Users/brsama/code/GitHub/Sparkle-project @ 3c4618cc1d23b79792e330f87114484434a410ed (backend dirty files: v3-output/WT401-Q03-VISUAL/*.json 与未跟踪 zip/md，均与本卡无关、未进入探针路径)",
+    "code_changes_by_this_task": [
+      "scripts/devtools/probe_v4_b06_fullchain.py (新增探针工具)",
+      "v4/evidence/V4-B06/* (本目录)",
+      "v4/04_tasks/tasks.json (B06 状态更新)"
+    ]
+  },
+  "environment": {
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.11.15 (/Users/brsama/code/GitHub/Sparkle-project/backend/.venv)",
+    "httpx": "0.28.1",
+    "websockets": "16.0",
+    "live_stack": {
+      "engine_grpc": "127.0.0.1:50051 (PID 77460, grpc_server.py, cwd=Sparkle-project/backend)",
+      "engine_http": "127.0.0.1:8000",
+      "gateway": "127.0.0.1:8080 (PID 77602)",
+      "containers": ["sparkle_db healthy", "sparkle_redis healthy", "sparkle_minio healthy"]
+    },
+    "network": "本机回环 → 公网 provider (DashScope 北京 compatible-mode)",
+    "env_source": "backend/.env (live)，密钥零回显：见 env_redacted_snapshot.txt（21 项仅记 <REDACTED len=N>）"
+  },
+  "model_config_inventory": {
+    "llm_provider": "qwen",
+    "batch_llm_provider": "minimax",
+    "minimax_rpm_budget": 200,
+    "registered_models": 31,
+    "models_with_key": 30,
+    "tier_mapping_effective": "见 model_routing_frozen_snapshot.json",
+    "findings": [
+      "活栈 .env 末尾残留 LLM_TIER_PRO=dashscope_standard_thinking,glm_4_7_pro（实测覆盖生效，log: 'LLM tier override applied for pro'），与同文件『已移除全部 tier 钉死』注释矛盾 → PRO 层实际首位为 standard_thinking（降档），REASONING 层仍 dashscope_reason。属配置漂移，记录待裁决（本卡不改配置）。",
+      "GLM 全车道「保留待用」：glm-5.3-flash 统一挂 ZHIPU_* 各键，降级链各层末位。",
+      "MiniMax M3 仅 glm_batch 车道（key+开关双门控），不进主聊天能力层；RPM 预算 200。"
+    ]
+  },
+  "commands": [
+    {"cmd": "git worktree add ../wtB06 -b agent/v4/b06", "exit": 0},
+    {"cmd": "sed 脱敏导出 live .env → v4/evidence/V4-B06/env_redacted_snapshot.txt（KEY/SECRET/PASSWORD/凭据 TOKEN 仅留长度）", "exit": 0},
+    {"cmd": ".venv/bin/python 冻结 llm_router 注册表 → model_routing_frozen_snapshot.json", "exit": 0, "note": "log 证实 LLM_TIER_PRO env 覆盖生效"},
+    {"cmd": ".venv/bin/python scripts/devtools/probe_v4_b06_fullchain.py --out v4/evidence/V4-B06/probe --turns 3", "exit": 0},
+    {"cmd": "自测 A1-A4（resolve_metering_model_key / 检出器 grep / estimate_cost 未知价）", "exit": 0},
+    {"cmd": "grep 探针 trace 于 logs/grpc_server_2026-09-28_09-55-32_333353.log（[LATENCY] 3 行 + Token usage recorded 3 行 + T3 失败/rescue 链）", "exit": 0}
+  ],
+  "probe_budget": {
+    "card_cap": "<=5 真实模型调用（协调者授权；卡文未给更小值）",
+    "actual_model_bearing_turns": 3,
+    "actual_upstream_calls": ">=4 (t1 1 + t2 1 + t3 失败流式 1 + t3 rescue 非流式 1)",
+    "guest_login": "1 次（零模型调用）",
+    "stop_rule": "未超卡定预算即停；未重试烧预算"
+  },
+  "artifacts": [
+    "env_redacted_snapshot.txt",
+    "model_routing_frozen_snapshot.json",
+    "probe/probe_raw.json",
+    "hidden_llm_consumer_files.txt",
+    "metering_point_map.md",
+    "diff_or_evidence_only.md",
+    "test_results.json",
+    "review_receipt.json",
+    "limitations.md"
+  ],
+  "artifacts_sha256": "SEE sha256sums.txt (post-write)",
+  "secrets_handling": "JWT/所有 API key 零回显零入库；probe_raw.json 已检（0 处 eyJ/access_token/token= 模式）"
+}

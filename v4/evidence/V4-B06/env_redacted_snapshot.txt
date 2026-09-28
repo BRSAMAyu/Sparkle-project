@@ -1,0 +1,175 @@
+# Application Settings
+APP_NAME=Sparkle
+ENVIRONMENT=development
+DEBUG=True
+SECRET_KEY=<REDACTED len=64>
+
+# Database Settings (canonical)
+POSTGRES_HOST=sparkle_db
+POSTGRES_PORT=5432
+POSTGRES_DB=sparkle
+POSTGRES_USER=brsama
+POSTGRES_PASSWORD=<REDACTED len=9>
+DATABASE_URL=postgresql+asyncpg://<REDACTED_URLCREDS>@@127.0.0.1:5432/sparkle
+SPARKLE_DB_PORT=5432
+
+# Redis Settings
+REDIS_HOST=sparkle_redis
+REDIS_PORT=6379
+REDIS_PASSWORD=<REDACTED len=22>
+REDIS_URL=redis://<REDACTED_URLCREDS>@@127.0.0.1:6379/0
+
+# CORS Settings
+BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:8000"]
+
+# JWT Settings (Unified across Go Gateway and Python Backend)
+JWT_ISSUER=sparkle-gateway
+JWT_AUDIENCE=sparkle-app
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+ALGORITHM=HS256
+
+# LLM Service Configuration
+LLM_PROVIDER=qwen
+LLM_API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+LLM_API_KEY=<REDACTED len=35>
+LLM_MODEL_NAME=qwen3.8-flash
+LLM_REASON_MODEL_NAME=qwen3.8-flash
+
+# DeepSeek Configuration (v4 models)
+DEEPSEEK_API_KEY=<REDACTED len=35>
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_CHAT_MODEL=deepseek-flash
+DEEPSEEK_REASON_MODEL=deepseek-v4-pro
+
+# DashScope (Aliyun)
+DASHSCOPE_API_KEY=<REDACTED len=35>
+DASHSCOPE_BASE_HTTP_API_URL=https://dashscope.aliyuncs.com/api/v1
+DASHSCOPE_BASE_URL_COMPATIBLE=https://dashscope.aliyuncs.com/compatible-mode/v1
+# DASHSCOPE_*_MODEL 四项钉值已删（2026-09-22 QWEN-PLAN）：旧值全钉 qwen3.8-flash
+# 会抹平分层选型；代码默认即选型表 FAST=qwen3.7-flash / STANDARD=qwen3.8-flash /
+# PLUS=qwen3.7-plus / PRO=qwen3.7-plus(思考)。如需临时改档参照 .env.example。
+DASHSCOPE_TEMPERATURE=0.7
+DASHSCOPE_EMBEDDING_MODEL=qwen3.7-text-embedding-flash
+DASHSCOPE_RERANK_MODEL=qwen3-rerank
+
+# SiliconFlow Configuration
+SILICONFLOW_API_KEY=<REDACTED len=51>
+SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1
+SILICONFLOW_OCR_MODEL=deepseek-ai/DeepSeek-OCR
+SILICONFLOW_EMBEDDING_MODEL=Qwen/Qwen3-Embedding-4B
+SILICONFLOW_RERANK_MODEL=Qwen/Qwen3-Reranker-4B
+
+# Zhipu AI (GLM) Configuration
+# 2026-09-19 key 轮换 + 模型列表收敛：可用模型仅 glm-5.3 / glm-5.3-flash（本项目只用 flash）
+# 全部 chat 类 lane 统一 glm-5.3-flash；glm-ocr（版面解析）经实测仍存活故保留
+ZHIPU_API_KEY=<REDACTED len=49>
+ZHIPU_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+ZHIPU_CHAT_MODEL=glm-5.3-flash
+ZHIPU_TOOLS_MODEL=glm-5.3-flash
+ZHIPU_FLASH_MODEL=glm-5.3-flash
+GLM_4_7_FLASH_MODEL=glm-5.3-flash
+ZHIPU_AIR_MODEL=glm-5.3-flash
+ZHIPU_LIGHT_MODEL=glm-5.3-flash
+ZHIPU_MAX_MODEL=glm-5.3-flash
+ZHIPU_TOP_MODEL=glm-5.3-flash
+
+# MIMO Configuration (官网标准端点 - 用于 mimo-v2-flash)
+XIAOMI_MIMO_API_KEY=<REDACTED len=51>
+XIAOMI_MIMO_BASE_URL=https://api.xiaomimimo.com/v1
+XIAOMI_CHAT_MODEL=mimo-v2.6-flash
+
+# MIMO 编码套餐 (用于 mimo-v2-pro)
+XIAOMI_MIMO_TOKEN_PLAN_API_KEY=<REDACTED len=51>
+XIAOMI_MIMO_TOKEN_PLAN_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
+
+# MIMO Pro Configuration (标准 + 推理，支持联网搜索)
+XIAOMI_PRO_MODEL=MiMo-V2.5
+XIAOMI_PRO_TEMPERATURE=1.0
+XIAOMI_WEB_SEARCH_ENABLED=true
+
+# LLM Tier Routing —— 2026-09-22 QWEN-PLAN 合入后移除全部 tier 钉死：
+# 旧钉死（MAX=dashscope_reason 单条 / TOP=glm_5.1 单点 / FREE_FAST 单条无降级链）
+# 会覆盖代码默认链，破坏 Qwen 主力切换与 tier 内降级。代码默认即用户指令语义：
+# 主力=Qwen 分层、glm_batch=MiniMax M3 优先→Qwen batch、GLM 全保留可 env 回切。
+# （QWEN-PLAN/MO-M3 后如需临时钉死某层，参照 backend/.env.example 注释）
+
+# Embedding Service (双供应商配置)
+EMBEDDING_PROVIDER=dashscope
+EMBEDDING_MODEL=text-embedding-v4
+EMBEDDING_DIM=1024
+RERANK_PROVIDER=dashscope
+RERANK_MODEL=qwen3-rerank
+
+# STT (Speech to Text) Service
+STT_PROVIDER=bailian
+STT_ENHANCE_ENABLED=true
+
+# Xunfei (科大讯飞) STT Configuration
+XUNFEI_APP_ID=4e9a...<REDACTED_APPID>
+XUNFEI_API_KEY=<REDACTED len=32>
+XUNFEI_API_SECRET=<REDACTED len=32>
+XUNFEI_STT_DOMAIN=iat
+XUNFEI_STT_LANGUAGE=zh-CN
+XUNFEI_STT_SAMPLE_RATE=16000
+XUNFEI_STT_MAX_AUDIO_DURATION=60
+XUNFEI_STT_EOS_MS=6000
+
+# WebSocket Settings
+WS_ALLOW_QUERY_TOKEN=true
+
+# Internal API
+INTERNAL_API_KEY=<REDACTED len=16>
+GATEWAY_INTERNAL_URL=http://localhost:8080
+SPARKLE_GATEWAY_PORT=8080
+SPARKLE_API_PORT=8000
+SPARKLE_AGENT_PORT=50051
+SPARKLE_MINIO_API_PORT=9000
+SPARKLE_MINIO_CONSOLE_PORT=9001
+
+# gRPC Server
+GRPC_PORT=50051
+GRPC_ENABLE_REFLECTION=True
+
+# MinIO / JWT (required by docker-compose services)
+# MR-3 修复（2026-09-19）：与运行中容器 sparkle_minio 的实际 root 凭证对齐
+# （docker exec sparkle_minio env 可核验），并补上引擎 presign 真正读取的
+# MINIO_ACCESS_KEY / MINIO_SECRET_KEY——此前缺失导致预签名 PUT 必 403。
+MINIO_ROOT_USER=sparkle_minio
+MINIO_ROOT_PASSWORD=<REDACTED len=22>
+MINIO_ACCESS_KEY=<REDACTED len=13>
+MINIO_SECRET_KEY=<REDACTED len=22>
+JWT_SECRET=<REDACTED len=64>
+
+# OpenClaw Integration
+OPENCLAW_ENABLED=true
+OPENCLAW_GATEWAY_URL=http://127.0.0.1:18789
+OPENCLAW_AUTH_TOKEN=<REDACTED len=40>
+OPENCLAW_DEFAULT_AGENT_ID=main
+OPENCLAW_TRANSPORT=gateway_ws
+OPENCLAW_WS_URL=ws://127.0.0.1:18789
+OPENCLAW_WS_DEVICE_TOKEN=<REDACTED len=43>
+OPENCLAW_WS_DEVICE_IDENTITY_PATH=/Users/brsama/.openclaw/sparkle-backend/device.json
+OPENCLAW_WS_CLIENT_ID=Sparkle Backend
+
+# MiniMax（token plan 充值档 2026-09-24 实证：200/1.13s/standard tier；账户级 200 RPM / 10M TPM）
+MINIMAX_API_KEY=<REDACTED len=125>
+MINIMAX_BASE_URL=https://api.minimaxi.com/v1
+MINIMAX_CHAT_MODEL=MiniMax-M3
+# B 线车道切换（2026-09-22 令）：batch 类调用从 GLM 原链切 MiniMax M3（GLM 保留配置不启用）
+BATCH_LLM_PROVIDER=minimax
+# 充值档账户级 RPM（跨进程 Redis 60s 窗口，引擎+全部 celery worker 共享；0=禁用）
+MINIMAX_RPM_BUDGET=200
+# 语音（百炼，比赛主力）
+STT_BACKUP_PROVIDER=zhipu
+QWEN_ASR_MODEL=qwen3-asr-flash-realtime
+QWEN_ASR_LANGUAGE=zh
+TTS_PROVIDER=bailian
+QWEN_TTS_MODEL=qwen3-tts-instruct-flash
+QWEN_TTS_VOICE=Cherry
+LLM_TIER_PRO=dashscope_standard_thinking,glm_4_7_pro
+LOG_FILE_PATH=logs/engine_uvicorn.log
+LOG_ROTATION_MB=20
+LOG_RETENTION=10

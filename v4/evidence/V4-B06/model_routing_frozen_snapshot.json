@@ -1,0 +1,379 @@
+{
+ "captured_at_utc": "2026-09-28T09:22:52.306495+00:00",
+ "env_source": "/Users/brsama/code/GitHub/Sparkle-project/backend/.env (live stack)",
+ "llm_provider_setting": "qwen",
+ "batch_llm_provider": "minimax",
+ "minimax_rpm_budget": 200,
+ "llm_tier_pro_env": "dashscope_standard_thinking,glm_4_7_pro",
+ "llm_tier_glm_batch_env": "",
+ "free_tier_ceiling": "",
+ "registered_models": {
+  "mimo_pro": {
+   "provider": "xiaomi",
+   "model_name": "MiMo-V2.5",
+   "tier": "max",
+   "cost_per_1k_tokens": 0.002,
+   "avg_latency_ms": 1500,
+   "thinking_mode": "enabled",
+   "has_api_key": true,
+   "base_url": "https://token-plan-cn.xiaomimimo.com/v1"
+  },
+  "deepseek_fast": {
+   "provider": "deepseek",
+   "model_name": "deepseek-flash",
+   "tier": "fast",
+   "cost_per_1k_tokens": 0.0002,
+   "avg_latency_ms": 200,
+   "thinking_mode": "disabled",
+   "has_api_key": true,
+   "base_url": "https://api.deepseek.com"
+  },
+  "deepseek_chat": {
+   "provider": "deepseek",
+   "model_name": "deepseek-flash",
+   "tier": "standard",
+   "cost_per_1k_tokens": 0.0004,
+   "avg_latency_ms": 500,
+   "thinking_mode": "enabled",
+   "has_api_key": true,
+   "base_url": "https://api.deepseek.com"
+  },
+  "deepseek_reason": {
+   "provider": "deepseek",
+   "model_name": "deepseek-v4-pro",
+   "tier": "max",
+   "cost_per_1k_tokens": 0.008,
+   "avg_latency_ms": 2500,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://api.deepseek.com"
+  },
+  "glm_4_7_no_thinking": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "glm_batch",
+   "cost_per_1k_tokens": 0.001,
+   "avg_latency_ms": 400,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/coding/paas/v4"
+  },
+  "glm_4_7_thinking": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "glm_batch",
+   "cost_per_1k_tokens": 0.002,
+   "avg_latency_ms": 2000,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/coding/paas/v4"
+  },
+  "glm_4_5_air_batch": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "glm_batch",
+   "cost_per_1k_tokens": 0.0004,
+   "avg_latency_ms": 250,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/coding/paas/v4"
+  },
+  "glm_4_6_batch": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "glm_batch",
+   "cost_per_1k_tokens": 0.0006,
+   "avg_latency_ms": 300,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/coding/paas/v4"
+  },
+  "glm_4_7_flash_no_thinking": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "fast",
+   "cost_per_1k_tokens": 0.0001,
+   "avg_latency_ms": 200,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/paas/v4"
+  },
+  "glm_4_7_flash_thinking": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "free_fast",
+   "cost_per_1k_tokens": 0.0005,
+   "avg_latency_ms": 1200,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/paas/v4"
+  },
+  "glm_4_5_air_free": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "free_fast",
+   "cost_per_1k_tokens": 0.0002,
+   "avg_latency_ms": 220,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/coding/paas/v4"
+  },
+  "glm_5_max": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "max",
+   "cost_per_1k_tokens": 0.004,
+   "avg_latency_ms": 2500,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/coding/paas/v4"
+  },
+  "glm_4_7_plus": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "plus",
+   "cost_per_1k_tokens": 0.0008,
+   "avg_latency_ms": 600,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/coding/paas/v4"
+  },
+  "glm_4_7_pro": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "pro",
+   "cost_per_1k_tokens": 0.002,
+   "avg_latency_ms": 2000,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/coding/paas/v4"
+  },
+  "glm_5_1_top": {
+   "provider": "zhipu",
+   "model_name": "glm-5.3-flash",
+   "tier": "top",
+   "cost_per_1k_tokens": 0.008,
+   "avg_latency_ms": 4000,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/coding/paas/v4"
+  },
+  "siliconflow_free": {
+   "provider": "siliconflow",
+   "model_name": "Qwen/Qwen3.5-4B",
+   "tier": "free",
+   "cost_per_1k_tokens": 0.0,
+   "avg_latency_ms": 300,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://api.siliconflow.cn/v1"
+  },
+  "dashscope_fast": {
+   "provider": "dashscope",
+   "model_name": "qwen3.7-flash",
+   "tier": "fast",
+   "cost_per_1k_tokens": 0.0001,
+   "avg_latency_ms": 150,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  },
+  "dashscope_standard_thinking": {
+   "provider": "dashscope",
+   "model_name": "qwen3.8-flash",
+   "tier": "standard",
+   "cost_per_1k_tokens": 0.00025,
+   "avg_latency_ms": 260,
+   "thinking_mode": "enabled",
+   "has_api_key": true,
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  },
+  "dashscope_chat": {
+   "provider": "dashscope",
+   "model_name": "qwen3.7-plus",
+   "tier": "plus",
+   "cost_per_1k_tokens": 0.0003,
+   "avg_latency_ms": 500,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  },
+  "dashscope_reason": {
+   "provider": "dashscope",
+   "model_name": "qwen3.7-plus",
+   "tier": "pro",
+   "cost_per_1k_tokens": 0.0012,
+   "avg_latency_ms": 2000,
+   "thinking_mode": "enabled",
+   "has_api_key": true,
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  },
+  "qwen3_8_max": {
+   "provider": "dashscope",
+   "model_name": "qwen3.8-max",
+   "tier": "max",
+   "cost_per_1k_tokens": 0.0034,
+   "avg_latency_ms": 2500,
+   "thinking_mode": "enabled",
+   "has_api_key": true,
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  },
+  "qwen3_8_max_top": {
+   "provider": "dashscope",
+   "model_name": "qwen3.8-max",
+   "tier": "top",
+   "cost_per_1k_tokens": 0.0034,
+   "avg_latency_ms": 3500,
+   "thinking_mode": "enabled",
+   "has_api_key": true,
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  },
+  "zhipu_ocr": {
+   "provider": "zhipu",
+   "model_name": "glm-ocr",
+   "tier": "specialist",
+   "cost_per_1k_tokens": 0.001,
+   "avg_latency_ms": 2000,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://open.bigmodel.cn/api/paas/v4"
+  },
+  "siliconflow_ocr": {
+   "provider": "siliconflow",
+   "model_name": "deepseek-ai/DeepSeek-OCR",
+   "tier": "specialist",
+   "cost_per_1k_tokens": 0.001,
+   "avg_latency_ms": 2000,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://api.siliconflow.cn/v1"
+  },
+  "hunyuan_translate": {
+   "provider": "hunyuan",
+   "model_name": "tencent/Hunyuan-MT-7B",
+   "tier": "specialist",
+   "cost_per_1k_tokens": 0.0005,
+   "avg_latency_ms": 1000,
+   "thinking_mode": null,
+   "has_api_key": false,
+   "base_url": "https://api.siliconflow.cn/v1"
+  },
+  "siliconflow_translate": {
+   "provider": "siliconflow",
+   "model_name": "tencent/Hunyuan-MT-7B",
+   "tier": "specialist",
+   "cost_per_1k_tokens": 0.0005,
+   "avg_latency_ms": 1000,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://api.siliconflow.cn/v1"
+  },
+  "default": {
+   "provider": "deepseek",
+   "model_name": "deepseek-flash",
+   "tier": "standard",
+   "cost_per_1k_tokens": 0.001,
+   "avg_latency_ms": 500,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://api.deepseek.com"
+  },
+  "xiaomi_chat": {
+   "provider": "xiaomi",
+   "model_name": "mimo-v2.6-flash",
+   "tier": "fast",
+   "cost_per_1k_tokens": 0.0001,
+   "avg_latency_ms": 200,
+   "thinking_mode": "disabled",
+   "has_api_key": true,
+   "base_url": "https://api.xiaomimimo.com/v1"
+  },
+  "xiaomi_standard_thinking": {
+   "provider": "xiaomi",
+   "model_name": "mimo-v2.6-flash",
+   "tier": "standard",
+   "cost_per_1k_tokens": 0.0002,
+   "avg_latency_ms": 350,
+   "thinking_mode": "enabled",
+   "has_api_key": true,
+   "base_url": "https://api.xiaomimimo.com/v1"
+  },
+  "minimax_m3_batch": {
+   "provider": "minimax",
+   "model_name": "MiniMax-M3",
+   "tier": "glm_batch",
+   "cost_per_1k_tokens": 0.0,
+   "avg_latency_ms": 2500,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://api.minimaxi.com/v1"
+  },
+  "qwen3_7_flash_batch": {
+   "provider": "dashscope",
+   "model_name": "qwen3.7-flash",
+   "tier": "glm_batch",
+   "cost_per_1k_tokens": 0.0001,
+   "avg_latency_ms": 300,
+   "thinking_mode": null,
+   "has_api_key": true,
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  }
+ },
+ "tier_mapping_effective": {
+  "free": [
+   "siliconflow_free"
+  ],
+  "free_fast": [
+   "dashscope_fast",
+   "siliconflow_free",
+   "glm_4_7_flash_thinking",
+   "glm_4_5_air_free"
+  ],
+  "free_reasoning": [
+   "glm_4_7_flash_thinking",
+   "glm_4_5_air_free"
+  ],
+  "fast": [
+   "dashscope_fast",
+   "deepseek_fast",
+   "xiaomi_chat",
+   "glm_4_7_flash_no_thinking"
+  ],
+  "standard": [
+   "dashscope_standard_thinking",
+   "deepseek_chat",
+   "xiaomi_standard_thinking"
+  ],
+  "plus": [
+   "dashscope_chat",
+   "glm_4_7_plus"
+  ],
+  "pro": [
+   "dashscope_standard_thinking",
+   "glm_4_7_pro"
+  ],
+  "reasoning": [
+   "dashscope_reason",
+   "glm_4_7_pro"
+  ],
+  "max": [
+   "qwen3_8_max",
+   "deepseek_reason",
+   "glm_5_max"
+  ],
+  "top": [
+   "qwen3_8_max_top",
+   "glm_5_1_top"
+  ],
+  "glm_batch": [
+   "minimax_m3_batch",
+   "qwen3_7_flash_batch"
+  ],
+  "specialist": [
+   "zhipu_ocr",
+   "siliconflow_ocr",
+   "hunyuan_translate",
+   "siliconflow_translate"
+  ]
+ }
+}

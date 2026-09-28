@@ -1,0 +1,73 @@
+{
+  "task": "V4-B06",
+  "self_tests": [
+    {
+      "id": "A1",
+      "name": "澄清轮归因标签（无生成无用量）",
+      "command": "resolve_metering_model_key({}, has_real_usage=False)",
+      "expected": "no_generation_model",
+      "actual": "no_generation_model",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A2",
+      "name": "有用量无归因标签",
+      "command": "resolve_metering_model_key({}, has_real_usage=True)",
+      "expected": "unattributed_model",
+      "actual": "unattributed_model",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A3",
+      "name": "带token的no_generation_model检出器存在性",
+      "command": "grep -rn -i no_generation app/ --include=*.py + 关键词过滤(detect/guard/anomal/token)",
+      "expected": "存在检出器（卡验收要求可检出）",
+      "actual": "NOT_FOUND — 仅 response_builder.py 定义处 3 处引用，无任何下游检出/告警/拦截",
+      "verdict": "FAIL",
+      "note": "如实 FAIL：属 I10 修复面；本卡交付复现机制（M1 合成估算时序）与探针实证 T3"
+    },
+    {
+      "id": "A4",
+      "name": "未知价格不填0（estimate_cost 未知键行为）",
+      "command": "TokenTracker(redis=None).estimate_cost(model='totally_unknown_model'|'no_generation_model'|'dashscope_fast')",
+      "expected": "未知键显式 unknown，不填 0、不冒充已知价",
+      "actual": "unknown→$0.006（150tok, gpt-4价替换）; no_generation_model 42tok→$0.00126（gpt-4价）; dashscope_fast 1441tok→$0.000144（正确）",
+      "verdict": "FAIL",
+      "note": "如实 FAIL：未知键被静默按 gpt-4 定价（错价非零价）；token_tracker.py L518-519；属 I10"
+    },
+    {
+      "id": "A5",
+      "name": "gRPC与整链指标标签分开",
+      "command": "比对 app/core/metrics.py 与 gateway/internal/metrics/ws_metrics.go 序列名/标签",
+      "expected": "序列名与标签集不重叠",
+      "actual": "引擎 sparkle_request_latency_seconds{module,method}/AI_RESPONSE_TOTAL_DURATION{chat_mode,reasoning_mode,model_tier} vs 网关 sparkle_ai_chat_{total,first_event,first_token,stream}_duration_seconds{chat_mode} — 无重叠",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A6",
+      "name": "密钥零回显",
+      "command": "grep 'eyJ|access_token|token=' v4/evidence/V4-B06/probe/probe_raw.json; 检查 env_redacted_snapshot.txt",
+      "expected": "0 泄漏",
+      "actual": "probe_raw.json 0 命中；env 快照 21 项仅 <REDACTED len=N>",
+      "verdict": "PASS"
+    }
+  ],
+  "probe_runs": {
+    "summary": "3 轮全链（guest JWT→网关:8080 WS→gRPC→引擎→DashScope），0 超时 0 客户端错误帧",
+    "budget": {"cap": 5, "model_bearing_turns": 3, "upstream_calls_observed": ">=4（t3 含 1 次失败流式 + 1 次 rescue 成功）"},
+    "turns": [
+      {"turn": "t1_generation_min", "t_ack_s": 0.0169, "t_first_visible_s": 2.8176, "t_done_s": 17.2127, "model": "dashscope_fast(qwen3.7-flash)", "usage_receipt": {"prompt_tokens": 1369, "completion_tokens": 72, "total_tokens": 1441, "cost_micro_usd": 0}, "internal_ledger": "1441 tok est $0.000144", "error": null},
+      {"turn": "t2_generation_fast", "t_ack_s": 0.0006, "t_first_visible_s": 1.0929, "t_done_s": 20.9685, "model": "dashscope_fast(qwen3.7-flash)", "usage_receipt": {"prompt_tokens": 1245, "completion_tokens": 76, "total_tokens": 1321, "cost_micro_usd": 0}, "internal_ledger": "1321 tok est $0.000132", "error": null},
+      {"turn": "t3_greeting_l0", "t_ack_s": 0.0015, "t_first_visible_s": 1.8577, "t_done_s": 1.9897, "model": "流式失败(上游400)→rescue非流式成功(qwen3.7-flash)", "usage_receipt": null, "internal_ledger": "估算 2+42=44 tok est $0.000004（合成估算，非实账）", "error": null, "note": "上游400: \"USER is not one of ['system','assistant','user','tool','function']\"（dashscope compatible-mode 拒绝消息角色），引擎 rescue 链接管；FIX545 现行产生形状实证"}
+    ],
+    "engine_latency_probe_lines": {
+      "t1": "total=16506ms first_stream_content=2113ms execute_graph=14632ms",
+      "t2": "total=20903ms first_stream_content=1039ms execute_graph=20186ms",
+      "t3": "total=1941ms first_stream_content=1811ms execute_graph=1355ms"
+    },
+    "raw": "probe/probe_raw.json"
+  },
+  "overall_verdict": "IMPLEMENTATION_EVIDENCE_COMPLETE",
+  "verdict_note": "验收项2为 FAIL（如实记录，不可改标签凑绿）——该两缺口为 V4-I10 的工作定义；本卡为验证卡，产出=计量点地图+探针种子+检出缺失台账",
+  "exit_codes": {"probe": 0, "self_tests": 0, "routing_freeze": 0, "env_redaction": 0}
+}

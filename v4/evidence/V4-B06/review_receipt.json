@@ -1,0 +1,19 @@
+{
+  "task": "V4-B06",
+  "review_model": "独立未参与会话审查（舰队验收模型）",
+  "status": "PENDING_INDEPENDENT_REVIEW",
+  "self_review_by": "wtB06 (agent/v4/b06)",
+  "self_review_checks": [
+    {"check": "密钥零回显零入库", "result": "PASS", "method": "模式扫描 eyJ/access_token/token= 0 命中；env 快照 21 项仅长度"},
+    {"check": "调用预算未超卡定（≤5）", "result": "PASS", "method": "3 轮 + guest 登录（零模型）；无重试烧预算"},
+    {"check": "FAIL 如实记录不改标签", "result": "PASS", "method": "验收项2 FAIL 记入 test_results.json（A3 检出缺失 / A4 错价）"},
+    {"check": "无产品代码路径变更", "result": "PASS", "method": "diff 仅 scripts/devtools 新探针 + v4 证据 + tasks.json 状态"},
+    {"check": "不重建V3/S05/S06证据", "result": "PASS", "method": "仅新增整链口径种子数据，未重置旧证"}
+  ],
+  "independent_reviewer_assignment": "由协调者在集成时指派未参与会话；复验基线 = 本分支集成 SHA",
+  "reviewer_checklist_hint": [
+    "复跑 probe（注意预算：复跑会再烧真实调用，建议只抽查 probe_raw.json 与引擎日志行）",
+    "复核 test_results.json A3/A4 FAIL 是否与 I10 范围一致",
+    "复核 metering_point_map.md 行号引用与集成 SHA 源码一致"
+  ]
+}
