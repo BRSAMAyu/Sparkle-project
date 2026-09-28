@@ -28,5 +28,13 @@
     "CH-4 muted 单向升级（cooldown 可被静音覆写、静音不被冷却降级）与一次 effect 不叠加的并存语义",
     "CH-5 mutation 演示的复原完整性：M1-M3 均以 sha256/17 passed 复原收口，请复核还原后 unified_budget.py 与 commit d0bd8d45 一致"
   ],
-  "notes": "依赖 I01/D02/I04 已全合并；锁 proactive-policy 按本卡独占使用；tasks.json 已推进 in_progress → REVIEW_READY；不 push（本地银行领先 origin）"
+  "notes": "依赖 I01/D02/I04 已全合并；锁 proactive-policy 按本卡独占使用；tasks.json 已推进 in_progress → REVIEW_READY；不 push（本地银行领先 origin）",
+  "review_verdict": "APPROVE_WITH_CONDITIONS（2026-09-29，wtP01R1；全文见 review_r1.md）",
+  "remediation": {
+    "status": "CONDITIONS_CLOSED",
+    "commit": "4d80c4c5",
+    "commit_message": "fix(v4): P01 一审 C-1 spine→nudge 抑制接线+C-2a/b 文档",
+    "scope": "C-1 spine 放行路径 subject 键直落 Notification.data + 提取面读预算信封（端到端双向矩阵 tests/api/test_p01_cross_channel_suppression_e2e.py，mutation 3 failed→还原绿）；C-2a rollback 全关紧急开关口径五处同步；C-2b 基线 242→1202 勘误；详见 review_r1.md 整改注记",
+    "regression": "原 11 文件集 1219 passed 零失败；含新文件 1221 passed；mypy 33/31 零新增；ruff/black 过（零新增漂移）；OpenAPI 3 passed 零漂移"
+  }
 }

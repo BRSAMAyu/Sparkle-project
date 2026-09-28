@@ -73,3 +73,13 @@
 - **记录项（不阻塞）**：R1) F2 scan 路径抑制面旁路口径随卡片交接；R2) CH-2/CH-3 裁决与 quiet 直钉缺口留档；R3) FIX-48 仍 OPEN（limitations#3 如实，属语义裁决非本卡）。
 
 审查探针文件已删除；本 receipt 为审查会话唯一新增物。未 push、未动实现提交。
+
+---
+
+## 整改注记（2026-09-29，wtP01 整改会话追加；上文审查内容零改动）
+
+- **整改 commit**：`4d80c4c5`（agent/v4/p01，`fix(v4): P01 一审 C-1 spine→nudge 抑制接线+C-2a/b 文档`；实现主逻辑仅动 C-1 修复面，本 receipt 原文零改动）。
+- **C-1 闭环（F1）**：生产者侧 `recall_notification_task` 放行路径把上下文 subject 键（plan_id/task_id/goal_id）直落 `Notification.data`（gate/envelope/data 三处同源自 `subject_refs_from_payload(parsed_context)`）+ 提取面 `subject_refs_from_payload` 兼读预算信封 `proactive_budget.subject`（顶层键后读优先；损坏形状不炸）——两半场互为双保险，各配独立钉（wiring 测试 spine data 键钉 / 闸门测试信封提取钉）。F1 指出的「反向半场合成载荷跳过 API→提取→写库」由新端到端 `backend/tests/api/test_p01_cross_channel_suppression_e2e.py` 闭合：真实任务产形（任务体外呼 mock）→ 真实 `NotificationService.create` 落库 → 真实 `record_suggestion_action` handler → 提取 → P-03 写库读回 → 统一闸门判定，双向矩阵（spine 静音→同 plan nudge 拦 `cross_channel_suppressed`；nudge 拒绝→同 subject spine 拦）全绿；摘 C-1 修复突变 3 failed（方向一端到端 + 两半场钉）→ 还原 19 passed。
+- **C-2a 闭环**：rollback 口径改为「全关紧急开关：off 时 nudge 渠道既有 P-03/P-06 检查一并失效」——config.py 旋钮注释 / unified_budget.py docstring 与步骤 0 注释 / limitations#10 / diff_or_evidence_only.md / `test_knob_off_passthrough` docstring 五处同步。
+- **C-2b 闭环**：run_manifest.json / test_results.json / diff_or_evidence_only.md 三份证据文件「基线 242」→ 同集 1202（1219=1202+17）订正，勘误注记留痕。
+- **整改验收证据**：原 11 文件集复跑 1219 passed 零失败（184.55s）；含新端到端文件 1221 passed；mypy 六入口 33/31 与一审基线同数（棘轮 ≤77 未触）；ruff 全过、black 零新增漂移（celery_tasks 14 hunks 为 base 既有同 hunk 集）；OpenAPI 契约 3 passed 零漂移（data 面非路由面）；CH-1 scan 路径抑制面缺口维持 limitations#1 如实登记不扩面（R1 记录项保持）。
