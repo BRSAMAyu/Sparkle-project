@@ -2,8 +2,8 @@
   "task": "V4-U11",
   "risk": "high",
   "independent_reviewers_required": 2,
-  "status": "NOT_RUN",
-  "note": "实现自评不替代独立审查。本卡按高风险卡预登记 5 条审查挑战点（R1-C1..C5），供 R1/R2 优先证伪。",
+  "status": "REVIEWED_R2",
+  "note": "本文件由 R2 独立审查会话覆写回填：R1/R2 两份独立审查均 APPROVE，高风险卡双审齐备。全文裁决与可复现锚见同目录 review_r1.md / review_r2.md。",
   "pre_registered_challenges": [
     {
       "id": "R1-C1",
@@ -29,6 +29,45 @@
       "id": "R1-C5",
       "point": "验收2『sprint排序不混量纲』移动端只钉了模型词表，服务端排序被绕过怎么办？",
       "expected_answer": "排序唯一真源在后端 SquadBoardService._sort_key（completion/ledger/user_id 定序），AST 断言（导入扫描）+ 行为断言（零光子零榜分）为既有 D-COMM-4 真源测试（本卡回归 60 绿内含）；移动端是无排序只读渲染（rank 如实显示不重排），模型词表钉+注入丢弃钉补的是渲染面。三层合起来覆盖卡面；审查可变异：在 _sort_key 注入 xp 排序键必须红（既有 AST/行为断言职责）。"
+    }
+  ],
+  "independent_reviews": [
+    {
+      "round": "R1",
+      "reviewer": "wtU11R1（独立会话，未参与实现）",
+      "reviewed_sha": "ecda5a5d（agent/v4/u11；基线 dd74bae9）",
+      "verdict": "APPROVE",
+      "review_date": "2026-09-28",
+      "receipt": "v4/evidence/V4-U11/review_r1.md",
+      "commit": "9710fe93",
+      "challenges_rulings": "R1-C1..C5 全部『实现成立』（授权面服务端真源+S16 404 复现；假 affordance 移除非回退；双账号 DB 级实证+软删时间线自洽；多实例机制锚 websocket.py:345+S19/S20 重跑；量纲 mutation 注入恰 1 red）",
+      "non_blocking_errata": [
+        "arb 新键实数 6 非 7（manifest gen_note/limitations #4）；生成行数 80 非 83/106 口径混乱",
+        "f2608836 不过 N9 守卫、修正折叠在 1fcba073——最终代码态以 ecda5a5d 为准",
+        "权威卡库 PENDING 未同步（收口项）"
+      ]
+    },
+    {
+      "round": "R2",
+      "reviewer": "wtU11R2（独立会话，未参与实现与一审）",
+      "reviewed_sha": "ecda5a5d（agent/v4/u11 头，审查时含 9710fe93；基线 dd74bae9）",
+      "verdict": "APPROVE",
+      "review_date": "2026-09-28",
+      "receipt": "v4/evidence/V4-U11/review_r2.md",
+      "errata_recheck": "一审勘误 3/3 复核属实（6 键/80 行亲数；终态 N9 PASS 亲跑 + f2608836 红态 diff 亲验；卡库 PENDING 亲查）",
+      "key_verifications": [
+        "终态亲跑全绿：新测 14 + 移动端社区 100 + 后端社区 60 + S05/WS 33 + N9 棘轮 PASS（258/260）",
+        "隐私红线：原跑 B 账号真实登录拉 /shared-errors，11 禁词零命中，item=19 键白名单，content jsonb ?| 三禁键=f/f",
+        "量纲 mutation 复放：_sort_key 注入 photon → test_leaderboard_sorting_ties_percentile_and_pagination 1 failed，验后还原树 clean",
+        "原始记录 DB 抽核 4/4 吻合 + 全 20 步真服重跑 20 PASS/24.78s（撤回腿 S14-S17 端到端：软删→B 即时不可见→404→新 share_id 非复活）",
+        "merge-tree dd74bae9/HEAD/ab1b8339 = 0 CONFLICT；U11 6 键与 Q03 新键零交集",
+        "裁决校准：C1 服务端授权面 HEAD 亲核、demo 标记（门控+l10n 演示后缀）、单人行动面重跑 PASS——无新阻断面"
+      ],
+      "leftovers_non_blocking": [
+        "文档陈旧数字以 review_r2.md §1 为准（或实现者收口顺手修正）",
+        "权威卡库状态同步（PENDING→DONE_REVIEWED）由派发方收口",
+        "与 main 集成时 l10n 并集合并（键集不交机械解）"
+      ]
     }
   ]
 }
