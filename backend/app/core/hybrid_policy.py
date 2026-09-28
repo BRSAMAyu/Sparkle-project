@@ -121,6 +121,8 @@ SCAFFOLD_TRANSITION_REASONS: frozenset[str] = frozenset(
 #: 材料不在此列——本键集只约束**系统生成的独立检验**节点。
 #: ``solution_steps``（I07 一审 F4）：解题步骤即答案实质（工作解），与
 #: ``solution`` 同面——判分权威（服务端 guide_json）原地保留，投影前剥除。
+#: ``explanation``/``correct_option``/``grading.correct``（I07 二审 R2-1）：同一
+#: 答案面同类键（解析文本/正确选项/判分结论），构造性泄漏与 solution 同型。
 INDEPENDENT_CHECK_ANSWER_KEYS: frozenset[str] = frozenset(
     {
         "answer",
@@ -131,6 +133,9 @@ INDEPENDENT_CHECK_ANSWER_KEYS: frozenset[str] = frozenset(
         "solution",
         "solution_steps",
         "answer_key",
+        "explanation",
+        "correct_option",
+        "correct",  # 叶子键匹配：grading.correct 的判分结论落在本键
     }
 )
 

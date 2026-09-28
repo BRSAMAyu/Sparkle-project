@@ -442,7 +442,9 @@ def _guide_with_check() -> dict[str, Any]:
                 "question": "求 f(x)=e^x 在 x=0 处的二阶泰勒展开",
                 "answer": "1 + x + x^2/2",
                 "solution_steps": ["展开到二阶", "e^x 的导数恒为自身"],
-                "grading": {"correct_answer": "1 + x + x^2/2", "tolerance": 0},
+                "explanation": "逐项求导后代入 x=0（R2-1：解析文本=答案面）",
+                "correct_option": "B",
+                "grading": {"correct_answer": "1 + x + x^2/2", "tolerance": 0, "correct": True},
             },
         },
     }
@@ -464,6 +466,9 @@ def test_independent_check_answer_redacted_from_projection():
     assert "answer" not in inner and "answer" not in inner["grading"]
     assert any(p.endswith("answer") for p in removed) and any("grading" in p for p in removed)
     assert any(p.endswith("solution_steps") for p in removed), "solution_steps 剥除路径可观测"
+    assert "explanation" not in inner and "correct_option" not in inner, "R2-1：解析文本/正确选项=答案面同类键"
+    assert any(p.endswith("explanation") for p in removed) and any(p.endswith("correct_option") for p in removed)
+    assert inner.get("grading", {}).get("correct") is None, "R2-1：grading.correct 判分结论剥除"
     assert scaffold is not None and scaffold["stage"] == "independent_check", "脚手架面（非答案）照常投影"
     # 服务端本体不被改写（判分权威原地保留——含 solution_steps 本体）
     server_inner = _guide_with_check()[GOAL_PURPOSE_BLOCK_KEY]["independent_check"]
@@ -506,6 +511,9 @@ def test_independent_check_answer_keys_frozen():
                 "solution",
                 "solution_steps",
                 "answer_key",
+                "explanation",
+                "correct_option",
+                "correct",
             }
         )
         == INDEPENDENT_CHECK_ANSWER_KEYS
