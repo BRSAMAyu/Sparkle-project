@@ -161,6 +161,29 @@ AgentRunView genericRunAwaitingHuman() => AgentRunView.fromJson(
       },
     );
 
+AgentRunView genericRunExpiredHuman() => AgentRunView.fromJson(
+      <String, dynamic>{
+        'run_id': 'run-g1',
+        'status': 'AWAITING_USER',
+        'is_terminal': false,
+        'objective': '比较多份资料，重排后两周计划',
+        'kind': 'openclaw',
+        'steps': <dynamic>[
+          _step('step-1', 1, 'agent', true),
+          _step('step-2', 2, 'human', false),
+        ],
+        'awaiting_step': <String, dynamic>{
+          'step_id': 'step-2',
+          'ordinal': 2,
+          'owner': 'human',
+          'state': 'expired',
+          'label': 'step-2',
+          'prompt': '这一步需要你',
+          'artifacts': <dynamic>[],
+        },
+      },
+    );
+
 Map<String, dynamic> _awaitingJudgmentPayload() => <String, dynamic>{
       'version': 'hybrid_journey.v1',
       'run': <String, dynamic>{
@@ -185,14 +208,17 @@ Widget _harness(
   required _FakeCommandService command,
   Object? loadError,
   String? initialRunId,
+  void Function()? onFetch,
 }) {
   final container = ProviderContainer(
     overrides: [
-      if (loadError != null)
-        activeAgentRunsProvider.overrideWith(
-            (ref) => Future<List<AgentRunView>>.error(loadError),)
-      else
-        activeAgentRunsProvider.overrideWith((ref) => Future.value(runs)),
+      activeAgentRunsProvider.overrideWith((ref) {
+        onFetch?.call();
+        if (loadError != null) {
+          return Future<List<AgentRunView>>.error(loadError);
+        }
+        return Future.value(runs);
+      }),
       agentRunCommandServiceProvider.overrideWithValue(command),
       hybridJourneyRepositoryProvider.overrideWithValue(repository),
     ],
@@ -399,5 +425,38 @@ void main() {
     expect(repository.fetchStateRunIds, ['run-j1']);
     expect(repository.startCalls, 0);
     expect(find.byKey(const Key('hybrid-journey-ready')), findsOneWidget);
+  });
+
+  testWidgets('正：expired 步态卡内「刷新」重查 run 读面——绝不误触取消'
+      '（一审 R-2 接线勘误的固定断言）', (tester) async {
+    var fetchCount = 0;
+    final repository = _FakeRepository(_awaitingJudgmentPayload());
+    final command = _FakeCommandService();
+    await tester.pumpWidget(_harness(
+      tester,
+      runs: [genericRunExpiredHuman()],
+      repository: repository,
+      command: command,
+      onFetch: () => fetchCount++,
+    ),);
+    await tester.pumpAndSettle();
+
+    // expired 态：无确认入口，给「刷新」（重查服务端实际状态）。
+    expect(find.text('确认，继续'), findsNothing);
+    expect(find.text('刷新结果'), findsOneWidget);
+    expect(fetchCount, 1);
+
+    await tester.tap(find.text('刷新结果'));
+    await tester.pumpAndSettle();
+
+    // 刷新 = 读面重查（客户端非 runtime owner，零本地状态可改）；语义勘误：
+    // 不再打开「取消这段运行？」对话框，也不产生任何命令面调用。
+    expect(fetchCount, 2);
+    expect(find.byKey(const Key('workbench_cancel_confirm_yes')), findsNothing);
+    expect(command.cancelCalls, isEmpty);
+    expect(command.completeCalls, isEmpty);
+    expect(repository.startCalls, 0);
+    // 刷新后 run 卡仍在（读面回放同一段 run）。
+    expect(find.byKey(const Key('workbench_run_card_run-g1')), findsOneWidget);
   });
 }

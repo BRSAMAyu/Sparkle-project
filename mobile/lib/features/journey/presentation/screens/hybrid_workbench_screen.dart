@@ -39,7 +39,8 @@ class HybridWorkbenchScreen extends ConsumerStatefulWidget {
   /// （幂等读面回放，不 start 新 run）。
   final String? initialRunId;
 
-  /// 从任务面带上下文进入时携带（start 幂等键按任务锚定，跨端同键同 run）。
+  /// 任务面/深链带上下文进入时携带（start 幂等键按任务锚定，跨端同键同
+  /// run；一审 F-B 勘误后路由侧消费 `task_id` 查询参数传入）。
   final String? initialTaskId;
 
   @override
@@ -95,6 +96,11 @@ class _HybridWorkbenchScreenState extends ConsumerState<HybridWorkbenchScreen> {
     });
     ref.invalidate(activeAgentRunsProvider);
   }
+
+  /// 卡内「刷新」与下拉刷新同源：只重查 run 读面（客户端不是 runtime owner，
+  /// 本页零本地持久化可改）。一审 R-2 勘误：此前 AwaitingStepResumeCard 的
+  /// onRefresh 被误接到取消对话框——刷新语义是重查状态，不是取消。
+  void _refreshRuns() => ref.invalidate(activeAgentRunsProvider);
 
   Future<void> _cancelRun(AgentRunView run, [String? idempotencyKey]) async {
     final l10n = context.l10n;
@@ -210,6 +216,7 @@ class _HybridWorkbenchScreenState extends ConsumerState<HybridWorkbenchScreen> {
         onResumeJourney: _resumeJourney,
         onConfirmStep: _completeAwaitingStep,
         onCancelRun: (idempotencyKey) => _cancelRun(run, idempotencyKey),
+        onRefreshRead: _refreshRuns,
       );
 
   void _resumeJourney(AgentRunView run) {
@@ -224,6 +231,7 @@ class _RunCard extends StatelessWidget {
     required this.onResumeJourney,
     required this.onConfirmStep,
     required this.onCancelRun,
+    required this.onRefreshRead,
   });
 
   final AgentRunView run;
@@ -239,6 +247,10 @@ class _RunCard extends StatelessWidget {
   /// 取消整段 run（确认对话框在父层；key 为空时父层按 (run, awaiting step)
   /// 确定性推导，重试/重进同键不重复取消）。
   final Future<void> Function(String? idempotencyKey) onCancelRun;
+
+  /// expired/cancelled 步态下的「刷新」：重查 run 读面（一审 R-2 勘误——
+  /// 不再接到取消对话框）。
+  final VoidCallback onRefreshRead;
 
   bool get _isJourneyRun => run.traceId == kHybridJourneyTraceId;
 
@@ -290,7 +302,11 @@ class _RunCard extends StatelessWidget {
                 ),
             ],
           ),
-          if (awaiting != null && awaiting.isAwaiting) ...[
+          // 服务端投影出 awaiting_step（含 expired/cancelled 步态）即挂统一卡：
+          // 卡内如实呈现「轮到你 / 已过期 / 已取消」，不给确认入口、只留刷新
+          // 重查——不把过期步伪装成可继续（此前门在 isAwaiting，expired 态
+          // 整卡缺席，刷新重查面不可达；一审 R-2 整改）。
+          if (awaiting != null) ...[
             const SizedBox(height: DS.sm),
             if (_isJourneyRun)
               // 旅程 run：回同一张 HybridJourneySheet（同 run 幂等回放；
@@ -316,7 +332,8 @@ class _RunCard extends StatelessWidget {
                   idempotencyKey: idempotencyKey,
                 ),
                 onCancel: onCancelRun,
-                onRefresh: () => onCancelRun(null),
+                // expired/cancelled 的「刷新」= 重查读面（绝不误触取消）。
+                onRefresh: onRefreshRead,
               ),
             ],
           ],

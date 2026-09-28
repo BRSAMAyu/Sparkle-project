@@ -16,9 +16,9 @@
 - **入口挂载面**（全部只增）：
   - 任务面：`task_execution_screen.dart` 在 `PendingProposalSection`（X-03 提案卡挂载点）下增挂 `HybridJourneyEntrySection(taskId: task.id)`（+4 行）；
   - OpenClaw：`openclaw_hub_screen.dart` 概览按钮区增挂「运行工作台」`TextButton.icon` → `context.push(JourneyRoutes.workbench)`（+9 行）；
-  - 深链：`/journey/workbench?run_id=`（`JourneyRoutes.workbenchUri`）。
+  - 深链：`/journey/workbench?run_id=`（`JourneyRoutes.workbenchUri`；一审 F-B 整改后 `task_id=` 亦被路由消费——带 task_id 的深链启动以该任务为锚 `j06:start:<taskId>`）。
 - **不绕审批**：
-  - 入口区块只是导航——`hybrid_journey_entry_section_test.dart` 第 2 面证明入口唯一写动作是「打开 sheet」，零 approve/reject/complete 调用；
+  - 入口区块只是导航——`hybrid_journey_entry_section_test.dart` 第 2 面证明入口唯一写动作是「打开 sheet」，零 approve/reject/complete 调用（一审 C-2 整改后此断言真实成立：fake 记录全部四仓库方法 + 命令面记账，白名单=导航与启动/续跑；mutation ② 向 `_openSheet` 注入 `confirmOutcome` 复核为 2 面红）；
   - 判断门：sheet 内空选择结构性禁用提交（既有 `hybrid_journey_sheet_test.dart` 3 面保持全绿，服务端 `judgment_required` 422 不变）；
   - human_required 步骤推进门见 ②；
   - `start` 幂等键按任务锚定 `j06:start:<taskId>`（跨端同键同 run，不绕过服务端幂等/状态机）。
@@ -37,7 +37,12 @@
 - 深链 `run_id` 冷启动直达同一段 run（不 start 新 run）；
 - 后端同 run 语义由既有测试钉住（`tests/unit/test_j06_hybrid_journey.py` 5 passed；I08 恢复对抗 24 passed）。
 
-## 变更清单（+579/-2，全部 mobile）
+## 变更清单（数字口径勘误，一审 R-5——原头部「+579/-2，全部 mobile」不可复现，作废）
+
+- **全 commit（`30b94d42..a4fd656d`）：+2782/-5，28 文件**（`git diff --numstat 30b94d42..a4fd656d` 可复现）；
+  - mobile：**+2380/-2**，18 文件——lib +1083/-2（l10n gen 产物 +384；arb 双语各 +39/-1）、test +1297/-0；
+  - `v4/04_tasks/tasks.json`：+6/-3；v4 证据文件：+396/-0；
+  - backend：0 文件（零 diff）。
 
 新增：
 - `mobile/lib/features/journey/journey_routes.dart`（只增路由 `/journey/workbench`）
@@ -64,3 +69,16 @@
 - human mastery/目的词表：`hybrid_policy.py`（I07，零改动；ownership 文案「我来做/带我做/交给 Sparkle」对其三种可读选择）
 - awaiting-step 卡/防抖/幂等键推导：`AwaitingStepResumeCard`/`ProposalActionGuard`/`runStepActionIdempotencyKey`（U-04/X-07 既有组件，零改动）
 - 成功视觉唯一经既有 Badge 体系（F03 词表/呈现适配器未触碰）
+
+## 一审整改（review_r1 = PASS_WITH_CHALLENGES → 整改 diff；SHA 注记见 review_receipt.json）
+
+| 项 | 处置 |
+|---|---|
+| C-1（条件） | 新增 `mobile/test/features/task/presentation/screens/task_execution_hybrid_entry_mount_test.dart`（2 面）：整屏 pump `TaskExecutionScreen` + `agentRunReadServiceProvider` override——把一审临时探针固化为永久挂载断言（`hybrid_journey_entry_section` 真实上树；无 run → `journey_entry_start` 非 resume；有本任务 run → `journey_entry_resume`；`takeException` null）。注：区块「读取完成才渲染」（设计行为），故必须读面 override——这是一审 CH-3 指出既有整屏测试看不到该区块的原因 |
+| C-2（条件） | entry 测试 `_FakeRepository` 记录**全部四个仓库方法**（start/fetchState 白名单 + submitJudgment/confirmOutcome 黑名单记账）+ 新增 `_FakeCommandService`（complete/cancel 记账）override 命令面；①②交互面在**关闭 sheet 后**断言零审批写（`_openSheet` 关闭后段亦在观察面内，审批写无论注入在打开前/关闭后都必红）。mutation ② 复核：注入 `confirmOutcome` → 2 面红；复原复绿 |
+| R-2/F-1（新发现①） | `hybrid_workbench_screen.dart`：`AwaitingStepResumeCard.onRefresh` 由 `onCancelRun(null)`（误开取消对话框）改接 `_refreshRuns()` = `ref.invalidate(activeAgentRunsProvider)`（重查 run 读面）。**根因补充**：屏侧卡挂载门原为 `awaiting.isAwaiting`——expired/cancelled 步态下整卡缺席、刷新面不可达（一审 R-2 描述的错位接线实际不可触发）；门放宽为 `awaiting != null`，卡内如实呈现「已过期/已取消」终态 + 刷新重查（不给确认入口，不伪装可继续）。新增 workbench expired 刷新面：刷新后读面重查计数 +1、取消对话框不上树、零命令调用 |
+| F-B/F-3（新发现②） | `workbenchUri(taskId:)` 二选一取**消费**侧：路由 `initialTaskId: query['task_id']` 传入工作台 → sheet 启动键 `j06:start:<taskId>`（跨端同键同 run，顺带缓解 CH-2 auto 锚点漂移）。取舍依据：删参数侧会留下永不构造的 `HybridWorkbenchScreen.initialTaskId` 死字段且需同步改 screen；消费侧 +1 行路由代码 + 1 条 wiring 深链面（`/journey/workbench?task_id=task-deep-1` → `startKeys == ['j06:start:task-deep-1']`），改动更小且语义诚实 |
+| R-4/F-2（数字①） | `test_results.json` `total.flutter_passed` 228 → **224**（列套件和 31+31+122+4+10+26；228 系 deep-link 4 重复计入） |
+| R-5/F-2（数字②） | 本文件头部聚合口径改为可复现口径（见上「变更清单」）；`run_manifest.json` arb 行数勘误 +40/-1 → +39/-1（双语两处） |
+
+整改后计数：journey **33**（+2：workbench expired 刷新面、wiring task_id 深链面；entry 4 面断言强化不加数）+ task/shared/smoke **124**（+2：C-1 两面）+ deep link **4** + 既有整屏两套 **15**（回归）全绿；`flutter analyze` 归零基线零新增；l10n 零新键（未触 gen-l10n）。

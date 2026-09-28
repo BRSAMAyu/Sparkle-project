@@ -20,6 +20,7 @@ import 'package:sparkle/core/offline/models/focus_session_record.dart';
 import 'package:sparkle/core/offline/models/offline_chat_message.dart';
 import 'package:sparkle/core/offline/models/translation_record.dart';
 import 'package:sparkle/core/offline/models/vocab_word.dart';
+import 'package:sparkle/core/services/agent_run_read_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
@@ -27,6 +28,8 @@ import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart'
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart'
     show sharedPreferencesProvider;
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+import 'package:sparkle/features/journey/data/models/hybrid_journey_models.dart';
+import 'package:sparkle/features/journey/data/repositories/hybrid_journey_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
@@ -148,6 +151,147 @@ void main() {
     expect(find.text('页面未找到'), findsNothing);
     expect(find.textContaining('运行工作台'), findsWidgets);
   });
+
+  testWidgets(
+      '深链带 task_id 进入工作台：启动以该任务为锚（j06:start:<taskId>）——'
+      '一审 F-B 死参数勘误的固定断言（路由侧消费 task_id，不再恒走 auto）',
+      (tester) async {
+    final repository = _RecordingJourneyRepository();
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith(
+          (ref) => _FakeAuthNotifier(
+            AuthState(
+              isAuthenticated: true,
+              user: _buildUser(),
+            ),
+          ),
+        ),
+        sharedPreferencesProvider.overrideWithValue(
+          await SharedPreferences.getInstance(),
+        ),
+        onboardingCompletedProvider.overrideWith(
+          (ref) => _FakeOnboardingCompletedNotifier(true, ref),
+        ),
+        enhancedGalaxyRepositoryProvider.overrideWithValue(
+          _TestGalaxyRepository(),
+        ),
+        // 读面给空列表：工作台渲染空态 + 启动入口（不走真实 Dio/fake-async 悬挂）。
+        agentRunReadServiceProvider.overrideWithValue(_FakeRunsReadService()),
+        hybridJourneyRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider);
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(
+          routerConfig: router,
+          theme: AppThemes.lightTheme,
+          locale: const Locale('zh'),
+          localizationsDelegates: const [
+            ...AppLocalizations.localizationsDelegates,
+            GlobalMaterialLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    router.go('/journey/workbench?task_id=task-deep-1');
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    expect(find.byKey(const Key('workbench_start_journey')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('workbench_start_journey')));
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // task_id 被路由消费并传到 sheet：启动幂等键按任务锚定，跨端同键同 run。
+    expect(repository.startKeys, ['j06:start:task-deep-1']);
+    expect(repository.startTaskIds, ['task-deep-1']);
+    expect(find.byKey(const Key('hybrid-journey-ready')), findsOneWidget);
+  });
+}
+
+/// 空读面（深链 task_id 面）：不让工作台挂在真实 Dio 的永久读取中。
+class _FakeRunsReadService implements AgentRunReadService {
+  @override
+  Future<AgentRunView?> fetchRun(String runId) async => null;
+
+  @override
+  Future<List<AgentRunView>> fetchActiveRuns({String? taskId}) async =>
+      const <AgentRunView>[];
+}
+
+/// 深链 task_id 面的旅程仓库全方法记账（启动键/任务锚点可断言）。
+class _RecordingJourneyRepository implements HybridJourneyRepository {
+  final List<String> startKeys = <String>[];
+  final List<String?> startTaskIds = <String?>[];
+
+  HybridJourneyPayload get _payload => HybridJourneyPayload.fromJson(
+        const <String, dynamic>{
+          'version': 'hybrid_journey.v1',
+          'run': <String, dynamic>{
+            'run_id': 'run-deep-1',
+            'status': 'AWAITING_USER',
+            'steps': <dynamic>[],
+            'awaiting_step': <String, dynamic>{
+              'step_id': 'judgment',
+              'ordinal': 2,
+              'owner': 'human',
+              'state': 'awaiting',
+            },
+          },
+          'goal': <String, dynamic>{'goal_id': 'g1', 'title': '掌握树遍历'},
+          'task': <String, dynamic>{'id': 'task-deep-1', 'title': '写综述'},
+          'artifacts': <dynamic>[],
+          'citations': <dynamic>[],
+        },
+      );
+
+  @override
+  Future<HybridJourneyPayload> start({
+    required String idempotencyKey,
+    String? taskId,
+  }) async {
+    startKeys.add(idempotencyKey);
+    startTaskIds.add(taskId);
+    return _payload;
+  }
+
+  @override
+  Future<HybridJourneyPayload> submitJudgment({
+    required String runId,
+    required List<String> selectedRefs,
+    required String idempotencyKey,
+    String? focusNote,
+  }) async =>
+      _payload;
+
+  @override
+  Future<HybridJourneyPayload> confirmOutcome({
+    required String runId,
+    required String idempotencyKey,
+    String? note,
+  }) async =>
+      _payload;
+
+  @override
+  Future<HybridJourneyPayload?> fetchState({required String runId}) async =>
+      _payload;
 }
 
 UserModel _buildUser() => UserModel(

@@ -83,9 +83,54 @@
     }
   ],
   "total": {
-    "flutter_passed": 228,
+    "flutter_passed": 224,
     "pytest_passed": 94,
-    "failed": 0
+    "failed": 0,
+    "note": "一审 R-4 勘误（整改 commit 修正）：原值 228 系 deep-link 4 重复计入；本值 = 列套件 flutter 项之和 31+31+122+4+10+26 = 224"
+  },
+  "remediation": {
+    "round": "review_1（PASS_WITH_CHALLENGES）",
+    "covers": [
+      "C-1 整屏挂载断言",
+      "C-2 入口零审批写钉（mutation ② 必红）",
+      "R-2/F-1 onRefresh 接真实刷新（含卡挂载门可达性根因修正）",
+      "F-B/F-3 task_id 路由消费",
+      "R-4/R-5/F-2 数字口径勘误"
+    ],
+    "suites": [
+      {
+        "name": "journey（整改后）",
+        "cmd": "flutter test test/features/journey/",
+        "exit_code": 0,
+        "passed": 33,
+        "failed": 0,
+        "note": "31→33：workbench expired 刷新面 +1、wiring task_id 深链面 +1；entry 4 面断言强化（零审批写+关闭 sheet 观察面）不加数"
+      },
+      {
+        "name": "task/shared/smoke（整改后）",
+        "cmd": "flutter test test/features/task/ test/shared/widgets/ test/app/router_smoke_test.dart",
+        "exit_code": 0,
+        "passed": 124,
+        "failed": 0,
+        "note": "122→124：C-1 整屏挂载断言 2 面（task_execution_hybrid_entry_mount_test）"
+      },
+      {
+        "name": "router deep link（整改后回归）",
+        "cmd": "flutter test test/app/router_deep_link_test.dart",
+        "exit_code": 0,
+        "passed": 4,
+        "failed": 0
+      },
+      {
+        "name": "既有整屏回归（一审 CH-3 补跑口径）",
+        "cmd": "flutter test test/widget/exam_sprint_closed_loop_test.dart test/widget/task/test_task_execution_ux.dart",
+        "exit_code": 0,
+        "passed": 15,
+        "failed": 0
+      }
+    ],
+    "mutation_recheck": "mutation ②（_openSheet 注入 repository.confirmOutcome 审批写）→ hybrid_journey_entry_section_test 2 面红（①②交互面；测试现会关闭 sheet，关闭后段同样在观察面内）；复原后复绿 4 面",
+    "static": "flutter analyze --no-pub → No issues found（归零基线零新增）；l10n 零新键（未触 gen-l10n）"
   },
   "red_evidence": {
     "wiring": "stash mobile/lib/app/routes.dart → hybrid_workbench_wiring_test 1 failed（0 widgets with key hybrid_workbench_screen）→ pop 复绿",

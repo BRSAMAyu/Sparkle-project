@@ -137,7 +137,7 @@
       "mobile/lib/features/home/presentation/screens/openclaw_hub_screen.dart (+11)",
       "mobile/lib/features/journey/data/models/hybrid_journey_models.dart (+7)",
       "mobile/lib/features/task/presentation/screens/task_execution_screen.dart (+6)",
-      "mobile/lib/l10n/app_zh.arb (+40/-1)、mobile/lib/l10n/app_en.arb (+40/-1) 及 gen-l10n 再生产物",
+      "mobile/lib/l10n/app_zh.arb (+39/-1)、mobile/lib/l10n/app_en.arb (+39/-1) 及 gen-l10n 再生产物（一审 R-5 勘误：原记 +40/-1）",
       "mobile/test/features/journey/hybrid_journey_copy_test.dart (+81)"
     ]
   },
@@ -156,5 +156,47 @@
     "semantics": "u04_workbench_semantics.txt —— 读屏可读面枚举（全部 Text + 按钮 label）：ownership 词表、awaiting 提示、取消确认对话框全文可得；无仅靠图形/长按才能完成的操作",
     "capture": "flutter test 真实渲染（U02TestFonts 宿主字体 + RepaintBoundary 全屏边界，含 overlay 内 sheet/dialog）；真实操作由测试断言背书（非摆拍）"
   },
-  "model_usage": "零模型调用（纯接线与读面；journey 起草 LLM 属后端既有路径，本卡未触发）"
+  "model_usage": "零模型调用（纯接线与读面；journey 起草 LLM 属后端既有路径，本卡未触发）",
+  "remediation": {
+    "round": "review_1（PASS_WITH_CHALLENGES）",
+    "note": "一审整改 commit（SHA 注记见 review_receipt.json remediation.commit）；聚焦整改 commit 复跑口径如下，原上表为实现 commit（a4fd656d）口径，不相互覆盖",
+    "commands": [
+      {
+        "purpose": "journey 套件（整改后）",
+        "cmd": "flutter test test/features/journey/",
+        "exit_code": 0,
+        "result": "33 passed（31→33：workbench expired 刷新面 + wiring task_id 深链面；entry 4 面断言强化不加数）"
+      },
+      {
+        "purpose": "task/shared/smoke 套件（整改后）",
+        "cmd": "flutter test test/features/task/ test/shared/widgets/ test/app/router_smoke_test.dart",
+        "exit_code": 0,
+        "result": "124 passed（122→124：C-1 整屏挂载断言 2 面）"
+      },
+      {
+        "purpose": "router deep link 回归（整改后）",
+        "cmd": "flutter test test/app/router_deep_link_test.dart",
+        "exit_code": 0,
+        "result": "4 passed"
+      },
+      {
+        "purpose": "既有整屏回归（一审 CH-3 口径）",
+        "cmd": "flutter test test/widget/exam_sprint_closed_loop_test.dart test/widget/task/test_task_execution_ux.dart",
+        "exit_code": 0,
+        "result": "15 passed"
+      },
+      {
+        "purpose": "flutter analyze（整改后终态）",
+        "cmd": "flutter analyze --no-pub",
+        "exit_code": 0,
+        "result": "No issues found（归零基线零新增；新增测试文件 dart fix --apply 后归零）"
+      },
+      {
+        "purpose": "mutation ② 复核（一审 C-2 验收）",
+        "cmd": "向 hybrid_journey_entry_section._openSheet 注入 repository.confirmOutcome 审批写 → flutter test test/features/journey/hybrid_journey_entry_section_test.dart（用后即复原）",
+        "exit_code": 1,
+        "result": "2 failed（①②交互面红——fake 全四方法+命令面记账，且测试关闭 sheet 使 _openSheet 关闭后段同在观察面内）；复原后 4 面复绿。一审同名 mutation 4 面全绿的缺口已钉死"
+      }
+    ]
+  }
 }

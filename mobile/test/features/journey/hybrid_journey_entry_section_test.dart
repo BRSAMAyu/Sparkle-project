@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/services/agent_run_command_service.dart';
 import 'package:sparkle/core/services/agent_run_read_service.dart';
 import 'package:sparkle/features/journey/data/models/hybrid_journey_models.dart';
 import 'package:sparkle/features/journey/data/repositories/hybrid_journey_repository.dart';
@@ -15,17 +16,40 @@ import '../../shared/i18n_test_helper.dart';
 /// ① 有本任务进行中的旅程 run → 「继续一起推进」按 runId 续跑**同一段 run**
 ///    （fetchState 幂等回放，start 零调用——不重复生成工件）；
 /// ② 没有 → 「和 Sparkle 一起推进」以任务锚定幂等键启动（跨端同键同 run）；
-/// ③ 本区块只是入口：不预填、不代答、不携带任何审批写动作（不绕审批）；
+/// ③ 本区块只是入口：不预填、不代答、不携带任何审批写动作（不绕审批）——
+///    fake 记录**全部四个仓库方法**与命令面（complete/cancel），白名单=
+///    导航 + 启动/续跑既有合法动作，judgment/confirm（approve/reject）与
+///    complete 类写调用交互后恒零（一审 C-2 固定断言：mutation ② 向
+///    _openSheet 注入 confirmOutcome 审批写时，①②两面必红）；
 /// ④ 读面失败 → 诚实错误，不伪造入口可用状态。
 class _FakeRepository implements HybridJourneyRepository {
   _FakeRepository(this.payload);
 
   final Map<String, dynamic> payload;
 
+  // 白名单面：导航打开 sheet 后的既有合法动作（任务锚定启动 / 续跑读面）。
   final List<String> fetchStateRunIds = <String>[];
   final List<String> startKeys = <String>[];
   final List<String?> startTaskIds = <String?>[];
   int startCalls = 0;
+
+  // 审批写面（黑名单，一审 C-2）：入口交互后必须恒空。
+  final List<String> judgmentRunIds = <String>[];
+  final List<String> confirmRunIds = <String>[];
+
+  /// C-2 零审批写断言：任何入口交互都不得代用户给判断/交付审批。
+  void expectNoApprovalWrites() {
+    expect(
+      judgmentRunIds,
+      isEmpty,
+      reason: '入口不得代提交旅程判断（submitJudgment 属 sheet 内服务端门后）',
+    );
+    expect(
+      confirmRunIds,
+      isEmpty,
+      reason: '入口不得代确认交付审批（confirmOutcome 属 sheet 内服务端门后）',
+    );
+  }
 
   @override
   Future<HybridJourneyPayload> start({
@@ -44,21 +68,63 @@ class _FakeRepository implements HybridJourneyRepository {
     required List<String> selectedRefs,
     required String idempotencyKey,
     String? focusNote,
-  }) async =>
-      HybridJourneyPayload.fromJson(payload);
+  }) async {
+    judgmentRunIds.add(runId);
+    return HybridJourneyPayload.fromJson(payload);
+  }
 
   @override
   Future<HybridJourneyPayload> confirmOutcome({
     required String runId,
     required String idempotencyKey,
     String? note,
-  }) async =>
-      HybridJourneyPayload.fromJson(payload);
+  }) async {
+    confirmRunIds.add(runId);
+    return HybridJourneyPayload.fromJson(payload);
+  }
 
   @override
   Future<HybridJourneyPayload?> fetchState({required String runId}) async {
     fetchStateRunIds.add(runId);
     return HybridJourneyPayload.fromJson(payload);
+  }
+}
+
+/// C-2：命令面同样全记录——入口若出现任何 complete/approve/reject 类写调用
+/// 即被此处捕获（入口只该导航，绝不直接推进任何步骤）。
+class _FakeCommandService implements AgentRunCommandService {
+  final List<Map<String, Object?>> completeCalls = <Map<String, Object?>>[];
+  final List<Map<String, Object?>> cancelCalls = <Map<String, Object?>>[];
+
+  @override
+  Future<Map<String, dynamic>> completeStep(
+    String runId,
+    String stepId, {
+    required String idempotencyKey,
+    String action = 'confirm',
+    String? note,
+  }) async {
+    completeCalls.add(<String, Object?>{
+      'run_id': runId,
+      'step_id': stepId,
+      'idempotency_key': idempotencyKey,
+      'action': action,
+    });
+    return <String, dynamic>{'step_replay': false, 'run': <String, dynamic>{}};
+  }
+
+  @override
+  Future<Map<String, dynamic>> cancelRun(
+    String runId, {
+    String? idempotencyKey,
+  }) async {
+    cancelCalls.add(<String, Object?>{
+      'run_id': runId,
+      'idempotency_key': idempotencyKey,
+    });
+    return <String, dynamic>{
+      'run': <String, dynamic>{'run_id': runId, 'status': 'CANCELLED'},
+    };
   }
 }
 
@@ -138,11 +204,14 @@ Widget _harness(
   required String taskId,
   required _FakeRepository repository,
   required _FakeReadService readService,
+  _FakeCommandService? command,
 }) {
   final container = ProviderContainer(
     overrides: [
       agentRunReadServiceProvider.overrideWithValue(readService),
       hybridJourneyRepositoryProvider.overrideWithValue(repository),
+      agentRunCommandServiceProvider
+          .overrideWithValue(command ?? _FakeCommandService()),
     ],
   );
   addTearDown(container.dispose);
@@ -163,6 +232,7 @@ void main() {
   testWidgets('正：本任务有进行中旅程 run → 继续入口按 runId 幂等回放同一段 run'
       '（start 零调用，不重复生成工件）', (tester) async {
     final repository = _FakeRepository(_awaitingJudgmentPayload());
+    final command = _FakeCommandService();
     final readService = _FakeReadService(
       runs: [
         _otherTraceRun('run-x', 'task-1'),
@@ -174,6 +244,7 @@ void main() {
       taskId: 'task-1',
       repository: repository,
       readService: readService,
+      command: command,
     ),);
     await tester.pumpAndSettle();
 
@@ -186,12 +257,23 @@ void main() {
 
     expect(repository.fetchStateRunIds, ['run-j1']);
     expect(repository.startCalls, 0);
+
+    // 关闭 sheet：让 _openSheet 的「sheet 关闭后」段也在测试内执行——
+    // 审批写无论注入在打开前还是关闭后都无处可藏（mutation ② 覆盖面）。
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+    await tester.pumpAndSettle();
+
+    // C-2：入口零审批写（mutation ② 教训固定）——唯一动作是打开 sheet。
+    repository.expectNoApprovalWrites();
+    expect(command.completeCalls, isEmpty);
+    expect(command.cancelCalls, isEmpty);
   });
 
   testWidgets('反：本任务没有旅程 run（他任务/他链路不算）→ 只给启动入口；'
       '启动幂等键按任务锚定（跨端同键同 run），不携带任何审批写动作',
       (tester) async {
     final repository = _FakeRepository(_awaitingJudgmentPayload());
+    final command = _FakeCommandService();
     final readService = _FakeReadService(
       runs: [
         _journeyRun('run-other-task', 'task-2'),
@@ -203,6 +285,7 @@ void main() {
       taskId: 'task-1',
       repository: repository,
       readService: readService,
+      command: command,
     ),);
     await tester.pumpAndSettle();
 
@@ -212,12 +295,20 @@ void main() {
     await tester.tap(find.byKey(const Key('journey_entry_start')));
     await tester.pumpAndSettle();
 
-    // 唯一写动作是「打开 sheet」；启动由 sheet 以任务锚定键发起（ judgment/
-    // 审批门留在 sheet 内服务端），入口本身零审批写调用。
+    // 关闭 sheet：_openSheet 关闭后段同样纳入观察面（见正面第 ① 面注释）。
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+    await tester.pumpAndSettle();
+
+    // 唯一写动作是「打开 sheet」；启动由 sheet 以任务锚定键发起（judgment/
+    // 审批门留在 sheet 内服务端），入口本身零审批写调用（fake 全方法记账，
+    // 一审 C-2：mutation ② 注入 confirmOutcome 时本面必红）。
     expect(repository.startCalls, 1);
     expect(repository.startKeys, ['j06:start:task-1']);
     expect(repository.startTaskIds, ['task-1']);
     expect(repository.fetchStateRunIds, isEmpty);
+    repository.expectNoApprovalWrites();
+    expect(command.completeCalls, isEmpty);
+    expect(command.cancelCalls, isEmpty);
   });
 
   testWidgets('反：读面失败 → 诚实错误文案 + 仍只给启动入口，不伪造继续状态',
@@ -236,6 +327,7 @@ void main() {
     expect(find.byKey(const Key('journey_entry_resume')), findsNothing);
     expect(find.byKey(const Key('journey_entry_start')), findsOneWidget);
     expect(repository.startCalls, 0);
+    repository.expectNoApprovalWrites();
   });
 
   testWidgets('反：读取进行中不渲染区块（不闪占位、不伪造入口可用性）',
@@ -270,5 +362,6 @@ void main() {
       findsNothing,
     );
     expect(repository.startCalls, 0);
+    repository.expectNoApprovalWrites();
   });
 }

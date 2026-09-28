@@ -11,7 +11,9 @@ import 'package:sparkle/features/journey/presentation/screens/hybrid_workbench_s
 /// - OpenClaw hub 概览经「运行工作台」按钮进入（沿用 OpenClaw 路径与 Run ID，
 ///   不创建第二 Agent 中心，SCREEN_FAMILIES「运行台」红线）；
 /// - 跨端/冷启动恢复深链：`run_id` 查询参数直接续跑**同一段** run（幂等读面，
-///   不新建 run、不重复生成工件）。
+///   不新建 run、不重复生成工件）；带 `task_id` 时启动以该任务为锚
+///   （`j06:start:<taskId>`，跨端同键同 run）——一审 F-B 勘误：此前 task_id
+///   只生成于 URI、路由侧无人消费（死参数），现由路由消费传入工作台。
 class JourneyRoutes {
   static const String workbench = '/journey/workbench';
 
@@ -37,6 +39,7 @@ class JourneyRoutes {
               state: state,
               child: HybridWorkbenchScreen(
                 initialRunId: query['run_id'],
+                initialTaskId: query['task_id'],
               ),
             );
           },
