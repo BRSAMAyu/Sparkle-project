@@ -1,0 +1,38 @@
+{
+  "scope": "offline reading room only",
+  "checks": [
+    {
+      "name": "initial master design",
+      "pass": true
+    },
+    {
+      "name": "desktop reader no overflow",
+      "pass": true
+    },
+    {
+      "name": "search returns matches",
+      "pass": true
+    },
+    {
+      "name": "task navigation",
+      "pass": true
+    },
+    {
+      "name": "empty search visible",
+      "pass": true
+    },
+    {
+      "name": "start prompt navigation",
+      "pass": true
+    },
+    {
+      "name": "mobile reader no overflow",
+      "pass": true
+    },
+    {
+      "name": "no exceptions",
+      "pass": true
+    }
+  ],
+  "browser_errors": []
+}

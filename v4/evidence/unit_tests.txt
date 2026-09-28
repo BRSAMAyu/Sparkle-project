@@ -1,0 +1,48 @@
+test_background_silent (test_package_reference.FeedbackTests.test_background_silent) ... ok
+test_committed_success (test_package_reference.FeedbackTests.test_committed_success) ... ok
+test_different_event_same_receipt_deduped (test_package_reference.FeedbackTests.test_different_event_same_receipt_deduped) ... ok
+test_memory_save_not_action_success (test_package_reference.FeedbackTests.test_memory_save_not_action_success) ... ok
+test_missing_receipt_cannot_celebrate (test_package_reference.FeedbackTests.test_missing_receipt_cannot_celebrate) ... ok
+test_muted_still_visible (test_package_reference.FeedbackTests.test_muted_still_visible) ... ok
+test_pending_cannot_celebrate (test_package_reference.FeedbackTests.test_pending_cannot_celebrate) ... ok
+test_reduced_motion (test_package_reference.FeedbackTests.test_reduced_motion) ... ok
+test_replay_preserves_text_not_effect (test_package_reference.FeedbackTests.test_replay_preserves_text_not_effect) ... ok
+test_unsupported_haptic (test_package_reference.FeedbackTests.test_unsupported_haptic) ... ok
+test_wrong_user_cannot_celebrate (test_package_reference.FeedbackTests.test_wrong_user_cannot_celebrate) ... ok
+test_wrong_version_cannot_celebrate (test_package_reference.FeedbackTests.test_wrong_version_cannot_celebrate) ... ok
+test_conflict_not_ranked_away (test_package_reference.MemoryTests.test_conflict_not_ranked_away) ... ok
+test_dead_source_excluded (test_package_reference.MemoryTests.test_dead_source_excluded) ... ok
+test_duplicate_reference_rejected (test_package_reference.MemoryTests.test_duplicate_reference_rejected) ... ok
+test_expiry_boundary_excluded (test_package_reference.MemoryTests.test_expiry_boundary_excluded) ... ok
+test_external_material_not_user_memory (test_package_reference.MemoryTests.test_external_material_not_user_memory) ... ok
+test_future_expiry_allowed (test_package_reference.MemoryTests.test_future_expiry_allowed) ... ok
+test_global_requires_consent (test_package_reference.MemoryTests.test_global_requires_consent) ... ok
+test_invalid_rate_not_hidden (test_package_reference.MemoryTests.test_invalid_rate_not_hidden) ... ok
+test_naive_time_rejected (test_package_reference.MemoryTests.test_naive_time_rejected) ... ok
+test_nan_score_rejected (test_package_reference.MemoryTests.test_nan_score_rejected) ... ok
+test_negative_transfer_can_reject (test_package_reference.MemoryTests.test_negative_transfer_can_reject) ... ok
+test_other_goal_excluded (test_package_reference.MemoryTests.test_other_goal_excluded) ... ok
+test_other_task_type_excluded (test_package_reference.MemoryTests.test_other_task_type_excluded) ... ok
+test_relevant_confirmed_selected (test_package_reference.MemoryTests.test_relevant_confirmed_selected) ... ok
+test_revocation_excluded (test_package_reference.MemoryTests.test_revocation_excluded) ... ok
+test_token_budget_enforced (test_package_reference.MemoryTests.test_token_budget_enforced) ... ok
+test_top_k_limit (test_package_reference.MemoryTests.test_top_k_limit) ... ok
+test_wrong_owner_excluded (test_package_reference.MemoryTests.test_wrong_owner_excluded) ... ok
+test_zero_denominator_na (test_package_reference.MemoryTests.test_zero_denominator_na) ... ok
+test_author_cannot_self_review (test_package_reference.PackageTests.test_author_cannot_self_review) ... ok
+test_cycle_rejected (test_package_reference.PackageTests.test_cycle_rejected) ... ok
+test_duplicate_id_rejected (test_package_reference.PackageTests.test_duplicate_id_rejected) ... ok
+test_every_module_owned (test_package_reference.PackageTests.test_every_module_owned) ... ok
+test_failed_dependency_not_ready (test_package_reference.PackageTests.test_failed_dependency_not_ready) ... ok
+test_heavy_slot_respected (test_package_reference.PackageTests.test_heavy_slot_respected) ... ok
+test_missing_dependency_rejected (test_package_reference.PackageTests.test_missing_dependency_rejected) ... ok
+test_real_dag (test_package_reference.PackageTests.test_real_dag) ... ok
+test_receipt_consistency_and_tamper_detection (test_package_reference.PackageTests.test_receipt_consistency_and_tamper_detection) ... ok
+test_six_initial_slots (test_package_reference.PackageTests.test_six_initial_slots) ... ok
+test_skipped_run_not_pass (test_package_reference.PackageTests.test_skipped_run_not_pass) ... ok
+test_zero_slots (test_package_reference.PackageTests.test_zero_slots) ... ok
+
+----------------------------------------------------------------------
+Ran 43 tests in 0.004s
+
+OK

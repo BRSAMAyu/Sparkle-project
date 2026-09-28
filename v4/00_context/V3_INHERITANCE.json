@@ -1,0 +1,454 @@
+{
+  "policy": "保留原任务与历史证据，V4 不重置 V3 状态。任务完成≠指标通过。",
+  "counts": {
+    "total": 107,
+    "done": 104
+  },
+  "carried_obligations": [
+    {
+      "id": "O-01",
+      "title": "公网 Staging HTTPS/WSS 一键部署",
+      "status": "TODO"
+    },
+    {
+      "id": "Q-07",
+      "title": "Chaos / Recovery / Offline / Restore Storm 终验",
+      "status": "TODO"
+    },
+    {
+      "id": "Q-08",
+      "title": "V3 Final Gate Audit / Commercial RC",
+      "status": "TODO"
+    }
+  ],
+  "reported_task_states": [
+    {
+      "id": "B-01",
+      "status": "done"
+    },
+    {
+      "id": "B-02",
+      "status": "done"
+    },
+    {
+      "id": "B-03",
+      "status": "done"
+    },
+    {
+      "id": "B-04",
+      "status": "done"
+    },
+    {
+      "id": "B-05",
+      "status": "done"
+    },
+    {
+      "id": "B-06",
+      "status": "done"
+    },
+    {
+      "id": "U-01",
+      "status": "done"
+    },
+    {
+      "id": "U-02",
+      "status": "done"
+    },
+    {
+      "id": "U-03",
+      "status": "done"
+    },
+    {
+      "id": "U-04",
+      "status": "done"
+    },
+    {
+      "id": "U-05",
+      "status": "done"
+    },
+    {
+      "id": "U-06",
+      "status": "done"
+    },
+    {
+      "id": "U-07",
+      "status": "done"
+    },
+    {
+      "id": "U-08",
+      "status": "done"
+    },
+    {
+      "id": "U-09",
+      "status": "done"
+    },
+    {
+      "id": "U-10",
+      "status": "done"
+    },
+    {
+      "id": "D-01",
+      "status": "done"
+    },
+    {
+      "id": "D-02",
+      "status": "done"
+    },
+    {
+      "id": "D-03",
+      "status": "done"
+    },
+    {
+      "id": "D-04",
+      "status": "done"
+    },
+    {
+      "id": "D-05",
+      "status": "done"
+    },
+    {
+      "id": "D-06",
+      "status": "done"
+    },
+    {
+      "id": "D-07",
+      "status": "done"
+    },
+    {
+      "id": "D-08",
+      "status": "done"
+    },
+    {
+      "id": "M-01",
+      "status": "done"
+    },
+    {
+      "id": "M-02",
+      "status": "done"
+    },
+    {
+      "id": "M-03",
+      "status": "done"
+    },
+    {
+      "id": "M-04",
+      "status": "done"
+    },
+    {
+      "id": "M-05",
+      "status": "done"
+    },
+    {
+      "id": "M-06",
+      "status": "done"
+    },
+    {
+      "id": "M-07",
+      "status": "done"
+    },
+    {
+      "id": "M-08",
+      "status": "done"
+    },
+    {
+      "id": "M-09",
+      "status": "done"
+    },
+    {
+      "id": "M-10",
+      "status": "done"
+    },
+    {
+      "id": "C-01",
+      "status": "done"
+    },
+    {
+      "id": "C-02",
+      "status": "done"
+    },
+    {
+      "id": "C-03",
+      "status": "done"
+    },
+    {
+      "id": "C-04",
+      "status": "done"
+    },
+    {
+      "id": "C-05",
+      "status": "done"
+    },
+    {
+      "id": "C-06",
+      "status": "done"
+    },
+    {
+      "id": "C-07",
+      "status": "done"
+    },
+    {
+      "id": "C-08",
+      "status": "done"
+    },
+    {
+      "id": "X-01",
+      "status": "done"
+    },
+    {
+      "id": "X-02",
+      "status": "done"
+    },
+    {
+      "id": "X-03",
+      "status": "done"
+    },
+    {
+      "id": "X-04",
+      "status": "done"
+    },
+    {
+      "id": "X-05",
+      "status": "done"
+    },
+    {
+      "id": "X-06",
+      "status": "done"
+    },
+    {
+      "id": "X-07",
+      "status": "done"
+    },
+    {
+      "id": "X-08",
+      "status": "done"
+    },
+    {
+      "id": "X-09",
+      "status": "done"
+    },
+    {
+      "id": "X-10",
+      "status": "done"
+    },
+    {
+      "id": "A-01",
+      "status": "done"
+    },
+    {
+      "id": "A-02",
+      "status": "done"
+    },
+    {
+      "id": "A-03",
+      "status": "done"
+    },
+    {
+      "id": "A-04",
+      "status": "done"
+    },
+    {
+      "id": "A-05",
+      "status": "done"
+    },
+    {
+      "id": "A-06",
+      "status": "done"
+    },
+    {
+      "id": "A-07",
+      "status": "done"
+    },
+    {
+      "id": "A-08",
+      "status": "done"
+    },
+    {
+      "id": "J-01",
+      "status": "done"
+    },
+    {
+      "id": "J-02",
+      "status": "done"
+    },
+    {
+      "id": "J-03",
+      "status": "done"
+    },
+    {
+      "id": "J-04",
+      "status": "done"
+    },
+    {
+      "id": "J-05",
+      "status": "done"
+    },
+    {
+      "id": "J-06",
+      "status": "done"
+    },
+    {
+      "id": "J-07",
+      "status": "done"
+    },
+    {
+      "id": "J-08",
+      "status": "done"
+    },
+    {
+      "id": "E-01",
+      "status": "done"
+    },
+    {
+      "id": "E-02",
+      "status": "done"
+    },
+    {
+      "id": "E-03",
+      "status": "done"
+    },
+    {
+      "id": "E-04",
+      "status": "done"
+    },
+    {
+      "id": "E-05",
+      "status": "done"
+    },
+    {
+      "id": "E-06",
+      "status": "done"
+    },
+    {
+      "id": "E-07",
+      "status": "done"
+    },
+    {
+      "id": "E-08",
+      "status": "done"
+    },
+    {
+      "id": "P-01",
+      "status": "done"
+    },
+    {
+      "id": "P-02",
+      "status": "done"
+    },
+    {
+      "id": "P-03",
+      "status": "done"
+    },
+    {
+      "id": "P-04",
+      "status": "done"
+    },
+    {
+      "id": "P-05",
+      "status": "done"
+    },
+    {
+      "id": "P-06",
+      "status": "done"
+    },
+    {
+      "id": "G-01",
+      "status": "done"
+    },
+    {
+      "id": "G-02",
+      "status": "done"
+    },
+    {
+      "id": "G-03",
+      "status": "done"
+    },
+    {
+      "id": "G-04",
+      "status": "done"
+    },
+    {
+      "id": "G-05",
+      "status": "done"
+    },
+    {
+      "id": "S-01",
+      "status": "done"
+    },
+    {
+      "id": "S-02",
+      "status": "done"
+    },
+    {
+      "id": "S-03",
+      "status": "done"
+    },
+    {
+      "id": "S-04",
+      "status": "done"
+    },
+    {
+      "id": "S-05",
+      "status": "done"
+    },
+    {
+      "id": "O-01",
+      "status": "TODO"
+    },
+    {
+      "id": "O-02",
+      "status": "done"
+    },
+    {
+      "id": "O-03",
+      "status": "done"
+    },
+    {
+      "id": "O-04",
+      "status": "done"
+    },
+    {
+      "id": "O-05",
+      "status": "done"
+    },
+    {
+      "id": "O-06",
+      "status": "done"
+    },
+    {
+      "id": "O-07",
+      "status": "done"
+    },
+    {
+      "id": "Q-01",
+      "status": "done"
+    },
+    {
+      "id": "Q-02",
+      "status": "done"
+    },
+    {
+      "id": "Q-03",
+      "status": "done"
+    },
+    {
+      "id": "Q-04",
+      "status": "done"
+    },
+    {
+      "id": "Q-05",
+      "status": "done"
+    },
+    {
+      "id": "Q-06",
+      "status": "done"
+    },
+    {
+      "id": "Q-07",
+      "status": "TODO"
+    },
+    {
+      "id": "Q-08",
+      "status": "TODO"
+    }
+  ]
+}

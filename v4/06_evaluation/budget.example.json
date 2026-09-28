@@ -1,0 +1,12 @@
+{
+  "enabled": false,
+  "currency": "USD",
+  "max_spend": null,
+  "price_table_verified": false,
+  "pilot_episodes": 30,
+  "holdout_profiles": 30,
+  "holdout_episodes": 120,
+  "arms": 4,
+  "max_decisions_per_episode": 4,
+  "note": "max_spend必须从现有用户授权预算/运行配置读取；无授权不发收费批量请求。单轮最多1920决策机会，judge与重试额外计量。不是1920个token或保证1920次调用。"
+}

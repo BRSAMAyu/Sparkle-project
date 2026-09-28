@@ -1,0 +1,3524 @@
+{
+  "schema_version": "sparkle-v4-task/1",
+  "package_version": "4.0-proposal.1",
+  "default_mode": "FULL_V4_INTERNAL",
+  "visual_approval": "NOT_APPROVED",
+  "parallelism": {
+    "leader": 1,
+    "workers": 6,
+    "heavy_per_host": 1
+  },
+  "tasks": [
+    {
+      "id": "V4-B01",
+      "title": "继承当前HEAD与最新修复，不重开V3",
+      "depends_on": [],
+      "status": "READY",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "v4-baseline"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "00_context/READING_AND_CONFLICTS.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [
+        "S01",
+        "S07",
+        "S08"
+      ],
+      "objective": "读取当前任务/修复台账与本包冲突表，绑定真源路径，记录源码SHA与运行栈SHA；核实FIX507/539/540/543较新成果，继承O-01/Q-07/Q-08原义务。",
+      "work": "读取当前任务/修复台账与本包冲突表，绑定真源路径，记录源码SHA与运行栈SHA；核实FIX507/539/540/543较新成果，继承O-01/Q-07/Q-08原义务。不得借换版删除负结果。",
+      "acceptance": [
+        "104/107仅作快照，给出现仓库差量及证据链接",
+        "已修事项不生成重复修复卡；未知状态明确unknown",
+        "发布已有root AGENTS优先，V4规范以增量合并不覆盖"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-B02",
+      "title": "43模块及在用路由映射增量",
+      "depends_on": [],
+      "status": "READY",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "v4-portfolio"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "00_context/READING_AND_CONFLICTS.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [
+        "S02",
+        "S09"
+      ],
+      "objective": "读取当前B01矩阵和D-COMM决定，核实43目录、onboarding归user、journey/recovery入口；把所有可发布屏幕绑定页面家族与任务。",
+      "work": "读取当前B01矩阵和D-COMM决定，核实43目录、onboarding归user、journey/recovery入口；把所有可发布屏幕绑定页面家族与任务。保留自我锚与受限光子出口，不机械执行旧关停决策。",
+      "acceptance": [
+        "当前feature集合exact match，无遗漏/幽灵onboarding目录",
+        "HIDDEN/LABS不自动开放；所有活跃入口均有迁移负责人",
+        "每个页面记录route/deeplink/数据真源/当前证据层级"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-B03",
+      "title": "冻结负结果与配对评测基线",
+      "depends_on": [],
+      "status": "READY",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "v4-eval-fixtures"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "06_evaluation/EVALUATION_PROTOCOL.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [
+        "S03",
+        "S04"
+      ],
+      "objective": "导入A08修后、Q04首轮及后续修复版本；保留失败原始文件，生成开发/独立holdout模板，冻结utility和范围。",
+      "work": "导入A08修后、Q04首轮及后续修复版本；保留失败原始文件，生成开发/独立holdout模板，冻结utility和范围。重算与运行分开，禁止拿旧pre-fix0.65作最新基线。",
+      "acceptance": [
+        "重算9/20与11/20一致，记录模拟非live边界",
+        "无记忆、V3、V4各臂可区分，holdout不泄漏给实现Agent",
+        "0分母为N/A，未解决/缺失样本不能被排除"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-B04",
+      "title": "原生视觉与资源基线，不把参考图当V3截图",
+      "depends_on": [],
+      "status": "READY",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "v4-visual-harness"
+      ],
+      "heavy_token_required": true,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [
+        "S15",
+        "S08"
+      ],
+      "objective": "盘点tokens_v2与现有golden/emulator工具；截当前实际路由含dialog/sheet顶层，记录DPR/字号/构建模式与硬件。",
+      "work": "盘点tokens_v2与现有golden/emulator工具；截当前实际路由含dialog/sheet顶层，记录DPR/字号/构建模式与硬件。建立单HEAVY资源预约，不另造多模拟器农场。",
+      "acceptance": [
+        "参考图标PROPOSED；真实基线截图有build/route/设备",
+        "背景RepaintBoundary误捕获能失败，弹层内容可见",
+        "profile帧记录与截图检查分开；一次仅一个HEAVY"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-B05",
+      "title": "冻结呈现与上下文回执最小合同",
+      "depends_on": [],
+      "status": "READY",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "design",
+      "required_locks": [
+        "v4-contract-design"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/ARCHITECTURE_DELTA.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [],
+      "objective": "映射现有receipt/context/proto，拟定ContextSelectionReceipt、ExperienceEvent与EpisodeResumeView最小增量；列哪些字段现有可复用，缺项才迁移。",
+      "work": "映射现有receipt/context/proto，拟定ContextSelectionReceipt、ExperienceEvent与EpisodeResumeView最小增量；列哪些字段现有可复用，缺项才迁移。先合同后并行实现。",
+      "acceptance": [
+        "每字段有来源/版本/unknown语义；事件不能授予权限",
+        "新旧客户端双读用例与proto生成入口明确",
+        "5种错误状态不混committed；跨对象ID误用拒绝"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-B06",
+      "title": "真实模型能力、调用预算与全链测量基线",
+      "depends_on": [],
+      "status": "READY",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "v4-model-probe"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/LATENCY_COST_RUNTIME.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [
+        "S05",
+        "S06"
+      ],
+      "objective": "读取实际provider配置并做限额探测，冻结模型/价格来源/网络环境。",
+      "work": "读取实际provider配置并做限额探测，冻结模型/价格来源/网络环境。定位FIX545与所有隐藏模型调用，输出前台/后台预算；不更换未经probe的所谓最新模型。",
+      "acceptance": [
+        "任何Key不入输出；用户未授权预算不发大批请求",
+        "带token的no_generation_model可检出；未知价格不填0",
+        "gRPC测量与Flutter→Gateway整链指标标签分开"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-F01",
+      "title": "像素候选主题并入唯一令牌体系",
+      "depends_on": [
+        "V4-B04"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "design-tokens"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "settings",
+        "visual_elements"
+      ],
+      "source_anchors": [],
+      "objective": "实现纸昼/暮色/低刺激候选profile，像素尺寸与动效映射到现有tokens_v2；保持classic可回退。",
+      "work": "实现纸昼/暮色/低刺激候选profile，像素尺寸与动效映射到现有tokens_v2；保持classic可回退。只改语义令牌，不全仓重写DS。",
+      "acceptance": [
+        "最终颜色对比度自动测；3profile核心文案可读",
+        "200%字阶无主CTA截断，系统字号可继承",
+        "runtime只有一个token源；preview默认off"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-F02",
+      "title": "原生像素组件与完整状态故事页",
+      "depends_on": [
+        "V4-F01",
+        "V4-B05"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "design-components"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "visual_elements"
+      ],
+      "source_anchors": [],
+      "objective": "实现PixelFrame/主次卡/CTA/receipt/diff/run/evidence组件，保留原生输入与语义；对stair边/DPR/focus做组件故事页。",
+      "work": "实现PixelFrame/主次卡/CTA/receipt/diff/run/evidence组件，保留原生输入与语义；对stair边/DPR/focus做组件故事页。",
+      "acceptance": [
+        "DPR1/1.25/1.5/2/3主要轮廓稳定，文字不点阵化",
+        "取消/unknown/conflict/失败均有区分且无成功动效",
+        "装饰不吞点击，键盘与屏幕阅读器可定位操作"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-F03",
+      "title": "真实状态驱动的反馈呈现适配器",
+      "depends_on": [
+        "V4-F02",
+        "V4-B05"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "experience-presenter"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/MOTION_AUDIO_HAPTICS.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "experience",
+        "aurora"
+      ],
+      "source_anchors": [],
+      "objective": "接既有业务receipt到ExperienceEvent，统一视觉/声/触入口；加入事件去重、replay抑制、当前对象version校验。",
+      "work": "接既有业务receipt到ExperienceEvent，统一视觉/声/触入口；加入事件去重、replay抑制、当前对象version校验。",
+      "acceptance": [
+        "无committed回执不能触发成功；同event重播不重复震/音",
+        "仅保存记忆不显示任务修改完成；证据登记不叫精通",
+        "断网未知状态仍可查，不渲染为绿色成功"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-F04",
+      "title": "五Tab Shell与响应式布局升级",
+      "depends_on": [
+        "V4-F02",
+        "V4-B02"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "mobile-shell"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "home",
+        "user",
+        "task",
+        "chat",
+        "galaxy"
+      ],
+      "source_anchors": [],
+      "objective": "保留实际route ID与五Tab，替换导航视觉、SafeArea、桌面侧栏、键盘布局；图标语义独立，不照抄四Tab参考图。",
+      "work": "保留实际route ID与五Tab，替换导航视觉、SafeArea、桌面侧栏、键盘布局；图标语义独立，不照抄四Tab参考图。",
+      "acceptance": [
+        "全部旧深链能到同一对象、Back不丢上下文",
+        "360宽/800×600/1280×720下主操作和错误可见",
+        "系统返回、文本200%、键盘打开不越界"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-F05",
+      "title": "可替换设计Preview与主题切换",
+      "depends_on": [
+        "V4-F03",
+        "V4-F04"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "style-preview"
+      ],
+      "heavy_token_required": true,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "visual_elements",
+        "home"
+      ],
+      "source_anchors": [],
+      "objective": "制作真实Flutter内部预览，至少首页/卡住sheet/记忆/长回答/星图五面，切三profile并运行同一状态流；本包HTML仅作参考。",
+      "work": "制作真实Flutter内部预览，至少首页/卡住sheet/记忆/长回答/星图五面，切三profile并运行同一状态流；本包HTML仅作参考。",
+      "acceptance": [
+        "设计未批准时稳定主题仍可用，preview不隐性全量上线",
+        "切主题不重启run/清数据/改token用量",
+        "五面状态截图附相同build与数据seed"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-F06",
+      "title": "无障碍与文本缩放基础能力",
+      "depends_on": [
+        "V4-F02",
+        "V4-F04"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "a11y"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/ACCESSIBILITY_ASSETS.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "settings",
+        "galaxy",
+        "chat"
+      ],
+      "source_anchors": [],
+      "objective": "补PixelFrame/Semantics、星图列表替代、焦点顺序、reduceMotion静态分支与文字缩放；沿用V3已有实现只补缺口。",
+      "work": "补PixelFrame/Semantics、星图列表替代、焦点顺序、reduceMotion静态分支与文字缩放；沿用V3已有实现只补缺口。",
+      "acceptance": [
+        "关键目标≥48dp项目标准；正文contrast≥4.5:1",
+        "screenreader无同义重复朗读；toast不抢持续输入",
+        "200%和reduced-motion无零duration崩溃"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-I01",
+      "title": "目标Episode接续读模型",
+      "depends_on": [
+        "V4-B01",
+        "V4-B05"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "episode-view"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/ARCHITECTURE_DELTA.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "goal",
+        "journey",
+        "aurora"
+      ],
+      "source_anchors": [],
+      "objective": "将现有goal/task/run/outcome聚合成版本化接续视图；区分上次已确认位置、等待人类步骤、过期约束。",
+      "work": "将现有goal/task/run/outcome聚合成版本化接续视图；区分上次已确认位置、等待人类步骤、过期约束。不能创造另一个主任务表。",
+      "acceptance": [
+        "跨会话/进程重开恢复同一对象；已删对象不复活",
+        "目标改变或版本过期时退回明确校准，旧计划不强推",
+        "无历史时不造连续学习/理解分数"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-I02",
+      "title": "合法历史的效用筛选与反向迁移抑制",
+      "depends_on": [
+        "V4-B01",
+        "V4-B03"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "context-memory"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/MEMORY_UTILITY_AND_CONFLICT.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "memory",
+        "cognitive"
+      ],
+      "source_anchors": [
+        "S03",
+        "S11"
+      ],
+      "objective": "在原Context Compiler预筛后增加optional history效用门；当前约束强制保留，旧失败只在同类型/有效时间影响候选。",
+      "work": "在原Context Compiler预筛后增加optional history效用门；当前约束强制保留，旧失败只在同类型/有效时间影响候选。记录选/拒用原因。",
+      "acceptance": [
+        "FIX52异类型失败不拉向skill/difficulty",
+        "required-memory场景有召回，全部拒用不能过门",
+        "已删/越权/过期/错scope任何条目不入prompt"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-I03",
+      "title": "复杂表达的受限语义选择器",
+      "depends_on": [
+        "V4-I02",
+        "V4-B06"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "aurora-selector"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/AURORA_SEMANTIC_POLICY.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "aurora",
+        "intent"
+      ],
+      "source_anchors": [],
+      "objective": "把明确规则快路与复杂语义分开；模型只选合法干预/执行模式/ref，可提出一个缺失变量。",
+      "work": "把明确规则快路与复杂语义分开；模型只选合法干预/执行模式/ref，可提出一个缺失变量。保留schema校验和一次修复，影子先跑。",
+      "acceptance": [
+        "多否定/时间约束/材料不足不靠单关键词误判",
+        "未知ref或目录外tool拒绝，不拼“已执行”话术",
+        "同样输入的规则/语义臂对照保留成本和失败"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-I04",
+      "title": "无动作仍可纠正与一次决策性澄清",
+      "depends_on": [
+        "V4-I03"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "stuck-policy"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/AURORA_SEMANTIC_POLICY.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "recovery",
+        "aurora"
+      ],
+      "source_anchors": [
+        "S03"
+      ],
+      "objective": "落实FIX97裁决：abstain/no_action面可自由补充；当前两种不同后果候选时才问一次，收到明确纠正立即重决策不反复画像。",
+      "work": "落实FIX97裁决：abstain/no_action面可自由补充；当前两种不同后果候选时才问一次，收到明确纠正立即重决策不反复画像。",
+      "acceptance": [
+        "没有错误提案也能纠正并形成合法经验",
+        "今天15分钟不写永久偏好；“不是不会”不追难度",
+        "澄清后行动改变依据可追踪，用户可跳过/暂停"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-I05",
+      "title": "经验策略影子验证与有界启用",
+      "depends_on": [
+        "V4-I02",
+        "V4-I04",
+        "V4-D02"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "policy-patches"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/EXPERIENCE_AND_LEARNING.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "aurora",
+        "experience",
+        "cognitive"
+      ],
+      "source_anchors": [],
+      "objective": "复用A05六字段，补precondition/negative evidence/版本/观察窗；候选从真实同域结果投影，先影子对照再受限live。",
+      "work": "复用A05六字段，补precondition/negative evidence/版本/观察窗；候选从真实同域结果投影，先影子对照再受限live。",
+      "acceptance": [
+        "不新增任意prompt/code字段，不越六表面权限",
+        "缺失结果censored；重复摘要不累积为多源证据",
+        "撤回源后相关策略失效；无收益策略不静默启用"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-I06",
+      "title": "Context使用回执与来源验证",
+      "depends_on": [
+        "V4-I02",
+        "V4-B05"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "context-receipt"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/ARCHITECTURE_DELTA.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "memory",
+        "chat",
+        "knowledge"
+      ],
+      "source_anchors": [],
+      "objective": "把实际已注入且被合法使用的ref/version映射到用户可读why-this；校验RAG引用存在并支持相关句子，不把单纯检索命中称已利用。",
+      "work": "把实际已注入且被合法使用的ref/version映射到用户可读why-this；校验RAG引用存在并支持相关句子，不把单纯检索命中称已利用。",
+      "acceptance": [
+        "来源不可定位时明确unknown；不编时间/quote",
+        "用户看到的scope与后台一致，删除后旧receipt更新",
+        "RAG引用可点原文；外部文本不变用户事实"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-I07",
+      "title": "学习/交付目标的人机权限与脚手架",
+      "depends_on": [
+        "V4-I03",
+        "V4-B05"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "hybrid-policy"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/EXPERIENCE_AND_LEARNING.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "journey",
+        "error_book",
+        "reviews"
+      ],
+      "source_anchors": [],
+      "objective": "在现有Human/Agent/Hybrid步骤上加mastery/deliverable目的与human_required约束，接示例→尝试→独立检验及提示渐隐。",
+      "work": "在现有Human/Agent/Hybrid步骤上加mastery/deliverable目的与human_required约束，接示例→尝试→独立检验及提示渐隐。",
+      "acceptance": [
+        "学会目标中Agent代答不能结算人类掌握",
+        "交付目标允许合法代办，不强迫用户手工重复",
+        "独立检验答案不出现在可见/可检索上下文"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-I08",
+      "title": "深任务返回控制与恢复一致性",
+      "depends_on": [
+        "V4-B06",
+        "V4-I01"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "agent-runtime"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/LATENCY_COST_RUNTIME.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "openclaw",
+        "journey"
+      ],
+      "source_anchors": [],
+      "objective": "复用OpenClaw/run机制，让深任务有真实阶段产物和离开后恢复；处理human handoff、预算暂停、unknown对账。",
+      "work": "复用OpenClaw/run机制，让深任务有真实阶段产物和离开后恢复；处理human handoff、预算暂停、unknown对账。不是重建Runtime。",
+      "acceptance": [
+        "5s内可查看/取消/离开；ack不算有效答案",
+        "重启/断网/重试不双写，取消后外部副作用如实对账",
+        "人类步骤等待，不由Agent伪造完成"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-I09",
+      "title": "真正零模型的确定性快路与快慢分层",
+      "depends_on": [
+        "V4-B06"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ai-fast-lane"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/LATENCY_COST_RUNTIME.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "chat",
+        "intent"
+      ],
+      "source_anchors": [],
+      "objective": "使L0按钮/确定状态零生成调用，L1不串无必要review/reflection；L2有硬交互预算、超时返回诚实可继续状态。",
+      "work": "使L0按钮/确定状态零生成调用，L1不串无必要review/reflection；L2有硬交互预算、超时返回诚实可继续状态。",
+      "acceptance": [
+        "L0 token=0且无隐含模型attempt",
+        "有效首内容不以stage/ack/模板鸡汤抵扣",
+        "路由与降级不损工具/授权合同"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-I10",
+      "title": "根请求全调用计量与label真实性",
+      "depends_on": [
+        "V4-B06"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "cost-ledger"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/LATENCY_COST_RUNTIME.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "tools",
+        "settings"
+      ],
+      "source_anchors": [
+        "S06"
+      ],
+      "objective": "修FIX545检测与归因；将分类/充分性/HyDE/生成/审查/反思/embedding/语音统一root_request下计量，保留actual/estimated/unknown。",
+      "work": "修FIX545检测与归因；将分类/充分性/HyDE/生成/审查/反思/embedding/语音统一root_request下计量，保留actual/estimated/unknown。",
+      "acceptance": [
+        "7条已知错挂案例被检出且不再靠改label消失",
+        "未核价unknown不填0，重复重放不重复结算",
+        "并发预算原子reserve/settle，独立开销可切片"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-D01",
+      "title": "交付到真实呈现的曝光语义增量",
+      "depends_on": [
+        "V4-B01",
+        "V4-B05"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "lifecycle-exposure"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/DATA_AND_GRAPH.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "experience",
+        "home",
+        "chat"
+      ],
+      "source_anchors": [
+        "S07"
+      ],
+      "objective": "保留FIX507生产hook；区分delivered/rendered与等价无障碍曝光，记录真实操作而非用下发代替看到，幂等接原事件。",
+      "work": "保留FIX507生产hook；区分delivered/rendered与等价无障碍曝光，记录真实操作而非用下发代替看到，幂等接原事件。",
+      "acceptance": [
+        "旧生产接线与测试不回退；无新同义事件总线",
+        "不可见/后台下发不算看到；重复render不重复曝光",
+        "丢事件可重放且不会拖跨主业务"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-D02",
+      "title": "结果窗口、关联键与缺失语义",
+      "depends_on": [
+        "V4-D01"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "lifecycle-attribution"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/DATA_AND_GRAPH.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "experience",
+        "insights"
+      ],
+      "source_anchors": [],
+      "objective": "统一goal/task/occurrence/run同域关联与观察窗；支持accepted/rejected/started及明确edited迁移，延迟outcome/censored。",
+      "work": "统一goal/task/occurrence/run同域关联与观察窗；支持accepted/rejected/started及明确edited迁移，延迟outcome/censored。",
+      "acceptance": [
+        "不同ID域不能拼接伪归因；unattributed公开分母",
+        "超窗未回来不记失败；重复回放不加样本",
+        "UI→receipt→event→outcome随机追踪可还原"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-D03",
+      "title": "撤回派生影响与投影重算",
+      "depends_on": [
+        "V4-D02"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "evidence-retraction"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/DATA_AND_GRAPH.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "memory",
+        "cognitive",
+        "galaxy"
+      ],
+      "source_anchors": [],
+      "objective": "沿epoch与revocation机制实现受影响策略/insight/能力节点重算；严格区分删除材料、撤回推断、撤回结果，保留合法其他来源。",
+      "work": "沿epoch与revocation机制实现受影响策略/insight/能力节点重算；严格区分删除材料、撤回推断、撤回结果，保留合法其他来源。",
+      "acceptance": [
+        "并发旧job不能复活已删内容",
+        "非线性状态按有效事件回放而非减旧分数",
+        "重算中UI与工具均标过期，不继续旧建议"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-D04",
+      "title": "星图证据与参与足迹分离",
+      "depends_on": [
+        "V4-D03",
+        "V4-B02"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "galaxy-evidence"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/DATA_AND_GRAPH.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "galaxy",
+        "knowledge",
+        "achievement"
+      ],
+      "source_anchors": [],
+      "objective": "在关系型主星图中接有效outcome，区分练习过/独立检验通过；旧时间增长降为活动痕迹，贡献回到具体来源。",
+      "work": "在关系型主星图中接有效outcome，区分练习过/独立检验通过；旧时间增长降为活动痕迹，贡献回到具体来源。",
+      "acceptance": [
+        "只学习计时不显示掌握；Agent产物不计人类能力",
+        "撤回证据后节点、列表、insight同version",
+        "sprint奖励不读AI掌握分，跨用户分享不加个人能力"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-D05",
+      "title": "可读且不夸大的洞察与经验回访",
+      "depends_on": [
+        "V4-D02",
+        "V4-I05"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "insights-view"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/DATA_AND_GRAPH.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "insights",
+        "cognitive",
+        "report"
+      ],
+      "source_anchors": [],
+      "objective": "把D07事实卡接成用户可读观察/下一步建议，标来源、样本、missing/censored；回访能证明上次建议是否相关而非套模板。",
+      "work": "把D07事实卡接成用户可读观察/下一步建议，标来源、样本、missing/censored；回访能证明上次建议是否相关而非套模板。",
+      "acceptance": [
+        "三例只有两例关联不能写因果提升67%",
+        "无数据不出“充分理解”，已删来源不复用",
+        "一条观察≤一个主建议，用户可拒绝且不扣奖励"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-D06",
+      "title": "GraphRAG时效与关系型fallback",
+      "depends_on": [
+        "V4-D04"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "graph-retrieval"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/DATA_AND_GRAPH.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "knowledge",
+        "galaxy"
+      ],
+      "source_anchors": [],
+      "objective": "确认AGE写入与watermark真实覆盖，优先关系型主真源；若AGE索引不完整就显式fallback，不启动第二套世界模型。",
+      "work": "确认AGE写入与watermark真实覆盖，优先关系型主真源；若AGE索引不完整就显式fallback，不启动第二套世界模型。",
+      "acceptance": [
+        "新资料立即有明确版本/索引中状态",
+        "AGE旧数据不能压过更新/删除的关系型事实",
+        "对同题关系型/AGE来源可复算，失败保留"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U01",
+      "title": "首页接续与有价值的第一主动作",
+      "depends_on": [
+        "V4-F04",
+        "V4-I01"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-home"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "home",
+        "splash",
+        "goal"
+      ],
+      "source_anchors": [],
+      "objective": "把首页从功能菜单变成goal接续+一主行动+Aurora可展开依据；保留今日账本与有效状态，压缩装饰首屏高度。",
+      "work": "把首页从功能菜单变成goal接续+一主行动+Aurora可展开依据；保留今日账本与有效状态，压缩装饰首屏高度。",
+      "acceptance": [
+        "360宽首屏有主CTA，不靠滚动找下一步",
+        "新用户零假历史；回归有真last_step/可调整",
+        "退出/重进不强制自动播放或重播成就"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U02",
+      "title": "卡住→纠正→差异确认垂直交互",
+      "depends_on": [
+        "V4-F03",
+        "V4-I04",
+        "V4-I06"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-recovery"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "recovery",
+        "aurora"
+      ],
+      "source_anchors": [],
+      "objective": "统一首页/目标/任务的recovery sheet；显示本次约束与持久偏好分离、可读action diff和实际committed回执。",
+      "work": "统一首页/目标/任务的recovery sheet；显示本次约束与持久偏好分离、可读action diff和实际committed回执。",
+      "acceptance": [
+        "三宿主同语义，abstain仍可输入纠正",
+        "保存偏好≠改任务；取消不改变原行动",
+        "unknown/版本冲突可恢复，回执之后才成功反馈"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U03",
+      "title": "我的理解：项目范围与校准控制",
+      "depends_on": [
+        "V4-F02",
+        "V4-I06"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-memory"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "memory",
+        "user",
+        "cognitive"
+      ],
+      "source_anchors": [],
+      "objective": "复用UserPersona活入口，改黑话为来源/这次/这个目标/忘记；不复活已删孤儿界面。",
+      "work": "复用UserPersona活入口，改黑话为来源/这次/这个目标/忘记；不复活已删孤儿界面。",
+      "acceptance": [
+        "任何记忆操作可键盘与200%字体使用",
+        "并发更改scope有版本冲突，不静默覆盖",
+        "解释次数预算不限制纠正/删除权"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U04",
+      "title": "Hybrid入口接线与运行工作台",
+      "depends_on": [
+        "V4-F03",
+        "V4-I07",
+        "V4-I08"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-hybrid"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "journey",
+        "openclaw"
+      ],
+      "source_anchors": [],
+      "objective": "将已有HybridJourneySheet接到合法提案/运行卡，明确我来做/带我做/交给Sparkle；挂现有OpenClaw而非第二Agent页。",
+      "work": "将已有HybridJourneySheet接到合法提案/运行卡，明确我来做/带我做/交给Sparkle；挂现有OpenClaw而非第二Agent页。",
+      "acceptance": [
+        "FIX535入口真实可达且不绕审批",
+        "human_required步骤只能用户证据推进",
+        "中断/跨端恢复保持同run，不重复生成工件"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U05",
+      "title": "星图轨迹与证据详情视觉",
+      "depends_on": [
+        "V4-F02",
+        "V4-D04"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-galaxy"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "galaxy",
+        "knowledge"
+      ],
+      "source_anchors": [],
+      "objective": "应用像素节点/路径语言但保持可读标签，分离活动足迹和能力证据，接来源抽屉与列表替代。",
+      "work": "应用像素节点/路径语言但保持可读标签，分离活动足迹和能力证据，接来源抽屉与列表替代。",
+      "acceptance": [
+        "节点点开来源与投影version一致",
+        "缩放按钮不遮挡主CTA，键盘可选节点",
+        "不开特效仍理解全部信息，无数据不造进度"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U06",
+      "title": "首程落点、账号升级与确认反馈",
+      "depends_on": [
+        "V4-F04",
+        "V4-U01"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-onboarding"
+      ],
+      "heavy_token_required": true,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "auth",
+        "user",
+        "splash",
+        "journey"
+      ],
+      "source_anchors": [],
+      "objective": "继承FIX539/540注册首卡修复；裁决536/541：携带用户待发请求到目标对话，否则到该目标今天；新手确认后真实receipt可見。",
+      "work": "继承FIX539/540注册首卡修复；裁决536/541：携带用户待发请求到目标对话，否则到该目标今天；新手确认后真实receipt可見。",
+      "acceptance": [
+        "真实UI注册/升级不落意外我的页",
+        "首卡与确认文案、DB同一次receipt一致",
+        "guest示例不污染真实长期记忆；无API旁路冒充首程"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U07",
+      "title": "长对话、代码、RAG与快慢反馈",
+      "depends_on": [
+        "V4-F02",
+        "V4-I09",
+        "V4-I06"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-chat"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "chat",
+        "translation",
+        "vocabulary"
+      ],
+      "source_anchors": [],
+      "objective": "像素外壳内保持现代阅读，回复分段流式、来源定位、工具阶段折叠；上滑后不自动拉回，保留中断内容。",
+      "work": "像素外壳内保持现代阅读，回复分段流式、来源定位、工具阶段折叠；上滑后不自动拉回，保留中断内容。",
+      "acceptance": [
+        "200%长中文/代码/公式不横向破屏",
+        "reference点击真来源，未知引用不造超链接",
+        "首个有用内容与ack区分，慢任务不循环假思考"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U08",
+      "title": "任务计划日历统一行动语义",
+      "depends_on": [
+        "V4-F04",
+        "V4-F03"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-plan-task"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "task",
+        "plan",
+        "goal",
+        "calendar"
+      ],
+      "source_anchors": [],
+      "objective": "像素组件覆盖task/plan/calendar/goal，保留估时与真实专注区分、时间/时区/重复任务逻辑；表单与列表渐进披露。",
+      "work": "像素组件覆盖task/plan/calendar/goal，保留估时与真实专注区分、时间/时区/重复任务逻辑；表单与列表渐进披露。",
+      "acceptance": [
+        "四页面看到同task/version；重复点击一次写入",
+        "改日程有键盘/按钮路径，不仅拖动",
+        "计划时长不作为完成证据，删除/放弃不同语义"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U09",
+      "title": "专注：低刺激与真实成果收口",
+      "depends_on": [
+        "V4-F03",
+        "V4-U08"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-focus"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "focus"
+      ],
+      "source_anchors": [],
+      "objective": "专注页面只保留当前动作、计时、退出；结束可记录成果或跳过，不强制长反思；接可选声音状态。",
+      "work": "专注页面只保留当前动作、计时、退出；结束可记录成果或跳过，不强制长反思；接可选声音状态。",
+      "acceptance": [
+        "中断计时不假保存；估计和实际分开",
+        "切后台/重开不重置或重复结算",
+        "无声音动效仍完整可用，失败不显示庆祝"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U10",
+      "title": "资料→错题→练习→检验连续体验",
+      "depends_on": [
+        "V4-F02",
+        "V4-I07"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-learning"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "file",
+        "document",
+        "documents",
+        "error_book",
+        "reviews",
+        "knowledge",
+        "translation",
+        "vocabulary",
+        "tools"
+      ],
+      "source_anchors": [],
+      "objective": "统一材料/错题/复习/词汇工具为目标上下文入口，来源可见，独立检验与示例严格隔离；OCR不可用有文本替代。",
+      "work": "统一材料/错题/复习/词汇工具为目标上下文入口，来源可见，独立检验与示例严格隔离；OCR不可用有文本替代。",
+      "acceptance": [
+        "不会从目标跳入无上下文的工具空页",
+        "答案不泄漏到检验用户可读状态",
+        "真实文件/图片失败无伪造解析，来源版本正确"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U11",
+      "title": "小队、火堆与分享边界风格",
+      "depends_on": [
+        "V4-F04",
+        "V4-D01"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-community"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "community"
+      ],
+      "source_anchors": [],
+      "objective": "保留当前邀请小队/冲刺语义，统一成员/成果卡/火堆，私人Memory不进入群；检验单实例与多实例实时边界。",
+      "work": "保留当前邀请小队/冲刺语义，统一成员/成果卡/火堆，私人Memory不进入群；检验单实例与多实例实时边界。",
+      "acceptance": [
+        "两个真实测试账号分享/撤回/重连可达",
+        "sprint排序不混XP/光子/私人画像",
+        "无其他成员也可完整单人行动；demo角色明确标记"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U12",
+      "title": "自我锚与光子：保留最新商业决定",
+      "depends_on": [
+        "V4-F02",
+        "V4-U11"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-rewards"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "leaderboard",
+        "photon",
+        "achievement",
+        "shop"
+      ],
+      "source_anchors": [],
+      "objective": "复用最新self-anchor和photon/redeem-pro活路由，换成一致像素语法；保留受限奖励与免费核心，HIDDEN商店不打开。",
+      "work": "复用最新self-anchor和photon/redeem-pro活路由，换成一致像素语法；保留受限奖励与免费核心，HIDDEN商店不打开。",
+      "acceptance": [
+        "不恢复全站综合榜或以flame_level冒充付费身份",
+        "余额/兑换来自真账本，重复兑换幂等",
+        "可关闭庆祝，核心记忆纠正/隐私不收费"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U13",
+      "title": "洞察报告：让分析可理解",
+      "depends_on": [
+        "V4-F02",
+        "V4-D05"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-insights"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "insights",
+        "cognitive",
+        "report",
+        "experience"
+      ],
+      "source_anchors": [],
+      "objective": "将insights/cognitive/report中的原始数值与推断拆开，图表保持现代读数，支持跳原始记录。",
+      "work": "将insights/cognitive/report中的原始数值与推断拆开，图表保持现代读数，支持跳原始记录。",
+      "acceptance": [
+        "所有百分比/样本/时间窗有真实定义",
+        "无数据/不足/撤回分别呈现",
+        "图表标签不像素糊化，低刺激色觉模式等价"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U14",
+      "title": "设置、通知与所有异常表面",
+      "depends_on": [
+        "V4-F04",
+        "V4-F06"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-settings"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "settings",
+        "notification_center",
+        "auth",
+        "user"
+      ],
+      "source_anchors": [],
+      "objective": "配置主题preview、动效/背景声/提示音/触觉独立偏好；统一错误/离线/权限失效/深链空对象面，不破坏现有设置。",
+      "work": "配置主题preview、动效/背景声/提示音/触觉独立偏好；统一错误/离线/权限失效/深链空对象面，不破坏现有设置。",
+      "acceptance": [
+        "偏好重开保持；系统减少动态具有约束力",
+        "录音/声音权限拒绝只降该能力不堵目标",
+        "通知落真实对象，已删对象提示而非空白"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-U15",
+      "title": "长尾家族清点与风格一致性闭合",
+      "depends_on": [
+        "V4-F02",
+        "V4-B02"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-longtail"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/SCREEN_FAMILIES.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "intent",
+        "mirofish",
+        "reflection",
+        "seed_library",
+        "simulation",
+        "theater",
+        "visual_elements",
+        "tools"
+      ],
+      "source_anchors": [],
+      "objective": "对所有尚未由U卡覆盖的活跃表面迁移，LABS/HIDDEN只检查不泄露入口；去掉旧皮肤硬编码与不一致加载/空态。",
+      "work": "对所有尚未由U卡覆盖的活跃表面迁移，LABS/HIDDEN只检查不泄露入口；去掉旧皮肤硬编码与不一致加载/空态。",
+      "acceptance": [
+        "43模块每个都有explicit disposition/截图或不可达证据",
+        "不新增同义组件和主题真源",
+        "原guard棘轮只降不升，无半接线屏被偷偷开放"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-S01",
+      "title": "动效节奏与降低动态等价实现",
+      "depends_on": [
+        "V4-F03"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "motion-policy"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/MOTION_AUDIO_HAPTICS.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "visual_elements",
+        "aurora"
+      ],
+      "source_anchors": [],
+      "objective": "按语义乐谱实现按压/提案/回执/证据动效，不给滚动正文降帧；减少动态用静态分支，不通配Duration.zero。",
+      "work": "按语义乐谱实现按压/提案/回执/证据动效，不给滚动正文降帧；减少动态用静态分支，不通配Duration.zero。",
+      "acceptance": [
+        "无后台无限动画和全屏粒子",
+        "cancel/replay不重播成功；enter/state/milestone预算可测",
+        "profile下帧时间与baseline对照"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-S02",
+      "title": "音频焦点、合法音轨与静音fallback",
+      "depends_on": [
+        "V4-F03",
+        "V4-U14",
+        "V4-S04"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "audio-policy"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/MOTION_AUDIO_HAPTICS.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "focus",
+        "chat",
+        "settings"
+      ],
+      "source_anchors": [],
+      "objective": "实现环境/提示音两独立音量及TTS/录音/来电/耳机拔出状态机；合法资产才进入bundle，默认关闭。",
+      "work": "实现环境/提示音两独立音量及TTS/录音/来电/耳机拔出状态机；合法资产才进入bundle，默认关闭。",
+      "acceptance": [
+        "未明确点播无声音；重开不自续",
+        "录音不回录提示音，TTS可duck/暂停环境床",
+        "模拟器只认调用与录制证据，未测真扬声器标未验证"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-S03",
+      "title": "平台语义触觉与去重",
+      "depends_on": [
+        "V4-F03",
+        "V4-U14"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "haptic-policy"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/MOTION_AUDIO_HAPTICS.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "settings",
+        "visual_elements"
+      ],
+      "source_anchors": [],
+      "objective": "封装系统能力探测和离散语义触觉，native已有反馈避免双震；不支持时静默保持文本，事件重播不震。",
+      "work": "封装系统能力探测和离散语义触觉，native已有反馈避免双震；不支持时静默保持文本，事件重播不震。",
+      "acceptance": [
+        "无用户同意/已关闭/重播=0触觉调用",
+        "pending/unknown不误用success pattern",
+        "模拟器调用正确与真机舒适度分开出具结论"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-S04",
+      "title": "原创像素资产与许可账本",
+      "depends_on": [
+        "V4-B04"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "asset-pipeline"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "02_design/ACCESSIBILITY_ASSETS.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "visual_elements"
+      ],
+      "source_anchors": [],
+      "objective": "建立最小sprite/icon/环境图/音轨资产清单，每项作者来源权利版本哈希fallback；参考图仅方向，不剪图上线。",
+      "work": "建立最小sprite/icon/环境图/音轨资产清单，每项作者来源权利版本哈希fallback；参考图仅方向，不剪图上线。",
+      "acceptance": [
+        "没有未知许可字体/商业BGM/游戏图标混入产物",
+        "原生多DPR导出或nearest-neighbor处理一致",
+        "替换芽/星光角色不改业务协议；未批准资源走占位"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-P01",
+      "title": "主动建议与接续同策略同打扰预算",
+      "depends_on": [
+        "V4-I01",
+        "V4-D02",
+        "V4-I04"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "proactive-policy"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/AURORA_SEMANTIC_POLICY.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "aurora",
+        "notification_center"
+      ],
+      "source_anchors": [],
+      "objective": "将当前nudges/spine渠道归到同一用户预算，触发基于合法事件/作用范围/quietHours；只在有具体帮助时出现。",
+      "work": "将当前nudges/spine渠道归到同一用户预算，触发基于合法事件/作用范围/quietHours；只在有具体帮助时出现。",
+      "acceptance": [
+        "拒绝/静音/过期计划不再被另一渠道补发",
+        "回归不视为必须打扰，不改变主题推断情绪",
+        "同一提示多端一次effect，预算与因果来源可追"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-P02",
+      "title": "记忆污染、授权与媒体边界红队",
+      "depends_on": [
+        "V4-I05",
+        "V4-D03",
+        "V4-U11"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "privacy-review"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "03_intelligence/MEMORY_UTILITY_AND_CONFLICT.md",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "memory",
+        "community",
+        "file"
+      ],
+      "source_anchors": [],
+      "objective": "沿既有隔离检测外部资料中的伪用户偏好、群共享越权、撤回后的缓存/策略/截图日志残留；不靠模型承诺安全。",
+      "work": "沿既有隔离检测外部资料中的伪用户偏好、群共享越权、撤回后的缓存/策略/截图日志残留；不靠模型承诺安全。",
+      "acceptance": [
+        "禁止来源不能经反思洗成explicit-user",
+        "跨账号本地cache/群AI/后台job隔离负例全保留",
+        "故障注入撤回与并发读取无旧依据副作用"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-P03",
+      "title": "运行韧性与V3外部依赖衔接",
+      "depends_on": [
+        "V4-I08",
+        "V4-I10"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ops-bridge"
+      ],
+      "heavy_token_required": true,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "08_release/ROLLOUT_AND_OPERATIONS.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [],
+      "objective": "检查FIX530/542启动路径与守护，使用现有服务监督与恢复脚本；把V4候选绑定原O-01/Q-07/Q-08外部门，不替代授权。",
+      "work": "检查FIX530/542启动路径与守护，使用现有服务监督与恢复脚本；把V4候选绑定原O-01/Q-07/Q-08外部门，不替代授权。",
+      "acceptance": [
+        "进程失联能被检测，CWD不决定资源路径",
+        "无凭据/TCC不越权，内部工作可继续",
+        "恢复/迁移/主题/selector回滚分别有可执行证据"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-Q01",
+      "title": "核心像素×AI垂直旅程真端验收",
+      "depends_on": [
+        "V4-U01",
+        "V4-U02",
+        "V4-U03",
+        "V4-U04",
+        "V4-D02",
+        "V4-F05"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "qa-vertical"
+      ],
+      "heavy_token_required": true,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "06_evaluation/EVALUATION_PROTOCOL.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [],
+      "objective": "在真实运行栈完成接续→卡住→纠正→Hybrid→回执→结果闭环，客户端操作驱动而非直接调用DB代替。",
+      "work": "在真实运行栈完成接续→卡住→纠正→Hybrid→回执→结果闭环，客户端操作驱动而非直接调用DB代替。",
+      "acceptance": [
+        "原生操作录像+UI语义树+只读DB/event三证对齐",
+        "同版本3次重复、失败与重试全部保留",
+        "设计未批准时仅preview证据，不默认发布"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-Q02",
+      "title": "记忆效用四臂与新holdout",
+      "depends_on": [
+        "V4-I05",
+        "V4-I06",
+        "V4-D03"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "qa-memory"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "06_evaluation/EVALUATION_PROTOCOL.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [],
+      "objective": "先冻结并复现原反例，再按开发/独立holdout规则运行四臂；实际模型/预算一致，按用户簇估区间，记录真实与模拟边界。",
+      "work": "先冻结并复现原反例，再按开发/独立holdout规则运行四臂；实际模型/预算一致，按用户簇估区间，记录真实与模拟边界。",
+      "acceptance": [
+        "合成结果不宣称真人留存；比较不丢失败",
+        "不用历史臂不能剥夺当前明确约束；selected与all历史同可见范围",
+        "同一source多摘要不加n；利益门失败不靠全拒用通过"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-Q03",
+      "title": "人机分工与学习迁移护栏验收",
+      "depends_on": [
+        "V4-U10",
+        "V4-U04",
+        "V4-I07"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "qa-learning"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "06_evaluation/EVALUATION_PROTOCOL.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [],
+      "objective": "运行目标为mastery/deliverable/mixed的独立任务，验证用户步骤、示例隔离、提示渐隐与成果核验；模拟器行为与真人认知分别标记。",
+      "work": "运行目标为mastery/deliverable/mixed的独立任务，验证用户步骤、示例隔离、提示渐隐与成果核验；模拟器行为与真人认知分别标记。",
+      "acceptance": [
+        "Agent代答不记用户掌握；无示例可見答案污染",
+        "切模式/取消/重连不跳人类步骤",
+        "交付效率与独立能力分别报，未测真人就unknown"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-Q04",
+      "title": "端到端有用延迟与完整成本重测",
+      "depends_on": [
+        "V4-I09",
+        "V4-I10",
+        "V4-I08",
+        "V4-U07"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "qa-latency"
+      ],
+      "heavy_token_required": true,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "06_evaluation/EVALUATION_PROTOCOL.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [
+        "S05",
+        "S06"
+      ],
+      "objective": "沿真实App→Gateway→Engine采样L0-L3，先小样本定位后每层≥100报告分位，绑定价格来源与所有attempt；未授权预算可暂停但不缩样充数。",
+      "work": "沿真实App→Gateway→Engine采样L0-L3，先小样本定位后每层≥100报告分位，绑定价格来源与所有attempt；未授权预算可暂停但不缩样充数。",
+      "acceptance": [
+        "ack/首delta/首有用内容/完整交付四个时刻分开",
+        "no_generation带token/漏辅助计费必须报红",
+        "取消/降级/失败纳入延迟与成本分母"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-Q05",
+      "title": "三端页面家族视觉与无障碍审查",
+      "depends_on": [
+        "V4-U05",
+        "V4-U06",
+        "V4-U07",
+        "V4-U08",
+        "V4-U09",
+        "V4-U10",
+        "V4-U11",
+        "V4-U12",
+        "V4-U13",
+        "V4-U14",
+        "V4-U15",
+        "V4-F06",
+        "V4-S04"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "qa-visual"
+      ],
+      "heavy_token_required": true,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "06_evaluation/EVALUATION_PROTOCOL.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [],
+      "objective": "按屏幕家族跑浅/深/静态与字体/窗口矩阵，截图+语义树+真实交互联合；拒绝仅AI说好看即通过。",
+      "work": "按屏幕家族跑浅/深/静态与字体/窗口矩阵，截图+语义树+真实交互联合；拒绝仅AI说好看即通过。",
+      "acceptance": [
+        "所有发布入口都有状态覆盖，无A/B级遮挡/误导",
+        "pixel风格跨页相同，密集信息仍清晰",
+        "无自动更新golden掩盖差异，外观审查独立于实现"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-Q06",
+      "title": "全感官关闭/重放/真机能力矩阵",
+      "depends_on": [
+        "V4-S01",
+        "V4-S02",
+        "V4-S03"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "qa-sensory"
+      ],
+      "heavy_token_required": true,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "06_evaluation/EVALUATION_PROTOCOL.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [],
+      "objective": "对事件乐谱全量测enabled/disabled/replay/background/unsupported/permission拒绝；可用真机则测硬件，无真机只签模拟器层。",
+      "work": "对事件乐谱全量测enabled/disabled/replay/background/unsupported/permission拒绝；可用真机则测硬件，无真机只签模拟器层。",
+      "acceptance": [
+        "静音/无触觉/减少动态所有任务同样可完成",
+        "replay不重播；仅真实commit用success",
+        "DEVICE_UNVERIFIED不写成体验舒适度已通过"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-Q07",
+      "title": "长期接续、离线与多账号组合回归",
+      "depends_on": [
+        "V4-Q01",
+        "V4-P01",
+        "V4-P02",
+        "V4-P03",
+        "V4-U05",
+        "V4-U06",
+        "V4-U09",
+        "V4-U11"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "qa-soak"
+      ],
+      "heavy_token_required": true,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "06_evaluation/EVALUATION_PROTOCOL.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [],
+      "objective": "控制钟模拟14日与真实跨进程/多端会话分开运行，注入撤回/离线/副作用unknown/小队退出/音频中断；保留原V3发布回归。",
+      "work": "控制钟模拟14日与真实跨进程/多端会话分开运行，注入撤回/离线/副作用unknown/小队退出/音频中断；保留原V3发布回归。",
+      "acceptance": [
+        "不同版本和时间机制不混成14日真人验证",
+        "同账号多端与不同账号缓存不混",
+        "可用已完成V3证据，但本次触达链必须新复验"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-Q08",
+      "title": "V4发布裁决与可修改设计快照",
+      "depends_on": [
+        "V4-Q02",
+        "V4-Q03",
+        "V4-Q04",
+        "V4-Q05",
+        "V4-Q06",
+        "V4-Q07",
+        "V4-D06",
+        "V4-S04"
+      ],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "verification",
+      "required_locks": [
+        "qa-release"
+      ],
+      "heavy_token_required": false,
+      "risk": "high",
+      "independent_reviewers": 2,
+      "specs": [
+        "MASTER_DESIGN.md",
+        "V4_DONE.md",
+        "V4_DONE.md"
+      ],
+      "modules": [],
+      "source_anchors": [],
+      "objective": "生成分层完成矩阵、失败/外部条件、设计待定项和可回滚候选。",
+      "work": "生成分层完成矩阵、失败/外部条件、设计待定项和可回滚候选。完整满足才VALUE/RELEASE通过，不因58张卡做完就开关全live。",
+      "acceptance": [
+        "设计预览、工程、效用、外部发布四种结论独立",
+        "原O-01/Q-07/Q-08未过就不称公网商业上线",
+        "交付包、build、flags、model、价格、schema、资产许可和证据同版本"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": true
+      },
+      "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+      "stop_conditions": [
+        "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+        "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+        "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+      ],
+      "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    }
+  ]
+}

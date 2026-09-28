@@ -1,0 +1,156 @@
+{
+  "as_of": "2026-09-28",
+  "scope": "定向查阅的一手研究/官方文档/产品资料，不是穷尽综述；源结果不转写为Sparkle成绩",
+  "sources": [
+    {
+      "id": "R01",
+      "title": "Effective context engineering for AI agents",
+      "publisher": "Anthropic",
+      "version": "2025-09-29",
+      "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+      "finding": "工程建议：上下文有限，按任务选择高信号资料；支持渐进加载。",
+      "adoption_and_limit": "采用小而相关的context与来源；不能把少token自动等于更智能。",
+      "type": "industry_primary"
+    },
+    {
+      "id": "R02",
+      "title": "MemRL: Self-Evolving Agents via Runtime Reinforcement Learning on Episodic Memory",
+      "publisher": "arXiv",
+      "version": "2026-02-12 v2",
+      "url": "https://arxiv.org/abs/2601.03192",
+      "finding": "研究把稳定推理与可塑记忆分开，检索结合语义和环境反馈效用。",
+      "adoption_and_limit": "借鉴效用选择；不照搬基准奖励到人的学习，不宣称Sparkle已有论文收益。",
+      "type": "research_primary"
+    },
+    {
+      "id": "R03",
+      "title": "Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models",
+      "publisher": "arXiv / ICLR2026",
+      "version": "2026-03-29 v3",
+      "url": "https://arxiv.org/abs/2510.04618",
+      "finding": "使用增量生成、反思、整理形成可演化context/playbook，避免反复整体改写丢细节。",
+      "adoption_and_limit": "映射到受限经验卡与版本；不让线上模型任意改权限或系统prompt。",
+      "type": "research_primary"
+    },
+    {
+      "id": "R04",
+      "title": "Hindsight is 20/20: Building Agent Memory that Retains, Recalls, and Reflects",
+      "publisher": "arXiv",
+      "version": "2025-12",
+      "url": "https://arxiv.org/abs/2512.12818",
+      "finding": "区分多种记忆信息并组织retain/recall/reflect过程。",
+      "adoption_and_limit": "作为现有五层模型的对照，不重复造新的记忆数据库。",
+      "type": "research_primary"
+    },
+    {
+      "id": "R05",
+      "title": "Web Content Accessibility Guidelines 2.2",
+      "publisher": "W3C",
+      "version": "2024-12-12 recommendation",
+      "url": "https://www.w3.org/TR/WCAG22/",
+      "finding": "可测的对比、焦点、目标尺寸、缩放和替代操作要求。",
+      "adoption_and_limit": "工程测关键条款；48dp为项目标准，不称是全部WCAG条款或已全面认证。",
+      "type": "standard_primary"
+    },
+    {
+      "id": "R06",
+      "title": "CustomPainter.semanticsBuilder",
+      "publisher": "Flutter API",
+      "version": "accessed 2026-09-28",
+      "url": "https://api.flutter.dev/flutter/rendering/CustomPainter/semanticsBuilder.html",
+      "finding": "自绘图形的可访问语义需显式构建，不能假设像素画布自带节点。",
+      "adoption_and_limit": "装饰与操作分开，星图有语义列表；不把所有原生控件画成一张图。",
+      "type": "official_docs"
+    },
+    {
+      "id": "R07",
+      "title": "Playing haptics",
+      "publisher": "Apple HIG",
+      "version": "accessed 2026-09-28",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/playing-haptics",
+      "finding": "触觉使用一致的语义、短促、克制并让用户可关闭，与视觉声音互补。",
+      "adoption_and_limit": "按回执统一反馈，支持平台差异；不证明模拟器可评价真实触感。",
+      "type": "official_docs"
+    },
+    {
+      "id": "R08",
+      "title": "Android haptics API reference",
+      "publisher": "Android Developers",
+      "version": "accessed 2026-09-28",
+      "url": "https://developer.android.com/develop/ui/views/haptics/haptics-apis",
+      "finding": "不同设备支持不同反馈能力，应选择语义接口并探测适配。",
+      "adoption_and_limit": "unsupported静默等价，不借长震动制造“有反馈”。",
+      "type": "official_docs"
+    },
+    {
+      "id": "R09",
+      "title": "Habitica — Gamify Your Life",
+      "publisher": "Habitica",
+      "version": "accessed 2026-09-28",
+      "url": "https://habitica.com/",
+      "finding": "官方产品把任务、习惯与角色、奖励、社交玩法结合。",
+      "adoption_and_limit": "像素/RPG任务不是独创护城河；不复制惩罚机制和游戏资产。",
+      "type": "product_primary"
+    },
+    {
+      "id": "R10",
+      "title": "About Finch",
+      "publisher": "Finch",
+      "version": "accessed 2026-09-28",
+      "url": "https://finchcare.com/about-finch",
+      "finding": "官方产品把虚拟伙伴、目标、反思和陪伴式成长相连。",
+      "adoption_and_limit": "视觉陪伴已有竞品；Sparkle应靠可校准学习协作而非更黏人的宠物。",
+      "type": "product_primary"
+    },
+    {
+      "id": "R11",
+      "title": "Generative AI without guardrails can harm learning: Evidence from high school mathematics",
+      "publisher": "PNAS",
+      "version": "2025",
+      "url": "https://doi.org/10.1073/pnas.2422633122",
+      "finding": "特定高中数学实验区分AI辅助练习与移除AI后的独立表现，提示工具设计影响技能获得。",
+      "adoption_and_limit": "保留human_required和独立检验；不把该研究外推为本产品已提高大学生成绩。",
+      "type": "research_primary"
+    },
+    {
+      "id": "R12",
+      "title": "LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory",
+      "publisher": "arXiv",
+      "version": "2024-10",
+      "url": "https://arxiv.org/abs/2410.10813",
+      "finding": "覆盖长期记忆中的多会话、时序、更新、抽取与拒答等能力。",
+      "adoption_and_limit": "借鉴测试切片，另加行动效用；记忆问答高分不等于用户成长。",
+      "type": "research_primary"
+    },
+    {
+      "id": "R13",
+      "title": "Hidden in Memory: Sleeper Memory Poisoning in LLM Agents",
+      "publisher": "arXiv",
+      "version": "2026-05",
+      "url": "https://arxiv.org/abs/2605.15338",
+      "finding": "研究持久记忆可能将不可信输入转化为后续影响，提示来源权限必须保留。",
+      "adoption_and_limit": "测试资料→反思→假用户偏好的污染链；不提供进攻性产品能力。",
+      "type": "research_primary"
+    },
+    {
+      "id": "R14",
+      "title": "Performance best practices",
+      "publisher": "Flutter",
+      "version": "accessed 2026-09-28",
+      "url": "https://docs.flutter.dev/perf/best-practices",
+      "finding": "关注布局/构建/绘制开销及昂贵saveLayer等路径，需实际profile。",
+      "adoption_and_limit": "像素装饰需预算，不能用debug截图证明帧率。",
+      "type": "official_docs"
+    },
+    {
+      "id": "R15",
+      "title": "Effective harnesses for long-running agents",
+      "publisher": "Anthropic",
+      "version": "2025-11-26",
+      "url": "https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents",
+      "finding": "长期agent需要持续状态、增量工作和可检查交接，而非仅一条长prompt。",
+      "adoption_and_limit": "沿用当前fleet/worktree/证据，不再造一个多Agent管理平台。",
+      "type": "industry_primary"
+    }
+  ]
+}

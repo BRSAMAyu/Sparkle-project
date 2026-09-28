@@ -1,0 +1,108 @@
+{
+  "status": "PROPOSED_NOT_APPROVED",
+  "runtime_owner": "mobile/lib/core/design/tokens_v2 -> theme -> context.*",
+  "no_parallel_runtime_source": true,
+  "themes": {
+    "paper_day": {
+      "canvas": "#F4F0E6",
+      "surface": "#FFFCF4",
+      "raised": "#E9E5D8",
+      "ink": "#29342F",
+      "muted": "#58665C",
+      "line": "#68766A",
+      "accent": "#3E6652",
+      "on_accent": "#FFFFFF",
+      "info": "#3C607A",
+      "warning": "#805126",
+      "error": "#9C3D38",
+      "success": "#386347",
+      "decor": "#D0D8CB"
+    },
+    "dusk": {
+      "canvas": "#19241F",
+      "surface": "#24322B",
+      "raised": "#2F4036",
+      "ink": "#F5F0E3",
+      "muted": "#C2CCBE",
+      "line": "#9DAF9F",
+      "accent": "#B9D5B5",
+      "on_accent": "#17261C",
+      "info": "#AFCADC",
+      "warning": "#E2BF89",
+      "error": "#F1B0A4",
+      "success": "#B9D5B5",
+      "decor": "#344B3B"
+    },
+    "quiet": {
+      "canvas": "#F7F5EF",
+      "surface": "#FFFFFF",
+      "raised": "#ECECE5",
+      "ink": "#202A24",
+      "muted": "#536056",
+      "line": "#627063",
+      "accent": "#344F3D",
+      "on_accent": "#FFFFFF",
+      "info": "#36556D",
+      "warning": "#795126",
+      "error": "#933B35",
+      "success": "#345C40",
+      "decor": "#EAEEE8"
+    }
+  },
+  "spacing_dp": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48
+  ],
+  "type_roles": {
+    "display": {
+      "size_sp": 28,
+      "line_height": 1.25
+    },
+    "title": {
+      "size_sp": 22,
+      "line_height": 1.3
+    },
+    "section": {
+      "size_sp": 18,
+      "line_height": 1.4
+    },
+    "body": {
+      "size_sp": 16,
+      "line_height": 1.6
+    },
+    "label": {
+      "size_sp": 14,
+      "line_height": 1.4
+    },
+    "caption": {
+      "size_sp": 13,
+      "line_height": 1.4
+    }
+  },
+  "hit_target_dp": 48,
+  "pixel_step_dp": 2,
+  "corner_cut_dp": [
+    4,
+    8,
+    12
+  ],
+  "stroke_dp": [
+    1,
+    2
+  ],
+  "motion_ms": {
+    "press": 80,
+    "state": 160,
+    "enter": 220,
+    "milestone_max": 650
+  },
+  "text_scaling_min_test": 1.0,
+  "text_scaling_max_test": 2.0,
+  "high_contrast": "derive_and_measure_not_guess",
+  "glyph_policy": "系统中文/拉丁字体；可选像素字只用于短标牌；不在包中附字体"
+}

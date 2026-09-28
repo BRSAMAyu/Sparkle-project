@@ -1,0 +1,39 @@
+{
+  "scope": "PACKAGE_ONLY_NOT_PRODUCT",
+  "tasks": 58,
+  "modules": 43,
+  "scenario_specs": 72,
+  "initial_ready": [
+    "V4-B01",
+    "V4-B02",
+    "V4-B03",
+    "V4-B04",
+    "V4-B05",
+    "V4-B06"
+  ],
+  "contrast_proposal_only": {
+    "paper_day": {
+      "body": 12.59,
+      "secondary": 5.9,
+      "button": 6.51,
+      "error": 6.53,
+      "warning": 6.56
+    },
+    "dusk": {
+      "body": 11.78,
+      "secondary": 8.09,
+      "button": 9.96,
+      "error": 7.33,
+      "warning": 7.69
+    },
+    "quiet": {
+      "body": 14.81,
+      "secondary": 6.61,
+      "button": 9.01,
+      "error": 7.2,
+      "warning": 6.96
+    }
+  },
+  "errors": [],
+  "pass": true
+}

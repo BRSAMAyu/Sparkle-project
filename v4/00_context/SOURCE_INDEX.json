@@ -1,0 +1,142 @@
+[
+  {
+    "id": "S01",
+    "archive_path": "v3/V3-COMPLETE-STATUS-FOR-V4.md",
+    "copy": "00_context/source_notes/S01_V3-COMPLETE-STATUS-FOR-V4.md",
+    "sha256": "bcd21f4fdf714f3d439423a1de22ad143b779302c3ed48355963d789b5a0b9dd",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S02",
+    "archive_path": "v3/FLEET-BRIEF.md",
+    "copy": "00_context/source_notes/S02_FLEET-BRIEF.md",
+    "sha256": "1a56ce82fb588893aecfc3fec5e304780898a2b72da9ee35e6f2c9c17baa0454",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S03",
+    "archive_path": "v3-output/WT412-FRICTION-FIXES/a08-post-fix/EVAL_RESULTS.md",
+    "copy": "00_context/source_notes/S03_EVAL_RESULTS.md",
+    "sha256": "145b94f5d84cdd934a7b25e5cd4c13bca5dfbef0c0651fd081dfbf32497e9390",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S04",
+    "archive_path": "v3-output/WT404-Q04-REDTEAM/DASHBOARD.md",
+    "copy": "00_context/source_notes/S04_DASHBOARD.md",
+    "sha256": "77f045855c0d2e2ab32c10abf302d01a176b77017118d147dd75736f88f3d6c2",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S05",
+    "archive_path": "v3-output/WT801-E08FINAL/summary.md",
+    "copy": "00_context/source_notes/S05_summary.md",
+    "sha256": "8386e40775331856e26175cf5ebaa8f5e70777eab1ff183953bc4e9fcfe11ec5",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S06",
+    "archive_path": "v3-output/WT803-E08REV/receipt.md",
+    "copy": "00_context/source_notes/S06_receipt.md",
+    "sha256": "0ae71d8df5a59f6951be514cdef995c9d58a62fca00ddab923a752023dc865a3",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S07",
+    "archive_path": "v3-output/WT797-F507/notes.md",
+    "copy": "00_context/source_notes/S07_notes.md",
+    "sha256": "733ece4960205714bae7b708cad14f1526bcd067eb32a75f5effc0f72f8498f4",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S08",
+    "archive_path": "v3-output/WT802-J02-RETEST/REPORT.md",
+    "copy": "00_context/source_notes/S08_REPORT.md",
+    "sha256": "f7abf203b8f098fee137fcbd1c08ec84684ddd697433c0fc555f55d138b679ec",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S09",
+    "archive_path": "v3-output/WT790-B01DELTA/delta_report.md",
+    "copy": "00_context/source_notes/S09_delta_report.md",
+    "sha256": "9c79bd11399fc39f5b1f2c3b1c1923cb6602d35c1ad4a58a617232b5474f57c0",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S10",
+    "archive_path": "v3-output/WT774-DOC-AJ/A-line.md",
+    "copy": "00_context/source_notes/S10_A-line.md",
+    "sha256": "b68eed234f37e3daa6e65f2ef0854f9bd6698538a280698bebdf7c5e93c06140",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S11",
+    "archive_path": "v3-output/WT770-DOC-MX/M-line.md",
+    "copy": "00_context/source_notes/S11_M-line.md",
+    "sha256": "4a7e1f48e4ecb5c785d26e512cb051e8b6494b8dde0e39dafed3dda3ba02d5d7",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S12",
+    "archive_path": "v3-output/WT770-DOC-MX/X-line.md",
+    "copy": "00_context/source_notes/S12_X-line.md",
+    "sha256": "9368e3d1f3f99ecff857c30e72b40c8c8095f80fc181670ee4d5f183ce1e36f5",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S13",
+    "archive_path": "v3-output/WT776-DOC-DE/D-line.md",
+    "copy": "00_context/source_notes/S13_D-line.md",
+    "sha256": "99a42292b94a1a8568db605a25d392f19ea3df62771dfd8c9f7128f0f2b72582",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S14",
+    "archive_path": "v3-output/WT776-DOC-DE/E-line.md",
+    "copy": "00_context/source_notes/S14_E-line.md",
+    "sha256": "0bf26830cab167aed26f59b99fbb7a8dbc507a48846f824417856854cd667392",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S15",
+    "archive_path": "v3-output/WT775-DOC-UPSG/U-line.md",
+    "copy": "00_context/source_notes/S15_U-line.md",
+    "sha256": "218feb014699d512bf00858e874d2df25441832895e822c21241cd3b5c665dab",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S16",
+    "archive_path": "v3-output/WT775-DOC-UPSG/P-line.md",
+    "copy": "00_context/source_notes/S16_P-line.md",
+    "sha256": "6fceedf65d1d3e8f1e79ce54ea27bfccbc2301596e0955ef4c3547d45b41a76e",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S17",
+    "archive_path": "v3-output/WT775-DOC-UPSG/S-line.md",
+    "copy": "00_context/source_notes/S17_S-line.md",
+    "sha256": "cdd54e60bdd851de979bc5b19bf588f0bca1f4ffd15f0a42fd55c549ef681f89",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S18",
+    "archive_path": "v3-output/WT775-DOC-UPSG/G-line.md",
+    "copy": "00_context/source_notes/S18_G-line.md",
+    "sha256": "e08c2586837e10bf8b428e9975b2e3ac62a2d52eff1e1927a32f5e0e1861af2d",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S19",
+    "archive_path": "v3-output/WT779-DOC-OQ/Q-line.md",
+    "copy": "00_context/source_notes/S19_Q-line.md",
+    "sha256": "f4f24fafc764c03ea0d8982a0f46bb5d3364abe1ccc0dfef0e34419a22506120",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  },
+  {
+    "id": "S20",
+    "archive_path": "v3-output/WT779-DOC-OQ/O-line.md",
+    "copy": "00_context/source_notes/S20_O-line.md",
+    "sha256": "cd577500729b546db94e8f36323db61f1b97dd03d11b06ccbafa63a0e31315e9",
+    "kind": "user_supplied_report_not_independent_runtime_verification"
+  }
+]

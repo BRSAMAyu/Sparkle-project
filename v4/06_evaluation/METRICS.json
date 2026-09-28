@@ -1,0 +1,214 @@
+{
+  "targets_are": "proposed_engineering_acceptance_not_observed_results",
+  "sample_policy": "可先低成本pilot，但不得把小样本当最终达标；预算不足记BLOCKED_BUDGET/NOT_RUN",
+  "metrics": [
+    {
+      "id": "M01",
+      "name": "首个有效行动",
+      "definition": "从真实新用户开始到有效行动确认并收到真实回执",
+      "target": "≤180秒；每平台≥12完整跑，全部保留",
+      "evidence_layer": "UI_LIVE",
+      "caveat": "不含纯欢迎/示例数据/API注册旁路"
+    },
+    {
+      "id": "M02",
+      "name": "回归接续",
+      "definition": "从打开到正确未完成行动可继续的主要操作数",
+      "target": "≤3次；30个含过期/目标改变用例",
+      "evidence_layer": "UI_LIVE",
+      "caveat": "过期目标应校准，不以强推旧动作过门"
+    },
+    {
+      "id": "M03",
+      "name": "本地反馈",
+      "definition": "触控到可见按压/进行中反馈",
+      "target": "p95≤100ms；≥200操作",
+      "evidence_layer": "PROFILE",
+      "caveat": "不是模型完成时间"
+    },
+    {
+      "id": "M04",
+      "name": "L0确定性快路",
+      "definition": "本地或服务确定性响应及生成调用数",
+      "target": "生成调用=0；服务处理p95≤500ms；≥100条",
+      "evidence_layer": "LIVE_STACK",
+      "caveat": "网络端到端另报"
+    },
+    {
+      "id": "M05",
+      "name": "L1首个有用内容",
+      "definition": "按请求相关内容判定，不是ack/stage",
+      "target": "p50≤2s/p95≤5s；≥100条",
+      "evidence_layer": "LIVE_STACK",
+      "caveat": "设备/网络/provider分层"
+    },
+    {
+      "id": "M06",
+      "name": "L2可用提案",
+      "definition": "从提交到有效可确认或必要澄清",
+      "target": "p50≤4s/p95≤12s；20s转交/终止；≥100条",
+      "evidence_layer": "LIVE_STACK",
+      "caveat": "模板鸡汤不算提案；失败计入"
+    },
+    {
+      "id": "M07",
+      "name": "L3控制返回",
+      "definition": "可查看真实范围并取消/离开运行卡",
+      "target": "≤5s；深任务软90s/硬180s初值；≥100条",
+      "evidence_layer": "LIVE_STACK",
+      "caveat": "单报最终耗时，不将ack算答案"
+    },
+    {
+      "id": "M08",
+      "name": "合法记忆引用",
+      "definition": "有权限且当前scope/epoch有效的引用数/全部使用引用",
+      "target": "≥0.95；≥80个发生引用的独立决定",
+      "evidence_layer": "LIVE_MODEL+DETERMINISTIC",
+      "caveat": "0引用分母N/A，不是100%"
+    },
+    {
+      "id": "M09",
+      "name": "必要记忆召回",
+      "definition": "oracle标为必要的合法记忆在决策中被恰当使用",
+      "target": "≥0.90；≥80个eligible决定",
+      "evidence_layer": "LIVE_MODEL",
+      "caveat": "防全拒用策略投机"
+    },
+    {
+      "id": "M10",
+      "name": "硬边界违反",
+      "definition": "跨账号/撤回/失效授权/错scope导致依据或副作用",
+      "target": "观察到=0；至少60条独立负例",
+      "evidence_layer": "DETERMINISTIC+LIVE_STACK",
+      "caveat": "零观测不证明总体概率为零"
+    },
+    {
+      "id": "M11",
+      "name": "记忆净收益",
+      "definition": "配对holdout目标解决率V4选择历史−V3",
+      "target": "点估计≥+10pp且用户簇bootstrap95%下界>0",
+      "evidence_layer": "LIVE_MODEL_SYNTHETIC",
+      "caveat": "≥30profile/120episodes；不得声称真人提升"
+    },
+    {
+      "id": "M12",
+      "name": "对无可选历史不退化",
+      "definition": "同holdout V4−无可选历史",
+      "target": "点估计≥0；任何预定切片退化>5pp须阻止该scope启用",
+      "evidence_layer": "LIVE_MODEL_SYNTHETIC",
+      "caveat": "当前显式约束各臂共享，不是记忆剥夺"
+    },
+    {
+      "id": "M13",
+      "name": "纠正后行为一致",
+      "definition": "明确纠正后当前与下一相关决定遵循新约束",
+      "target": "≥0.95；≥80序列",
+      "evidence_layer": "LIVE_STACK+LIVE_MODEL",
+      "caveat": "保存记忆回执不等于当前任务自动改写"
+    },
+    {
+      "id": "M14",
+      "name": "无关个性化侵入",
+      "definition": "不该个性化决定中无关历史改变结果比例",
+      "target": "≤0.05；≥80控制决定",
+      "evidence_layer": "LIVE_MODEL",
+      "caveat": "与M08/M09同时验"
+    },
+    {
+      "id": "M15",
+      "name": "回执与反馈一致",
+      "definition": "成功visual/audio/haptic必须有有效对应回执",
+      "target": "零提前成功、零重放音震；≥60事件序列",
+      "evidence_layer": "DETERMINISTIC+UI_LIVE",
+      "caveat": "出错可仍显示文本结果"
+    },
+    {
+      "id": "M16",
+      "name": "证据可追溯",
+      "definition": "能力/成长节点可回到合法有效来源比例",
+      "target": "100%已展示节点；无来源则unknown不计掌握",
+      "evidence_layer": "LIVE_STACK",
+      "caveat": "参与足迹与能力证据分开"
+    },
+    {
+      "id": "M17",
+      "name": "删除传播",
+      "definition": "撤回源后缓存/策略/未执行提案/投影失效",
+      "target": "零继续用已删依据；至少30并发序列",
+      "evidence_layer": "LIVE_STACK",
+      "caveat": "保留合法独立来源，不暴力删用户全部历史"
+    },
+    {
+      "id": "M18",
+      "name": "生命周期覆盖",
+      "definition": "有合法ID桥的呈现/响应/结果能关联",
+      "target": "≥0.98 eligible；另报全部unattributed/丢失占比",
+      "evidence_layer": "LIVE_STACK",
+      "caveat": "不把delivered全算rendered"
+    },
+    {
+      "id": "M19",
+      "name": "像素跨端可用性",
+      "definition": "关键页面/状态视觉误导、遮挡、不可操作",
+      "target": "A/B级缺陷=0；三端页面家族覆盖",
+      "evidence_layer": "UI_LIVE",
+      "caveat": "AI审美评分不是人类喜好"
+    },
+    {
+      "id": "M20",
+      "name": "无障碍可达",
+      "definition": "文本/对比/焦点/目标尺寸/替代操作",
+      "target": "正文≥4.5:1；关键部件≥3:1；48dp项目目标；200%可用",
+      "evidence_layer": "SEMANTICS+UI_LIVE",
+      "caveat": "不是完整WCAG认证"
+    },
+    {
+      "id": "M21",
+      "name": "帧与资源",
+      "definition": "profile/release代表旅程的build/raster与装饰负载",
+      "target": "60Hz目标下p95各≤16.7ms、jank≤1%；每旅程≥1000帧",
+      "evidence_layer": "DEVICE_PROFILE",
+      "caveat": "注明硬件；宿主模拟器资源不足单独分类"
+    },
+    {
+      "id": "M22",
+      "name": "全费用可审计",
+      "definition": "root request所有模型/工具计费attempt覆盖",
+      "target": "100%已知attempt记录；未知价格/usage分开，精确成本主张需0unknown",
+      "evidence_layer": "LIVE_STACK",
+      "caveat": "不以每query不全统计营销"
+    },
+    {
+      "id": "M23",
+      "name": "人机步骤不偷换",
+      "definition": "human_required由Agent伪造完成/答案泄漏",
+      "target": "观察到=0；≥40混合任务",
+      "evidence_layer": "DETERMINISTIC+UI_LIVE",
+      "caveat": "不等于真人学习已提升"
+    },
+    {
+      "id": "M24",
+      "name": "感官关闭等价",
+      "definition": "静音/无震/减少动态仍能理解完成全部核心旅程",
+      "target": "全部10旅程pass；unsupported有等价文本",
+      "evidence_layer": "UI_LIVE",
+      "caveat": "真机触感/音质另记DEVICE_UNVERIFIED"
+    },
+    {
+      "id": "M25",
+      "name": "主动抑制",
+      "definition": "禁扰/拒绝/过期/跨渠道重复等硬限制",
+      "target": "违反=0；≥40触发序列",
+      "evidence_layer": "LIVE_STACK",
+      "caveat": "不优化打开率牺牲用户控制"
+    },
+    {
+      "id": "M26",
+      "name": "回退和继承",
+      "definition": "关V4开关后的V3已验收链路",
+      "target": "触达回归全通过；原发布外部门单独登记",
+      "evidence_layer": "LIVE_STACK",
+      "caveat": "不能把待授权门强置绿"
+    }
+  ]
+}

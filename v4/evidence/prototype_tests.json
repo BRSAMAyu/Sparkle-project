@@ -1,0 +1,75 @@
+{
+  "scope": "standalone HTML preview only; not Sparkle native application",
+  "browser": "Chromium headless",
+  "checks": [
+    {
+      "name": "no horizontal overflow desktop",
+      "pass": true
+    },
+    {
+      "name": "fixture label",
+      "pass": true
+    },
+    {
+      "name": "proposal not yet committed",
+      "pass": true
+    },
+    {
+      "name": "commit receipt visible",
+      "pass": true
+    },
+    {
+      "name": "scoped memory visible",
+      "pass": true
+    },
+    {
+      "name": "forget reflected",
+      "pass": true
+    },
+    {
+      "name": "practice evidence not mastery",
+      "pass": true
+    },
+    {
+      "name": "retraction reflected",
+      "pass": true
+    },
+    {
+      "name": "failed submit explicit",
+      "pass": true
+    },
+    {
+      "name": "failed submit no receipt",
+      "pass": true
+    },
+    {
+      "name": "closing cancels local preview timer",
+      "pass": true
+    },
+    {
+      "name": "theme dusk",
+      "pass": true
+    },
+    {
+      "name": "theme quiet",
+      "pass": true
+    },
+    {
+      "name": "escape closes dialog",
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow mobile",
+      "pass": true
+    },
+    {
+      "name": "dialog contained mobile",
+      "pass": true
+    },
+    {
+      "name": "no browser exceptions",
+      "pass": true
+    }
+  ],
+  "browser_errors": []
+}

@@ -1,0 +1,687 @@
+{
+  "canonical_count": 43,
+  "onboarding_note": "历史F24不是当前独立目录，承载在user，不额外算第44模块",
+  "features": [
+    {
+      "feature_id": "F01",
+      "name": "achievement",
+      "reported_path": "mobile/lib/features/achievement",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "只为真实成果或已定义行为展示轻庆祝；缺席不惩罚；不改原奖励账本。",
+      "task_ids": [
+        "V4-D04",
+        "V4-U12"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F02",
+      "name": "aurora",
+      "reported_path": "mobile/lib/features/aurora",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "通过接续/校准/真实回执感知关系，不显示虚构理解百分比。",
+      "task_ids": [
+        "V4-F03",
+        "V4-I01",
+        "V4-I03",
+        "V4-I04",
+        "V4-I05",
+        "V4-U02",
+        "V4-S01",
+        "V4-P01"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F03",
+      "name": "auth",
+      "reported_path": "mobile/lib/features/auth",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "原生输入、持久内联错误、正确登陆落点；像素框不吞点击。",
+      "task_ids": [
+        "V4-U06",
+        "V4-U14"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F04",
+      "name": "calendar",
+      "reported_path": "mobile/lib/features/calendar",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "正常日期/时区排版，像素选中框；拖动有等价操作。",
+      "task_ids": [
+        "V4-U08"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F05",
+      "name": "chat",
+      "reported_path": "mobile/lib/features/chat",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "现代文字与代码，像素仅外围；来源/有用首内容/中断保留。",
+      "task_ids": [
+        "V4-F04",
+        "V4-F06",
+        "V4-I06",
+        "V4-I09",
+        "V4-D01",
+        "V4-U07",
+        "V4-S02"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F06",
+      "name": "cognitive",
+      "reported_path": "mobile/lib/features/cognitive",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "五层证据语义不变，观察与人格推断分离；不输出无依据雷达图。",
+      "task_ids": [
+        "V4-I02",
+        "V4-I05",
+        "V4-D03",
+        "V4-D05",
+        "V4-U03",
+        "V4-U13"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F07",
+      "name": "community",
+      "reported_path": "mobile/lib/features/community",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "邀请小队/冲刺成果卡；隐私与撤回先于火堆装饰。",
+      "task_ids": [
+        "V4-U11",
+        "V4-P02"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F08",
+      "name": "document",
+      "reported_path": "mobile/lib/features/document",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "保留当前单文档承载路径，来源/解析状态/失败真实。",
+      "task_ids": [
+        "V4-U10"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F09",
+      "name": "documents",
+      "reported_path": "mobile/lib/features/documents",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "材料列表家族；与document共享组件，不顺手合并数据库模型。",
+      "task_ids": [
+        "V4-U10"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F10",
+      "name": "error_book",
+      "reported_path": "mobile/lib/features/error_book",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "拍照或文本输入真实；示例/提示与独立检验答案隔离。",
+      "task_ids": [
+        "V4-I07",
+        "V4-U10"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F11",
+      "name": "experience",
+      "reported_path": "mobile/lib/features/experience",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "干预呈现/响应/结果链路；用户可读关联而非因果夸大。",
+      "task_ids": [
+        "V4-F03",
+        "V4-I05",
+        "V4-D01",
+        "V4-D02",
+        "V4-U13"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F12",
+      "name": "file",
+      "reported_path": "mobile/lib/features/file",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "上传、权限、解析中、错误、已撤回语义统一。",
+      "task_ids": [
+        "V4-U10",
+        "V4-P02"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F13",
+      "name": "focus",
+      "reported_path": "mobile/lib/features/focus",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "行动导向安静计时；音频显式开启；真实时长与成果分开。",
+      "task_ids": [
+        "V4-U09",
+        "V4-S02"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F14",
+      "name": "galaxy",
+      "reported_path": "mobile/lib/features/galaxy",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "像素证据轨迹+可读列表；时间足迹不等于能力。",
+      "task_ids": [
+        "V4-F04",
+        "V4-F06",
+        "V4-D03",
+        "V4-D04",
+        "V4-D06",
+        "V4-U05"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F15",
+      "name": "goal",
+      "reported_path": "mobile/lib/features/goal",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "目标结果标准与接续位置优先，不以巨大百分比代替信息。",
+      "task_ids": [
+        "V4-I01",
+        "V4-U01",
+        "V4-U08"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F16",
+      "name": "home",
+      "reported_path": "mobile/lib/features/home",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "一主行动+真实接续+可纠正的依据，不让品牌口号吃满首屏。",
+      "task_ids": [
+        "V4-F04",
+        "V4-F05",
+        "V4-D01",
+        "V4-U01"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F17",
+      "name": "insights",
+      "reported_path": "mobile/lib/features/insights",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "事实来源/观察窗口/少样本明确；可选一个后续调整。",
+      "task_ids": [
+        "V4-D02",
+        "V4-D05",
+        "V4-U13"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F18",
+      "name": "intent",
+      "reported_path": "mobile/lib/features/intent",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "复杂语义受限选择，用户不需要看内部成因编号。",
+      "task_ids": [
+        "V4-I03",
+        "V4-I09",
+        "V4-U15"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F19",
+      "name": "knowledge",
+      "reported_path": "mobile/lib/features/knowledge",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "关系型真源优先；材料引用/AGE时效可检查。",
+      "task_ids": [
+        "V4-I06",
+        "V4-D04",
+        "V4-D06",
+        "V4-U05",
+        "V4-U10"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F20",
+      "name": "leaderboard",
+      "reported_path": "mobile/lib/features/leaderboard",
+      "baseline_status": "HIDDEN",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "WT790 delta",
+      "v4_disposition": "覆盖较新self-anchor可达面；不复活全站综合榜。",
+      "task_ids": [
+        "V4-U12"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F21",
+      "name": "memory",
+      "reported_path": "mobile/lib/features/memory",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "沿UserPersona等活入口，让用户看/改/限范围/忘记。",
+      "task_ids": [
+        "V4-I02",
+        "V4-I06",
+        "V4-D03",
+        "V4-U03",
+        "V4-P02"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F22",
+      "name": "mirofish",
+      "reported_path": "mobile/lib/features/mirofish",
+      "baseline_status": "LABS",
+      "latest_effective_status": "LABS",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "维持LABS不默默上线；统一边界页并记录当前真实入口。",
+      "task_ids": [
+        "V4-U15"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F23",
+      "name": "notification_center",
+      "reported_path": "mobile/lib/features/notification_center",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "跨渠道去重/静音/具体对象深链；已删除对象可解释。",
+      "task_ids": [
+        "V4-U14",
+        "V4-P01"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F25",
+      "name": "openclaw",
+      "reported_path": "mobile/lib/features/openclaw",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "唯一运行工作台；Human/Agent/Hybrid共用Run ID。",
+      "task_ids": [
+        "V4-I08",
+        "V4-U04"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F26",
+      "name": "photon",
+      "reported_path": "mobile/lib/features/photon",
+      "baseline_status": "HIDDEN",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "WT790 delta",
+      "v4_disposition": "沿最新受限兑换出口；保留免费核心和反刷，不混付费身份。",
+      "task_ids": [
+        "V4-U12"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F27",
+      "name": "plan",
+      "reported_path": "mobile/lib/features/plan",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "计划→动作→成果一条链；原子确认、估时和实耗区分。",
+      "task_ids": [
+        "V4-U08"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F28",
+      "name": "reflection",
+      "reported_path": "mobile/lib/features/reflection",
+      "baseline_status": "HIDDEN",
+      "latest_effective_status": "HIDDEN",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "维持HIDDEN；复盘能力复用活跃报告而不恢复旧独立空页。",
+      "task_ids": [
+        "V4-U15"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F29",
+      "name": "report",
+      "reported_path": "mobile/lib/features/report",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "事实先结构化，再自然语言；每个数字可追溯。",
+      "task_ids": [
+        "V4-D05",
+        "V4-U13"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F30",
+      "name": "reviews",
+      "reported_path": "mobile/lib/features/reviews",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "复习/独立检验目标明确；样例答案不穿透到测试。",
+      "task_ids": [
+        "V4-I07",
+        "V4-U10"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F31",
+      "name": "seed_library",
+      "reported_path": "mobile/lib/features/seed_library",
+      "baseline_status": "LABS",
+      "latest_effective_status": "LABS",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "LABS/明确示例；不可把seed画像合并真实用户历史。",
+      "task_ids": [
+        "V4-U15"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F32",
+      "name": "settings",
+      "reported_path": "mobile/lib/features/settings",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "主题/动/声/震独立，导出删除与无障碍不收费。",
+      "task_ids": [
+        "V4-F01",
+        "V4-F06",
+        "V4-I10",
+        "V4-U14",
+        "V4-S02",
+        "V4-S03"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F33",
+      "name": "shop",
+      "reported_path": "mobile/lib/features/shop",
+      "baseline_status": "HIDDEN",
+      "latest_effective_status": "HIDDEN",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "维持HIDDEN；不为像素装扮重新开放未批准交易。",
+      "task_ids": [
+        "V4-U12"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F34",
+      "name": "simulation",
+      "reported_path": "mobile/lib/features/simulation",
+      "baseline_status": "LABS",
+      "latest_effective_status": "LABS",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "LABS只做明确模拟；不把仿真数据记真实成果。",
+      "task_ids": [
+        "V4-U15"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F35",
+      "name": "splash",
+      "reported_path": "mobile/lib/features/splash",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "压缩首屏装饰，快速到真实价值入口。",
+      "task_ids": [
+        "V4-U01",
+        "V4-U06"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F36",
+      "name": "task",
+      "reported_path": "mobile/lib/features/task",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "执行动作与真实回执中心；可读差异与卡住入口。",
+      "task_ids": [
+        "V4-F04",
+        "V4-U08"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F37",
+      "name": "theater",
+      "reported_path": "mobile/lib/features/theater",
+      "baseline_status": "LABS",
+      "latest_effective_status": "LABS",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "LABS边界保留；不新增剧情绕开用户目标。",
+      "task_ids": [
+        "V4-U15"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F38",
+      "name": "tools",
+      "reported_path": "mobile/lib/features/tools",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "上下文工具面；能力可用性探测与权限，失败不假成功。",
+      "task_ids": [
+        "V4-I10",
+        "V4-U10",
+        "V4-U15"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F39",
+      "name": "translation",
+      "reported_path": "mobile/lib/features/translation",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "嵌入当前材料，保留原文/译文来源，别造独立任务孤岛。",
+      "task_ids": [
+        "V4-U07",
+        "V4-U10"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F40",
+      "name": "user",
+      "reported_path": "mobile/lib/features/user",
+      "baseline_status": "CORE",
+      "latest_effective_status": "CORE",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "吸收onboarding现有承载；我的理解/自我锚/设置结构清楚。",
+      "task_ids": [
+        "V4-F04",
+        "V4-U03",
+        "V4-U06",
+        "V4-U14"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F41",
+      "name": "visual_elements",
+      "reported_path": "mobile/lib/features/visual_elements",
+      "baseline_status": "LABS",
+      "latest_effective_status": "LABS",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "LABS feature状态保留；核心设计令牌仍在core/design，不依赖实验页面。",
+      "task_ids": [
+        "V4-F01",
+        "V4-F02",
+        "V4-F05",
+        "V4-U15",
+        "V4-S01",
+        "V4-S03",
+        "V4-S04"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F42",
+      "name": "vocabulary",
+      "reported_path": "mobile/lib/features/vocabulary",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "B01 directory matrix",
+      "v4_disposition": "围绕当前材料的短练习/回顾，不用背词数量充目标进度。",
+      "task_ids": [
+        "V4-U07",
+        "V4-U10"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F43",
+      "name": "journey",
+      "reported_path": "mobile/lib/features/journey",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "WT790 delta",
+      "v4_disposition": "FirstAction与Hybrid生产入口接通；共用现有Runtime。",
+      "task_ids": [
+        "V4-I01",
+        "V4-I07",
+        "V4-I08",
+        "V4-U04",
+        "V4-U06"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    },
+    {
+      "feature_id": "F44",
+      "name": "recovery",
+      "reported_path": "mobile/lib/features/recovery",
+      "baseline_status": "CONTEXTUAL",
+      "latest_effective_status": "CONTEXTUAL",
+      "status_basis": "WT790 delta",
+      "v4_disposition": "跨home/goal/task同一恢复sheet，无提案也能纠正。",
+      "task_ids": [
+        "V4-I04",
+        "V4-U02"
+      ],
+      "runtime_verification": "NOT_RUN_THIS_PACKAGE",
+      "ui_family_spec": "02_design/SCREEN_FAMILIES.md"
+    }
+  ]
+}

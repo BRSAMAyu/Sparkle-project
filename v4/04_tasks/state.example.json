@@ -1,0 +1,295 @@
+{
+  "note": "示例而非新的fleet权威；运行时沿仓库工具。不要把全部任务初始改成DONE。",
+  "tasks": {
+    "V4-B01": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-B02": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-B03": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-B04": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-B05": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-B06": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-F01": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-F02": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-F03": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-F04": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-F05": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-F06": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-I01": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-I02": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-I03": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-I04": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-I05": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-I06": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-I07": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-I08": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-I09": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-I10": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-D01": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-D02": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-D03": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-D04": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-D05": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-D06": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U01": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U02": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U03": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U04": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U05": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U06": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U07": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U08": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U09": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U10": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U11": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U12": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U13": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U14": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-U15": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-S01": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-S02": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-S03": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-S04": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-P01": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-P02": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-P03": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-Q01": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-Q02": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-Q03": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-Q04": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-Q05": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-Q06": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-Q07": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    },
+    "V4-Q08": {
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "assigned_session": null
+    }
+  }
+}

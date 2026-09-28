@@ -1,0 +1,51 @@
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+import json, os, shutil
+root=Path(__file__).resolve().parents[1]
+url=(root/'prototype/DESIGN_LAB.html').as_uri()
+results=[]
+with sync_playwright() as p:
+    binary=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium') or shutil.which('google-chrome')
+    launch={'headless':True}
+    if binary: launch['executable_path']=binary
+    b=p.chromium.launch(**launch)
+    page=b.new_page(viewport={'width':1440,'height':1080},device_scale_factor=1)
+    errs=[];page.on('pageerror',lambda e:errs.append(str(e)))
+    page.set_content((root/'prototype/DESIGN_LAB.html').read_text(),wait_until='load')
+    def check(name,cond):
+        results.append({'name':name,'pass':bool(cond)})
+        if not cond: raise AssertionError(name)
+    check('no horizontal overflow desktop',page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+    check('fixture label',page.locator('.demo-banner').is_visible())
+    page.screenshot(path=str(root/'evidence/preview_desktop.png'),full_page=True)
+    page.locator('#help').click();page.locator('#scope').select_option('goal');page.locator('#preview').click()
+    check('proposal not yet committed', 'DEMO-R001' not in page.locator('.content').inner_text())
+    page.locator('#confirm').click();page.wait_for_timeout(450)
+    check('commit receipt visible','DEMO-R001' in page.locator('.content').inner_text())
+    page.locator('#why').click();check('scoped memory visible','实践时先看相近示例' in page.locator('.content').inner_text())
+    page.locator('#forget').click();check('forget reflected','没有保存长期偏好' in page.locator('.content').inner_text())
+    page.locator('[data-page=tasks]').click();page.locator('#record').click();page.locator('#saveEvidence').click()
+    check('practice evidence not mastery','不显示“已掌握”' in page.locator('.content').inner_text())
+    page.locator('#mapAction').click();page.locator('#retract').click()
+    check('retraction reflected','尚未留下本次成果' in page.locator('.content').inner_text())
+    page.locator('#reset').click();page.locator('#fail').check();page.locator('#help').click();page.locator('#preview').click();page.locator('#confirm').click();page.wait_for_timeout(450)
+    check('failed submit explicit','模拟提交失败' in page.locator('#result').inner_text())
+    page.locator('#close').click();check('failed submit no receipt','DEMO-R001' not in page.locator('.content').inner_text())
+    page.locator('#reset').click();page.locator('#help').click();page.locator('#preview').click();page.locator('#confirm').click();page.locator('#close').click();page.wait_for_timeout(450)
+    check('closing cancels local preview timer', 'DEMO-R001' not in page.locator('.content').inner_text())
+    page.locator('#reset').click();page.locator('[data-theme-choice=dusk]').click()
+    check('theme dusk',page.locator('html').get_attribute('data-theme')=='dusk')
+    page.screenshot(path=str(root/'evidence/preview_dusk.png'),full_page=True)
+    page.locator('[data-theme-choice=quiet]').click();page.emulate_media(reduced_motion='reduce')
+    check('theme quiet',page.locator('html').get_attribute('data-theme')=='quiet')
+    page.locator('[data-theme-choice=paper_day]').click()
+    page.locator('#help').click();page.keyboard.press('Escape');check('escape closes dialog',not page.locator('#modal').is_visible())
+    page.set_viewport_size({'width':390,'height':844});page.screenshot(path=str(root/'evidence/preview_mobile.png'),full_page=True)
+    check('no horizontal overflow mobile',page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+    page.locator('#help').click();check('dialog contained mobile',page.locator('.dialog').bounding_box()['width']<=390)
+    page.screenshot(path=str(root/'evidence/preview_mobile_dialog.png'),full_page=True)
+    page.locator('#close').click()
+    check('no browser exceptions',not errs)
+    b.close()
+(root/'evidence/prototype_tests.json').write_text(json.dumps({'scope':'standalone HTML preview only; not Sparkle native application','browser':'Chromium headless','checks':results,'browser_errors':errs},ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({'checks':len(results),'pass':sum(r['pass'] for r in results),'errors':errs}))
