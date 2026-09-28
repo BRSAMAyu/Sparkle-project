@@ -119,5 +119,8 @@
     }
   },
   "llm_usage": "无模型调用（纯 backend 增量：词表冻结 + 确定性投影器 + 幂等记录面；零 HEAVY）",
-  "ui_evidence": "无 UI 变更（移动端消费归 V4-F03 experience-presenter 锁 + WS ExperienceEventFrame 归 contract-owner，见 limitations.md）"
+  "ui_evidence": "无 UI 变更（移动端消费归 V4-F03 experience-presenter 锁 + WS ExperienceEventFrame 归 contract-owner，见 limitations.md）",
+  "environment_notes": [
+    "R2-C4 勘误：worktree 无 .env，pytest 复跑需显式 SECRET_KEY=<一次性值>（sqlite/test 环境）与 DATABASE_URL=sqlite://，原 manifest 未登记"
+  ]
 }

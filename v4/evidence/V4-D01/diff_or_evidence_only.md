@@ -14,7 +14,7 @@
 
 ## 差量判定（卡「当前仓库已满足本卡行为时做差量举证，不重写」）
 
-- 未重建 V3：无新表、无迁移、无新事件总线（发布走既有进程内 EventBus 既有实例）、无 proto 改动、无 D-05 词表扩展。
+- 未重建 V3：无新表、无迁移、无新事件总线（发布走既有 Redis stream 事件总线（R2-C3 勘误：原「进程内 EventBus」措辞失准，以 limitations.md 口径为准））、无 proto 改动、无 D-05 词表扩展。
 - 复用既有权威 5 处：`build_record_decision_contract`（决策契约投影，恒同 decision_id）、D-05 exposed 行（权威回执真源）、`InterventionRecordService` 转场状态机（原事件挂点）、`EventBus.publish`（既有总线）、`derive_lifecycle_event_id` 派生风格（事件 id 内容寻址先例）。
 - 新增仅 2 文件 + 2 处最小改动（见 run_manifest.json scope_and_denominator.deliverables）。
 
