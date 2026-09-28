@@ -1,6 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/services/agent_run_read_service.dart';
 
+/// V4-U04 · hybrid journey run 在 X-05 run 聚合上的链路面标记（wire 值与后端
+/// `HYBRID_JOURNEY_TRACE_ID` 同名对齐；`GET /runs` 投影携带 trace_id）。
+///
+/// 只作**识别面**（工作台/入口据此把 run 卡路由回旅程 sheet 继续同一段
+/// run），不是第二权威：识别后的全部行为仍由 `/journey/hybrid/*` 端点裁决。
+const String kHybridJourneyTraceId = 'hybrid_journey';
+
 /// J-06 · Hybrid Flagship Journey 数据模型（四段链的移动端投影）.
 ///
 /// 真源对齐（不重建）：旅程脊柱与 handoff 权威在引擎

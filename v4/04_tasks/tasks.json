@@ -2040,9 +2040,12 @@
         "V4-I07",
         "V4-I08"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
-      "evidence_verdict": "NOT_RUN",
+      "status": "in_progress",
+      "implementation_state": "REVIEW_READY",
+      "evidence_verdict": "PENDING_REVIEW",
+      "progress_note": "2026-09-29 wtU04：REVIEW_READY 交付（worktree wtU04，分支 agent/v4/u04，未 push）。FIX535：孤儿 HybridJourneySheet 接到任务面提案卡旁入口 + OpenClaw hub「运行工作台」按钮 + /journey/workbench 深链（run_id 跨端恢复）；human 步只能用户 confirm 推进（消费 step_replay，落 V3-FIX-379① 挂载义务）；已知边界如实登记：WS frame 未私定（走 REST 读面）、无 taskId 启动的锚点漂移、generic agent 步无客户端推进面——见 v4/evidence/V4-U04/limitations.md（8 条限制 + 5 条审查挑战预登记 CH-1~CH-5）。",
+      "evidence_note": "交付于 wtU04@agent/v4/u04；mobile-only 纯接线（backend 零 diff），14 新测一正一反 + 接线级 RED 证据（stash routes 注册行 wiring 1 failed→复绿）；I07 31 + I08 24 + U10 34 必跑回归全绿；双审未做，evidence_verdict 保持 PENDING_REVIEW（high 待双审）",
+      "evidence": "v4/evidence/V4-U04/ (diff_or_evidence_only.md, run_manifest.json, test_results.json, review_receipt.json, limitations.md)",
       "kind": "implementation",
       "required_locks": [
         "ui-hybrid"

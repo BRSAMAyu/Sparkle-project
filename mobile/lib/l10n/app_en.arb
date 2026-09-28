@@ -16283,5 +16283,43 @@
   "learningContinueActionSemantics": "Continue current action: {label}",
   "learningSourceBadgeLabel": "Source {id} version {version}",
   "learningSourceTapSemantics": "View source fragment {label}",
-  "learningSourceCompactLabel": "Source version {version}"
+  "learningSourceCompactLabel": "Source version {version}",
+  "workbenchTitle": "Run Workbench",
+  "workbenchActiveRunsHeader": "Active runs",
+  "workbenchRunCount": "{count} runs in progress",
+  "@workbenchRunCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workbenchEmptyHint": "No active runs. Start from a task, or come back here after confirming a proposal.",
+  "workbenchStartJourney": "Start together",
+  "workbenchStartJourneyHint": "Sparkle prepares → you decide → confirm delivery together. Leave any time; the same run is here when you return.",
+  "workbenchResumeJourney": "Continue journey",
+  "workbenchCancelRun": "Cancel run",
+  "workbenchCancelConfirmTitle": "Cancel this run?",
+  "workbenchCancelConfirmBody": "Cancelling moves this run to a terminal state: what is already done stays, nothing pretends to be finished.",
+  "workbenchCancelConfirmYes": "Cancel run",
+  "workbenchOwnershipHuman": "I do it",
+  "workbenchOwnershipHybrid": "Do it with me",
+  "workbenchOwnershipAgent": "Hand to Sparkle",
+  "workbenchStepAwaiting": "Your turn",
+  "workbenchStepDone": "Done",
+  "workbenchStepWaiting": "Waiting",
+  "workbenchReplayNotice": "This step was already confirmed (idempotent replay); it was not advanced twice.",
+  "workbenchLoadFailed": "Cannot reach the server right now, try again later",
+  "workbenchRetry": "Retry",
+  "workbenchStatusQueued": "Queued",
+  "workbenchStatusRunning": "Running",
+  "workbenchStatusAwaitingUser": "Waiting for you",
+  "workbenchStatusSucceeded": "Completed",
+  "workbenchStatusFailed": "Not completed",
+  "workbenchStatusCancelled": "Cancelled",
+  "openclawHubButtonWorkbench": "Run Workbench",
+  "journeyEntryResumeLabel": "Continue together",
+  "journeyEntryStartLabel": "Do it with Sparkle",
+  "journeyEntryHint": "Prepare · you decide · confirm delivery together; every step says who does it.",
+  "journeyEntryFailed": "Cannot reach the server right now, try again later"
 }

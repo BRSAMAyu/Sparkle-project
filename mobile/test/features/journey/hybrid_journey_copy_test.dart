@@ -99,4 +99,85 @@ void main() {
       expect(text.trim(), isNotEmpty, reason: 'en copy must exist');
     }
   });
+
+  test('V4-U04 workbench/entry copy is guilt-free in zh and en (红线同款)',
+      () {
+    final zh = AppLocalizationsZh();
+    final en = AppLocalizationsEn();
+
+    final zhTexts = [
+      zh.workbenchTitle,
+      zh.workbenchActiveRunsHeader,
+      zh.workbenchRunCount(2),
+      zh.workbenchEmptyHint,
+      zh.workbenchStartJourney,
+      zh.workbenchStartJourneyHint,
+      zh.workbenchResumeJourney,
+      zh.workbenchCancelRun,
+      zh.workbenchCancelConfirmTitle,
+      zh.workbenchCancelConfirmBody,
+      zh.workbenchCancelConfirmYes,
+      zh.workbenchOwnershipHuman,
+      zh.workbenchOwnershipHybrid,
+      zh.workbenchOwnershipAgent,
+      zh.workbenchStepAwaiting,
+      zh.workbenchStepDone,
+      zh.workbenchStepWaiting,
+      zh.workbenchReplayNotice,
+      zh.workbenchLoadFailed,
+      zh.workbenchRetry,
+      zh.workbenchStatusQueued,
+      zh.workbenchStatusRunning,
+      zh.workbenchStatusAwaitingUser,
+      zh.workbenchStatusSucceeded,
+      zh.workbenchStatusFailed,
+      zh.workbenchStatusCancelled,
+      zh.openclawHubButtonWorkbench,
+      zh.journeyEntryResumeLabel,
+      zh.journeyEntryStartLabel,
+      zh.journeyEntryHint,
+      zh.journeyEntryFailed,
+    ];
+    final enTexts = [
+      en.workbenchTitle,
+      en.workbenchActiveRunsHeader,
+      en.workbenchRunCount(2),
+      en.workbenchEmptyHint,
+      en.workbenchStartJourney,
+      en.workbenchStartJourneyHint,
+      en.workbenchResumeJourney,
+      en.workbenchCancelRun,
+      en.workbenchCancelConfirmTitle,
+      en.workbenchCancelConfirmBody,
+      en.workbenchCancelConfirmYes,
+      en.workbenchOwnershipHuman,
+      en.workbenchOwnershipHybrid,
+      en.workbenchOwnershipAgent,
+      en.workbenchStepAwaiting,
+      en.workbenchStepDone,
+      en.workbenchStepWaiting,
+      en.workbenchReplayNotice,
+      en.workbenchLoadFailed,
+      en.workbenchRetry,
+      en.workbenchStatusQueued,
+      en.workbenchStatusRunning,
+      en.workbenchStatusAwaitingUser,
+      en.workbenchStatusSucceeded,
+      en.workbenchStatusFailed,
+      en.workbenchStatusCancelled,
+      en.openclawHubButtonWorkbench,
+      en.journeyEntryResumeLabel,
+      en.journeyEntryStartLabel,
+      en.journeyEntryHint,
+      en.journeyEntryFailed,
+    ];
+    for (final text in zhTexts) {
+      assertGuiltFree(text, zhGuiltTerms, 'zh');
+      expect(text.trim(), isNotEmpty, reason: 'zh copy must exist');
+    }
+    for (final text in enTexts) {
+      assertGuiltFree(text, enGuiltTerms, 'en');
+      expect(text.trim(), isNotEmpty, reason: 'en copy must exist');
+    }
+  });
 }

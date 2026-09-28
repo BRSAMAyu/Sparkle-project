@@ -1,0 +1,26 @@
+{
+  "card": "V4-U04",
+  "state": "PENDING_REVIEW",
+  "risk": "high",
+  "independent_reviewers_required": 2,
+  "reviewer_1": null,
+  "reviewer_2": null,
+  "branch": "agent/v4/u04",
+  "base_sha": "30b94d427422144f91983c312f52d0d31e08426d",
+  "commit": "（见分支 tip；feat(v4): U04 Hybrid 入口接线与运行工作台）",
+  "review_inputs": [
+    "v4/evidence/V4-U04/diff_or_evidence_only.md（验收三面对照 + 变更清单 + 复用声明）",
+    "v4/evidence/V4-U04/run_manifest.json（真实命令/exit code/RED-GREEN/产物 sha256）",
+    "v4/evidence/V4-U04/test_results.json（11 套件计数）",
+    "v4/evidence/V4-U04/limitations.md（8 条限制 + 审查挑战预登记）",
+    "UI 证据：u04_workbench_top.png / u04_workbench_resume_sheet.png / u04_workbench_cancel_confirm.png / u04_workbench_semantics.txt"
+  ],
+  "challenge_pre_registration": [
+    "CH-1 幂等键推导双轨：工作台 cancel 键在「无 awaiting step」时回退 stepId='run'（x07:<runId>:run:cancel），与 AwaitingStepResumeCard 卡内推导（恒用 awaiting stepId）同形不同源——审查请核两键在 awaiting 态恒等、非 awaiting 态（RUNNING 中取消）客户端键是否与后端 cancel 幂等语义冲突（后端 cancel 幂等为 optional key，需确认无键冲突面）",
+    "CH-2 'j06:start:auto' 键桶：无 taskId 的 workbench 启动走固定键，同用户多在飞任务时第二次启动会幂等回放第一次的 run（同 run 保证，但锚点可能漂移到最近触碰任务）——审查请裁决这是否本卡可接受的「同 run 不重复工件」语义边界（已在 limitations #2 登记）",
+    "CH-3 task_execution_screen 挂载面回归广度：该屏仅跑了 test/features/task/ 122 面，未整屏 pump；入口区块在其 build 内为条件渲染段，审查请评估是否需整屏冒烟补强",
+    "CH-4 workbench 深链 run_id 无鉴权外露面评估：run_id 经 query param 传递，读取全部经认证 API（GET /runs、/journey/hybrid/* 均带 current_user 归属校验），跨用户 run 404——审查请复核无越权读面",
+    "CH-5 step_replay 消费面：workbench 用 Snackbar 式 Pill（workbench_replay_notice）呈现幂等回放，清除时机是下次列表重建——审查请核「不呈现为错误/不伪装首次成功」是否满足 X-07 挂载要求原文"
+  ],
+  "integration_reverify_plan": "合并后复跑：flutter test test/features/journey/ test/features/learning/（预期 31+31）+ pytest tests/unit/test_hybrid_policy.py tests/unit/test_v4_i08_deep_task_return_control.py（预期 31+24）+ test_j06_hybrid_journey.py（5）"
+}

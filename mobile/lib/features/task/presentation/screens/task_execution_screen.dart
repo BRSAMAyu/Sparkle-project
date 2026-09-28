@@ -24,6 +24,8 @@ import 'package:sparkle/features/focus/presentation/providers/focus_statistics_p
     as focus_stats;
 import 'package:sparkle/features/focus/presentation/widgets/focus_agent_sheet.dart';
 import 'package:sparkle/features/home/home_routes.dart';
+// V4-U04（FIX535）：任务面 Hybrid 入口区块（只增挂载；审批门留在 sheet/服务端）。
+import 'package:sparkle/features/journey/presentation/widgets/hybrid_journey_entry_section.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/recovery/presentation/widgets/stuck_journey_sheet.dart';
@@ -1976,6 +1978,10 @@ class _ExecutionAssistPanel extends ConsumerWidget {
           // U-04: 统一 Action Proposal 卡片（task 挂载点；与 chat 页共用同一
           // 组件）。数据来自 X-03 proposal 收件箱（subject_id=本任务）。
           PendingProposalSection(taskId: task.id),
+          // V4-U04（FIX535）：Hybrid 旅程入口挂到任务提案/运行面——有进行中
+          // 旅程 run 则续跑同一段 run；没有则打开 sheet 启动（判断/交付门
+          // 全部留在服务端与 sheet 内，本入口不绕审批）。只增挂载。
+          HybridJourneyEntrySection(taskId: task.id),
           if (supportsAiHandoff) ...[
             SizedBox(
               width: double.infinity,

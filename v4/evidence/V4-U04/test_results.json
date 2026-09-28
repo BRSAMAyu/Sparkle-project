@@ -1,0 +1,94 @@
+{
+  "card": "V4-U04",
+  "date": "2026-09-29",
+  "env": "SECRET_KEY=<一次性生成> 且 wtU04/backend 无 .env（sqlite 口径）；flutter 3.41.3 stable；pytest 9.0.2",
+  "suites": [
+    {
+      "name": "flutter test test/features/journey/（本卡新测 + 既有 journey 回归）",
+      "cmd": "flutter test test/features/journey/",
+      "exit_code": 0,
+      "passed": 31,
+      "failed": 0,
+      "note": "新测 14：hybrid_workbench_screen 8（正：ownership 可见/继续旅程同 run/重建同幂等键/深链恢复/确认推进+step_replay/取消确认；反：空态不自动发起/读面失败诚实）+ hybrid_journey_entry_section 4（正：runId 续跑同 run；反：他任务不冒充/失败诚实/读取中不渲染）+ wiring 1（真实 router 可达）+ copy 红线扩展 1（31 新键 zh+en 零 guilt）。既有 17 全绿未动断言"
+    },
+    {
+      "name": "U10 受影响面回归（mobile learning）",
+      "cmd": "flutter test test/features/learning/",
+      "exit_code": 0,
+      "passed": 31,
+      "failed": 0
+    },
+    {
+      "name": "受影响面回归（task 面 + shared 组件 + router smoke）",
+      "cmd": "flutter test test/features/task/ test/shared/widgets/ test/app/router_smoke_test.dart",
+      "exit_code": 0,
+      "passed": 122,
+      "failed": 0
+    },
+    {
+      "name": "受影响面回归（router deep link，routes.dart 被触碰）",
+      "cmd": "flutter test test/app/router_deep_link_test.dart",
+      "exit_code": 0,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "name": "受影响面回归（OpenClaw connection/automation/module，hub 入口所在面）",
+      "cmd": "flutter test test/core/services/openclaw_connection_service_test.dart test/core/services/openclaw_automation_service_test.dart test/widget/openclaw_module_state_test.dart",
+      "exit_code": 0,
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "name": "受影响面回归（X-07 awaiting-step 卡组件）",
+      "cmd": "flutter test test/shared/widgets/action_proposal/",
+      "exit_code": 0,
+      "passed": 26,
+      "failed": 0
+    },
+    {
+      "name": "I07 回归（必跑）",
+      "cmd": "pytest tests/unit/test_hybrid_policy.py -q",
+      "exit_code": 0,
+      "passed": 31,
+      "failed": 0
+    },
+    {
+      "name": "I08 回归（必跑）",
+      "cmd": "pytest tests/unit/test_v4_i08_deep_task_return_control.py -q",
+      "exit_code": 0,
+      "passed": 24,
+      "failed": 0
+    },
+    {
+      "name": "U10 回归（必跑）",
+      "cmd": "pytest tests/core/test_learning_journey.py tests/services/test_learning_journey_service.py tests/api/test_learning_journey_api.py -q",
+      "exit_code": 0,
+      "passed": 34,
+      "failed": 0,
+      "note": "19+11+4，与 U10 卡 integration_reverify 口径一致"
+    },
+    {
+      "name": "本卡消费的后端契约回归（J-06 hybrid journey）",
+      "cmd": "pytest tests/unit/test_j06_hybrid_journey.py -q",
+      "exit_code": 0,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "name": "静态面",
+      "cmd": "flutter analyze --no-pub",
+      "exit_code": 0,
+      "result": "No issues found（棘轮全量归零基线，零新增）；backend 零 diff 故 ruff/black/mypy 零新增（无输入）；设计系统 lint 新增/触碰文件零违规（存量 3131 不属本卡）"
+    }
+  ],
+  "total": {
+    "flutter_passed": 228,
+    "pytest_passed": 94,
+    "failed": 0
+  },
+  "red_evidence": {
+    "wiring": "stash mobile/lib/app/routes.dart → hybrid_workbench_wiring_test 1 failed（0 widgets with key hybrid_workbench_screen）→ pop 复绿",
+    "meaning": "/journey/workbench 入口真实注册于 app router，非声明性存在"
+  }
+}

@@ -12,6 +12,8 @@ import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/home/presentation/widgets/openclaw_automation_panel.dart';
 import 'package:sparkle/features/home/presentation/widgets/openclaw_connection_diagnostics_sheet.dart';
 import 'package:sparkle/features/home/presentation/widgets/openclaw_node_management_panel.dart';
+// V4-U04（FIX535）：运行工作台入口挂在既有 OpenClaw hub（不建第二 Agent 中心）。
+import 'package:sparkle/features/journey/journey_routes.dart';
 import 'package:sparkle/features/openclaw/presentation/providers/openclaw_module_provider.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_connection_panel.dart';
@@ -526,6 +528,15 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                           onPressed: () => context.push('/tasks'),
                           icon: const Icon(Icons.task_alt_rounded),
                           label: Text(context.l10n.openclawHubButtonViewTasks),
+                        ),
+                        // V4-U04（FIX535）：运行工作台入口——沿用 OpenClaw 路径
+                        // 与 Run ID 的运行面（只增按钮，不动其余 hub 结构）。
+                        TextButton.icon(
+                          onPressed: () =>
+                              context.push(JourneyRoutes.workbench),
+                          icon: const Icon(Icons.workspaces_outlined),
+                          label:
+                              Text(context.l10n.openclawHubButtonWorkbench),
                         ),
                         if (moduleState.needsSetup ||
                             moduleState.needsAttention)

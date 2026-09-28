@@ -33424,4 +33424,100 @@ class AppLocalizationsZh extends AppLocalizations {
   String learningSourceCompactLabel(Object version) {
     return '来源 · 版本 $version';
   }
+
+  @override
+  String get workbenchTitle => '运行工作台';
+
+  @override
+  String get workbenchActiveRunsHeader => '进行中的运行';
+
+  @override
+  String workbenchRunCount(int count) {
+    return '$count 段运行进行中';
+  }
+
+  @override
+  String get workbenchEmptyHint => '没有进行中的运行。从任务页发起，或确认提案后回到这里继续。';
+
+  @override
+  String get workbenchStartJourney => '开始一起推进';
+
+  @override
+  String get workbenchStartJourneyHint =>
+      'Sparkle 备料 → 你研判 → 一起确认交付。开始后可以随时离开，回来还在同一段运行里。';
+
+  @override
+  String get workbenchResumeJourney => '继续旅程';
+
+  @override
+  String get workbenchCancelRun => '取消运行';
+
+  @override
+  String get workbenchCancelConfirmTitle => '取消这段运行？';
+
+  @override
+  String get workbenchCancelConfirmBody => '取消后这段运行进入终态：已完成的内容保留，不会假装完成。';
+
+  @override
+  String get workbenchCancelConfirmYes => '确认取消';
+
+  @override
+  String get workbenchOwnershipHuman => '我来做';
+
+  @override
+  String get workbenchOwnershipHybrid => '带我做';
+
+  @override
+  String get workbenchOwnershipAgent => '交给 Sparkle';
+
+  @override
+  String get workbenchStepAwaiting => '轮到你';
+
+  @override
+  String get workbenchStepDone => '已完成';
+
+  @override
+  String get workbenchStepWaiting => '等待中';
+
+  @override
+  String get workbenchReplayNotice => '这一步此前已确认过（幂等回放），未重复推进。';
+
+  @override
+  String get workbenchLoadFailed => '暂时连不上，稍后再试';
+
+  @override
+  String get workbenchRetry => '重试';
+
+  @override
+  String get workbenchStatusQueued => '排队中';
+
+  @override
+  String get workbenchStatusRunning => '进行中';
+
+  @override
+  String get workbenchStatusAwaitingUser => '等你操作';
+
+  @override
+  String get workbenchStatusSucceeded => '已完成';
+
+  @override
+  String get workbenchStatusFailed => '未完成';
+
+  @override
+  String get workbenchStatusCancelled => '已取消';
+
+  @override
+  String get openclawHubButtonWorkbench => '运行工作台';
+
+  @override
+  String get journeyEntryResumeLabel => '继续一起推进';
+
+  @override
+  String get journeyEntryStartLabel => '和 Sparkle 一起推进';
+
+  @override
+  String get journeyEntryHint => '备料 · 你研判 · 一起确认交付；每一步由谁做都写清楚。';
+
+  @override
+  String get journeyEntryFailed => '暂时连不上，稍后再试';
 }
