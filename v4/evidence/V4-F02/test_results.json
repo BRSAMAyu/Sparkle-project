@@ -1,0 +1,101 @@
+{
+  "task": "V4-F02",
+  "date": "2026-09-28",
+  "flutter": "3.41.3 stable",
+  "summary": {
+    "new_tests_total": 34,
+    "new_tests_passed": 34,
+    "regression_design": "160 passed（126 既有 + 34 新增，全绿）",
+    "regression_app_a11y_smoke": "45 passed (+45 ~1)",
+    "analyze_design_dirs": "No issues found",
+    "guards": {
+      "UI-TOKENS": "PASS (color=225/275, fontSize=634/727)",
+      "DL-SPEC": "PASS (15 dims ratchet held)",
+      "TYPO-RHYTHM": "PASS (sub12=232/234, w900=6/6)",
+      "SPACING-RHYTHM": "PASS (spacingHalfStep=1591/1623；首跑 FAIL 已修，见 failures_fixed)"
+    }
+  },
+  "new_suite": {
+    "path": "mobile/test/core/design/pixel/",
+    "files": [
+      "pixel_geometry_dpr_test.dart (9)",
+      "pixel_state_story_test.dart (11)",
+      "pixel_frame_hit_focus_test.dart (6)",
+      "pixel_primary_action_test.dart (5)",
+      "pixel_story_evidence_test.dart (3)"
+    ],
+    "acceptance_mapping": [
+      {
+        "acceptance": "DPR 1/1.25/1.5/2/3 主要轮廓稳定，文字不点阵化",
+        "positive": [
+          "五档纯几何：顶点物理网格对齐、阶梯步数恒 4、线宽物理整数倍、包围盒偏差 ≤2px（5 用例）",
+          "五档 widget 渲染：渲染盒逻辑尺寸恒等、路径顶点物理对齐（1）",
+          "五档文字：fontSize 逻辑值恒等、文本盒恒等、无 RawImage、无 Transform 祖先（1）"
+        ],
+        "negative": "反例控制组：未吸附顶点（7.7 @dpr3）在同一网格断言下必须判负，组件几何同输入判正（1）"
+      },
+      {
+        "acceptance": "取消/unknown/conflict/失败均有区分且无成功动效",
+        "positive": [
+          "四态四元组（令牌槽+字形+轮廓+动效）两两互异（1）",
+          "celebrates 只有 success true（1）",
+          "轮廓区分维四态各占一形（1）",
+          "paperDay/dusk 渲染：语义标签互异 + 状态色逐对不等（2）",
+          "故事页全组件就位、成功庆祝元素计数钉死（1）"
+        ],
+        "negative": "每非成功态组件树反例钉死：无 PixelSuccessBadge、无 check/check_circle 字形、无「已完成」语义（4）；控制组：含成功徽章的树同一查找器必须命中（1）"
+      },
+      {
+        "acceptance": "装饰不吞点击，键盘与屏幕阅读器可定位操作",
+        "positive": [
+          "切角装饰覆盖按钮点击仍达 + IgnorePointer/ExcludeSemantics 实现面断言（1）",
+          "Tab 遍历按序聚焦两 CTA + focus ring 画笔出现（1）",
+          "receipt 纠正/仅本次/删除语义节点带 tap 动作且真实触发 onCorrect（1）",
+          "CTA 语义 button 标志 + tap 动作（1）"
+        ],
+        "negative": "控制组×2：吞手势覆盖层下点击必须被吞（1）；动作回调为空时同一 tap 断言必须判 0（1）"
+      },
+      {
+        "acceptance": "classic 行为零差量（发布面红线，组件面）",
+        "positive": "classic 下 22dp 圆角、stairSteps=0、无像素扩展挂载、组件可用（2）",
+        "negative": "classic 下无 PixelOutlinePainter/PixelSuccessBadge 渗漏（并入上述断言）"
+      }
+    ]
+  },
+  "failures_fixed": [
+    {
+      "round": 1,
+      "symptom": "PixelPrimaryAction 构建崩溃「Tried to make a child into a parent of itself」——外层 Focus 与 TextButton 内部 Focus 重复挂载同一 focusNode",
+      "fix": "改为单一挂载点：focusNode 交给 TextButton 内部 Focus 持有，State 用 listener 观察 hasFocus 画 ring",
+      "nature": "实现缺陷（Focus 系统契约误用），非测试放水"
+    },
+    {
+      "round": 2,
+      "symptom": "find.bySemanticsLabel('已取消') 命中 0：Semantics(container)+子树 Text 合并后 label 为「已取消\\n已取消」（显式 label 与子文本拼接重复），等值匹配失败",
+      "fix": "badge 子树包 ExcludeSemantics，读屏内容=显式 label 单一来源；同时修掉读屏重复朗读隐患",
+      "nature": "实现缺陷（语义重复），测试如实暴露"
+    },
+    {
+      "round": 3,
+      "symptom": "SPACING-RHYTHM 守卫 FAIL：新文件 13 处 DS.spacing2 半格档（N43：新组件只准 4 基栅格档）",
+      "fix": "DS.spacing2 → DS.xs(4)；dashed chip EdgeInsets 字面量 2 → DS.xs",
+      "nature": "实现缺陷（间距档位越规），守卫按设计拦截"
+    },
+    {
+      "round": 4,
+      "symptom": "挂起 Timer 不变量失败：press 锁存窗 Future.delayed(80ms) 在用例结束未到期",
+      "fix": "测试侧 tap 断言后 pump(120ms) 走完锁存窗（实现语义不变，锁存窗本身是禁写合同的一部分）",
+      "nature": "测试时序修正（fake-async 纪律），非降阈值"
+    },
+    {
+      "round": 5,
+      "symptom": "证据落盘 PathNotFound：io.Directory 对象 toString 进了路径插值（Directory: '...'）",
+      "fix": "改用 outDir.path",
+      "nature": "测试工具缺陷"
+    }
+  ],
+  "not_run": [
+    "真机/桌面物理屏 DPR 呈现与 60Hz frame 统计（无设备；tester.view 注入覆盖 DPR 面，设备面如实 NOT_RUN）",
+    "sparkle-coordination-v2 租约登记（远端未配置于本机）"
+  ]
+}

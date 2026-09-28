@@ -1,0 +1,146 @@
+{
+  "task": "V4-F02",
+  "title": "原生像素组件与完整状态故事页",
+  "date": "2026-09-28",
+  "executor": "wtF02（worktree /Users/brsama/code/GitHub/wtF02，分支 agent/v4/f02，自 main@5575e38b 开出）",
+  "source_sha_base": "5575e38b98639b02132576c8fabb8238a1cec525",
+  "source_sha_head": "工作树（commit 前取证；提交 SHA 见 commit 本体与台账）",
+  "no_push": true,
+  "toolchain": {
+    "flutter": "3.41.3 stable (revision 48c32af034, 2026-02-27)",
+    "host": "darwin 25.6.0 arm64",
+    "gen_note": "mobile/lib/gen 为 gitignored 实体目录：自主检出 cp -R 复制进 worktree（非 symlink，未入库）；l10n 生成文件曾被 flutter pub get 误触再生成（-90 行），已 git checkout 还原，不在 diff 中"
+  },
+  "locks": {
+    "required": ["design-components"],
+    "note": "sparkle-coordination-v2 远端未配置于本机（git fetch 无此 remote），租约登记 NOT_RUN；冲突面自证：diff 不含 features/ 文件、不含 dashboard_screen/compact_status_bar/task_execution_screen、不含路由文件"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtF02 -b agent/v4/f02 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "依赖解析（新 worktree 无 .dart_tool）",
+      "command": "cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "Got dependencies! 2 packages discontinued（既有约束口径）"
+    },
+    {
+      "id": 3,
+      "purpose": "复制 gitignored 生成目录",
+      "command": "cp -R Sparkle-project/mobile/lib/gen wtF02/mobile/lib/gen",
+      "exit_code": 0
+    },
+    {
+      "id": 4,
+      "purpose": "静态检查（新增两个目录）",
+      "command": "flutter analyze --no-pub lib/core/design/pixel test/core/design/pixel",
+      "exit_code": 0,
+      "result": "No issues found! (ran in 4.0s)"
+    },
+    {
+      "id": 5,
+      "purpose": "静态检查（design 全目录）",
+      "command": "flutter analyze --no-pub lib/core/design test/core/design",
+      "exit_code": 0,
+      "result": "No issues found! (ran in 5.6s)"
+    },
+    {
+      "id": 6,
+      "purpose": "本卡新套件",
+      "command": "flutter test test/core/design/pixel/",
+      "exit_code": 0,
+      "result": "34/34 passed（含两轮失败修复史，见 test_results.json failures_fixed）"
+    },
+    {
+      "id": 7,
+      "purpose": "design 全量回归",
+      "command": "flutter test test/core/design",
+      "exit_code": 0,
+      "result": "160/160 passed（126 既有 + 34 新增）"
+    },
+    {
+      "id": 8,
+      "purpose": "主题敏感面回归（app 壳 + a11y + 冒烟）",
+      "command": "flutter test test/app test/widget/a11y_semantic_labels_test.dart test/widget_test.dart",
+      "exit_code": 0,
+      "result": "+45 ~1 All tests passed!（~1 为既有 tearDownAll 挂起残记，与 main 基线同口径）"
+    },
+    {
+      "id": 9,
+      "purpose": "UI-TOKENS 棘轮守卫",
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py",
+      "exit_code": 0,
+      "result": "PASS — color=225/275, fontSize=634/727 (184 files)"
+    },
+    {
+      "id": 10,
+      "purpose": "DL-SPEC 棘轮守卫",
+      "command": "python3 scripts/guards/check_dl_spec_ratchet.py",
+      "exit_code": 0,
+      "result": "PASS — 15 dims ratchet held"
+    },
+    {
+      "id": 11,
+      "purpose": "TYPO-RHYTHM 棘轮守卫",
+      "command": "python3 scripts/guards/check_typography_rhythm_ratchet.py",
+      "exit_code": 0,
+      "result": "PASS — sub12=232/234, w900=6/6"
+    },
+    {
+      "id": 12,
+      "purpose": "SPACING-RHYTHM 棘轮守卫",
+      "command": "python3 scripts/guards/check_spacing_rhythm_ratchet.py",
+      "exit_code": 0,
+      "result": "PASS — spacingHalfStep=1591/1623",
+      "note": "首跑 FAIL：新文件用 DS.spacing2 半格档 13 处 → 全部改 4 基栅格 DS.xs 后 PASS（见 test_results.json failures_fixed）"
+    },
+    {
+      "id": 13,
+      "purpose": "证据落盘（三档截图 + 语义 dump）",
+      "command": "PIXEL_STORY_EVIDENCE_DIR=<repo>/v4/evidence/V4-F02 flutter test test/core/design/pixel/pixel_story_evidence_test.dart",
+      "exit_code": 0,
+      "result": "3/3 passed；PNG×3 + semantics.txt×3"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "v4/evidence/V4-F02/pixel_story_paperDay.png",
+      "sha256": "79fabb28188558a5f9f014f48292ba90040e2bd90048a48db18e7706fcaec348",
+      "what": "纸昼档故事页整页截图（dpr=2 渲染；测试环境 Ahem 字体无 CJK 字形，文字呈方块——字形本身属设备面，见 limitations）"
+    },
+    {
+      "path": "v4/evidence/V4-F02/pixel_story_dusk.png",
+      "sha256": "f138491bc432b7a0e8324b12f63fe9e99ed37321a78b4b427c6da6311dcf284c",
+      "what": "暮色档故事页整页截图"
+    },
+    {
+      "path": "v4/evidence/V4-F02/pixel_story_quiet.png",
+      "sha256": "2dc3bbb9d034f3cdcc825cee75ee4487fc95289ca16927ad3ac91161577f7f09",
+      "what": "低刺激档故事页整页截图"
+    },
+    {
+      "path": "v4/evidence/V4-F02/pixel_story_paperDay_semantics.txt",
+      "sha256": "93e6d7b31aec309de9ba9d20bbda2166a423a26f1b5b981a8c40e3f292362a79",
+      "what": "纸昼档语义树 dump（87 节点：状态徽章显式 label、CTA button 标志可见）"
+    },
+    {
+      "path": "v4/evidence/V4-F02/pixel_story_dusk_semantics.txt",
+      "sha256": "93e6d7b31aec309de9ba9d20bbda2166a423a26f1b5b981a8c40e3f292362a79",
+      "what": "暮色档语义树 dump（结构与纸昼同构，语义与档位无关——同状态同语义的直接证据）"
+    },
+    {
+      "path": "v4/evidence/V4-F02/pixel_story_quiet_semantics.txt",
+      "sha256": "93e6d7b31aec309de9ba9d20bbda2166a423a26f1b5b981a8c40e3f292362a79",
+      "what": "低刺激档语义树 dump"
+    }
+  ],
+  "device_scope": {
+    "real_device": "NOT_RUN（本机无 iOS/Android 真机与模拟器接入；DPR 面以 tester.view 注入五档 devicePixelRatio 覆盖，物理屏字形渲染/60Hz 帧统计属设备面，未测不得声称）"
+  },
+  "llm_usage": "本卡为纯工程实现，无模型调用、无推理费用"
+}
