@@ -1434,9 +1434,9 @@
       "depends_on": [
         "V4-D01"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
-      "evidence_verdict": "NOT_RUN",
+      "status": "in_progress",
+      "implementation_state": "REVIEW_READY",
+      "evidence_verdict": "PENDING_REVIEW",
       "kind": "implementation",
       "required_locks": [
         "lifecycle-attribution"

@@ -1,0 +1,131 @@
+{
+  "card": "V4-D02",
+  "task": "结果窗口、关联键与缺失语义（goal/task/occurrence/run 同域关联 + 统一观察窗 + unattributed 公开分母 + 链路追踪还原）",
+  "agent": "wtD02",
+  "branch": "agent/v4/d02",
+  "base_sha": "56c3341c1c9d899f59e91b6dd5c890becee886b9",
+  "generated_at_local": "2026-09-28",
+  "kind": "implementation",
+  "product_code_changed": true,
+  "environment": {
+    "worktree": "wtD02（bare worktree，无 .env；测试自然落 sqlite/内存，不触 dev DB）",
+    "python": "3.11.15（venv 共享主检出 /Users/brsama/code/GitHub/Sparkle-project/backend/.venv）",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2 (compiled: yes)",
+    "ruff": "0.15.8",
+    "black": "共享 venv 版本（--check 过）",
+    "note": "backend/app/gen 由主检出复制进 worktree（cp -R 实体目录，非 symlink；.gitignore:246 已忽略，不入库不入 commit）"
+  },
+  "commands": [
+    {
+      "purpose": "建立 worktree",
+      "cmd": "git worktree add ../wtD02 -b agent/v4/d02 main",
+      "exit_code": 0
+    },
+    {
+      "purpose": "复制 gitignored 生成产物（测试需要，永不提交）",
+      "cmd": "cp -R /Users/brsama/code/GitHub/Sparkle-project/backend/app/gen /Users/brsama/code/GitHub/wtD02/backend/app/gen",
+      "exit_code": 0
+    },
+    {
+      "purpose": "现状盘点：四域关联键/unattributed/观察窗/链路追踪现状（缺口 G1-G4 定位）",
+      "cmd": "grep -rn \"occurrence\" backend/app --include=\"*.py\" -l；grep -n \"CorrelationIds\\|CORRELATION_KEYS\\|goal_id\" backend/app/core/event_registry.py；grep -rn \"unattributed\\|censored\" backend/app --include=\"*.py\" -l；sed -n '1,30p' v4/03_intelligence/DATA_AND_GRAPH.md",
+      "exit_code": 0,
+      "evidence": "CorrelationIds 裸 UUID 平铺不验域（G1）；unattributed 仅 D-05 切片档无 outcome 侧分母（G2）；resolve_observation_status 绑 exposure 单锚点（G3）；trace_receipt/溯源零命中（G4）。DATA_AND_GRAPH 为本卡直接设计真源（§事件定义/§对照指标）"
+    },
+    {
+      "purpose": "基线：受影响权威模块既有测试全绿（回退判据）",
+      "cmd": "pytest tests/core/test_experience_event.py tests/services/test_intervention_lifecycle_service.py tests/services/test_experience_event_service.py -q",
+      "exit_code": 0,
+      "evidence": "80 passed in 19.52s"
+    },
+    {
+      "purpose": "D02 契约新测试（38 测：词表冻结/分域拒绝/公开分母/超窗删失/重放幂等/链路还原）",
+      "cmd": "pytest tests/core/test_attribution.py -q",
+      "exit_code": 0,
+      "evidence": "38 passed in 0.49s"
+    },
+    {
+      "purpose": "突变注入①：跨域拒绝改裸值比较（可失败性演示）",
+      "cmd": "sed 突变 links() 后 pytest tests/core/test_attribution.py -q；随后还原",
+      "exit_code": 1,
+      "evidence": "1 failed（test_identical_uuid_across_domains_never_links）→ 还原 38 passed"
+    },
+    {
+      "purpose": "突变注入②：超窗照常归因（删失语义破坏演示）",
+      "cmd": "sed 突变 if not in_window: → if False: 后 pytest；随后还原",
+      "exit_code": 1,
+      "evidence": "2 failed（超窗反例+统一窗对照）→ 还原 38 passed"
+    },
+    {
+      "purpose": "突变注入③：sample id 混入查询时点 now（重放幂等破坏演示）",
+      "cmd": "sed 突变 derive_attribution_sample_id 调用掺 now 后 pytest；随后还原",
+      "exit_code": 1,
+      "evidence": "1 failed（test_replay_produces_identical_verdict_and_sample_id）→ 还原 38 passed"
+    },
+    {
+      "purpose": "突变注入④：trace 跳过 event 身份比对（链路完整性破坏演示）",
+      "cmd": "sed 突变 event_identity 比较恒真后 pytest；随后还原",
+      "exit_code": 1,
+      "evidence": "1 failed（test_mutated_event_breaks_chain_loudly）→ 还原 38 passed"
+    },
+    {
+      "purpose": "受影响面回归（core 全量 + 契约 + lifecycle/experience/outcome 权威服务面）",
+      "cmd": "pytest tests/core tests/contract/test_intervention_lifecycle_contract.py tests/contract/test_experience_memory_contract.py tests/contract/test_event_registry_contract.py tests/services/test_intervention_lifecycle_service.py tests/services/test_experience_event_service.py tests/services/test_f507_lifecycle_wiring.py tests/services/test_outcome_ledger_service.py tests/services/test_x08_outcome_ledger_gj.py tests/unit/test_outcome_ledger_contract.py tests/unit/test_x08_outcome_capture.py -q",
+      "exit_code": 0,
+      "evidence": "666 passed, 1 skipped, 36 errors——36 errors 全部在 tests/core/test_bert_intent_classifier.py（transformers 未安装环境噪声，主检出同命令 3 passed 36 errors 逐同，base 既有失败非本卡回归；与 D01 manifest『core 全量回归（36 errors 为既有环境噪声）』同一族）"
+    },
+    {
+      "purpose": "services 全量回归（D01 同款收口判据）",
+      "cmd": "pytest tests/services -q",
+      "exit_code": 0,
+      "evidence": "1018 passed, 10 skipped in 553.53s（与 D01 基线 1018 passed 同数，零回归）"
+    },
+    {
+      "purpose": "mypy 棘轮门（存量类型债只降不升）",
+      "cmd": "bash scripts/ci/mypy_ratchet.sh",
+      "exit_code": 0,
+      "evidence": "mypy errors: 55 / baseline: 77（本地口径恰为指令给的 55 基线；新文件 attribution.py/test_attribution.py 逐名过滤零 error 行）"
+    },
+    {
+      "purpose": "ruff + black（全部新增文件）",
+      "cmd": "ruff check app/core/attribution.py tests/core/test_attribution.py && black --check app/core/attribution.py tests/core/test_attribution.py",
+      "exit_code": 0,
+      "evidence": "All checks passed! / 2 files would be left unchanged."
+    },
+    {
+      "purpose": "治理守卫全量（基线记录，区分既有失败与新增）",
+      "cmd": "bash scripts/run_all_rule_guards.sh",
+      "exit_code": 1,
+      "evidence": "wtD02: BG BJ 两项失败。BJ=本卡新模块零生产 import（守卫按设计提示三选一）→ 按既有先例（slo.py 等 5 文件同款）落 '# rule-bj: exempt' + KNOWN_CODE_DEBT_LEDGER P3 #13 登记，复跑 [Rule BJ] PASS；BG=websocket.proto 的 Go/Dart 生成物不在本 bare worktree（主检出同 guard exit=0——worktree 环境差异，非代码回归）。主检出同命令基线：'rule guards failed: AM AURORA-CONFIG CARD-DUAL-WRITE'（base 既有失败，与本地状态相关，本 worktree 反而通过）。区分记录：本卡新增回归=0（BJ 已按守卫自身机制收口）"
+    }
+  ],
+  "scope_and_denominator": {
+    "deliverables": [
+      "backend/app/core/attribution.py（新增 717 行：AttributionDomain 四域封闭词表 / DomainKey 分域键 / attribute_outcome + attribute_outcome_entry 确定性归因 / AttributionDenominator 公开分母 / anchor_observation_status 统一窗门面 / derive_attribution_sample_id 幂等样本 id / trace_receipt_to_outcome 链路验证）",
+      "backend/tests/core/test_attribution.py（新增 560 行，38 测）",
+      "docs/engineering/KNOWN_CODE_DEBT_LEDGER.md（P3 表新增 #13 登记行：attribution.py 待接线，消费卡序 V4-D03/V4-D05）",
+      "v4/evidence/V4-D02/*（本证据包）"
+    ],
+    "untouched_by_design": [
+      "backend/app/core/intervention_lifecycle.py（D-05 冻结契约：仅 import 复用，词表/语义零改动）",
+      "backend/app/core/outcome_ledger.py（D-02：仅 import 复用）",
+      "backend/app/core/experience_event.py（D01/B05：仅 import 复用）",
+      "backend/app/core/event_registry.py（CorrelationIds 不动——其值域门放宽/分域化属 event-domain 契约变更，需单头契约 owner，本卡不越权）",
+      "proto/、Alembic 迁移、mobile/、gateway/：零改动"
+    ],
+    "test_denominator": "新增 38 测全绿；受影响面 666 passed（36 既有环境 errors 与 base 逐同）；services 全量 1018 passed 与 D01 基线同数"
+  },
+  "llm_usage": {
+    "called": false,
+    "note": "纯 stdlib 确定性函数面；本卡零模型调用、零费用（测试亦不触 LLM）"
+  },
+  "ui_evidence": {
+    "applicable": false,
+    "note": "本卡为语义契约层，无 UI 变更；链路追踪的消费面（insights 公开分母呈现）归 V4-D05"
+  },
+  "environment_notes": [
+    "worktree 无 .env：SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// 按测试纪律显式传入",
+    "artifact sha256 见 test_results.json artifacts_sha256"
+  ]
+}
