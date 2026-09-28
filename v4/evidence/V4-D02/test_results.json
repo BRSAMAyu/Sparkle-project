@@ -1,0 +1,86 @@
+{
+  "card": "V4-D02",
+  "base_sha": "56c3341c1c9d899f59e91b6dd5c890becee886b9",
+  "generated_at_local": "2026-09-28",
+  "summary": {
+    "new_contract_tests": { "file": "backend/tests/core/test_attribution.py", "total": 38, "passed": 38, "failed": 0 },
+    "affected_surface_regression": {
+      "cmd": "pytest tests/core tests/contract/{intervention_lifecycle,experience_memory,event_registry}_contract.py tests/services/{intervention_lifecycle,experience_event,f507_lifecycle_wiring,outcome_ledger}_service.py tests/services/test_x08_outcome_ledger_gj.py tests/unit/{outcome_ledger_contract,x08_outcome_capture}.py -q",
+      "passed": 666,
+      "skipped": 1,
+      "errors": 36,
+      "errors_attribution": "36 errors 全部为 tests/core/test_bert_intent_classifier.py（mock.patch AutoTokenizer，transformers 包未安装）；主检出 base 同命令 3 passed 36 errors 逐同 → base 既有环境失败，非本卡回归",
+      "exit_code": 0
+    },
+    "services_full_regression": {
+      "cmd": "pytest tests/services -q",
+      "passed": 1018,
+      "skipped": 10,
+      "failed": 0,
+      "duration_sec": 553.53,
+      "note": "与 V4-D01 合并后基线（1018 passed）同数，零回归"
+    },
+    "baseline_before_change": {
+      "cmd": "pytest tests/core/test_experience_event.py tests/services/test_intervention_lifecycle_service.py tests/services/test_experience_event_service.py -q",
+      "passed": 80
+    }
+  },
+  "mutation_checks": [
+    {
+      "id": "M1-跨域拼接",
+      "mutation": "DomainKey.links 改为裸值比较（去掉域相等条件）",
+      "expected": "跨域伪归因反例转红",
+      "observed": "1 failed: TestCrossDomainSpliceRejection::test_identical_uuid_across_domains_never_links",
+      "restored": "38 passed"
+    },
+    {
+      "id": "M2-超窗归因",
+      "mutation": "attribute_outcome 的 if not in_window: → if False:（超窗照常 attributed）",
+      "expected": "超窗 censored 反例转红",
+      "observed": "2 failed（TestObservationWindowCensored::test_outcome_beyond_window_is_outside_window_and_anchor_censored 等）",
+      "restored": "38 passed"
+    },
+    {
+      "id": "M3-重放虚增",
+      "mutation": "sample id 派生掺入查询时点 now",
+      "expected": "重放幂等反例转红",
+      "observed": "1 failed: TestReplayIdempotency::test_replay_produces_identical_verdict_and_sample_id",
+      "restored": "38 passed"
+    },
+    {
+      "id": "M4-链路篡改容忍",
+      "mutation": "trace event_identity 比较恒真",
+      "expected": "链路篡改反例转红",
+      "observed": "1 failed: TestTraceReceiptToOutcome::test_mutated_event_breaks_chain_loudly",
+      "restored": "38 passed"
+    }
+  ],
+  "quality_gates": {
+    "ruff": { "cmd": "ruff check app/core/attribution.py tests/core/test_attribution.py", "exit_code": 0, "evidence": "All checks passed!" },
+    "black": { "cmd": "black --check app/core/attribution.py tests/core/test_attribution.py", "exit_code": 0, "evidence": "2 files would be left unchanged." },
+    "mypy_scoped": { "cmd": "mypy app/core/attribution.py（及 tests/core/test_attribution.py）逐名过滤", "exit_code": 0, "evidence": "attribution.py: 0 error 行；test_attribution.py: 0 error 行（follow-import 噪声 32 条全部位于其他 31 个既有文件，与本卡无关）" },
+    "mypy_ratchet": { "cmd": "bash scripts/ci/mypy_ratchet.sh", "exit_code": 0, "evidence": "mypy errors: 55 / baseline: 77（零新增；本地口径=55 即指令基线值）" },
+    "rule_guards": {
+      "cmd": "bash scripts/run_all_rule_guards.sh",
+      "exit_code": 1,
+      "baseline_comparison": "wtD02 失败集={BG, BJ}；主检出 base 失败集={AM, AURORA-CONFIG, CARD-DUAL-WRITE}",
+      "disposition": [
+        "BJ：本卡新模块零生产 import（守卫按设计提示接线/豁免/自动发现三选一）→ 按既有先例（backend/app/core/slo.py 等 5 文件同款）加 '# rule-bj: exempt V4-D02 冻结契约模块…' + KNOWN_CODE_DEBT_LEDGER P3 #13 登记；复跑 '[Rule BJ] PASS — no dead imports detected'",
+        "BG：websocket.proto 的 Go/Dart 生成物不在 bare worktree（主检出同 guard exit=0）→ worktree 环境差异，非代码回归，不修码",
+        "AM/AURORA-CONFIG/CARD-DUAL-WRITE：base 既有失败（主检出逐同），本 worktree 反而通过；与本卡零交集"
+      ],
+      "new_regressions_introduced_by_this_card": 0
+    }
+  },
+  "acceptance_to_test_mapping": [
+    { "acceptance": "不同 ID 域不能拼接伪归因；unattributed 公开分母", "tests": ["test_identical_uuid_across_domains_never_links", "test_cross_domain_verdict_is_unattributed_domain_mismatch", "test_task_occurrence_id_only_projects_to_occurrence_domain", "test_missing_key_is_unattributed_not_forced_not_dropped", "test_denominator_counts_every_eligible_event", "test_zero_eligible_ratio_is_none_no_zero_or_full_claim"], "mutation": "M1" },
+    { "acceptance": "超窗未回来不记失败；重复回放不加样本", "tests": ["test_outcome_beyond_window_is_outside_window_and_anchor_censored", "test_window_not_yet_due_is_censored_not_failure", "test_churned_user_after_window_is_censored_churned", "test_delayed_outcome_within_window_is_attributed", "test_outcome_before_anchor_never_retro_attributed", "test_unified_window_matches_d05_authority_for_all_four_domains", "test_replay_produces_identical_verdict_and_sample_id", "test_consumer_dedup_by_sample_id_counts_once", "test_edited_and_accepted_are_distinct_event_identities"], "mutation": "M2 + M3" },
+    { "acceptance": "UI→receipt→event→outcome 随机追踪可还原", "tests": ["test_random_sample_full_chain_restore", "test_mutated_event_breaks_chain_loudly", "test_event_without_receipt_ref_reports_broken_first_hop", "test_missing_outcome_is_explicit_incomplete_chain", "test_stored_outcome_id_mismatch_fails_outcome_identity", "test_same_domain_anchor_link_restores_chain", "test_exposure_linkage_path_uses_d05_authority", "test_receipt_pointing_at_other_outcome_fails_link"], "mutation": "M4" }
+  ],
+  "artifacts_sha256": {
+    "backend/app/core/attribution.py": "4c0b1c45952332dfc2744080f8e9985f9161ac0a84e0afc52098253376ba50d0",
+    "backend/tests/core/test_attribution.py": "512c73d41f86796e7b81069425aec77f24fa8a8aad48525b118d7b55a9c1c510",
+    "docs/engineering/KNOWN_CODE_DEBT_LEDGER.md": "bea092f91571e6e5565cff14a993dbabd2e3d8ca5732235bb03d8a7f3826a2f2",
+    "note": "shasum -a 256 @ base 56c3341c + 本卡增量；证据文档自身以 commit sha 为准（不入循环哈希）"
+  }
+}

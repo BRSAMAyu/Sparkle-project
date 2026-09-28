@@ -1,0 +1,24 @@
+{
+  "card": "V4-D02",
+  "branch": "agent/v4/d02",
+  "status": "PENDING",
+  "reviewers_required": 1,
+  "risk": "normal",
+  "generated_at_local": "2026-09-28",
+  "implementation_agent": "wtD02",
+  "implementation_complete": true,
+  "integration_sha_recheck": "PENDING_REVIEWER",
+  "review_focus_suggestions": [
+    "分域拒绝语义：DomainKey.links 同域+同值判定、task_occurrence_id 表级投影钉死是否足以覆盖 DATA_AND_GRAPH「不能把 task_occurrence_id 当 Task.id」的全部现实路径（含 CorrelationIds 未分域化的源头缺口，见 limitations #2）",
+    "unattributed 分母口径：n_eligible 全集、n_unknown ⊆ n_unattributed、eligible=0 时 ratio=None（不宣称 0%/100%）是否符合「不能剔除难配对事件制造 100%」的预期呈现语义",
+    "统一观察窗门面是否接受「逐值委托 D-05」为统一（而非要求新写四域语义）",
+    "trace 三选一链接语义（outcome:// 直连 / 同域键 / D-05 exposure linkage）是否有第四种合法链形态被遗漏",
+    "BJ 豁免 + KNOWN_CODE_DEBT_LEDGER P3 #13 双登记是否为可接受的待接线状态（消费卡序 V4-D03/V4-D05）"
+  ],
+  "evidence_files": [
+    "v4/evidence/V4-D02/diff_or_evidence_only.md",
+    "v4/evidence/V4-D02/run_manifest.json",
+    "v4/evidence/V4-D02/test_results.json",
+    "v4/evidence/V4-D02/limitations.md"
+  ]
+}
