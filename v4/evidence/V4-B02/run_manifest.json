@@ -1,0 +1,70 @@
+{
+ "card": "V4-B02",
+ "title": "43模块及在用路由映射增量",
+ "generated_at": "2026-09-28T17:31:43+08:00",
+ "source_sha": "3c4618cc1d23b79792e330f87114484434a410ed",
+ "branch": "agent/v4/b02",
+ "worktree": "wtB02",
+ "matrix_truth_source": "v3-output/B-01/MODULE_MATRIX.csv (44 lines = header + 43 features; FIX-555 后版本)",
+ "route_truth_sources": [
+  "mobile/lib/app/routes.dart",
+  "mobile/lib/features/*/**/*_routes.dart (32 files)",
+  "mobile/lib/core/services/deep_link_service.dart"
+ ],
+ "denominator": {
+  "features": 43,
+  "feature_dirs_on_disk": 43,
+  "route_files_parsed": 32,
+  "registered_route_paths": 136,
+  "sparkle_deep_link_types": 10
+ },
+ "coverage": "43/43 features (100%); routes: 5 tab_shell + 116 active_entry + 4 legacy_redirect + 1 deep_link_only + 10 registered_no_ui_entry",
+ "commands": [
+  {
+   "cmd": "git worktree add ../wtB02 -b agent/v4/b02",
+   "exit_code": 0
+  },
+  {
+   "cmd": "python3 /tmp/b02_route_analysis.py  # pass1: consts+GoRoute+shell+mounts+deep+providers",
+   "exit_code": 0
+  },
+  {
+   "cmd": "python3 /tmp/b02_refined.py  # pass2: interpolation+named routes",
+   "exit_code": 0
+  },
+  {
+   "cmd": "python3 /tmp/b02_final.py  # pass3: const/helper/named/deep inbound refs",
+   "exit_code": 0
+  },
+  {
+   "cmd": "python3 (inline)  # pass4: multiline/generic nav + Uri(path:)/route-config channels",
+   "exit_code": 0
+  },
+  {
+   "cmd": "python3 (inline)  # merge all sources -> final unreached",
+   "exit_code": 0
+  },
+  {
+   "cmd": "grep/sed spot checks x17 (high-risk manual sample)",
+   "exit_code": 0
+  },
+  {
+   "cmd": "python3 /tmp/b02_gen_mapping.py  # emit mapping.csv + route_inventory.csv with overrides",
+   "exit_code": 0
+  }
+ ],
+ "product_code_modified": false,
+ "matrix_modified": false,
+ "heavy_run": false,
+ "artifacts_sha256_note": "run_manifest.json 自身不列入（自引用）",
+ "artifacts_sha256": {
+  "diff_or_evidence_only.md": "f1099f4ffd8e6f9368add8571c758066545ce2956af03fad1567490417f04f05",
+  "drift_findings.md": "ec1c16dd8f3f257f00f682ea11520bfc31ae0bb6ff148467cc67a6354b8f728b",
+  "limitations.md": "408226b7b6c8f36eef5564ce3c8f07e76d9d84c1b42e0cdc9925edb19c283e76",
+  "mapping.csv": "364edb7ef69651a1c19d9a72f78aee42960d79fd049cd1f6227c8ffe419a98e3",
+  "mapping_report.md": "b85fa85677bdef829e8295a8eb49f2f84d542f2ea93feb16887b3bdb1a732039",
+  "review_receipt.json": "ffbd39d03a881cac06961997d15c81dcef5614cd6e80132c82d012cc2266494c",
+  "route_inventory.csv": "f51aa65b652b130cde85d7013a27602bbd7da64501d9f7bcde17448f3bba005d",
+  "test_results.json": "715c893c17d1735ef488d0d74627d077f9c287e3581473cde90eb3a7210538cc"
+ }
+}

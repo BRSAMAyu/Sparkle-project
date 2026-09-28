@@ -1,0 +1,27 @@
+{
+  "card": "V4-B02",
+  "required_independent_reviewers": 1,
+  "status": "PENDING_REVIEW",
+  "note": "按验收模型（普通任务 DONE = 独立未参与会话审查 + 当前集成 SHA 可失败测试），本卡由实现会话产出证据后待独立审查。自称完成不算完成：本文件留待审查会话填写，实现会话不代填结论。",
+  "reviewer": null,
+  "reviewer_session": null,
+  "reviewed_sha": "3c4618cc1d23b79792e330f87114484434a410ed",
+  "evidence_bundle": [
+    "v4/evidence/V4-B02/mapping.csv",
+    "v4/evidence/V4-B02/route_inventory.csv",
+    "v4/evidence/V4-B02/drift_findings.md",
+    "v4/evidence/V4-B02/mapping_report.md",
+    "v4/evidence/V4-B02/run_manifest.json",
+    "v4/evidence/V4-B02/test_results.json",
+    "v4/evidence/V4-B02/limitations.md"
+  ],
+  "suggested_review_checks": [
+    "复跑 43 目录 vs MODULE_MATRIX.csv 双向差集（应为空）",
+    "抽查 route_inventory.csv 任 5 行的 defined_in 与入边计数",
+    "复核 DF-01~DF-04 矩阵滞后四项的 file:line 证据",
+    "复核 DF-08/DF-09 深链 id-less 歧义（deep_link_service.dart:82-109 + galaxy_routes.dart:18）",
+    "确认产品代码零 diff（git show --stat 本卡 commit 应仅含 v4/evidence 与 tasks.json）"
+  ],
+  "verdict": null,
+  "reviewed_at": null
+}

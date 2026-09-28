@@ -1,0 +1,57 @@
+{
+  "card": "V4-B02",
+  "kind": "verification",
+  "test_policy_applied": "纯核验/文档型交付：按 AGENTS.md 验证规范不因核验卡重跑全产品测试；本卡不改产品代码，无可运行的产品测试增量。",
+  "static_checks": [
+    {
+      "name": "feature-set-exact-match",
+      "assert": "mobile/lib/features 目录集合 == MODULE_MATRIX.csv feature 集合（双向差集为空）",
+      "result": "PASS",
+      "detail": "43 == 43; dir_without_matrix_entry=[], matrix_entry_without_dir=[]",
+      "tool": "python3 /tmp/b02_route_analysis.py"
+    },
+    {
+      "name": "no-ghost-onboarding-dir",
+      "assert": "无独立 onboarding feature 目录；onboarding 路由归 user",
+      "result": "PASS",
+      "detail": "F24 空位；/onboarding/persona + /onboarding/modeling-chat 定义于 mobile/lib/features/user/user_routes.dart；仅 persona_onboarding_screen.dart 等 user 内文件"
+    },
+    {
+      "name": "all-route-files-mounted",
+      "assert": "每个 *_routes.dart 的路由组均在 app/routes.dart 挂载",
+      "result": "PASS",
+      "detail": "32/32 groups mounted; 0 orphan route file"
+    },
+    {
+      "name": "route-classification",
+      "assert": "136 注册路径全部分类且每类可溯源",
+      "result": "PASS",
+      "detail": "5 tab_shell + 116 active_entry + 4 legacy_redirect + 1 deep_link_only + 10 registered_no_ui_entry（10 条孤儿逐条入 DF-05~DF-10）"
+    },
+    {
+      "name": "hidden-labs-not-auto-opened",
+      "assert": "HIDDEN/LABS 特征无自动开放入口",
+      "result": "PASS",
+      "detail": "shop 0 UI 入口; visual-elements 0 UI 入口(U-07); reflection 0 入边; simulation/theater/seed_library 仅受控 const 入口"
+    },
+    {
+      "name": "deep-link-mapping-closure",
+      "assert": "sparkle:// 10 类型映射落点全部可判定",
+      "result": "PASS_WITH_FINDINGS",
+      "detail": "8 类解析到注册路由; 2 类 id-less 歧义登记为 DF-08/DF-09"
+    },
+    {
+      "name": "manual-spot-check-sample",
+      "assert": ">=10 高风险项人工 file:line 复核",
+      "result": "PASS",
+      "detail": "17 项复核（见 mapping_report.md §4），其中 3 项推翻静态误报、4 项证实矩阵滞后"
+    }
+  ],
+  "product_test_runs": [],
+  "product_test_runs_reason": "零产品代码变更（evidence-only 卡），无可运行产品测试增量；不跑 HEAVY（卡面 HEAVY=False）。",
+  "flutter_analyze": {
+    "run": false,
+    "reason": "产品代码零修改，无静态分析增量可检"
+  },
+  "overall": "PASS (verification/evidence-only)"
+}
