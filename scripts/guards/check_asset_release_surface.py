@@ -163,10 +163,11 @@ def scan() -> list[str]:
             if not path.exists():
                 failures.append(f"L002 账本指向缺失文件: {asset_id}")
 
-    # L005 字体
+    # L005 字体（跳过本地构建缓存目录——它们是 gitignored 的依赖检出/产物，
+    # 不属于「入产物面」的仓库声明范围；CI 新检出与 worktree 无这些目录）
     for path in (REPO_ROOT / "mobile").rglob("*"):
         if path.suffix.lower() in FONT_EXTS and path.is_file():
-            if any(part in ("build", ".dart_tool") for part in path.parts):
+            if any(part in ("build", ".dart_tool", "Pods", ".symlinks", "ephemeral") for part in path.parts):
                 continue
             asset_id = (
                 path.relative_to(ASSETS_ROOT).as_posix()
