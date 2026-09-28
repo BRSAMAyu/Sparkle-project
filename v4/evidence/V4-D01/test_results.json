@@ -1,0 +1,83 @@
+{
+  "card": "V4-D01",
+  "task": "交付到真实呈现的曝光语义增量（experience_event.v1）",
+  "generated_at_local": "2026-09-28",
+  "branch": "agent/v4/d01",
+  "base_sha": "1a53b8c3065aff821db210294501e425294c4166",
+  "python": "3.11.15",
+  "pytest_version": "9.0.2",
+  "mypy_version": "1.20.2",
+  "ruff_version": "0.15.8",
+  "summary": {
+    "new_tests": 44,
+    "new_tests_broken_down": {
+      "contract_guard_tests_core_test_experience_event_py": 31,
+      "integration_three_state_tests_services_test_experience_event_service_py": 13
+    },
+    "regression": {
+      "tests_services_full": "1018 passed, 10 skipped in 468.82s",
+      "tests_core_full": "326 passed, 1 skipped, 36 errors（既有环境噪声：test_bert_intent_classifier.py transformers fixture；git stash -u 基线复跑同 36 errors）",
+      "consumer_targeted": "98 passed（f507 wiring/readface + lifecycle service + notification/profile/api 消费方 11 模块）",
+      "notification_bridge_targeted": "37 passed, 1 warning"
+    },
+    "mypy": "零漂移：基线 30 错误集 == 改后错误集（排除 8 条 app.gen 生成 stub 环境噪声，主检出同源存在）；新文件自身零错误",
+    "ruff": "All checks passed（新增/改动 6 文件；首轮 10 处自动可修复项已 --fix）"
+  },
+  "runs": [
+    {
+      "cmd": "pytest tests/core/test_experience_event.py tests/services/test_experience_event_service.py -q",
+      "exit_code": 0,
+      "result": "44 passed in 5.59s"
+    },
+    {
+      "cmd": "pytest tests/core/test_experience_event.py tests/services/test_experience_event_service.py tests/services/test_f507_lifecycle_wiring.py tests/services/test_intervention_lifecycle_service.py -q",
+      "exit_code": 0,
+      "result": "89 passed in 21.35s（ruff --fix 后复验）"
+    },
+    {
+      "cmd": "pytest tests/services -q",
+      "exit_code": 0,
+      "result": "1018 passed, 10 skipped in 468.82s"
+    },
+    {
+      "cmd": "pytest tests/core -q",
+      "exit_code": 0,
+      "result": "326 passed, 1 skipped, 36 errors（全部既有，stash 基线同败）"
+    },
+    {
+      "cmd": "mypy app/core/intervention_lifecycle.py app/services/intervention_lifecycle_wiring.py app/services/intervention_record_service.py app/core/experience_event.py app/services/experience_event_service.py",
+      "exit_code": 0,
+      "result": "新文件零错误；对基线 diff 为空（excl. app.gen 环境噪声 8 条）"
+    },
+    {
+      "cmd": "ruff check <6 新增/改动文件>",
+      "exit_code": 0,
+      "result": "All checks passed!"
+    }
+  ],
+  "three_state_coverage": {
+    "曝光": [
+      "test_rendered_exposure_projects_event_anchored_to_authoritative_receipt",
+      "test_accessibility_surface_maps_to_audio_modality"
+    ],
+    "未曝光": [
+      "test_delivery_alone_never_projects_presentation_event",
+      "test_invalid_rendered_surface_is_refused_not_normalized"
+    ],
+    "回执缺失降级": [
+      "test_missing_authoritative_receipt_degrades_observably",
+      "test_missing_receipt_does_not_break_seen_transition",
+      "test_unprojectable_decision_contract_is_refused"
+    ],
+    "幂等重放韧性": [
+      "test_repeated_mark_seen_does_not_repeat_exposure",
+      "test_re_render_after_snooze_keeps_single_exposure_identity",
+      "test_lost_event_replays_to_identical_identity",
+      "test_publish_failure_does_not_break_seen_transition",
+      "test_mark_seen_without_event_bus_still_transitions_and_projects",
+      "test_delivery_wiring_regression_guard_still_green"
+    ]
+  },
+  "llm_usage": "无模型调用",
+  "honesty_notes": "『移动端已能收到呈现事件』『等价无障碍曝光已被真实上报』不是本卡可声明的事实（见 limitations.md 1/4）；当前可声明 = 服务面投影/幂等/重放/降级与全部测试证据。"
+}

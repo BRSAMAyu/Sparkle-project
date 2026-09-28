@@ -94,6 +94,14 @@ ACCEPTANCE_TO_LIFECYCLE_EVENT: dict[InterventionAcceptanceStatus, LifecycleEvent
 _DELIVERY_COGNITION_TIER = "l0_rules"  # 交付选择是确定性规则（taxonomy + 桥）
 _SPINE_COGNITION_TIER = "l1_light"  # spine 管线规则评估（无 LLM）
 
+# V4-D01 · delivered/rendered 语义区分（增量；不改本面既有接线语义）：
+# 交付面 lifecycle exposed 行的 detail 显式携带 exposure_basis="delivered"——
+# 它是**交付回执**（服务端确实下发了），不等于「用户真的看到」；「用户实际
+# 可见面」由 experience_event.v1 rendered 增量承载
+# （app/services/experience_event_service.py，唯一入口 mark_seen 真实转场）。
+EXPOSURE_BASIS_DETAIL_KEY = "exposure_basis"
+DELIVERY_EXPOSURE_BASIS = "delivered"
+
 
 # ---------------------------------------------------------------------------
 # 契约构造（交付面 / spine 面）
@@ -239,6 +247,8 @@ async def record_delivery_exposure(db: AsyncSession, record: InterventionRecord)
                 "trigger_type": record.trigger_type.value,
                 "delivery_channel": record.delivery_channel.value,
                 "delivery_strategy": record.delivery_strategy.value,
+                # V4-D01：显式标记交付回执语义（delivered ≠ rendered/seen）。
+                EXPOSURE_BASIS_DETAIL_KEY: DELIVERY_EXPOSURE_BASIS,
             },
         )
     except Exception as exc:  # noqa: BLE001 — 韧性壳：交付链路永不被 lifecycle 拖垮
