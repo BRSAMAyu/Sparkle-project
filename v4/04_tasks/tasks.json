@@ -1648,9 +1648,9 @@
         "V4-D03",
         "V4-B02"
       ],
-      "status": "in_progress",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "PENDING",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "APPROVE",
       "kind": "implementation",
       "required_locks": [
         "galaxy-evidence"
@@ -1700,7 +1700,13 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "review": {
+        "r1": "0f60e15e APPROVE（通道映射 20 组合穷举+M1 亲做+断言更新无削弱 FIX-292/GJ05 逐字节零差）",
+        "f1": "节点读门世代源用全局 epoch（潜在误判）——挂账消费卡接线前切 _last_retraction_epoch",
+        "f2": "spark 自报绕过通道分类（V3 既有）——FIX-562 已登记",
+        "integration_reverify": "合并后 galaxy 178 passed"
+      }
     },
     {
       "id": "V4-D05",
