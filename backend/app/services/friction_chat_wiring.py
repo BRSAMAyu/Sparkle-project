@@ -48,6 +48,19 @@
    user 级 active 集归因、非 scope 窄化）与 P3-5（inputs 缓存 120s TTL
    陈旧窗口）语义沿用服务层既有契约，本层不复制判定。
 
+5. **V4-I04 · 无动作仍可纠正与一次决策性澄清**（``NO_ACTION_CORRECTION_MODE``
+   ∈ {off, shadow, live}，默认 **off** = 本条零行为）：
+   - no_action/abstain 面（含 FIX-49 门拦静默面）挂**自由补充入口**（FIX97
+     裁决：单一自由输入「还有什么情况需要我知道？」，不依赖错误行动、
+     至多 2 个不同操作后果例子）；
+   - 已答 1 个自动澄清轮后引擎仍想追问 → **出口斜坡**（不 surfaced 第二问；
+     保守可试方案只能来自引擎自身「预算已用完」B1 出口，零伪造第二诊断）；
+   - 用户可**跳过/暂停**（封闭词表，先于分支解析）；
+   - **纠正追踪**（行动改变依据：前后出口 + 答句分支 + reason 码 + 证据
+     引用）随 ``context_data["friction_decision"]`` checkpoint 持久——重开
+     可见。shadow = 指标+结构化日志留痕、payload 零变化；live = 载荷出面
+     （本卡即 live 裁决语义归属卡，激活时显式 WARN，响应 I03 N-2）。
+
 词表纪律：零新 event name、零新 ref scheme、prompt 本体零改动（问句经
 metadata 出面，不经 prompt 渲染）。
 
@@ -67,16 +80,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aurora.friction_diagnosis import (
     FRICTION_DIAGNOSIS_VERSION,
+    FRICTION_INTERVENTION_NOMINATIONS,
     FrictionDiagnosis,
     apply_question_answer,
     diagnose_friction,
     resolve_answer_branch_detail,
 )
 from app.aurora.intervention_policy import evaluate_intervention_policy
+from app.aurora.no_action_supplement import (
+    budget_declared_replay,
+    clarification_exit_ramp,
+    classify_supplement_constraint,
+    conservative_option_from,
+    correction_trace,
+    difficulty_not_chased,
+    match_pause_marker,
+    match_skip_marker,
+    supplement_entry,
+)
+from app.core.metrics import AURORA_NO_ACTION_CORRECTION_TOTAL
 from app.core.policy_patch import SURFACE_PAYLOAD_KEYS
 from app.services.policy_patch_service import PolicyPatchService
 
-FRICTION_CHAT_WIRING_VERSION = "friction-chat-wiring.v3"
+FRICTION_CHAT_WIRING_VERSION = "friction-chat-wiring.v4"
 
 #: V3-FIX-49 · chat 面 fresh 出口词牌门的静默出口原因（annotations.wiring_gate）：
 #: - 无词牌 + unknown（U1 根分裂澄清问）：对零摩擦证据的普通消息发问卷 = 过度
@@ -109,6 +135,56 @@ CHAT_TURN_CAPABILITIES = frozenset({"chat", "llm_generate"})
 #: ——「回答按键解析不走自由文本词牌」的主路径；自由文本解析是回退层）。
 FRICTION_ANSWER_CONTEXT_KEY = "friction_answer"
 
+#: V4-I04 · no_action 纠正面的行为档位缓存（fail-closed：未知值按 off + WARN）。
+_CORRECTION_MODE_WARNED = False
+
+
+def _correction_mode() -> str:
+    """``settings.NO_ACTION_CORRECTION_MODE`` 档位读取（fail-closed 不猜）。
+
+    off = 零行为（V3 链路逐字节保持）；shadow = 指标+结构化日志留痕、payload
+    零变化；live = 载荷出面。live 首次激活打显式 WARN（I03 N-2「消费侧显式
+    标识」：本卡即 no_action 纠正面 live 裁决语义的归属卡，避免运维误读）。
+    """
+    global _CORRECTION_MODE_WARNED
+    from app.config import settings
+
+    mode = str(getattr(settings, "NO_ACTION_CORRECTION_MODE", "off") or "off").strip().lower()
+    if mode not in ("off", "shadow", "live"):
+        logger.warning("[FrictionWiring] unknown NO_ACTION_CORRECTION_MODE={!r}; treating as off", mode)
+        return "off"
+    if mode == "live" and not _CORRECTION_MODE_WARNED:
+        _CORRECTION_MODE_WARNED = True
+        logger.warning(
+            "[FrictionWiring] NO_ACTION_CORRECTION_MODE=live: 无动作自由补充/出口斜坡/纠正追踪"
+            "消费面已激活（V4-I04 live 裁决语义；关闭请回设 off）"
+        )
+    return mode
+
+
+def _record_correction_metric(surface: str, mode: str) -> None:
+    try:
+        AURORA_NO_ACTION_CORRECTION_TOTAL.labels(surface=surface, mode=mode).inc()
+    except Exception:  # pragma: no cover - 遥测失败不影响主链路
+        logger.opt(exception=True).warning("no-action correction metric failed")
+
+
+def _contender_primary_nominations(diagnosis: FrictionDiagnosis) -> dict[str, str]:
+    """竞争带成员 → 首要提名映射（读引擎公开常量，零复制语义）。
+
+    只保留首要提名**互不相同**的成员——FIX97 例子纪律：至多 2 个且必须
+    「不同操作后果」，同名/不可得不给（不摆卡点清单）。
+    """
+    contenders = diagnosis.annotations.get("contenders")
+    if not isinstance(contenders, list):
+        return {}
+    mapping: dict[str, str] = {}
+    for ftype in contenders:
+        nominations = FRICTION_INTERVENTION_NOMINATIONS.get(str(ftype)) or ()
+        if nominations and nominations[0] not in mapping.values():
+            mapping[str(ftype)] = nominations[0]
+    return mapping
+
 
 @dataclass
 class FrictionWiringOutcome:
@@ -116,6 +192,15 @@ class FrictionWiringOutcome:
 
     非 frozen：``_emit`` 按 ask/act 出口增量填充 question/intervention/policy_patch
     面（服务内部装配载体；对外仍是 to_dict 的只读投影）。
+
+    V4-I04 新增三面（``NO_ACTION_CORRECTION_MODE=live`` 才出面；shadow/off 恒
+    None——shadow 只留指标与结构化日志，payload 零变化）：
+
+    - ``supplement_entry``：no_action/abstain/无提案面的自由补充入口（FIX97）；
+    - ``exit_ramp``：澄清预算（≤1 自动轮）尽后的封闭出口斜坡——**结构上不携带
+      追问**（question 恒 None，``clarification_exit_ramp`` 保证）；
+    - ``correction_trace``：澄清/纠正后的行动改变依据追踪（随 checkpoint 持久，
+      重开可见；``user_can.skip/pause`` 恒真）。
     """
 
     version: str = FRICTION_CHAT_WIRING_VERSION
@@ -127,6 +212,9 @@ class FrictionWiringOutcome:
     question: Mapping[str, Any] | None = None
     intervention: Mapping[str, Any] | None = None
     policy_patch: Mapping[str, Any] | None = None
+    supplement_entry: Mapping[str, Any] | None = None
+    exit_ramp: Mapping[str, Any] | None = None
+    correction_trace: Mapping[str, Any] | None = None
     annotations: Mapping[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -140,6 +228,9 @@ class FrictionWiringOutcome:
             "question": dict(self.question) if self.question else None,
             "intervention": dict(self.intervention) if self.intervention else None,
             "policy_patch": dict(self.policy_patch) if self.policy_patch else None,
+            "supplement_entry": dict(self.supplement_entry) if self.supplement_entry else None,
+            "exit_ramp": dict(self.exit_ramp) if self.exit_ramp else None,
+            "correction_trace": dict(self.correction_trace) if self.correction_trace else None,
             "annotations": dict(self.annotations),
         }
 
@@ -211,7 +302,10 @@ class FrictionChatWiringService:
     def __init__(self, db: AsyncSession | None, redis_client=None):
         self.db = db
         self.redis = redis_client
-        self._patches = PolicyPatchService(db) if db is not None else None    # ------------------------------------------------------------------
+        self._patches = (
+            PolicyPatchService(db) if db is not None else None
+        )  # ------------------------------------------------------------------
+
     # 对外主入口
     # ------------------------------------------------------------------
 
@@ -271,6 +365,17 @@ class FrictionChatWiringService:
         now: datetime | None,
     ) -> FrictionWiringOutcome:
         question_id = str(pending.get("question_id") or "")
+        correction_mode = _correction_mode()
+        # V4-I04 · 用户可跳过/暂停（封闭词表；先于分支解析——跳过/暂停不是回答，
+        # 不消耗答案解析面）。off 档零行为（V3 链路逐字节保持）。
+        pause_marker = match_pause_marker(user_message) if correction_mode != "off" else None
+        skip_marker = match_skip_marker(user_message) if correction_mode != "off" and pause_marker is None else None
+        if pause_marker is not None:
+            return await self._pause_turn(user_id=user_id, session_id=session_id, pending=pending, marker=pause_marker)
+        if skip_marker is not None:
+            return await self._skip_turn(
+                user_id=user_id, session_id=session_id, pending=pending, marker=skip_marker, now=now
+            )
         # 1) branch_key 直传（主路径）：客户端回传结构化答案。
         branch_key: str | None = None
         resolution = "pending_absent"
@@ -327,15 +432,150 @@ class FrictionChatWiringService:
             clarification_preference=clarification,
         )
         await self._clear_pending(user_id, session_id)
-        return await self._emit(
+        # V4-I04 · 一次决策性澄清：已答 1 个自动澄清轮后引擎仍想追问 → 不 surfaced
+        # 第二问，以「预算已用完」声明触发引擎自身 B1/B2/B3 出口 + 出口斜坡
+        # （直接说情况/保守可试方案/先暂停）。off 档不干预（V3 允许问句预算 2）。
+        annotations: dict[str, Any] = {"answer_resolution": resolution, "answered_branch_key": branch_key}
+        exit_ramp: dict[str, Any] | None = None
+        if correction_mode != "off" and diagnosis.outcome == "ask":
+            annotations["suppressed_second_ask"] = (
+                diagnosis.question.question_id if diagnosis.question is not None else None
+            )
+            annotations["exit_reason"] = "v4_clarification_budget_exhausted"
+            diagnosis = budget_declared_replay(
+                dict(pending.get("input_snapshot") or {}),
+                answer=(question_id, branch_key),
+                clarification_preference=clarification,
+            )
+            exit_ramp = clarification_exit_ramp(
+                conservative_option=conservative_option_from(diagnosis),
+                prior_question_id=question_id,
+            )
+            _record_correction_metric("exit_ramp", correction_mode)
+        base = await self._emit(
             user_id=user_id,
             session_id=session_id,
             diagnosis=diagnosis,
             mode="answer_replay",
             payload_ctx=payload_ctx,
-            annotations={"answer_resolution": resolution, "answered_branch_key": branch_key},
+            annotations=annotations,
             now=now,
         )
+        if correction_mode != "off":
+            # 纠正追踪：行动改变依据可追踪（live 出面 / shadow 留痕不出面）。
+            trace = correction_trace(
+                before_outcome="ask",
+                after_outcome=diagnosis.outcome,
+                basis={
+                    "channel": "clarification_answer",
+                    "answer_resolution": resolution,
+                    "answered_branch_key": branch_key,
+                    "reason_codes": list(diagnosis.reasons),
+                    "evidence_refs": list(diagnosis.evidence_refs),
+                    "exit_ramp_reason": annotations.get("exit_reason"),
+                },
+            )
+            _record_correction_metric("trace", correction_mode)
+            if correction_mode == "live":
+                base.correction_trace = trace
+                base.exit_ramp = exit_ramp
+            else:
+                logger.info(
+                    "[FrictionWiring] shadow trace id={} before=ask after={} ramp={}",
+                    trace["trace_id"],
+                    diagnosis.outcome,
+                    exit_ramp is not None,
+                )
+        return base
+
+    async def _skip_turn(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        pending: Mapping[str, Any],
+        marker: str,
+        now: datetime | None,
+    ) -> FrictionWiringOutcome:
+        """V4-I04 · 用户跳过当前问句：pending 清除 + 保守可试方案或如实无行动。
+
+        保守方案只能来自引擎自身「预算已用完」出口（B1 best-guess，uncertain
+        如实标注）——本层零伪造诊断；B2/B3 无行动出口如实给纯斜坡（不锁聊天）。
+        """
+        correction_mode = _correction_mode()
+        await self._clear_pending(user_id, session_id)
+        _record_correction_metric("skip", correction_mode)
+        diagnosis = budget_declared_replay(dict(pending.get("input_snapshot") or {}))
+        trace = correction_trace(
+            before_outcome="ask",
+            after_outcome=diagnosis.outcome,
+            basis={
+                "channel": "clarification_skip",
+                "marker": marker,
+                "question_id": str(pending.get("question_id") or ""),
+                "reason_codes": list(diagnosis.reasons),
+            },
+            skipped=True,
+        )
+        exit_ramp = clarification_exit_ramp(
+            conservative_option=conservative_option_from(diagnosis),
+            reason="user_skipped_clarification",
+            prior_question_id=str(pending.get("question_id") or ""),
+        )
+        base = await self._emit(
+            user_id=user_id,
+            session_id=session_id,
+            diagnosis=diagnosis,
+            mode="answer_replay",
+            payload_ctx={},
+            annotations={"clarification_exit": "skip", "skip_marker": marker},
+            now=now,
+        )
+        if correction_mode == "live":
+            base.correction_trace = trace
+            base.exit_ramp = exit_ramp
+        else:
+            logger.info("[FrictionWiring] shadow skip trace id={} after={}", trace["trace_id"], diagnosis.outcome)
+        return base
+
+    async def _pause_turn(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        pending: Mapping[str, Any],
+        marker: str,
+    ) -> FrictionWiringOutcome:
+        """V4-I04 · 用户暂停：本域静默（零提名、零问句、零写路径），随时可继续。
+
+        输入与返回继续可用（FIX97 同律）；追踪记录 paused=True——暂停是可见的
+        用户选择，不是永久失败固化。
+        """
+        correction_mode = _correction_mode()
+        await self._clear_pending(user_id, session_id)
+        _record_correction_metric("pause", correction_mode)
+        trace = correction_trace(
+            before_outcome="ask",
+            after_outcome="no_action",
+            basis={
+                "channel": "clarification_pause",
+                "marker": marker,
+                "question_id": str(pending.get("question_id") or ""),
+            },
+            paused=True,
+        )
+        base = FrictionWiringOutcome(
+            mode="answer_replay",
+            outcome="no_action",
+            friction_type=str(pending.get("friction_type") or "unknown"),
+            lifecycle_tag=str(pending.get("lifecycle_tag") or "unattributed"),
+            annotations={"clarification_exit": "pause", "paused": True, "pause_marker": marker},
+        )
+        if correction_mode == "live":
+            base.correction_trace = trace
+        else:
+            logger.info("[FrictionWiring] shadow pause trace id={}", trace["trace_id"])
+        return base
 
     async def _fresh_turn(
         self,
@@ -367,7 +607,7 @@ class FrictionChatWiringService:
         if gate_reason is not None:
             # V3-FIX-114 · 静默出口载荷脱敏：被拦问句全文（question 对象/
             # clarify 渲染文本）不进 metadata——只动载荷构造，门判定不变。
-            return FrictionWiringOutcome(
+            base = FrictionWiringOutcome(
                 mode="fresh",
                 outcome="no_action",
                 friction_type=diagnosis.friction_type,
@@ -375,7 +615,9 @@ class FrictionChatWiringService:
                 diagnosis=_gate_silent_diagnosis_payload(diagnosis),
                 annotations={"wiring_gate": gate_reason},
             )
-        return await self._emit(
+            self._attach_supplement_entry(base, diagnosis)
+            return base
+        base = await self._emit(
             user_id=user_id,
             session_id=session_id,
             diagnosis=diagnosis,
@@ -384,6 +626,67 @@ class FrictionChatWiringService:
             annotations={},
             now=now,
         )
+        self._attach_supplement_entry(base, diagnosis)
+        # V4-I04 · 自由补充消费面：fresh 轮的 utterance 本身就是用户主动补充
+        # （FIX-49 门保证 fresh act/ask 必带正向自报词牌；用户主动不占系统追问
+        # 预算）。产出纠正追踪 + 临时约束分类 + 难度守卫复核——行动改变依据
+        # 可追踪（live 出面 / shadow 留痕）。
+        correction_mode = _correction_mode()
+        if correction_mode != "off":
+            constraint = classify_supplement_constraint(user_message)
+            guard_ok = difficulty_not_chased((), diagnosis.posterior, after_annotations=diagnosis.annotations)
+            if base.outcome in ("act", "ask") or constraint is not None or not guard_ok:
+                trace = correction_trace(
+                    before_outcome=None,
+                    after_outcome=base.outcome,
+                    basis={
+                        "channel": "free_supplement",
+                        "reason_codes": list(diagnosis.reasons),
+                        "evidence_refs": list(diagnosis.evidence_refs),
+                        "constraint_kind": (constraint or {}).get("kind"),
+                        "constraint_scope": (constraint or {}).get("scope"),
+                        "difficulty_guard_ok": guard_ok,
+                        "budget_impact": "none",
+                    },
+                )
+                _record_correction_metric("free_supplement", correction_mode)
+                if correction_mode == "live":
+                    base.correction_trace = trace
+                else:
+                    logger.info(
+                        "[FrictionWiring] shadow free_supplement trace id={} outcome={} constraint={}",
+                        trace["trace_id"],
+                        base.outcome,
+                        (constraint or {}).get("kind"),
+                    )
+        return base
+
+    def _attach_supplement_entry(self, base: FrictionWiringOutcome, diagnosis: FrictionDiagnosis) -> None:
+        """V4-I04 · FIX97：no_action/abstain 面挂自由补充入口（live 出面）。
+
+        该入口**不依赖错误行动存在**（FIX97 核心语义），不受 FIX-49 词牌门
+        影响——门拦的是「无词牌介入面」，补充入口是用户主动出口，恒可达。
+        shadow/off 档 payload 零变化（指标+日志留痕）。
+        """
+        mode = _correction_mode()
+        if mode == "off" or base.outcome not in ("no_action", "abstain"):
+            return
+        entry = supplement_entry(
+            outcome=base.outcome,
+            contender_primary_nominations=_contender_primary_nominations(diagnosis),
+            friction_type=diagnosis.friction_type,
+        )
+        if entry is None:
+            return
+        _record_correction_metric("supplement_entry", mode)
+        if mode == "live":
+            base.supplement_entry = entry
+        else:
+            logger.info(
+                "[FrictionWiring] shadow supplement_entry available outcome={} examples={}",
+                base.outcome,
+                len(entry["examples"]),
+            )
 
     # ------------------------------------------------------------------
     # 出口装配：ask → pending+问句载荷；act → A-05 补丁面 + A-02 评估

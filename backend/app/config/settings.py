@@ -962,6 +962,14 @@ class Settings(BaseSettings):
     # 本卡 live 在聊天流内与 shadow 同义（只记录不裁决）。未知值按 off 处理
     # （fail-closed，不猜）。
     SEMANTIC_SELECTOR_MODE: str = "off"
+    # V4-I04：无动作仍可纠正与一次决策性澄清（aurora/no_action_supplement.py，
+    # stuck-policy 域消费层）——no_action/abstain 面自由补充出口（FIX97）、
+    # 临时约束会话作用域（不写永久偏好）、自动澄清 ≤1 轮 + 出口斜坡（不连环
+    # 追问）、纠正追踪随 friction_decision checkpoint 持久。off = 零行为
+    # （V3 链路逐字节保持）；shadow = 指标+结构化日志留痕、payload 零变化；
+    # live = 载荷出面（本卡即 live 裁决语义归属卡；激活时显式 WARN + metric
+    # 标识，响应 I03 N-2）。未知值按 off 处理（fail-closed，不猜）。
+    NO_ACTION_CORRECTION_MODE: str = "off"
     COMPACTION_RECENT_WINDOW: int = 6
     COMPACTION_KEY_MESSAGE_CAP_TOKENS: int = 220
     # C-06：knowledge JIT（core/knowledge_jit.py）——大知识源只注入
