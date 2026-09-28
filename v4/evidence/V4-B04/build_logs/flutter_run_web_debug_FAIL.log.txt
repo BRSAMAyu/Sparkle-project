@@ -1,0 +1,17 @@
+Launching lib/main.dart on Web Server in debug mode...
+Waiting for connection from debug service on Web Server...      
+lib/core/offline/models/cached_list_snapshot.g.dart:19:8: Error: The integer literal 3993110354800439673 can't be represented exactly in JavaScript.
+Try changing the literal to something that can be represented in JavaScript. In JavaScript 3993110354800439808 is the nearest value that can be represented exactly.
+  id: -3993110354800439673,
+       ^^^^^^^^^^^^^^^^^^^
+lib/core/offline/models/cached_list_snapshot.g.dart:49:12: Error: The integer literal 5780496603892815176 can't be represented exactly in JavaScript.
+Try changing the literal to something that can be represented in JavaScript. In JavaScript 5780496603892814848 is the nearest value that can be represented exactly.
+      id: -5780496603892815176,
+           ^^^^^^^^^^^^^^^^^^^
+lib/core/offline/models/cached_list_snapshot.g.dart:62:11: Error: The integer literal 1681328346514525477 can't be represented exactly in JavaScript.
+Try changing the literal to something that can be represented in JavaScript. In JavaScript 1681328346514525440 is the nearest value that can be represented exactly.
+      id: 1681328346514525477,
+          ^^^^^^^^^^^^^^^^^^^
+Waiting for connection from debug service on Web Server...         30.1s
+Failed to compile application.
+RUN_EXIT:1

@@ -1,0 +1,70 @@
+{
+  "task": "V4-B04",
+  "card": "v4/04_tasks/cards/V4-B04.md",
+  "generated_at_local": "2026-09-28T17:50:00+08:00",
+  "executor": "wtB04 fleet agent (本机唯一 HEAVY 槽持有者)",
+  "worktree": {
+    "path": "/Users/brsama/code/GitHub/wtB04",
+    "branch": "agent/v4/b04",
+    "base_sha": "3c4618cc1d23b79792e330f87114484434a410ed",
+    "base_subject": "feat(v4): V4 设计与 Agent 执行包收编（58 卡）+舰队 V4 模式切换"
+  },
+  "lock": "v4-visual-harness",
+  "heavy_discipline": {
+    "single_heavy_reservation": true,
+    "pre_check_command": "pgrep -fl 'qemu|emulator|gradle'",
+    "pre_check_result": "no matches (exit 1) at start and before each heavy op",
+    "heavy_ops_run": [
+      "flutter build web --release (FAIL, CFE int literal)",
+      "flutter build web --debug (FAIL, same CFE path)",
+      "flutter run -d web-server (FAIL, same CFE path)"
+    ],
+    "note": "三次 Web 构建尝试为同一 HEAVY 操作的重试/诊断闭环，期间无第二重操作并行；模拟器未尝试启动（无 adb CLI、无 qemu 进程，评估为 5 分钟窗口内不可行，直接按授权降级）"
+  },
+  "capture_channel": {
+    "declared": "web-admin（降级渠道，如实标注）",
+    "why": "产品移动端 Flutter Web 全模式构建在本 SHA 失败（生成文件 64-bit int 字面量被 dart2js CFE 拒绝，属既有债务，红线禁止手改生成文件/产品码）；本机无可用 Android 模拟器路径",
+    "supplement_note": "FastAPI /docs 页面自身 CSP(script-src 'self') 阻止其引用的 jsdelivr CDN 资产——该页面对任何访客均无法渲染，为本次发现的第二个真实现状",
+    "viewer_plumbing": "headless Chrome (puppeteer-core 25.12.0 + 本机 Google Chrome 153) setBypassCSP + 请求拦截：仅将 CDN 资产替换为本地逐字节相同的副本；页面 HTML 与 /openapi.json 均来自活引擎，未修改",
+    "product_mobile_ui_capture": "BLOCKED（证据：build_logs/ 三份失败日志(.log.txt)）"
+  },
+  "environment": {
+    "hardware": "Apple M4, 10 cores, arm64",
+    "os": "macOS 26.6.2 (25G83)",
+    "flutter": "3.41.3 stable (framework 48c32af034, engine 327ed81450, dart 3.11.1)",
+    "browser": "HeadlessChrome/153.0.0.0 (本机 Google Chrome)",
+    "viewport": "1280x800 logical @ deviceScaleFactor=2 (DPR=2)，输出 PNG 2560x1600 物理像素",
+    "font_scale": "浏览器默认 16px root，无文本缩放 override（渠道限制：无法触及应用内字号设置）",
+    "build_mode": "n/a for captured faces（FastAPI/网关为已运行服务；Flutter Web 构建失败故无 app build mode 可记）",
+    "live_stack": {
+      "gateway": "sparkle_gateway :8080（/tmp/sparkle_gateway，进程启动 2026-09-28 09:55:45 本地时间）",
+      "engine": "Python FastAPI :8000（root 报告 app=Sparkle version=1.0.0）+ gRPC :50051",
+      "containers": "sparkle_db / sparkle_redis / sparkle_minio 全部 Up 2 hours (healthy)",
+      "repo_state_assumption": "运行栈启动于 Sparkle-project main @3c4618cc 时代（进程启动时间早于本 worktree 创建，精确构建 SHA 不可从进程回溯，如实记录）"
+    }
+  },
+  "commands_and_exit_codes": [
+    {"cmd": "curl -s http://127.0.0.1:8080/healthz", "exit": 0, "result": "{\"status\":\"alive\",...}"},
+    {"cmd": "docker ps --format '{{.Names}}\\t{{.Status}}'", "exit": 0, "result": "三容器 healthy"},
+    {"cmd": "POST /api/v1/auth/guest (curl)", "exit": 0, "result": "HTTP 200, access_token+refresh_token 返回（形状见 guest_auth_evidence_redacted.json，token 不入库）"},
+    {"cmd": "cd mobile && flutter pub get", "exit": 0},
+    {"cmd": "flutter build web --release", "exit": 1, "log": "build_logs/flutter_build_web_release_FAIL.log.txt"},
+    {"cmd": "flutter build web --debug", "exit": 1, "log": "build_logs/flutter_run_web_debug_FAIL.log.txt（debug 亦走 dart2js）"},
+    {"cmd": "flutter run -d web-server --web-hostname 127.0.0.1 --web-port 8137 --no-pub", "exit": 1, "log": "build_logs/flutter_run_web_debug_FAIL.log.txt"},
+    {"cmd": "node capture.js / capture2.js / capture3.js / capture4.js (puppeteer-core)", "exit": 0, "result": "5 张截图 + 3 份文本转储 + 程序化展开/折叠检查"},
+    {"cmd": "make proto-gen 替代步骤：从同 proto/commit(57a3eb0f) 的主仓库移动 mobile/lib/gen 27 个生成文件到本 worktree（gitignored，不入库，diff -rq 校验逐字节一致）", "exit": 0, "note": "本机无 protoc-gen-dart；proto_toolchain 镜像不存在。此为构建尝试的前置，不影响采集渠道结论"}
+  ],
+  "screenshots": [
+    {"file": "screenshots/01_fastapi_root_status.png", "route": "http://127.0.0.1:8000/", "content": "AI 引擎根状态 JSON (app=Sparkle version=1.0.0 status=running)", "sha256": "79583948cdd45957d2cc2e6d5b1cf4bab33cb24c78c4d2698ea98a63ca451630"},
+    {"file": "screenshots/02_fastapi_docs_top.png", "route": "http://127.0.0.1:8000/docs", "content": "活引擎 OpenAPI 文档面顶部：Sparkle 1.0.0 OAS 3.1 + 端点列表（折叠态）", "sha256": "a053076f0a03802797de7a1b2bdc2d51eca9a89378479527e77cb77d11d64b9c"},
+    {"file": "screenshots/03_fastapi_docs_endpoint_panel_expanded.png", "route": "http://127.0.0.1:8000/docs#/default/root__get", "content": "展开的端点面板（GET / Root）：参数/响应/schema 内容像素可见（正向对照）", "sha256": "96500373a3e20c8283f37ccea22a0cccfafdba9e90f70acf97698a2f09aebc76"},
+    {"file": "screenshots/04_gateway_healthz_live.png", "route": "http://127.0.0.1:8080/healthz", "content": "网关健康 JSON（status=alive + 时间戳）", "sha256": "c3f363d79bd247567ab103a27ab7eba45ccf5386e1d4b6f56498db6d34a0802b"},
+    {"file": "screenshots/05_gateway_metrics_top.png", "route": "http://127.0.0.1:8080/metrics", "content": "网关 Prometheus 指标顶部（go1.25.7 运行时指标）", "sha256": "47795b72ca7eb962f20e34a8e8a6df6a93f489905f891cab56666f7023e21213"}
+  ],
+  "acceptance_mapping": [
+    {"acceptance": "参考图标PROPOSED；真实基线截图有build/route/设备", "verdict": "PASS（部分渠道）", "detail": "REFERENCE_ONLY.jpg 登记 PROPOSED/UNKNOWN_REFERENCE_ONLY 未混入任何现状证据（见 resource_inventory.json）；5 张截图均带 route + DPR/设备/渠道记录；build 维度对 Flutter Web 为 FAIL 证据本身，已如实记录"},
+    {"acceptance": "背景RepaintBoundary误捕获能失败，弹层内容可见", "verdict": "PARTIAL（机制等价对照，产品 UI 弹层 NOT_RUN）", "detail": "折叠/展开机制对照：未展开面板 body 0px/不存在 → 只截背景的采集在内容可见检查上必然 FAIL；可信点击展开后 body 578px、schema 文本像素可见（capture_results_expand_check.json）。产品 UI dialog/sheet 顶层截图因 Web 构建失败无法采集，归因登记"},
+    {"acceptance": "profile帧记录与截图检查分开；一次仅一个HEAVY", "verdict": "PASS", "detail": "本卡零帧率声称（DESIGN_SYSTEM：帧统计属 profile/release，不在截图里估）；HEAVY 单槽纪律见 heavy_discipline"}
+  ],
+  "no_duplicate_rule": "V3 B-04（wt667）已 DONE 的 27 张 golden 证据（v3-output/B-04/，sha8=b8c94477）未重置未重跑；本卡只交 V4 差量（活栈现状 + 资源盘点 + 构建失败归因）"
+}

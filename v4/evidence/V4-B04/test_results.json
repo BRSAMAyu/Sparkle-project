@@ -1,0 +1,18 @@
+{
+  "task": "V4-B04",
+  "run_at_local": "2026-09-28T17:50:00+08:00",
+  "checks": [
+    {"id": "T01", "name": "网关健康（采集前）", "cmd": "curl -s http://127.0.0.1:8080/healthz", "expected": "status=alive", "actual": "status=alive @2026-09-28T09:08:21Z", "verdict": "PASS", "evidence": "healthz_before.json"},
+    {"id": "T02", "name": "三容器 healthy", "cmd": "docker ps --format", "expected": "db/redis/minio healthy", "actual": "sparkle_db, sparkle_redis, sparkle_minio 全部 Up 2 hours (healthy)", "verdict": "PASS", "evidence": "run_manifest.json environment.live_stack"},
+    {"id": "T03", "name": "采集前复验健康", "cmd": "curl -s http://127.0.0.1:8080/healthz", "actual": "status=alive @2026-09-28T09:25:15Z", "verdict": "PASS", "evidence": "healthz_before_capture.json"},
+    {"id": "T04", "name": "guest 登录可用", "cmd": "POST /api/v1/auth/guest", "expected": "HTTP 200 + token", "actual": "HTTP 200, bearer token 对（形状记录，token 脱敏不入库）", "verdict": "PASS", "evidence": "guest_auth_evidence_redacted.json"},
+    {"id": "T05", "name": "Flutter Web release 构建", "cmd": "flutter build web --release", "expected": "exit 0", "actual": "exit 1：cached_list_snapshot.g.dart 3 处 64-bit int 字面量被 dart2js CFE 拒绝（生成文件，禁止手改）", "verdict": "FAIL（既有债务，如实登记）", "evidence": "build_logs/flutter_build_web_release_FAIL.log.txt"},
+    {"id": "T06", "name": "Flutter Web debug 构建", "cmd": "flutter build web --debug", "expected": "exit 0", "actual": "exit 1：同一 CFE 路径（debug 亦走 dart2js --enable-asserts -O1）", "verdict": "FAIL（同因）", "evidence": "build_logs/flutter_run_web_debug_FAIL.log.txt"},
+    {"id": "T07", "name": "flutter run web-server（DDC 期望）", "cmd": "flutter run -d web-server --web-port 8137", "expected": "编译成功可访问", "actual": "Failed to compile application（同 3 处字面量错误；Flutter 3.41 各 Web 模式均经 dart2js/CFE）", "verdict": "FAIL（同因）", "evidence": "build_logs/flutter_run_web_debug_FAIL.log.txt"},
+    {"id": "T08", "name": "活栈 admin 面截图", "cmd": "headless Chrome capture.js/capture2.js/capture4.js", "expected": "5 张真实活栈截图", "actual": "5 张 PNG（2560x1600@DPR2）+ 3 份文本转储", "verdict": "PASS", "evidence": "screenshots/ + screenshots_sha256.txt"},
+    {"id": "T09", "name": "折叠负向对照（弹层内容可见检查可失败性）", "cmd": "capture4.js collapsed_negative_control", "expected": "未展开时面板内容 0px/不存在 → 仅背景采集判 FAIL", "actual": "bodyPresentBeforeClick=false（未展开无 body 节点）", "verdict": "PASS（机制对照）", "evidence": "capture_results_expand_check.json"},
+    {"id": "T10", "name": "展开正向对照（弹层内容可见）", "cmd": "capture4.js trusted click + panel_expand_check", "expected": "展开后内容像素可见", "actual": "is-open=true, body 578px, schema 文本可见（Root endpoint - health check | Parameters | Responses | 200 …）", "verdict": "PASS（机制对照；产品 UI dialog/sheet 顶层因 T05-T07 NOT_RUN）", "evidence": "capture_results_expand_check.json + screenshots/03_fastapi_docs_endpoint_panel_expanded.png"},
+    {"id": "T11", "name": "参考图与现状隔离", "cmd": "资源盘点", "expected": "参考图 PROPOSED 且不入现状证据", "actual": "REFERENCE_ONLY.jpg（sha256=0ca7299b…）仅存在于 v4/02_design/ 登记；coordinator 路径 …/sparkle-cosmos/picture/ui设计/ NOT_PRESENT；9=surfaces 数非参考图数；截图目录无任何参考图", "verdict": "PASS", "evidence": "resource_inventory.json reference_images"}
+  ],
+  "summary": {"pass": 8, "fail_preexisting": 3, "fail_new": 0, "partial": 0, "denominator_note": "T05-T07 为同一根因的三次构建模式验证，计为既有债务证据；非本卡新增回归"}
+}

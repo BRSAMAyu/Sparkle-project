@@ -1,0 +1,25 @@
+[
+  {
+    "step": "collapsed_negative_control",
+    "totalBlocks": 10,
+    "firstPath": "/",
+    "bodyPresentBeforeClick": false,
+    "collapsedPx": null,
+    "semantics": "unclicked panel body is 0px: background/summary-only capture FAILS the content-visible check by design"
+  },
+  {
+    "step": "panel_expand_check",
+    "firstPath": "/",
+    "bodyPresentAfterClick": true,
+    "isOpen": true,
+    "bodyVisiblePx": 578,
+    "sectionCount": 1,
+    "textSample": "Root endpoint - health check | Parameters | Try it out | No parameters | Responses | Code\tDescription\tLinks | 200\t | Successful Re"
+  },
+  {
+    "step": "screenshot",
+    "file": "03_fastapi_docs_endpoint_panel_expanded.png",
+    "url": "http://127.0.0.1:8000/docs#/default/root__get",
+    "note": "expanded endpoint panel: schema content visible in pixels (positive control)"
+  }
+]

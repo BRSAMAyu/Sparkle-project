@@ -1,0 +1,13 @@
+{
+  "task": "V4-B04",
+  "risk": "normal",
+  "required_independent_reviewers": 1,
+  "status": "PENDING_INDEPENDENT_REVIEW",
+  "self_review_done_by_executor": true,
+  "self_review_summary": "执行者自检：5 张截图逐一人工目检（内容与 route 匹配）；截图与参考图目录物理分离；token 脱敏复核（grep 无 JWT 形态串）；构建失败日志未截断",
+  "reviewer_hint": "独立审查者请复核：(1) screenshots/ 与 v4/02_design/REFERENCE_ONLY.jpg 无内容混同；(2) build_logs 三份日志的 FAIL 归因（cached_list_snapshot.g.dart int 字面量）；(3) capture_results_expand_check.json 的正/负对照数值；(4) run_manifest.json acceptance_mapping 与 test_results.json 逐条对应",
+  "note": "按 AGENTS.md 验收模型：普通任务 DONE = 独立未参与会话审查 + 当前集成 SHA 可失败测试；本凭据为占位，审查完成后由审查会话覆写 reviewer 字段",
+  "reviewer": null,
+  "reviewed_at": null,
+  "verdict": null
+}

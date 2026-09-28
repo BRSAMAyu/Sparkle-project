@@ -206,7 +206,7 @@
       "title": "原生视觉与资源基线，不把参考图当V3截图",
       "depends_on": [],
       "status": "READY",
-      "implementation_state": "NOT_STARTED",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
       "kind": "verification",
       "required_locks": [
@@ -256,7 +256,10 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "evidence_pointer": "v4/evidence/V4-B04/（run_manifest.json / test_results.json / screenshots/ / build_logs/）",
+      "evidence_note": "执行侧证据已交付：活栈 web-admin 渠道 5 截图 + 展开/折叠对照 + 资源盘点；Flutter Web 全模式构建 FAIL（既有生成文件债务，三日志在案）→ 产品 UI 顶层截图 NOT_RUN；独立审查 pending（review_receipt.json）",
+      "assigned_session": "wtB04"
     },
     {
       "id": "V4-B05",

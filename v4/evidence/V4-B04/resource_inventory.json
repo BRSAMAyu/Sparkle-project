@@ -1,0 +1,443 @@
+{
+  "task": "V4-B04",
+  "generated_at": "2026-09-28T09:15:00Z+08:00",
+  "repo_head_sha": "3c4618cc1d23b79792e330f87114484434a410ed",
+  "worktree": "wtB04 branch agent/v4/b04",
+  "mobile_assets": {
+    "root": "mobile/assets",
+    "total_files": 48,
+    "total_bytes": 162384008,
+    "by_category": {
+      "audio": {
+        "count": 45,
+        "bytes": 159607780
+      },
+      "icons": {
+        "count": 2,
+        "bytes": 2757190
+      },
+      "images": {
+        "count": 1,
+        "bytes": 19038
+      }
+    },
+    "files": [
+      {
+        "path": "mobile/assets/audio/ambient/cafe.ogg",
+        "bytes": 859932,
+        "category": "audio",
+        "sub": "ambient"
+      },
+      {
+        "path": "mobile/assets/audio/ambient/ocean_waves.ogg",
+        "bytes": 1677121,
+        "category": "audio",
+        "sub": "ambient"
+      },
+      {
+        "path": "mobile/assets/audio/ambient/piano.ogg",
+        "bytes": 305289,
+        "category": "audio",
+        "sub": "ambient"
+      },
+      {
+        "path": "mobile/assets/audio/ambient/rain.ogg",
+        "bytes": 842859,
+        "category": "audio",
+        "sub": "ambient"
+      },
+      {
+        "path": "mobile/assets/audio/ambient/white_noise.ogg",
+        "bytes": 1046647,
+        "category": "audio",
+        "sub": "ambient"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/bgm_catalog.json",
+        "bytes": 6784,
+        "category": "audio",
+        "sub": "bgm"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/.gitkeep",
+        "bytes": 1,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/anatol_ugorski_schumann_davidsbundlertanze_op_6__05_14_zart_und_singend.m4a",
+        "bytes": 5418808,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/artur_rubinstein_chopin_19_nocturnes_disc_1__01_1_02_chopin_nocturne_2_in_e_flat_op_9_2_ct_109.m4a",
+        "bytes": 6466317,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/artur_rubinstein_chopin_19_nocturnes_disc_1__03_1_10_chopin_nocturne_10_in_a_flat_op_32_2_ct_117.m4a",
+        "bytes": 8459461,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/artur_rubinstein_chopin_19_nocturnes_disc_2__05_2_03_chopin_nocturne_13_in_c_minor_op_48_1_ct_120.m4a",
+        "bytes": 25125931,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/les_introuvables_disc_5__01_5_01_bach_cello_suite_1_in_g_bwv_1007_praeludium.m4a",
+        "bytes": 5607916,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/mozart_complete_works_for_solo_piano_disc_3__03_3_07_mozart_piano_sonata_11_in_a_k_331_andante_grazioso.m4a",
+        "bytes": 63466906,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/the_best_of_cinema_music__01_01_nausicaa.m4a",
+        "bytes": 14433499,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/the_best_of_cinema_music__05_10_summer.m4a",
+        "bytes": 5923044,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/tokyo_quartet_beethoven_9_tokyo_sq__02_06_3_ii_andante_con_moto_quasi_allegretto.m4a",
+        "bytes": 14327063,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/bgm/curated/track__01_05.m4a",
+        "bytes": 5462508,
+        "category": "audio",
+        "sub": "bgm/curated"
+      },
+      {
+        "path": "mobile/assets/audio/ui/achievement_common.ogg",
+        "bytes": 6209,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/achievement_epic.ogg",
+        "bytes": 8390,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/achievement_legendary.ogg",
+        "bytes": 11139,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/achievement_rare.ogg",
+        "bytes": 6798,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/ai_start.ogg",
+        "bytes": 6976,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/button1.ogg",
+        "bytes": 5014,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/button2.ogg",
+        "bytes": 4977,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/card_flip.ogg",
+        "bytes": 7315,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/checkin.ogg",
+        "bytes": 6249,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/complete.ogg",
+        "bytes": 6600,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/confirm.ogg",
+        "bytes": 5706,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/dialog_open.ogg",
+        "bytes": 5074,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/drag_drop.ogg",
+        "bytes": 5666,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/drag_start.ogg",
+        "bytes": 4833,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/error.ogg",
+        "bytes": 5985,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/focus_complete.ogg",
+        "bytes": 6757,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/message_send.ogg",
+        "bytes": 5506,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/nav.ogg",
+        "bytes": 7768,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/off.ogg",
+        "bytes": 5022,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/on.ogg",
+        "bytes": 5216,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/select.ogg",
+        "bytes": 5092,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/sheet_open.ogg",
+        "bytes": 5622,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/star_unlock.ogg",
+        "bytes": 10036,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/streak.ogg",
+        "bytes": 7251,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/success.ogg",
+        "bytes": 6600,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/tap.ogg",
+        "bytes": 4880,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/toggle.ogg",
+        "bytes": 5216,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/audio/ui/warning.ogg",
+        "bytes": 5797,
+        "category": "audio",
+        "sub": "ui"
+      },
+      {
+        "path": "mobile/assets/icons/.gitkeep",
+        "bytes": 0,
+        "category": "icons",
+        "sub": "icons"
+      },
+      {
+        "path": "mobile/assets/icons/Gemini_Generated_Image_yt8rz9yt8rz9yt8r.png",
+        "bytes": 2757190,
+        "category": "icons",
+        "sub": "icons"
+      },
+      {
+        "path": "mobile/assets/images/noise_texture.png",
+        "bytes": 19038,
+        "category": "images",
+        "sub": "images"
+      }
+    ],
+    "images": [
+      {
+        "path": "mobile/assets/images/noise_texture.png",
+        "bytes": 19038,
+        "sha256": "3097b6228010fefe96a6cfa0d0598033149ed4bbb1eba03b684c4fd9e1dbd34f",
+        "used_for": "大面积透明噪声叠加（DESIGN_SYSTEM 禁默认）"
+      },
+      {
+        "path": "mobile/assets/icons/Gemini_Generated_Image_yt8rz9yt8rz9yt8r.png",
+        "bytes": 2757190,
+        "sha256": "38d7fef315e5169f532aea503666ae3b85634c4830d5b995a36b1abc32804ccf",
+        "rights_note": "文件名示 AI 生成（Gemini），许可账本待 V4-S04 盘点"
+      }
+    ]
+  },
+  "tokens_v2_runtime": {
+    "dir": "mobile/lib/core/design/tokens_v2",
+    "files": [
+      {
+        "path": "mobile/lib/core/design/tokens_v2/animation_token.dart",
+        "bytes": 8164,
+        "sha256": "6f0efd2e8ac580fba95648c00efcdf41c686c33b035f14e8a11f7bd3098c9c53"
+      },
+      {
+        "path": "mobile/lib/core/design/tokens_v2/color_token.dart",
+        "bytes": 2176,
+        "sha256": "fd78460950dbd6b061ae26fcf048ff9804344a990c544e15d9f28ff3d07ad2ac"
+      },
+      {
+        "path": "mobile/lib/core/design/tokens_v2/responsive_system.dart",
+        "bytes": 13910,
+        "sha256": "cda927cc224f2ed71f6a204bd765f52c52132273fbbd5a44d03c5ed5d503325b"
+      },
+      {
+        "path": "mobile/lib/core/design/tokens_v2/spacing_token.dart",
+        "bytes": 6032,
+        "sha256": "2a72e70b27785bdcbca705a8ba102b9995b4b35af4e2039bb70a8e4bf73874c9"
+      },
+      {
+        "path": "mobile/lib/core/design/tokens_v2/state_tokens.dart",
+        "bytes": 3802,
+        "sha256": "87e2f022d38ec65e3edf34a91130968d73bd0dcf14a2f75237bec3b2c7073575"
+      },
+      {
+        "path": "mobile/lib/core/design/tokens_v2/theme_manager.dart",
+        "bytes": 48916,
+        "sha256": "f80902233534c2b16487589d7e8616d7ce26530d627caf66043b4d9d64f1131b"
+      }
+    ],
+    "proposal_input": {
+      "path": "v4/02_design/TOKENS.proposal.json",
+      "status_field": "PROPOSED_NOT_APPROVED"
+    },
+    "legacy_bridge": "mobile/lib/core/design/tokens/color_tokens_v2.dart",
+    "guard": [
+      "scripts/guards/check_ui_design_tokens_ratchet.py",
+      "scripts/guards/ui_design_tokens_baseline.json"
+    ]
+  },
+  "golden_emulator_tooling": {
+    "mobile_golden_tests": [
+      "accessibility_settings_golden_test.dart",
+      "b04_visual_baseline",
+      "chat_code_block.png",
+      "chat_dark_5_messages.png",
+      "chat_empty.png",
+      "chat_error.png",
+      "chat_golden_test.dart",
+      "chat_light_5_messages.png",
+      "chat_long_message.png",
+      "chat_mobile.png",
+      "chat_tablet.png",
+      "chat_typing.png",
+      "chat_with_plan_review.png",
+      "dashboard_dark.png",
+      "dashboard_golden_test.dart",
+      "dashboard_light.png",
+      "dashboard_mobile.png",
+      "dashboard_tablet.png",
+      "emotion_adaptive_ui_golden_test.dart",
+      "golden_family_drift_guard.dart",
+      "golden_family_drift_guard_test.dart",
+      "goldens",
+      "i18n_batch_p2_08_golden_test.dart",
+      "notification_recall_card_golden_test.dart",
+      "p2_07_calendar_summary_i18n.png",
+      "p2_07_i18n_switch_golden_test.dart",
+      "q03_visual_qa",
+      "u02_dual_mode_evidence_test.dart"
+    ],
+    "b04_v3_harness": [
+      "mobile/test/goldens/b04_visual_baseline/b04_harness.dart",
+      "mobile/test/goldens/b04_visual_baseline/b04_visual_baseline_capture_test.dart",
+      "mobile/test/goldens/b04_visual_baseline/b04_tolerant_comparator_test.dart"
+    ],
+    "visual_baseline_py_pkg": [
+      "__init__.py",
+      "diffing.py",
+      "manifest.py",
+      "matrix.py",
+      "naming.py",
+      "states.py",
+      "tests",
+      "visual_baseline.py"
+    ],
+    "existing_v3_b04_evidence": {
+      "dir": "v3-output/B-04/",
+      "screenshots_png": 27,
+      "note": "V3 wt667 DONE 证据，flutter test golden 泵 demo 模式采集；不可重置"
+    },
+    "emulator_farm": null,
+    "emulator_farm_note": "仓库无多模拟器农场工具；本卡按单 HEAVY 预约执行"
+  },
+  "reference_images": {
+    "coordinator_path": "/Users/brsama/code/GitHub/sparkle-cosmos/picture/ui设计/",
+    "exists": false,
+    "status": "NOT_PRESENT",
+    "note": "sparkle-cosmos 仓库无 picture/ 目录，ui设计/ 9 张参考图不存在；只读登记即此条",
+    "in_repo_reference_asset": {
+      "path": "v4/02_design/REFERENCE_ONLY.jpg",
+      "bytes": 215505,
+      "sha256": "0ca7299bc7f4105ec340eba64cc29e2a0dee456f22fa513ccce25f979eedc422",
+      "rights": "UNKNOWN_REFERENCE_ONLY",
+      "ship_in_product": false,
+      "status": "PROPOSED",
+      "note": "方向示意参考图，禁止当作现状截图/已授权资产；与 ASSET_REGISTER.example.json 登记一致"
+    },
+    "naming_clarification": "「9」为 visual_baseline states.py 的 9 canonical surfaces（home/chat/galaxy/goal/task/settings/profile/memory/onboarding），非 9 张参考图"
+  }
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "step": "viewer_loaded",
+    "title": "Sparkle 1.0.0 OAS 3.1",
+    "version": "1.0.0",
+    "opblockCount": 10
+  },
+  {
+    "step": "screenshot",
+    "file": "02_fastapi_docs_top.png",
+    "url": "http://127.0.0.1:8000/docs",
+    "note": "live engine spec rendered in Swagger UI (local viewer), collapsed list"
+  },
+  {
+    "step": "panel_expand_check",
+    "target": "POST /api/v1/auth/guest",
+    "found": false,
+    "opblockCount": 10
+  },
+  {
+    "step": "screenshot",
+    "file": "03_fastapi_docs_guest_endpoint_expanded.png",
+    "url": "http://127.0.0.1:8000/docs",
+    "note": "expanded panel content visible; collapsed default would fail content-visible check (see next)"
+  },
+  {
+    "step": "collapsed_negative_control",
+    "isOpen": null,
+    "bodyVisiblePx": 0,
+    "semantics": "background-only capture yields 0px panel content => content-visible check FAILS by design when overlay/panel not opened"
+  },
+  {
+    "step": "screenshot",
+    "file": "04_gateway_healthz_live.png",
+    "url": "http://127.0.0.1:8080/healthz",
+    "note": "gateway healthz live JSON"
+  },
+  {
+    "step": "screenshot",
+    "file": "05_gateway_metrics_top.png",
+    "url": "http://127.0.0.1:8080/metrics",
+    "note": "gateway metrics live, top viewport"
+  }
+]

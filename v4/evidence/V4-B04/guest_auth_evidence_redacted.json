@@ -1,0 +1,12 @@
+{
+  "endpoint": "POST http://127.0.0.1:8080/api/v1/auth/guest",
+  "http_status": 200,
+  "response_shape": {
+    "access_token": "present_len_431",
+    "refresh_token": "present_len_432",
+    "token_type": "bearer",
+    "expires_in": null
+  },
+  "token_redacted": true,
+  "redaction_reason": "不提交任何凭据/试用者身份；仅记录形状与状态码"
+}
