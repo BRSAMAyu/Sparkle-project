@@ -111,11 +111,19 @@ func TestRunLiveProcessFailureStillLogsError(t *testing.T) {
 		runResult <- w.Run(ctx, noopHandler)
 	}()
 
-	waitForLogEntry(t, observed, "Worker started", 2*time.Second)
+	// 同上（V3-FIX-544）：负载 runner 下 goroutine 启动与首次日志落表也被
+	// 拖慢，2s 预算同族收紧；等待成立即返回，放宽只消假阴性。
+	waitForLogEntry(t, observed, "Worker started", 10*time.Second)
 
 	// Redis 变不可达而进程上下文仍存活：processMessages 的失败必须保持 ERROR。
+	//
+	// V3-FIX-544（CI 负载敏感测试族）：断言本身就是相对等待（waitForLogEntry
+	// 轮询至成立），这里给的是等待预算而非固定 deadline。健康路径实测 ~1.6s
+	// （go-redis 池 5 次 dial 重试 + 命令级退避吃掉大半），CI 28 在负载 runner
+	// 上超 5s 预算（5.00s 超时形态实录）。等待成立即返回，放宽预算不影响
+	// 健康路径时长，只消除负载下的假阴性：5s → 30s。
 	mr.Close()
-	waitForLogEntry(t, observed, "Error processing messages", 5*time.Second)
+	waitForLogEntry(t, observed, "Error processing messages", 30*time.Second)
 
 	select {
 	case <-runResult:

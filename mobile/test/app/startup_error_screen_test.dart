@@ -131,9 +131,17 @@ class _FakeStartupFailure implements Exception {
 }
 
 /// 假重试失败：toString 带超时关键词（归 timeout 类）。
+///
+/// V3-FIX-546 复核（2026-09-28，wt805）：本文件从未在 CI 红过（近 100 个
+/// run 的失败 Flutter job 全量扫描无一命中）；且全部交互走 fake-async 虚拟
+/// 时间（pump/pumpAndSettle），对 runner 负载免疫，不存在可超的「30s 窗」。
+/// 旧文案 `after 30000ms` 是死文本却酷似真实计时窗口，CI 29 轮把它连同
+/// 产品码 catch 块的 `❌ STARTUP RETRY FAILED` debugPrint（通过的测试也会打）
+/// 误读成本测试失败——文案改直白，杜绝下次误诊。
 class _FakeTimeoutFailure implements Exception {
   const _FakeTimeoutFailure();
 
   @override
-  String toString() => 'TimeoutException-marker after 30000ms (fake)';
+  String toString() =>
+      'TimeoutException-marker (fake fixture text; no timer, no window)';
 }
