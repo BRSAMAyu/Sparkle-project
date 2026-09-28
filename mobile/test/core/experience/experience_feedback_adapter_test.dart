@@ -311,7 +311,9 @@ void main() {
     }
     canonical.write('}');
     final digest = sha256.convert(utf8.encode(canonical.toString()));
-    expect(digest.toString(),
-        '949757daf0b81e7c31bad47f5ad4a47d6aa559270fd614ecafe6bf431862b200');
+    expect(
+      digest.toString(),
+      '949757daf0b81e7c31bad47f5ad4a47d6aa559270fd614ecafe6bf431862b200',
+    );
   });
 }
