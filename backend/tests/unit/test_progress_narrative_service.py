@@ -15,7 +15,12 @@ from app.services.progress_narrative_service import ProgressNarrativeService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    # V3-FIX-538：固定周日 12:00 UTC 锚消除周界翻转。文件含两族周几何需求：
+    # ①周叙述三测需 now-1d 落同周（周日锚→周六同周 ✓）；②快照两测的 7 天连击窗
+    # 需与历史全绿时点（UTC 周日，CI 23/25 实录）同构（周三锚实测翻红两测）。
+    # 全部日期均相对本锚构造，钉锚零相对语义变化。周一真实几何下「仅有上周活动
+    # →首条线索而非暂停语」的产品分支裁量留 Q-08/V4。
+    return datetime(2026, 9, 27, 12, 0, 0)
 
 
 class _MemoryCache:
