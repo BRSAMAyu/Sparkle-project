@@ -55,11 +55,14 @@
      至多 2 个不同操作后果例子）；
    - 已答 1 个自动澄清轮后引擎仍想追问 → **出口斜坡**（不 surfaced 第二问；
      保守可试方案只能来自引擎自身「预算已用完」B1 出口，零伪造第二诊断）；
-   - 用户可**跳过/暂停**（封闭词表，先于分支解析）；
+   - 用户可**跳过/暂停**（封闭词表+否定前缀守卫「宁漏报」，先于分支解析）；
    - **纠正追踪**（行动改变依据：前后出口 + 答句分支 + reason 码 + 证据
      引用）随 ``context_data["friction_decision"]`` checkpoint 持久——重开
-     可见。shadow = 指标+结构化日志留痕、payload 零变化；live = 载荷出面
-     （本卡即 live 裁决语义归属卡，激活时显式 WARN，响应 I03 N-2）。
+     可见。一审 F-1 整改收口：以上干预面的**行为应用只归 live**；shadow =
+     指标+结构化日志+观察注记（不清 pending、不产 no_action、不压制第二问
+     ——「shadow=观察零行为变化」红线）；off = 行为级零差量（version 串与
+     3 个 null 键除外，见 evidence 勘误）。live 激活时显式 WARN，响应
+     I03 N-2「消费侧显式标识」。
 
 词表纪律：零新 event name、零新 ref scheme、prompt 本体零改动（问句经
 metadata 出面，不经 prompt 渲染）。
@@ -142,9 +145,12 @@ _CORRECTION_MODE_WARNED = False
 def _correction_mode() -> str:
     """``settings.NO_ACTION_CORRECTION_MODE`` 档位读取（fail-closed 不猜）。
 
-    off = 零行为（V3 链路逐字节保持）；shadow = 指标+结构化日志留痕、payload
-    零变化；live = 载荷出面。live 首次激活打显式 WARN（I03 N-2「消费侧显式
-    标识」：本卡即 no_action 纠正面 live 裁决语义的归属卡，避免运维误读）。
+    off = 零行为（V3 链路**行为级**零差量——payload 仅 version 串 v3→v4 与
+    ``to_dict`` 新增的 3 个 null 键不同，见 evidence 勘误）；shadow = 指标+
+    结构化日志留痕、行为零变化（marker/澄清观察仅注记，不清 pending、不产
+    no_action——一审 F-1 整改后词表行为应用 live-only）；live = 载荷出面。
+    live 首次激活打显式 WARN（I03 N-2「消费侧显式标识」：本卡即 no_action
+    纠正面 live 裁决语义的归属卡，避免运维误读）。
     """
     global _CORRECTION_MODE_WARNED
     from app.config import settings
@@ -167,6 +173,21 @@ def _record_correction_metric(surface: str, mode: str) -> None:
         AURORA_NO_ACTION_CORRECTION_TOTAL.labels(surface=surface, mode=mode).inc()
     except Exception:  # pragma: no cover - 遥测失败不影响主链路
         logger.opt(exception=True).warning("no-action correction metric failed")
+
+
+def _with_shadow_marker_observation(
+    annotations: dict[str, Any],
+    observation: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """F-1 整改 · shadow 观察注记随行（纯函数）。
+
+    shadow 档 marker 命中的观察记录（kind/marker/applied=False）注入出口
+    annotations——行为零应用（不清 pending、不产 no_action），注记只声明
+    「live 将做什么」。observation 为 None（off/live 或无命中）原样返回。
+    """
+    if observation is None:
+        return annotations
+    return {**annotations, "shadow_marker_observation": observation}
 
 
 def _contender_primary_nominations(diagnosis: FrictionDiagnosis) -> dict[str, str]:
@@ -366,16 +387,41 @@ class FrictionChatWiringService:
     ) -> FrictionWiringOutcome:
         question_id = str(pending.get("question_id") or "")
         correction_mode = _correction_mode()
-        # V4-I04 · 用户可跳过/暂停（封闭词表；先于分支解析——跳过/暂停不是回答，
-        # 不消耗答案解析面）。off 档零行为（V3 链路逐字节保持）。
-        pause_marker = match_pause_marker(user_message) if correction_mode != "off" else None
-        skip_marker = match_skip_marker(user_message) if correction_mode != "off" and pause_marker is None else None
-        if pause_marker is not None:
-            return await self._pause_turn(user_id=user_id, session_id=session_id, pending=pending, marker=pause_marker)
-        if skip_marker is not None:
-            return await self._skip_turn(
-                user_id=user_id, session_id=session_id, pending=pending, marker=skip_marker, now=now
-            )
+        # V4-I04 一审 F-1 整改：跳过/暂停词表的**行为应用**只归 live——
+        # - live：marker 先于分支解析出面（_skip_turn/_pause_turn——跳过/暂停
+        #   不是回答，不消耗答案解析面）；
+        # - shadow：只观察（指标+结构化日志+shadow 注记），**不清 pending、
+        #   不产 no_action、不压制第二问**——「shadow=观察零行为变化」红线
+        #   （一审实测 shadow 下「先暂停一下」清 pending+no_action 与声明不符）；
+        # - off：词表零接触（V3 链路行为级零差量：version 串 v3→v4 与 3 个
+        #   null 键除外，见 evidence 勘误）。
+        shadow_marker_observation: dict[str, Any] | None = None
+        if correction_mode == "live":
+            pause_marker = match_pause_marker(user_message)
+            if pause_marker is not None:
+                return await self._pause_turn(
+                    user_id=user_id, session_id=session_id, pending=pending, marker=pause_marker
+                )
+            skip_marker = match_skip_marker(user_message)
+            if skip_marker is not None:
+                return await self._skip_turn(
+                    user_id=user_id, session_id=session_id, pending=pending, marker=skip_marker, now=now
+                )
+        elif correction_mode == "shadow":
+            pause_marker = match_pause_marker(user_message)
+            skip_marker = None if pause_marker is not None else match_skip_marker(user_message)
+            if pause_marker is not None or skip_marker is not None:
+                shadow_marker_observation = {
+                    "kind": "pause" if pause_marker is not None else "skip",
+                    "marker": pause_marker if pause_marker is not None else skip_marker,
+                    "applied": False,  # shadow 只观察：live-only 行为本档零应用
+                }
+                _record_correction_metric("marker_observation", "shadow")
+                logger.info(
+                    "[FrictionWiring] shadow marker observation kind={} marker={} (live-only behavior NOT applied: pending kept)",
+                    shadow_marker_observation["kind"],
+                    shadow_marker_observation["marker"],
+                )
         # 1) branch_key 直传（主路径）：客户端回传结构化答案。
         branch_key: str | None = None
         resolution = "pending_absent"
@@ -402,19 +448,26 @@ class FrictionChatWiringService:
                         outcome="ask",
                         friction_type=str(pending.get("friction_type") or "unknown"),
                         lifecycle_tag=str(pending.get("lifecycle_tag") or "unattributed"),
-                        annotations={
-                            "answer_resolution": "unresolved_weak_free_text",
-                            "wiring_gate": WIRING_GATE_WEAK_ANSWER,
-                        },
+                        annotations=_with_shadow_marker_observation(
+                            {
+                                "answer_resolution": "unresolved_weak_free_text",
+                                "wiring_gate": WIRING_GATE_WEAK_ANSWER,
+                            },
+                            shadow_marker_observation,
+                        ),
                     )
         if branch_key is None:
             # 无解析 → 问题保持 pending（用户可稍后点选）；本轮零问句零行动。
+            # shadow 的 marker 观察注记随行（行为与 off 同构：pending 保持）。
             return FrictionWiringOutcome(
                 mode="answer_replay",
                 outcome="ask",
                 friction_type=str(pending.get("friction_type") or "unknown"),
                 lifecycle_tag=str(pending.get("lifecycle_tag") or "unattributed"),
-                annotations={"answer_resolution": "unresolved_pending_kept"},
+                annotations=_with_shadow_marker_observation(
+                    {"answer_resolution": "unresolved_pending_kept"},
+                    shadow_marker_observation,
+                ),
             )
 
         # 闭环节点：apply_question_answer 以 pending 快照为重放源（诊断是输入
@@ -434,10 +487,15 @@ class FrictionChatWiringService:
         await self._clear_pending(user_id, session_id)
         # V4-I04 · 一次决策性澄清：已答 1 个自动澄清轮后引擎仍想追问 → 不 surfaced
         # 第二问，以「预算已用完」声明触发引擎自身 B1/B2/B3 出口 + 出口斜坡
-        # （直接说情况/保守可试方案/先暂停）。off 档不干预（V3 允许问句预算 2）。
-        annotations: dict[str, Any] = {"answer_resolution": resolution, "answered_branch_key": branch_key}
+        # （直接说情况/保守可试方案/先暂停）。一审 F-1 整改：该压制同属 marker/
+        # 澄清干预面——**只归 live**；shadow 只观察（V3 第二问照常出面，行为与
+        # off 零差量），off 不干预（V3 允许问句预算 2）。
+        annotations: dict[str, Any] = _with_shadow_marker_observation(
+            {"answer_resolution": resolution, "answered_branch_key": branch_key},
+            shadow_marker_observation,
+        )
         exit_ramp: dict[str, Any] | None = None
-        if correction_mode != "off" and diagnosis.outcome == "ask":
+        if correction_mode == "live" and diagnosis.outcome == "ask":
             annotations["suppressed_second_ask"] = (
                 diagnosis.question.question_id if diagnosis.question is not None else None
             )
@@ -452,6 +510,13 @@ class FrictionChatWiringService:
                 prior_question_id=question_id,
             )
             _record_correction_metric("exit_ramp", correction_mode)
+        elif correction_mode == "shadow" and diagnosis.outcome == "ask":
+            # shadow 只观察：live 将在此压制第二问并给出口斜坡——本档零应用。
+            _record_correction_metric("second_ask_observation", "shadow")
+            logger.info(
+                "[FrictionWiring] shadow second_ask observation question={} (live would suppress + exit ramp; behavior unchanged)",
+                diagnosis.question.question_id if diagnosis.question is not None else None,
+            )
         base = await self._emit(
             user_id=user_id,
             session_id=session_id,
@@ -499,6 +564,8 @@ class FrictionChatWiringService:
     ) -> FrictionWiringOutcome:
         """V4-I04 · 用户跳过当前问句：pending 清除 + 保守可试方案或如实无行动。
 
+        一审 F-1 整改：本方法即 marker 的**行为应用**，入口仅 ``_answer_turn``
+        的 live 分支（shadow/off 不会到达——shadow 只留观察注记）。
         保守方案只能来自引擎自身「预算已用完」出口（B1 best-guess，uncertain
         如实标注）——本层零伪造诊断；B2/B3 无行动出口如实给纯斜坡（不锁聊天）。
         """
@@ -548,6 +615,9 @@ class FrictionChatWiringService:
     ) -> FrictionWiringOutcome:
         """V4-I04 · 用户暂停：本域静默（零提名、零问句、零写路径），随时可继续。
 
+        一审 F-1 整改：本方法即 marker 的**行为应用**（清 pending + no_action
+        出口），入口仅 ``_answer_turn`` 的 live 分支——shadow 档对同一句子只留
+        观察注记、pending 保持（「shadow=观察零行为变化」红线）。
         输入与返回继续可用（FIX97 同律）；追踪记录 paused=True——暂停是可见的
         用户选择，不是永久失败固化。
         """

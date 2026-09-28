@@ -103,5 +103,35 @@
       "backend/app/core/metrics.py (+10，1 计数器)",
       "v4/04_tasks/tasks.json (I04 状态)"
     ]
+  },
+  "rectification": {
+    "note": "一审（PASS_WITH_CHALLENGES，receipt 1c10361a）四项跟进整改 commit（本分支追加，不 push、不动 receipt）。F-1 shadow marker 行为泄漏 → 行为应用 live-only（shadow 只观察：指标+日志+shadow_marker_observation 注记，不清 pending 不产 no_action）；F-3/R2 词表过报 → 按宁漏报收紧（MARKER_NEGATION_PREFIXES 否定前缀守卫）；F-4/R4 vacuous 断言 → 非空 evidence_refs 样例真咬合；F-2 → 计数勘误 660→880（明细为准）。改动面：no_action_supplement.py（守卫+词表）、friction_chat_wiring.py（live-only 门+shadow 观察）、settings.py（注释勘误）、test_no_action_supplement.py（33→39）、evidence 文档勘误。突变实证：还原 wiring 修复 → 2 个新 shadow 测试 FAILED，恢复后全绿。",
+    "commands": [
+      {
+        "purpose": "整改后新测+回归（39+77+49+76）",
+        "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_no_action_supplement.py tests/unit/test_semantic_selector.py tests/unit/test_deterministic_lane.py tests/services/test_friction_chat_wiring.py -q",
+        "exit_code": 0,
+        "summary": "241 passed"
+      },
+      {
+        "purpose": "相邻面回归",
+        "cmd": "pytest tests/unit/test_a03_friction_diagnosis.py tests/unit/test_j05_stuck_journey_migration_sqlite.py tests/unit/test_policy_patch_migration_sqlite.py -q",
+        "exit_code": 0,
+        "summary": "118 passed"
+      },
+      {
+        "purpose": "orchestration + contract 全量",
+        "cmd": "pytest tests/orchestration -q && pytest tests/contract -q",
+        "exit_code": 0,
+        "summary": "208 passed / 352 passed"
+      },
+      {
+        "purpose": "质量门（整改 4 文件）",
+        "cmd": "ruff check + black --check --line-length 120 + mypy（改动文件）+ bash scripts/ci/mypy_ratchet.sh",
+        "exit_code": 0,
+        "summary": "ruff/black 全过；改动文件 mypy 0 errors；棘轮 53 / baseline 77（零新增）"
+      }
+    ],
+    "real_model_calls": 0
   }
 }

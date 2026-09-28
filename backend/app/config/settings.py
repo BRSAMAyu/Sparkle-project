@@ -966,7 +966,9 @@ class Settings(BaseSettings):
     # stuck-policy 域消费层）——no_action/abstain 面自由补充出口（FIX97）、
     # 临时约束会话作用域（不写永久偏好）、自动澄清 ≤1 轮 + 出口斜坡（不连环
     # 追问）、纠正追踪随 friction_decision checkpoint 持久。off = 零行为
-    # （V3 链路逐字节保持）；shadow = 指标+结构化日志留痕、payload 零变化；
+    # （V3 链路行为级零差量：version 串 v3→v4 与 3 个 null 键除外，一审勘误）；
+    # shadow = 指标+结构化日志+观察注记、行为零变化（一审 F-1 整改：跳过/
+    # 暂停词表与澄清压制的应用 live-only，shadow 不清 pending 不产 no_action）；
     # live = 载荷出面（本卡即 live 裁决语义归属卡；激活时显式 WARN + metric
     # 标识，响应 I03 N-2）。未知值按 off 处理（fail-closed，不猜）。
     NO_ACTION_CORRECTION_MODE: str = "off"

@@ -4,7 +4,7 @@
     "python": "3.11.15",
     "env": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite://",
     "summary": {
-        "new_tests": 33,
+        "new_tests": 39,
         "new_tests_file": "backend/tests/unit/test_no_action_supplement.py",
         "regression_suites_run": 6,
         "regression_all_green": true,
@@ -15,6 +15,50 @@
             "mypy_ratchet": "55 / baseline 77 (≤ baseline，零新增；与派发口径一致)"
         }
     },
+    "rectification": {
+        "note": "一审 PASS_WITH_CHALLENGES（receipt 1c10361a）四项跟进整改后复跑（2026-09-28，同 env）；一审 33 测 → 整改后 39 测（+6：shadow marker 零行为/off 对照、shadow 第二问链保持、非空 evidence_refs 传播、否定前缀 fail-closed、纯命中不误杀、守卫词表冻结）",
+        "failable_evidence": {
+            "F1_mutation_check": "还原旧 wiring（marker 行为不限 live）→ test_shadow_mode_marker_sentence_keeps_pending / test_shadow_mode_keeps_v3_second_ask_chain FAILED（2 failed / 37 passed）；恢复后 39 全绿（反转即红实证）"
+        },
+        "suites": [
+            {
+                "purpose": "整改后新测（含 F-1/R2/R4 整改钉）+ I03 + I09 + wiring 直改面",
+                "cmd": "pytest tests/unit/test_no_action_supplement.py tests/unit/test_semantic_selector.py tests/unit/test_deterministic_lane.py tests/services/test_friction_chat_wiring.py -q",
+                "exit_code": 0,
+                "result": "241 passed（39 + 77 + 49 + 76）"
+            },
+            {
+                "purpose": "A-03/J-05/A-05 相邻面",
+                "cmd": "pytest tests/unit/test_a03_friction_diagnosis.py tests/unit/test_j05_stuck_journey_migration_sqlite.py tests/unit/test_policy_patch_migration_sqlite.py -q",
+                "exit_code": 0,
+                "result": "118 passed"
+            },
+            {
+                "purpose": "orchestration 全量",
+                "cmd": "pytest tests/orchestration -q",
+                "exit_code": 0,
+                "result": "208 passed, 7 warnings"
+            },
+            {
+                "purpose": "契约测试全量",
+                "cmd": "pytest tests/contract -q",
+                "exit_code": 0,
+                "result": "352 passed"
+            },
+            {
+                "purpose": "ruff/black（整改 4 改动文件）",
+                "cmd": "ruff check + black --check --line-length 120",
+                "exit_code": 0,
+                "result": "all passed"
+            },
+            {
+                "purpose": "mypy 改动文件 + 棘轮门",
+                "cmd": "mypy app/aurora/no_action_supplement.py app/services/friction_chat_wiring.py && bash scripts/ci/mypy_ratchet.sh",
+                "exit_code": 0,
+                "result": "改动文件 0 errors（grep 零命中）；棘轮 53 / baseline 77（零新增）"
+            }
+        ]
+    },
     "suites": [
         {
             "purpose": "新增：无动作可纠正与一次决策性澄清（验收①②③）",
@@ -23,16 +67,16 @@
             "result": "33 passed",
             "coverage_map": {
                 "acceptance_1_no_proposal_correction": [
-                    "TestSupplementEntry (7 tests: 无提案面入口恒可达/no_action+abstain 可用/act+ask 反例/例子≤2 且不同后果+同名空+目录外 fail-closed/prior=None 翻转 act+合法经验记录/预算不递增/无证据不伪造行动)"
+                    "TestSupplementEntry (8 tests: 无提案面入口恒可达/no_action+abstain 可用/act+ask 反例/例子≤2 且不同后果+同名空+目录外 fail-closed/prior=None 翻转 act+合法经验记录（含 R4 整改：旗舰空集语义显式钉死）/R4 整改非空 evidence_refs 三处恒等传播/预算不递增/无证据不伪造行动)"
                 ],
                 "acceptance_2_temporary_constraint_and_difficulty": [
                     "TestTemporaryConstraintAndDifficultyGuard (6 tests: 今日预算会话作用域/每周每次 fail-closed/写授权空集冻结/否定难度零权重归 dependency/否定词牌计分守卫反例/正向难度自报不误伤)"
                 ],
                 "acceptance_3_one_decisive_clarification_and_trace": [
-                    "TestOneDecisiveClarificationAndTrace (6 tests: 斜坡零追问/伪造保守方案拒绝/B1 预算声明出口/B2 不包装/追踪内容寻址+重开可见/跳过暂停封闭词表)"
+                    "TestOneDecisiveClarificationAndTrace (9 tests: 斜坡零追问/伪造保守方案拒绝/B1 预算声明出口/B2 不包装/追踪内容寻址+重开可见/跳过暂停封闭词表/R2 整改否定前缀 fail-closed/R2 守卫不误杀纯命中/R2 守卫词表冻结+英文边界)"
                 ],
                 "wiring_modes": [
-                    "TestWiringModes (10 tests: off 第二问链保持/shadow 零载荷/live 压第二问出斜坡+追踪/门拦面入口恒可达/自由补充追踪+约束分类/跳过清 pending/暂停可见/live 显式 WARN 一次性/未知档 fail-closed)"
+                    "TestWiringModes (11 tests: off 第二问链保持/live 压第二问出斜坡+追踪/live 门拦面入口恒可达/live 自由补充追踪+约束分类/live 跳过清 pending/live 暂停可见/live 显式 WARN 一次性/未知档 fail-closed/shadow 零载荷/F-1 整改 shadow marker 句 pending 保持+off 逐项恒等/F-1 整改 shadow 第二问链保持)"
                 ],
                 "i03_handover_closures": [
                     "TestI03HandoverClosures (3 tests: O-1 语料快照 23 条重算零 mismatch/O-2 干预名 import 不变式复核/档位默认 off 声明)"

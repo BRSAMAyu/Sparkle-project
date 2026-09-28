@@ -16,8 +16,18 @@
    方案（无引擎 reason 背书）即红。
 
 接线面（``NO_ACTION_CORRECTION_MODE``）：off 零行为（V3 第二问链保持）、
-shadow payload 零变化、live 出面 + 显式 WARN；跳过/暂停轮；FIX97 入口在
-FIX-49 门拦静默面恒可达。
+shadow 行为零变化（一审 F-1 整改：跳过/暂停词表与澄清压制的**行为应用
+live-only**，shadow 只留观察注记——不清 pending、不产 no_action）、
+live 出面 + 显式 WARN；跳过/暂停轮；FIX97 入口在 FIX-49 门拦静默面恒可达。
+
+一审（PASS_WITH_CHALLENGES）四项跟进（本文件整改钉）：
+- **F-1**：shadow 档 marker 句 pending 保持 + 与 off 行为级零差量断言
+  （live 行为照常由 ``test_skip_turn_clears_pending…`` /
+  ``test_pause_turn_is_visible…`` 双钉）；
+- **F-3/R2**：否定前缀复合句（「别停一下」/「不想跳过这题」）按宁漏报
+  fail-closed 不命中 + 纯命中不误杀；
+- **F-4/R4**：非空 ``evidence_refs`` 样例让引用传播断言真咬合（旗舰样例
+  空集语义显式钉死）。
 
 I03 移交闭合（本卡线顺手落）：
 - **O-1**：冻结语料快照对活代码重算 diff（零 mismatch）——快照漂移即刻暴露；
@@ -41,6 +51,7 @@ from app.aurora.friction_diagnosis import (
 )
 from app.aurora.no_action_supplement import (
     CLARIFICATION_EXIT_KINDS,
+    MARKER_NEGATION_PREFIXES,
     NO_ACTION_SUPPLEMENT_VERSION,
     SUPPLEMENT_INVITATION,
     SUPPLEMENT_WRITE_SURFACES,
@@ -147,8 +158,25 @@ class TestSupplementEntry:
         assert experience["retractable"] is True
         assert experience["permanent_preference_write"] is False
         assert experience["write_surfaces"] == []
-        for ref in experience["evidence_refs"]:
-            assert ref.split("://", 1)[0]  # 引用必有合法 scheme（引擎产出，无伪造）
+        # 一审 F-4/R4 整改：旗舰样例的引擎证据引用**如实为空**（该 utterance 无
+        # signal:// 级证据）——空集语义显式钉死（引用是引擎 passthrough，本层
+        # 零伪造；有引用面的传播断言见 test_…_propagates_nonempty_engine_evidence_refs）。
+        assert out.diagnosis.evidence_refs == ()
+        assert experience["evidence_refs"] == list(out.diagnosis.evidence_refs) == []
+        assert out.trace["basis"]["evidence_refs"] == []
+
+    def test_apply_free_supplement_propagates_nonempty_engine_evidence_refs(self):
+        """一审 F-4/R4 整改正例：非空 evidence_refs 样例让引用断言真咬合——
+        spine 状态证据（signal:// scheme，引擎自身产出）经重放进入经验记录与
+        纠正追踪，逐条 scheme 合法且三处恒等（零伪造、零丢失、可失败）。"""
+        out = apply_free_supplement("真的做不下去了，最近状态很差", spine_state_keys=("crisis_mode",))
+        refs = list(out.diagnosis.evidence_refs)
+        assert refs == ["signal://crisis_mode"]  # 引擎产出非空——不再空转
+        assert out.experience["evidence_refs"] == refs  # 经验记录逐条携带（不丢失）
+        assert out.trace["basis"]["evidence_refs"] == refs  # 追踪依据同源（不另造）
+        for ref in refs:
+            scheme, _, body = ref.partition("://")
+            assert scheme in ("signal", "user_state") and body  # 既有封闭 scheme（引擎 docstring 契约）
 
     def test_supplement_does_not_consume_clarification_budget(self):
         """用户主动补充不算系统追问：预算计数原样透传不递增。"""
@@ -302,6 +330,33 @@ class TestOneDecisiveClarificationAndTrace:
         assert match_skip_marker("今天继续学") is None
         assert match_pause_marker("不可以停止进步") is None  # 「停一下」≠「不可以停…」误伤面
 
+    def test_negation_prefix_compounds_fail_closed(self):
+        """一审 F-3/R2 整改（「宁漏报」收紧）：否定前缀复合句 fail-closed 不命中
+        ——「别停一下」是「不要停」不是「要暂停」、「不想跳过这题」不是「要跳过」
+        （一审实测的过报形态）；误清 pending/误静默比漏识别（用户再点选或改述）
+        代价高。"""
+        assert match_pause_marker("别停一下") is None
+        assert match_pause_marker("先别停一下") is None
+        assert match_skip_marker("不想跳过这题，让我再试试") is None
+        assert match_skip_marker("不是不想回答") is None  # 双重否定：不是「不想回答」
+
+    def test_negation_guard_does_not_kill_plain_marker_hits(self):
+        """反例（守卫不误杀）：无否定前缀的纯命中照常；否定词本身是词表成员的
+        （「不用问了」）不受守卫影响（守卫只看命中 span 之前的前缀）——词表
+        主通道保持（wiring live 档行为面不变）。"""
+        assert match_pause_marker("先暂停一下") == "暂停一下"
+        assert match_skip_marker("跳过，先不回答") == "跳过"
+        assert match_skip_marker("这个先不用问了") == "不用问了"
+        assert match_pause_marker("我要求暂停一下") == "暂停一下"
+
+    def test_marker_negation_prefixes_frozen_closed_set(self):
+        """守卫词表封闭且与实现窗口契约一致（1-2 字前缀；扩展过 reviewer 同词表纪律）。
+        已知边界（如实登记，不猜）：英文否定（don't skip）不在守卫域——
+        按「宁漏报」原则后续词表变更过 reviewer 再收。"""
+        assert {"别", "不要", "不想", "不是", "不用"} <= MARKER_NEGATION_PREFIXES
+        assert all(len(prefix) <= 2 for prefix in MARKER_NEGATION_PREFIXES)  # 1-2 字窗口契约
+        assert match_skip_marker("don't skip") == "skip"  # 边界如实：英文否定不守卫
+
 
 # ---------------------------------------------------------------------------
 # 接线面：NO_ACTION_CORRECTION_MODE 三档
@@ -310,7 +365,8 @@ class TestOneDecisiveClarificationAndTrace:
 
 class TestWiringModes:
     async def test_off_mode_keeps_v3_second_ask_chain(self, fake_redis, correction_mode):
-        """反例（可失败·回滚面）：off = V3 逐字节——第二问链保持、三面零出面。"""
+        """反例（可失败·回滚面）：off = V3 行为级零差量（一审勘误：payload 仅
+        version 串 v3→v4 与 3 个 null 键不同）——第二问链保持、三面零出面。"""
         correction_mode("off")
         svc = FrictionChatWiringService(None, fake_redis)
         first = await svc.process_turn(
@@ -466,7 +522,8 @@ class TestWiringModes:
         assert await svc._load_pending("u1", "s-pause") is None
 
     async def test_shadow_mode_records_without_payload_change(self, fake_redis, correction_mode):
-        """shadow = 指标/日志留痕，payload 零变化（三面恒 None + V3 第二问保持）。"""
+        """shadow = 指标/日志留痕，payload 零变化（三面恒 None + V3 第二问保持）。
+        （非 marker 语句面；marker 句的观察注记面见 test_shadow_mode_marker_sentence_keeps_pending。）"""
         correction_mode("shadow")
         svc = FrictionChatWiringService(None, fake_redis)
         outcome = await svc.process_turn(
@@ -479,6 +536,104 @@ class TestWiringModes:
         assert outcome.outcome == "no_action"
         assert outcome.supplement_entry is None  # payload 零变化
         assert outcome.correction_trace is None and outcome.exit_ramp is None
+
+    async def test_shadow_mode_marker_sentence_keeps_pending(self, fake_redis, correction_mode):
+        """一审 F-1 整改正例：shadow 档 marker 句**只观察不清 pending**——
+
+        - 行为面与 off 档逐项恒等（outcome/annotations/pending 生命周期），
+          唯一差量是显式 ``shadow_marker_observation`` 注记（applied=False）；
+        - 不产 no_action、不产追踪/斜坡（三面恒 None）；
+        - pending 未被破坏：下一轮结构化回答照常消费。
+        （一审实测：旧实现 shadow 下「先暂停一下」清 pending + no_action，
+        与「shadow=观察零行为变化」声明不符——本测试使该回归即刻变红。）
+        """
+        behavior: dict[str, dict] = {}
+        for mode in ("off", "shadow"):
+            correction_mode(mode)
+            svc = FrictionChatWiringService(None, fake_redis)
+            sid = f"s-mk-{mode}"
+            first = await svc.process_turn(
+                user_id="u1",
+                session_id=sid,
+                user_message="最近做不下去",
+                user_context_payload={},
+                request_extra_context={},
+            )
+            assert first.outcome == "ask" and first.question is not None
+            second = await svc.process_turn(
+                user_id="u1",
+                session_id=sid,
+                user_message="先暂停一下",
+                user_context_payload={},
+                request_extra_context={},
+            )
+            behavior[mode] = {
+                "outcome": second.outcome,
+                "annotations": dict(second.annotations),
+                "pending": await svc._load_pending("u1", sid),
+                "question_id": first.question["question_id"],
+            }
+            # 两档同律：不产 no_action、无介入面、无追踪/斜坡/入口（行为零变化）
+            assert second.outcome == "ask"
+            assert second.question is None and second.intervention is None
+            assert second.correction_trace is None and second.exit_ramp is None
+            assert second.supplement_entry is None
+            assert behavior[mode]["pending"] is not None  # pending 保持
+        # 与 off 逐项恒等：shadow 的 annotations == off 的 annotations + 观察注记
+        shadow_annotations = behavior["shadow"]["annotations"]
+        observation = shadow_annotations.pop("shadow_marker_observation")
+        assert shadow_annotations == behavior["off"]["annotations"]
+        assert observation == {"kind": "pause", "marker": "暂停一下", "applied": False}
+        # pending 未被 marker 破坏：下一轮结构化回答照常消费（shadow 会话）——
+        # V3 链同构：答案消费后引擎第二问正常出面并挂新 pending（非 marker 问句）
+        third = await svc.process_turn(
+            user_id="u1",
+            session_id="s-mk-shadow",
+            user_message="",
+            user_context_payload={},
+            request_extra_context={
+                FRICTION_ANSWER_CONTEXT_KEY: {
+                    "question_id": behavior["shadow"]["question_id"],
+                    "branch_key": "tried_unsure",
+                }
+            },
+        )
+        assert third.outcome == "ask" and third.question is not None
+        assert third.question["question_id"] != behavior["shadow"]["question_id"]
+        new_pending = await svc._load_pending("u1", "s-mk-shadow")
+        assert (new_pending or {}).get("question_id") == third.question["question_id"]
+
+    async def test_shadow_mode_keeps_v3_second_ask_chain(self, fake_redis, correction_mode):
+        """一审 F-1 整改（同一红线覆盖澄清压制面）：shadow 不应用第二问压制——
+        V3 第二问照常出面并挂新 pending（行为与 off 零差量），无压制注记、
+        无斜坡、无追踪（压制应用 live-only，live 对照 =
+        test_live_mode_suppresses_second_ask_with_exit_ramp）。"""
+        correction_mode("shadow")
+        svc = FrictionChatWiringService(None, fake_redis)
+        first = await svc.process_turn(
+            user_id="u1",
+            session_id="s-shadow2",
+            user_message="最近做不下去",
+            user_context_payload={},
+            request_extra_context={},
+        )
+        assert first.outcome == "ask"
+        second = await svc.process_turn(
+            user_id="u1",
+            session_id="s-shadow2",
+            user_message="",
+            user_context_payload={},
+            request_extra_context={
+                FRICTION_ANSWER_CONTEXT_KEY: {
+                    "question_id": first.question["question_id"],
+                    "branch_key": "tried_unsure",
+                }
+            },
+        )
+        assert second.question is not None  # 第二问未被压制（V3 链保持）
+        assert "suppressed_second_ask" not in second.annotations
+        assert second.exit_ramp is None and second.correction_trace is None
+        assert await svc._load_pending("u1", "s-shadow2") is not None  # 新问句正常挂起
 
     async def test_live_mode_activation_warns_explicitly(self, fake_redis, correction_mode):
         """I03 N-2 移交闭合：live 激活有显式 WARN（消费侧标识，防运维误读），

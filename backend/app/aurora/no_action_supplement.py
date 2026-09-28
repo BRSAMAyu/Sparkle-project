@@ -31,8 +31,12 @@
    时**不 surfaced 第二问**，改出封闭出口斜坡：直接说情况（自由补充——用户
    主动，不占预算）/ 先给保守可试方案（引擎自身 B1 预算声明 best-guess，
    uncertain 如实标注——绝不由本层伪造第二诊断）/ 先暂停。
-   ``SKIP_MARKERS`` / ``PAUSE_MARKERS``：用户可跳过/暂停的封闭词表——跳过 =
+   ``SKIP_MARKERS`` / ``PAUSE_MARKERS``：用户可跳过/暂停的封闭词表（+
+   ``MARKER_NEGATION_PREFIXES`` 否定前缀守卫：「别停一下」类否定复合句
+   fail-closed 不命中——一审 F-3/R2 按「宁漏报」收紧）——跳过 =
    保守可试方案或如实无行动，不锁住聊天；暂停 = 本域静默，可随时继续。
+   **词表的算法应用归 wiring 的 live 档**（一审 F-1 整改：shadow 只观察
+   不清 pending 不产 no_action，本模块词表函数本身保持纯函数零档位）。
    ``correction_trace``：澄清/纠正后**行动改变依据可追踪**——内容寻址
    trace_id（D02 ``attr_`` / I03 ``sscmp_`` 同族）+ 前后出口 + 依据
    （答句分支 / reason 码 / 证据引用）+ 重开可见通道声明（随
@@ -46,10 +50,10 @@
 - 零 IO、零模型调用、零用户文案（invitation 为 FIX97 裁决原文；例子只出
   封闭词表键，展示文案归客户端 l10n）；
 - 行为开关 ``settings.NO_ACTION_CORRECTION_MODE`` ∈ {off, shadow, live}
-  （默认 off = 零行为；shadow = 指标+结构化日志留痕、payload 零变化；
-  live = 载荷出面——**本卡即 live 裁决语义的归属卡**，激活时有显式 WARN
-  与 metric 标识，响应 I03 N-2「消费侧显式标识」）。未知值按 off 处理
-  （fail-closed，不猜）。
+  （默认 off = 零行为；shadow = 指标+结构化日志+观察注记、行为零变化——
+  干预行为应用 live-only（一审 F-1 整改收口）；live = 载荷出面——**本卡即
+  live 裁决语义的归属卡**，激活时有显式 WARN 与 metric 标识，响应 I03 N-2
+  「消费侧显式标识」）。未知值按 off 处理（fail-closed，不猜）。
 """
 
 from __future__ import annotations
@@ -112,6 +116,34 @@ PAUSE_MARKERS: tuple[str, ...] = (
     "先停一下",
     "停一下",
     "pause",
+)
+
+#: 否定前缀守卫（一审 F-3/R2 收紧，「宁漏报」原则）：命中点紧邻前缀是否定词
+#: 时该命中作废——「别停一下」是「不要停」不是「要暂停」、「不想跳过这题」
+#: 不是「要跳过」；误触发（清 pending/本域静默）比漏识别（用户再点选或改述，
+#: 可恢复）代价高，故否定复合句一律 fail-closed 不命中。只看命中点紧邻
+#: 1-2 字窗口（词面局部规则，零新权威）；「不用问了」等否定词**本身是词表
+#: 成员**的不受影响（守卫只看命中 span 之前的前缀）。英文否定（don't skip）
+#: 不在本守卫域——边界如实登记（evidence/limitations），按宁漏报后续变更
+#: 过 reviewer 再收。
+MARKER_NEGATION_PREFIXES: frozenset[str] = frozenset(
+    {
+        "别",
+        "莫",
+        "勿",
+        "甭",
+        "不要",
+        "不想",
+        "不是",
+        "不能",
+        "不可",
+        "不准",
+        "不许",
+        "先别",
+        "不用",
+        "无需",
+        "无须",
+    }
 )
 
 #: 临时约束种类（封闭词表；本卡只识别「今天口径」的时间预算——多天/每周
@@ -449,26 +481,37 @@ def clarification_exit_ramp(
     }
 
 
-def match_skip_marker(text: str) -> str | None:
-    """封闭跳过词表命中（长词优先；无命中 None）。"""
+def _negation_prefix_at(body: str, marker_start: int) -> bool:
+    """命中点紧邻否定前缀判定（1-2 字窗口；「宁漏报」收紧的局部词面规则）。"""
+    return any(body[max(0, marker_start - width) : marker_start] in MARKER_NEGATION_PREFIXES for width in (2, 1))
+
+
+def _match_marker(markers: tuple[str, ...], text: str) -> str | None:
+    """封闭词表命中（长词优先；否定前缀复合句 fail-closed 不命中——宁漏报）。
+
+    同一 marker 的多个出现位置逐一判前缀：任一非否定出现即命中；全被否定
+    则继续尝试下一 marker（更短成员同样过守卫）。
+    """
     body = str(text or "").strip().lower()
     if not body:
         return None
-    for marker in sorted(SKIP_MARKERS, key=len, reverse=True):
-        if marker in body:
-            return marker
+    for marker in sorted(markers, key=len, reverse=True):
+        start = body.find(marker)
+        while start != -1:
+            if not _negation_prefix_at(body, start):
+                return marker
+            start = body.find(marker, start + 1)
     return None
+
+
+def match_skip_marker(text: str) -> str | None:
+    """封闭跳过词表命中（长词优先；否定前缀复合句不命中——宁漏报；无命中 None）。"""
+    return _match_marker(SKIP_MARKERS, text)
 
 
 def match_pause_marker(text: str) -> str | None:
-    """封闭暂停词表命中（长词优先；无命中 None）。"""
-    body = str(text or "").strip().lower()
-    if not body:
-        return None
-    for marker in sorted(PAUSE_MARKERS, key=len, reverse=True):
-        if marker in body:
-            return marker
-    return None
+    """封闭暂停词表命中（长词优先；否定前缀复合句不命中——宁漏报；无命中 None）。"""
+    return _match_marker(PAUSE_MARKERS, text)
 
 
 def correction_trace(
@@ -570,6 +613,7 @@ __all__ = [
     "CLARIFICATION_EXIT_KINDS",
     "DIFFICULTY_FAMILY",
     "DEFAULT_SESSION_QUESTION_LIMIT",
+    "MARKER_NEGATION_PREFIXES",
     "NO_ACTION_SUPPLEMENT_VERSION",
     "PAUSE_MARKERS",
     "SKIP_MARKERS",
