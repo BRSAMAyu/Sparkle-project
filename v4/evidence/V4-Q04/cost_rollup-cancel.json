@@ -1,0 +1,51 @@
+{
+ "generated": "2026-09-28T23:43:12.853748+00:00",
+ "layers": {
+  "L0": {
+   "db_rows": 0,
+   "db_tokens": 0,
+   "db_cost": 0.0,
+   "frame_only_rows": 0,
+   "frame_tokens": 0,
+   "frame_cost": 0.0,
+   "unmetered": 0,
+   "bench_priced_db_cost": 0.0,
+   "total_cost_est": 0.0
+  },
+  "L1": {
+   "db_rows": 0,
+   "db_tokens": 0,
+   "db_cost": 0.0,
+   "frame_only_rows": 0,
+   "frame_tokens": 0,
+   "frame_cost": 0.0,
+   "unmetered": 0,
+   "bench_priced_db_cost": 0.0,
+   "total_cost_est": 0.0
+  },
+  "L2": {
+   "db_rows": 1,
+   "db_tokens": 0,
+   "db_cost": 0.0,
+   "frame_only_rows": 0,
+   "frame_tokens": 0,
+   "frame_cost": 0.0,
+   "unmetered": 0,
+   "bench_priced_db_cost": 0.0,
+   "total_cost_est": 0.0
+  },
+  "L3": {
+   "db_rows": 0,
+   "db_tokens": 0,
+   "db_cost": 0.0,
+   "frame_only_rows": 0,
+   "frame_tokens": 0,
+   "frame_cost": 0.0,
+   "unmetered": 0,
+   "bench_priced_db_cost": 0.0,
+   "total_cost_est": 0.0
+  }
+ },
+ "red_count": 0,
+ "reds": []
+}

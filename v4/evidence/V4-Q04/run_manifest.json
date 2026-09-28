@@ -1,0 +1,89 @@
+{
+  "task": "V4-Q04",
+  "title": "端到端有用延迟与完整成本重测（App→Gateway→Engine 真链 WS 采样，四时刻分开）",
+  "kind": "verification",
+  "branch": "agent/v4/q04",
+  "worktree": "/Users/brsama/code/GitHub/wtQ04",
+  "base_commit": "4622efe8ca22e40c8b914392c996c2eb1b59f848（main，含全部依赖合并 I09/I10/I08/U07）",
+  "source_sha": "4622efe8ca22e40c8b914392c996c2eb1b59f848 + 本卡新增 devtools 工具与证据（被测产品代码零改动；分支头见 review 阶段 commit）",
+  "captured_at": "2026-09-29T03:30 ~ 2026-09-29T07:45 +0800",
+  "timezone": "Asia/Shanghai (+0800)；时钟为宿主机真实钟（time.perf_counter 相对计时 + UTC 挂钟落盘）",
+  "environment": {
+    "host": "darwin arm64（macOS 25.6.0）",
+    "data_plane": "sparkle_db/sparkle_redis/sparkle_minio 三容器 Up 12h healthy——只读使用不重建（FIX-557）；其间经 Alembic 唯一入口补 I06 迁移（wt598_20260927→i06_20260928，主库此前缺表导致新代码事务中毒、计费行不落）",
+    "stack_under_test": {
+      "provenance": "wtQ04 worktree @4622efe8 自起（驻留栈进程早于全部依赖合并、且共享 DB host 侧鉴权自 09-28 起损坏故不可用——详见 limitations）",
+      "engine_grpc": "127.0.0.1:50052（make grpc-server 同径：backend venv + grpc_server.py；GRPC_PORT=50052）",
+      "engine_http": "127.0.0.1:8001（uvicorn app.main:app，承载 BillingWorker）",
+      "gateway": "127.0.0.1:8081（wtQ04 backend/gateway go build -o bin/gateway ./cmd/server，CGO_ENABLED=0 darwin/arm64 本机适用；bin sha256 前缀 41a90aa7170f3473；PORT=8081 AGENT_ADDRESS=127.0.0.1:50052）",
+      "proto_gen": "make proto-gen（dockerized toolchain 镜像缺失自动回退 host toolchain；生成 gateway/gen 与 Python stubs）",
+      "python": "backend/.venv（主仓共享 venv，Python 3.11）",
+      "fastlane_probe_override": "ENABLE_DETERMINISTIC_FAST_LANE=true 仅用于 fastlane 探针的引擎实例；出厂默认 False"
+    },
+    "credentials": "backend/.env 与 gateway/.env 以 symlink 只读引用主检出（未修改、密钥零回显）；共享数据面 host 侧鉴权使用 cosmos 仓 git 历史中的初始有效凭据（仅进程环境注入，未落盘未提交未回显）"
+  },
+  "chain": "WS 客户端（websockets 16.0，legacy {type:message} 帧 = Flutter App 同族传输协议）→ Gateway /ws/chat?token=<guest JWT> → gRPC StreamChat → ChatOrchestrator；App UI 本体未驱动（见 limitations）",
+  "four_moments_definition": {
+    "t_ack_s": "首帧 type=ack（gateway 接受回执）",
+    "t_first_delta_s": "首帧 type=delta（文本流开始）；澄清门纯 full_text 路径此时刻为空、单列 t_first_fulltext_s，不以 delta 冒充",
+    "t_first_useful_s": "首个通过冻结确定性 oracle 的文本时刻（BOILERPLATE_TEXTS 封闭状态语集合 + phatic 意图≥2 有效字符 / 实质意图≥12 有效字符；采样前冻结于工具源码；oracle v1 已知对『短而正确的直答』（如『1+1等于2。』）误判为未达，main 3 行，v2 参考口径见 test_results.json.notes）",
+    "t_complete_s": "终帧 type=meta（gateway 完成交付）或流异常终止（此时 outcome≠delivered）",
+    "计时": "客户端 perf_counter，自 message 帧发出起算；WS 连接建立单独计 ws_open_s 不混入四时刻"
+  },
+  "denominator_discipline": "每条发出的 query 计一层分母；delivered/error/timeout/cancelled 全部保留；分位基于实际到达样本、n_reached 逐时刻单列；本 run main 416/416 delivered，cancel 8/8 cancelled（入分母单报），无任何剔除或重试（失败不重试沿 E08 纪律）",
+  "commands": [
+    {"id": 1, "cmd": "git worktree add ../wtQ04 -b agent/v4/q04 main", "exit_code": 0},
+    {"id": 2, "cmd": "make proto-gen（wtQ04；dockerized toolchain 缺镜像回退 host）", "exit_code": 0},
+    {"id": 3, "cmd": "cd backend/gateway && CGO_ENABLED=0 go build -o bin/gateway ./cmd/server", "exit_code": 0},
+    {"id": 4, "cmd": "起服：GRPC_PORT=50052 venv/python grpc_server.py；uvicorn app.main:app --port 8001；PORT=8081 AGENT_ADDRESS=127.0.0.1:50052 ./bin/gateway", "exit_code": 0},
+    {"id": 5, "cmd": "alembic upgrade head（wtQ04/backend，DATABASE_URL 注入；wt598_20260927→i06_20260928）", "exit_code": 0},
+    {"id": 6, "cmd": "bench run --layers L0,L1 --per-layer 2 --passes 1 --tag pilot_a；--layers L2,L3 --per-layer 1 --tag pilot_b（小样本定位）", "exit_code": 0},
+    {"id": 7, "cmd": "bench run --layers L0,L1,L2,L3 --passes 4 --tag main（416 query，断点续跑支持，实际一次跑完）", "exit_code": 0},
+    {"id": 8, "cmd": "bench run --cancel-probe --layers L0,L1,L2,L3 --tag cancel（8 探针）", "exit_code": 0},
+    {"id": 9, "cmd": "重启引擎 ENABLE_DETERMINISTIC_FAST_LANE=true 后：bench run --layers L0 --passes 4 --tag fastlane（104）", "exit_code": 0},
+    {"id": 10, "cmd": "recover_q04_billing_deadletter.py --apply（死信恢复 58+1 行；复用 BillingWorker._to_stmt_data 同一列映射）", "exit_code": 0},
+    {"id": 11, "cmd": "bench summarize --tag main/cancel/fastlane/pilot_a/pilot_b", "exit_code": 0}
+  ],
+  "model_budget": {
+    "authorization_basis": "卡文 objective 明令『每层≥100报告分位』+ 派单指令同口径 + E08 系列同规模真模型基准先例（104q≈$0.127）；本卡实际支出 ≈$0.17（main $0.1567 + fastlane $0.0103 + pilot/cancel ≈$0.003），低于按先例单价折算的规模预期，未触预算暂停线",
+    "price_sources": "bench_ai_stack_l0_l3.py 内嵌价表（来源日期逐项注明）：dashscope_fast=qwen3.7-flash ¥0.225/¥0.974 per M（Aliyun 2026-09-10 价）等；本 run 归因子集 100% dashscope_fast",
+    "actual_model_and_usage": {
+      "main_run": {"db_attributed": "250 行 / 1,022,536 tok / $0.102185（dashscope_fast 219 + no_generation_model 0tok 24 + no_generation_model_estimated 带 216/216/277tok 3）", "stream_frame_only": "152 行 / 545,200 tok / $0.054525（引擎回执 cost_micro_usd；模型归因因计量持久化丢失不可得，如实标注）", "fully_unmetered_delivered": 14, "total_est_usd": 0.156710},
+      "fastlane_probe": {"db_attributed": "91 行 / 103,336 tok / $0.010334（全部为 model-lane 回退行）", "deterministic_rows": "26 行 0 token（但 0 行账面记录——见红项）", "total_est_usd": 0.010334},
+      "guest_accounts": "wtQ04_bench / wtQ04_bench_fl（guest 端点，零注册成本）"
+    }
+  },
+  "sample_and_denominator": {
+    "main": {"n": 416, "by_layer": {"L0": 104, "L1": 104, "L2": 104, "L3": 104}, "delivered": 416, "non_delivered": 0},
+    "cancel": {"n": 8, "cancelled": 8, "note": "取消探针入各自层分母（另报），纳入成本分母的实测：取消轮次服务端继续生成但记账为 no_generation_model/0tok——真实成本不可见（RED）"},
+    "fastlane": {"n": 104, "delivered": 104},
+    "session_design": "E08 同径：3 query 轮换 session；语料 26/层 × 4 遍（r1-r4）；重复不污染依据=网关语义缓存对带 extra_context 请求一律跳过 + 引擎幂等键 session_id+request_id 唯一；实测 is_cache_hit=0/528"
+  },
+  "drift": {
+    "note": "bench guest 状态随采样累积，后遍系统性劣化（真实多轮用户条件，分位表含之不剔除）",
+    "t_complete_p50_by_pass": {
+      "L0": {"r1": 11.1, "r2": 10.0, "r3": 15.4, "r4": 6.6},
+      "L1": {"r1": 18.3, "r2": 17.2, "r3": 20.9, "r4": 23.6},
+      "L2": {"r1": 30.7, "r2": 28.8, "r3": 28.4, "r4": 32.0},
+      "L3": {"r1": 34.7, "r2": 39.4, "r3": 40.0, "r4": 42.5}
+    }
+  },
+  "recovery": {
+    "context": "共享 Redis queue:billing 存在第二个消费者（主检出驻留栈 worker，其 Postgres 凭据失效），死信恢复的 RPUSH 被其抢占并以 password auth 失败回写死信，队列重推循环不收敛",
+    "method": "recover_q04_billing_deadletter.py：读死信中 request_id 前缀 wtq04- 的记录，以 BillingWorker._to_stmt_data 同一列映射与 insert 语句直插 token_usage（duplicate key 跳过，同 worker._retry_individually 语义）——恢复产品自身已产出的真实计量，非 Mock/非人工造数",
+    "recovered_rows": 59,
+    "residual_loss": "152 行计量记录被失效消费者吞没且未进死信，不可恢复；其成本已由流内 usage 帧（引擎回执）补齐，模型归因缺失如实标注"
+  },
+  "artifacts_sha256": {
+    "raw/raw-main.jsonl": "01831cc2edaa97b469ca17e0e76b612247ee8bd2cbc5523696f2ced11d16fbdc",
+    "raw/raw-fastlane.jsonl": "a5841ecf9ab58d349ca40431f94ce62114b5460a7781fda76f79cf5daa03bf84",
+    "raw/raw-cancel.jsonl": "6ea4d8720bd413a08362add18620d4107369b18aaa2760a822f3eac7f74aa2b0",
+    "raw/raw-pilot_a.jsonl": "ef1055f52df58dd26e088d8efec1c73c59f7d61cd6c33f651f5eb0262900997e",
+    "raw/raw-pilot_b.jsonl": "ee9cd418fa26647622b2026f0464aa75341deefbebf04f9b9d1adbde3da0e67f"
+  },
+  "stop_conditions_status": {
+    "budget": "未触发（全程 $0.17）",
+    "three_rounds_no_improvement": "不适用（本卡为测量卡；对 M04-M06 的 FAIL 未做修复轮——修复属实现卡职权，本卡只交测量与归因）",
+    "blocked_items": "见 limitations.md（驻留栈不可用、共享 DB 鉴权损坏、队列竞争消费者——均已绕行并留证）"
+  }
+}

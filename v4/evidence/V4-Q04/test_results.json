@@ -1,0 +1,78 @@
+{
+  "task": "V4-Q04",
+  "run_tag": "main+cancel+fastlane",
+  "generated": "2026-09-29T07:50+0800",
+  "verdict_summary": {
+    "M04_L0_fast_lane": "FAIL（flag=off：生成调用≠0 且首 delta p95=11.4s；flag=on：deterministic 子集 0 token ✓ 但端到端首 delta p50=1.32s/p90=4.78s > 500ms；且 deterministic 轮次无账面行）",
+    "M05_L1_first_useful": "FAIL（p50=2.45s>2s；p95=6.84s>5s）",
+    "M06_L2_usable_proposal": "FAIL（p50=4.27s>4s；p95=34.25s>12s；p99=111.5s）",
+    "M07_L3_control_return": "PASS（首状态帧 p50=0.282s/p95=1.227s/max=3.87s ≤5s；完成 max=69.8s 未越软 90s——完成耗时分位单列，不以 ack 冒充答案）",
+    "acceptance_1_four_moments": "PASS（四时刻逐行分开计量，澄清门 full_text 路径单列，不合并）",
+    "acceptance_2_billing_reds": "报红（4 类：no_generation 带 token 3 行；取消轮次 0 计费；delivered 完全无计量 main14+fastlane13 行；计量持久化丢失 152 行〔环境性〕）",
+    "acceptance_3_cancel_degrade_fail_in_denominator": "PASS（方法面：全部分母保留无剔除；发现面：系统对取消轮次的自身记账为 0——真实服务端成本不可见，已报红）"
+  },
+  "percentiles_main": {
+    "note": "P50/P90/P99 秒；分母 n=104/层，全 delivered；n_reached 逐时刻单列",
+    "L0": {
+      "t_ack_s": [0.013, 0.587, 4.598], "t_first_delta_s": [3.584, 9.354, 11.849],
+      "t_first_useful_s": [3.756, 9.451, 11.85], "t_complete_s": [10.284, 32.971, 45.928],
+      "t_first_stage_s": [0.151, 1.367, 4.956]
+    },
+    "L1": {
+      "t_ack_s": [0.001, 0.323, 1.394], "t_first_delta_s": [2.072, 4.988, 9.167],
+      "t_first_useful_s": [2.45, 5.551, 9.718], "t_complete_s": [19.822, 30.896, 39.667],
+      "t_first_stage_s": [0.045, 0.434, 2.255]
+    },
+    "L2": {
+      "t_ack_s": [0.028, 0.382, 5.017], "t_first_delta_s": [3.967, 19.258, 112.562],
+      "t_first_useful_s": [4.272, 12.081, 111.523], "t_complete_s": [29.878, 56.179, 112.405],
+      "t_first_stage_s": [0.111, 0.518, 5.085]
+    },
+    "L3": {
+      "t_ack_s": [0.112, 0.77, 1.784], "t_first_delta_s": [6.414, 11.6, 17.017],
+      "t_first_useful_s": [6.422, 11.651, 17.25], "t_complete_s": [38.714, 57.76, 65.365],
+      "t_first_stage_s": [0.282, 0.982, 3.302]
+    },
+    "n_reached": {
+      "L0": {"delta": 104, "useful": 101, "complete": 104},
+      "L1": {"delta": 97, "useful": 104, "complete": 104},
+      "L2": {"delta": 84, "useful": 104, "complete": 104},
+      "L3": {"delta": 96, "useful": 104, "complete": 104}
+    },
+    "clarification_gate_fulltext_only_rows": 35
+  },
+  "percentiles_fastlane_L0": {
+    "note": "ENABLE_DETERMINISTIC_FAST_LANE=true；n=104 全 delivered；lane 分布 deterministic=26 / model=78（剥词校验回退按 I09 设计工作）",
+    "all": {"t_ack_s": [0.004, 0.925, 1.66], "t_first_delta_s": [2.366, 6.013, 10.088], "t_complete_s": [6.215, 24.397, 42.522]},
+    "deterministic_subset_n26": {"t_first_delta_p50": 1.324, "p90": 4.782, "p99": 11.79, "tokens": "0（db 0 行账面，见 RED）"}
+  },
+  "cancel_probes": {
+    "n": 8, "cancelled": 8,
+    "billing_after_cancel": "4 条 first_delta 后取消的轮次 DB 记账全部为 no_generation_model/0tok；其中 L2-CANCEL 在客户端取消前已见 13,320 tok usage 帧——服务端继续生成的真实成本未入账（RED）",
+    "rows": [
+      {"qid": "L0-CANCEL-ack-1", "t_ack_s": 0.177}, {"qid": "L0-CANCEL-first_delta-2", "t_ack_s": 2.112, "t_first_delta_s": 28.5483},
+      {"qid": "L1-CANCEL-ack-1", "t_ack_s": 0.002}, {"qid": "L1-CANCEL-first_delta-2", "t_ack_s": 1.1123, "t_first_delta_s": 14.6514},
+      {"qid": "L2-CANCEL-ack-1", "t_ack_s": 0.4519}, {"qid": "L2-CANCEL-first_delta-2", "t_ack_s": 0.0209, "t_first_delta_s": 20.3914, "frame_tokens": 13320},
+      {"qid": "L3-CANCEL-ack-1", "t_ack_s": 0.0175}, {"qid": "L3-CANCEL-first_delta-2", "t_ack_s": 1.1141, "t_first_delta_s": 25.3184}
+    ]
+  },
+  "cost_rollup_main": {
+    "db_attributed": {"rows": 250, "tokens": 1022536, "usd": 0.102185, "model_distribution": {"dashscope_fast": 219, "no_generation_model(0tok)": 24, "no_generation_model_estimated(带tok)": 3}},
+    "stream_frame_only": {"rows": 152, "tokens": 545200, "usd": 0.054525, "note": "引擎回执 cost_micro_usd（I10 同源权威）；模型归因丢失如实标注"},
+    "fully_unmetered_delivered_rows": 14,
+    "total_est_usd": 0.15671,
+    "tier_observation": "归因子集 100% dashscope_fast——pro/deep 的 L2/L3 行亦无 STANDARD/MAX 归因（tier 塌缩复现，E08 先例）"
+  },
+  "billing_reds": {
+    "no_generation_with_tokens_estimated_bucket": ["L2-r1-08 (216tok)", "L2-r3-08 (216tok)", "L2-r4-08 (277tok)"],
+    "cancelled_turns_billed_zero": ["L0/L1/L2/L3 CANCEL-first_delta-2 ×4 全部 no_generation_model/0tok"],
+    "delivered_fully_unmetered": {"main": 14, "fastlane_deterministic": 13, "note": "fastlane 13 行全部为 deterministic 轮次——I09 单测承诺『账面 0+0 直达 no_generation_model 桶』在 live 未发生（快路 early-return 疑似绕过 cleanup 记账）；成本为 0 但审计 trail 缺失"},
+    "metering_persistence_loss": {"rows": 152, "root_cause": "共享 queue:billing 第二消费者（驻留栈 worker，凭据失效）抢占且未进死信；成本由流内 usage 帧补齐"},
+    "total_red_count_main": 172
+  },
+  "notes": {
+    "useful_oracle_v1_limit": "冻结 oracle v1 的 12 字符阈值把『短而正确的直答』误判为未达：L0-r1-12（『1+1等于2。』）、L0-r1-13（『30』）、L0-r4-12 共 3 行；v2 参考口径（对 v1 未达行取 t_first_fulltext_s 上界）下这些行的有用时刻分别为 2.0264/1.2703/6.5145s，对层分位影响可忽略（L0 useful p50 由 3.756→3.756 不变）",
+    "pass_drift": "bench guest 状态累积致后遍劣化（L1 useful r1=1.41s→r3=3.71s；L3 done r1=34.7→r4=42.5s）；分位含漂移不剔除，逐遍数据见 run_manifest.drift",
+    "no_cache_hits": "is_cache_hit=0/528（语义缓存对 extra_context 请求跳过的设计在实测中得到验证）"
+  }
+}

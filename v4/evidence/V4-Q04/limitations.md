@@ -1,0 +1,35 @@
+# V4-Q04｜limitations（真实 vs 模拟边界、BLOCKED 项、测量口径边界）
+
+## 1. 链路真实度边界
+
+- **App UI 本体未驱动**。本卡链路 = WS 客户端（Flutter App 同族 legacy `{type:message}` 帧，同一 `/ws/chat` 端点、同一鉴权与限流面）→ Gateway → gRPC → ChatOrchestrator。按 EVALUATION_PROTOCOL 五层证据定义，本测量为 **LIVE_STACK 层**（真实运行栈 + 真实模型 + 合成用户）；「真实 App/模拟器交互」的 L3-UI 层（触控渲染、U07 的 mobile 快慢反馈视觉面）**未覆盖**，不冒充。WS 客户端不含 Flutter 端渲染/本地反馈耗时。
+- **合成用户**：bench guest 账号（wtQ04_bench / wtQ04_bench_fl），非真实用户；会话历史按 E08 同径 3 query 轮换。
+- **语料复用**：104 条语料原样取自 WT372-E08（4 遍重复，非 416 条不同语料）。重复不影响延迟测量有效性的依据：网关语义缓存对带 extra_context 的请求一律跳过（实测 is_cache_hit=0/528）+ 引擎幂等键唯一；但**语料多样性为 26/层**，分位对语料分布敏感。
+- **结果质量未评审**：本卡测延迟与成本，不判回答正确性（E08 的 quality 粗筛面不在本卡验收内）。
+
+## 2. 环境偏离（重要——影响「当前集成 SHA 可失败测试」的口径）
+
+- **驻留栈不可用作验证目标**：主检出驻留 gRPC 引擎进程启动于 2026-09-28 09:55，早于全部四个依赖卡合并（I09 18:30 / I10 18:48 / I08 21:10 / U07 次日 03:07）。对其采样等于测陈旧代码。本卡自起 wtQ04 栈（agent/v4/q04@4622efe8，含全部依赖），端口隔离（8081/50052/8001），用完即关。**主检出主分支在采样期间又前进（2c2dbd1b），本证据绑定本卡分支基线 4622efe8，未含其后的主分支推进。**
+- **共享 Postgres host 侧鉴权自 2026-09-28 起损坏**（BLOCKED_EXPLICIT 级环境事实，非本卡修复范围）：sparkle_db 容器 env 的 POSTGRES_PASSWORD 与卷内 role hash 不匹配（.env 轮换未同步数据面），host 侧 scram 全部失败——驻留栈 guest auth 同样失败（已实测留证），token_usage 最新行停在 09-28 09:18。本卡以 cosmos 仓 git 历史中的初始有效凭据注入进程环境解决自身栈（只读引用；密钥零回显零落盘）。**fleet 需另派卡修复：或以 trust 路径重置 role 密码对齐现行 .env，或回滚 .env。**
+- **I06 迁移补齐**：主库缺 `context_selection_receipts` 表（I06 迁移未应用），新代码首查即事务中毒、计费行不落。本卡经 Alembic 唯一入口 `upgrade head` 补齐（wt598→i06，只增无改）。此举属数据面 schema 写入，超出「只读使用」字面——依据：DB schema 唯一入口即 Alembic（硬规则 2）、该迁移为主干已合并内容、不修复则任何主干部署均无法记账；已留证（命令/exit code/前后 head）。如 fleet 认为越权，可 `alembic downgrade -1` 回退。
+- **共享计费队列竞争消费者**：驻留栈 worker（坏凭据）与本卡 worker 同抢 queue:billing。后果三件：①152 行计量记录被吞（成本已由流内 usage 帧补齐，模型归因丢失如实标注）；②恢复 RPUSH 被抢占不收敛，最终以 BillingWorker 同列映射直插恢复 59 行（恢复产品自身已产出计量，非造数）；③**驻留栈自身 09-28 以来的全部计费皆进死信或丢失**——fleet 级计费完整性事故，已留证（dead_letter 114 条目可见），需另卡处置。
+- **MinIO/Redis 凭据跨仓漂移**：gateway/.env 与 backend/.env、cosmos compose 三方 MINIO/REDIS/POSTGRES 凭据互有出入；本卡按容器实际 env 对齐解决自身栈，未改任何文件。
+
+## 3. 测量口径边界
+
+- **四时刻为客户端口径**（WS 帧到达时刻）：含 gateway 排队/转发与引擎全链，不含 Flutter 渲染。ack=gateway 回执帧，非引擎内部时刻。
+- **「首有用内容」为冻结确定性 oracle（v1）**：封闭状态语黑名单 + 有效字符阈值（phatic≥2 / 实质≥12）。已知误判：短而正确的直答（3 行，v2 参考口径已另算，对分位无影响）；「有用」≠「正确」，无模型评审。
+- **成本三源**：DB 归因（精确）+ 流内 usage 帧回执（同源权威但模型归因丢失）+ 完全无计量 14 行（成本不可见，报红）。bench 价表对 stream_frame_only 行不适用（无模型键）；其 receipt 成本为引擎内部核价，两源口径已在汇总中分行列示，未混加单价假设。
+- **隐藏辅助调用不在计量范围**（router embedding / Layer3 意图分类 / sufficiency / HyDE）：主生成计量口径与 E08 一致；attempt 级辅助调用成本无法从外部观测，标 NOT_MEASURED。
+- **取消探针 n=8**：证明分母纪律与发现「取消轮次 0 计费」缺陷足够，但 8 行不足以给取消场景分位。
+- **时间漂移**：4 遍采样跨 ~3.5 小时，bench 用户状态累积致后遍劣化；分位含漂移（保守），逐遍切片已留证。若需「冷用户」口径需另起多 guest 重测。
+
+## 4. BLOCKED / 未覆盖项（不冒充）
+
+- L3-UI（真实 App/模拟器交互面）、M03 本地反馈、L4 真实用户：**NOT_MEASURED**。
+- 驻留栈修复、共享 DB 鉴权修复、计费队列隔离：**BLOCKED_EXPLICIT——非本卡职权，已留证待派**。
+- 「连续三轮无改善停手」：不适用——本卡为测量卡，M04-M06 的 FAIL 未触发修复轮（修复属实现卡职权）；本卡交付测量与归因，不降阈值。
+
+## 5. 价值判定口径
+
+本卡 verification 的测量方法面（四时刻分离、分母纪律、成本三源、报红义务）全部成立；被测系统面 M04/M05/M06 判 FAIL、M07 判 PASS。按验收模型，本卡交付诚实测量报告；value verdict 以独立审查后在 tasks.json 落定（evidence_verdict 反映测量成立性，不因被测系统 FAIL 而否认测量本身）。

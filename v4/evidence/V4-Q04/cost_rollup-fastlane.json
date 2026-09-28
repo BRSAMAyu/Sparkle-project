@@ -1,0 +1,32 @@
+{
+ "generated": "2026-09-28T23:42:03.597248+00:00",
+ "layers": {
+  "L0": {
+   "db_rows": 91,
+   "db_tokens": 103336,
+   "db_cost": 0.010334000000000003,
+   "frame_only_rows": 0,
+   "frame_tokens": 0,
+   "frame_cost": 0.0,
+   "unmetered": 13,
+   "bench_priced_db_cost": 0.0038432802797202788,
+   "total_cost_est": 0.010334000000000003
+  }
+ },
+ "red_count": 13,
+ "reds": [
+  "L0/L0-r1-02: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r1-02-633e41",
+  "L0/L0-r1-06: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r1-06-e87212",
+  "L0/L0-r1-16: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r1-16-d37dab",
+  "L0/L0-r2-01: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r2-01-563eed",
+  "L0/L0-r2-04: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r2-04-bbc988",
+  "L0/L0-r3-01: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r3-01-ba361f",
+  "L0/L0-r3-02: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r3-02-e8b994",
+  "L0/L0-r3-04: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r3-04-09af4b",
+  "L0/L0-r3-06: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r3-06-88a5f0",
+  "L0/L0-r4-01: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r4-01-f1be63",
+  "L0/L0-r4-06: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r4-06-69151f",
+  "L0/L0-r4-14: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r4-14-34ed21",
+  "L0/L0-r4-16: fully_unmetered_delivered 无usage帧且无token_usage行 req=wtq04-fastlane-l0-r4-16-42c480"
+ ]
+}

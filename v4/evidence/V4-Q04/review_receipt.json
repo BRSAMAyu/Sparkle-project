@@ -1,0 +1,22 @@
+{
+  "task": "V4-Q04",
+  "status": "PENDING",
+  "reviewer": null,
+  "note": "按舰队验收模型：本卡 normal 风险 = 1 位独立审查（未参与会话）在集成 SHA 复验。自称完成不算完成；独立审查通过前本卡 REVIEW_READY 而非 DONE。",
+  "self_check_summary": {
+    "sampling": "main 416/416 delivered（分母 104/层）+ cancel 8 + fastlane 104 + pilot 6，无剔除无重试",
+    "four_moments": "ack/首delta/首有用内容/完整交付逐行分开，澄清门 full_text 路径单列（35 行）",
+    "billing_reds_reported": 4,
+    "real_model_spend_usd": 0.17,
+    "product_code_changed": false,
+    "data_plane_writes": "产品自身代码路径的正常业务写入 + Alembic i06 迁移补齐 + 死信恢复直插 59 行（BillingWorker 同列映射）——均为留证的操作",
+    "secrets": "零回显零落盘；.env 只读 symlink 引用"
+  },
+  "review_anchors": [
+    "scripts/devtools/bench_v4_q04_e2e_latency_cost.py（四时刻定义/冻结 oracle/分母纪律/成本三源是否如 run_manifest 声称；抽样复算 raw-main.jsonl 分位）",
+    "scripts/devtools/recover_q04_billing_deadletter.py（恢复是否严格复用 BillingWorker 列映射；是否仅覆盖 wtq04- 前缀；有无越权改动）",
+    "v4/evidence/V4-Q04/raw/*.jsonl（抽查行：四时刻字段、outcome、is_cache_hit、usage_frame 与 DB 行对账）",
+    "summary-main.md 分位表与 test_results.json 数值一致性",
+    "limits：limitations.md 第 2 节环境偏离的处置是否越权（Alembic 补迁移/凭据历史引用/死信直插）——审查者需独立裁决并在本 receipt 落判"
+  ]
+}
