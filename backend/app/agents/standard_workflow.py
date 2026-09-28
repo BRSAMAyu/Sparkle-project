@@ -3942,6 +3942,21 @@ async def router_node(state: WorkflowState) -> WorkflowState:
             state.context_data["router_confidence"] = 1.0
             return state
 
+    # V4-I03 受限语义选择器（影子）：复杂表达结构探针 + 规则臂/语义臂对照，
+    # 记录落 context_data["semantic_selector"] + metrics，**永不改变路由**
+    # （off = 零行为；live 裁决语义归下游消费卡 V4-I04/I07）。零真模型：
+    # 影子对照不挂 proposer，语义臂如实记 proposer_unavailable 失败形态。
+    if str(settings.SEMANTIC_SELECTOR_MODE or "off").strip().lower() != "off":
+        from app.orchestration.semantic_selector import run_semantic_selector_shadow
+
+        try:
+            await run_semantic_selector_shadow(
+                state.messages[-1]["content"] if state.messages else "",
+                state.context_data,
+            )
+        except Exception:  # noqa: BLE001 — 影子观测失败不阻塞路由
+            logger.opt(exception=True).warning("[SemanticSelector] shadow comparison failed (route unchanged)")
+
     from app.routing.router_node import RouterNode
 
     redis_client = state.context_data.get("redis_client")

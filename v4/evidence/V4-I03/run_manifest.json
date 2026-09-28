@@ -1,0 +1,105 @@
+{
+  "task": "V4-I03",
+  "title": "复杂表达的受限语义选择器",
+  "branch": "agent/v4/i03",
+  "worktree": "wtI03",
+  "base_commit": "f1e68517",
+  "captured_at": "2026-09-28",
+  "environment": {
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.11.15 (worktree .venv symlink -> Sparkle-project/backend/.venv)",
+    "black": "host toolchain (26.x, line-length 120)",
+    "ruff": "host toolchain",
+    "mypy": "host toolchain 1.x",
+    "note": "backend/.venv 为 gitignore 产物经 symlink 复用主工作区；backend/app/gen 为 gitignored 实体目录，从主检出复制（不 symlink、永不提交）"
+  },
+  "required_env_for_local_test_run": {
+    "SECRET_KEY": "ci-test-key",
+    "DATABASE_URL": "sqlite://"
+  },
+  "commands": [
+    {
+      "purpose": "新增测试（验收①②③全可失败面）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_semantic_selector.py -q",
+      "exit_code": 0,
+      "summary": "77 passed in 1.88s"
+    },
+    {
+      "purpose": "受影响面回归（I09 同款面 + 新文件）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_semantic_selector.py tests/unit/test_deterministic_lane.py tests/unit/test_capability_lane.py tests/unit/test_review_skip_logic.py tests/unit/test_review_error_skips_reflection.py tests/unit/test_standard_workflow_generation_routing.py tests/unit/test_q06_resilience_fastfail.py tests/unit/test_stage_events_e03.py tests/unit/test_generation_reasoning_progress.py tests/unit/test_v4_i10_metering_truth.py tests/orchestration/test_response_builder_semantic_meta.py tests/orchestration/test_orchestrator_process_stream_integration.py -q",
+      "exit_code": 0,
+      "summary": "300 passed, 29 warnings in 20.14s"
+    },
+    {
+      "purpose": "orchestration 全量",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/orchestration -q",
+      "exit_code": 0,
+      "summary": "208 passed, 7 warnings in 45.90s"
+    },
+    {
+      "purpose": "agents 面 + 相邻 fastfail/stage_events",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/agents tests/unit/test_q06_resilience_fastfail.py tests/unit/test_stage_events_e03.py -q",
+      "exit_code": 0,
+      "summary": "29 passed, 29 warnings in 9.84s"
+    },
+    {
+      "purpose": "计量/效用门/计费/配额/ai_ops 相邻面",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py tests/unit/test_metering_model_attribution.py tests/unit/test_billing_worker.py tests/unit/test_llm_quota.py tests/unit/test_ai_ops_dashboard.py -q",
+      "exit_code": 0,
+      "summary": "87 passed in 5.07s"
+    },
+    {
+      "purpose": "契约测试全量（干预目录/aurora_decision/action_plan 等冻结面）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/contract -q",
+      "exit_code": 0,
+      "summary": "304 passed, 100 warnings in 12.88s"
+    },
+    {
+      "purpose": "ruff（全部改动文件）",
+      "cmd": "cd backend && ruff check app/orchestration/semantic_selector.py app/core/metrics.py app/config/settings.py app/agents/standard_workflow.py tests/unit/test_semantic_selector.py",
+      "exit_code": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "purpose": "black（新文件 + 非既有漂移文件；standard_workflow 有既有漂移行不触碰）",
+      "cmd": "cd backend && black --check --line-length 120 app/orchestration/semantic_selector.py tests/unit/test_semantic_selector.py app/config/settings.py app/core/metrics.py",
+      "exit_code": 0,
+      "summary": "4 files would be left unchanged"
+    },
+    {
+      "purpose": "mypy 改动文件（含 import 闭包）",
+      "cmd": "cd backend && mypy app/orchestration/semantic_selector.py app/core/metrics.py app/config/settings.py app/agents/standard_workflow.py",
+      "exit_code": 0,
+      "summary": "改动文件零错误（grep 四个文件名零命中；闭包内 38 errors 全部为既有依赖文件错误）"
+    },
+    {
+      "purpose": "mypy 棘轮门（全仓）",
+      "cmd": "bash scripts/ci/mypy_ratchet.sh",
+      "exit_code": 0,
+      "summary": "mypy errors: 71 / baseline: 77 —— 低于基线，零新增（本机平台代际差： coordinator 记录的 54 为另一机器口径，棘轮语义只对 baseline 77 生效）"
+    },
+    {
+      "purpose": "冻结探针语料快照生成（10 正例 + 13 反例全数命中）",
+      "cmd": "probe_complex_expression 语料跑批 → v4/evidence/V4-I03/probe_corpus_snapshot.json",
+      "exit_code": 0,
+      "summary": "all_match=true，23/23 命中（semantic_selector.v4.i03.v1）"
+    }
+  ],
+  "model_budget": {
+    "real_model_calls": 0,
+    "note": "红线遵守：全部测试为 stub/纯规则，本卡零真实模型调用、零上游请求。语义臂 proposer 为协议插口（SemanticProposer，测试用 stub）；真模型 proposer 接入前需按费用授权线先报备（记 limitations）。"
+  },
+  "diff_summary": {
+    "new_files": [
+      "backend/app/orchestration/semantic_selector.py",
+      "backend/tests/unit/test_semantic_selector.py",
+      "v4/evidence/V4-I03/*"
+    ],
+    "modified_files": [
+      "backend/app/agents/standard_workflow.py (router_node 影子钩子，+15 行，flag-gated)",
+      "backend/app/config/settings.py (SEMANTIC_SELECTOR_MODE=off)",
+      "backend/app/core/metrics.py (2 个计数器)",
+      "v4/04_tasks/tasks.json (I03 状态)"
+    ]
+  }
+}

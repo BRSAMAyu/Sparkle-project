@@ -1,0 +1,230 @@
+{
+  "captured_with": "semantic_selector.v4.i03.v1",
+  "corpus": [
+    {
+      "group": "positive_probes",
+      "text": "不是不感兴趣，是资料太多不知道先看哪份",
+      "expected": [
+        "multi_negation"
+      ],
+      "actual": [
+        "multi_negation"
+      ],
+      "match": true,
+      "rule_arm_decision": "semantic_escalate"
+    },
+    {
+      "group": "positive_probes",
+      "text": "我并不是没时间，只是想先整体规划",
+      "expected": [
+        "multi_negation"
+      ],
+      "actual": [
+        "multi_negation"
+      ],
+      "match": true,
+      "rule_arm_decision": "semantic_escalate"
+    },
+    {
+      "group": "positive_probes",
+      "text": "不能说没有进步",
+      "expected": [
+        "multi_negation"
+      ],
+      "actual": [
+        "multi_negation"
+      ],
+      "match": true,
+      "rule_arm_decision": "semantic_escalate"
+    },
+    {
+      "group": "positive_probes",
+      "text": "以后再说吧",
+      "expected": [
+        "time_deferral"
+      ],
+      "actual": [
+        "time_deferral"
+      ],
+      "match": true,
+      "rule_arm_decision": "defer_action"
+    },
+    {
+      "group": "positive_probes",
+      "text": "这个先不安排了",
+      "expected": [
+        "time_deferral"
+      ],
+      "actual": [
+        "time_deferral"
+      ],
+      "match": true,
+      "rule_arm_decision": "defer_action"
+    },
+    {
+      "group": "positive_probes",
+      "text": "还没复习完就要考试了",
+      "expected": [
+        "deadline_pressure"
+      ],
+      "actual": [
+        "deadline_pressure"
+      ],
+      "match": true,
+      "rule_arm_decision": "rescope_deadline"
+    },
+    {
+      "group": "positive_probes",
+      "text": "还剩3天，来不及了",
+      "expected": [
+        "deadline_pressure"
+      ],
+      "actual": [
+        "deadline_pressure"
+      ],
+      "match": true,
+      "rule_arm_decision": "rescope_deadline"
+    },
+    {
+      "group": "positive_probes",
+      "text": "现在没有材料",
+      "expected": [
+        "material_insufficiency"
+      ],
+      "actual": [
+        "material_insufficiency"
+      ],
+      "match": true,
+      "rule_arm_decision": "clarify_missing_material"
+    },
+    {
+      "group": "positive_probes",
+      "text": "资料还没准备好",
+      "expected": [
+        "material_insufficiency"
+      ],
+      "actual": [
+        "material_insufficiency"
+      ],
+      "match": true,
+      "rule_arm_decision": "clarify_missing_material"
+    },
+    {
+      "group": "positive_probes",
+      "text": "找不到复习资料",
+      "expected": [
+        "material_insufficiency"
+      ],
+      "actual": [
+        "material_insufficiency"
+      ],
+      "match": true,
+      "rule_arm_decision": "clarify_missing_material"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "不",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "我不太确定",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "我不知道，也不想知道",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "不是想学",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "以后",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "再说一遍",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "以后每天背50个单词",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "还没开始",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "还有很多天",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "他还没来，我先走了",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "材料",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "没有材料也不影响，我有笔记",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    },
+    {
+      "group": "negative_counterexamples",
+      "text": "现在有材料",
+      "expected": [],
+      "actual": [],
+      "match": true,
+      "rule_arm_decision": "no_complex_expression"
+    }
+  ],
+  "all_match": true
+}
