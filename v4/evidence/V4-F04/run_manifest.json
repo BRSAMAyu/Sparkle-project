@@ -1,0 +1,113 @@
+{
+  "task": "V4-F04",
+  "title": "五Tab Shell与响应式布局升级",
+  "date": "2026-09-28",
+  "executor": "wtF04（worktree /Users/brsama/code/GitHub/wtF04，分支 agent/v4/f04，自 main@71553984 开出）",
+  "source_sha_base": "7155398499674ad6ee3ffea3d97d163b94387d22",
+  "source_sha_head": "工作树（commit 前取证；提交 SHA 见 commit 本体与台账）",
+  "no_push": true,
+  "toolchain": {
+    "flutter": "3.41.3 stable (revision 48c32af034, 2026-02-27)",
+    "host": "darwin 25.6.0 arm64",
+    "gen_note": "mobile/lib/gen 为 gitignored 实体目录：自主检出 cp -R 复制进 worktree（非 symlink，未入库）；l10n 生成文件曾被 flutter pub get 误触再生成（-90 行），已 git checkout 还原，不在 diff 中（与 F02 同现象同处置）"
+  },
+  "locks": {
+    "required": [
+      "mobile-shell"
+    ],
+    "note": "sparkle-coordination-v2 远端未配置于本机（git remote 无此远端），租约登记 NOT_RUN；冲突面自证：diff 不含 features/ 文件、不含 dashboard_screen/compact_status_bar/task_execution_screen、不含 app/routes.dart；本机另有会话在 wtF03 干活，未触碰 mobile-shell 面"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtF04 -b agent/v4/f04 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "依赖解析（新 worktree 无 .dart_tool）",
+      "command": "cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "Got dependencies! 2 packages discontinued（既有约束口径）；副产物 l10n 再生成已还原"
+    },
+    {
+      "id": 3,
+      "purpose": "复制 gitignored 生成目录",
+      "command": "cp -R Sparkle-project/mobile/lib/gen wtF04/mobile/lib/gen",
+      "exit_code": 0
+    },
+    {
+      "id": 4,
+      "purpose": "静态检查（analyze 零 issue 口径）",
+      "command": "cd mobile && flutter analyze --no-pub",
+      "exit_code": 0,
+      "note": "No issues found!（主检出同口径基线亦为 No issues；过程中 26 个 pre-existing error 均为 gen 目录缺失所致，cp 后归零）"
+    },
+    {
+      "id": 5,
+      "purpose": "新 Shell 套件（29 用例：三验收面+零差量面+证据采集，每面一正一反）",
+      "command": "cd mobile && flutter test test/core/navigation/shell/",
+      "exit_code": 0,
+      "note": "+29 全绿（shell_accessibility 3 / shell_classic_zero_delta 4 / shell_deep_link_back 3 / shell_evidence 4 / shell_nav_slot 11 / shell_responsive_layout 4）"
+    },
+    {
+      "id": 6,
+      "purpose": "导航域回归（含 shell_warm_refresh_flag_gate 既有壳测试）",
+      "command": "cd mobile && flutter test test/core/navigation/",
+      "exit_code": 0,
+      "note": "+36 全绿"
+    },
+    {
+      "id": 7,
+      "purpose": "design 域回归（F01 令牌 + F02 像素组件族）",
+      "command": "cd mobile && flutter test test/core/design/",
+      "exit_code": 0,
+      "note": "+160 全绿"
+    },
+    {
+      "id": 8,
+      "purpose": "shell 触达契约钉（U-07 五Tab/N24 badge/成就单通道）",
+      "command": "cd mobile && flutter test test/widget/nav_decontextualization_contract_test.dart test/features/chat/presentation/providers/achievement_single_channel_test.dart test/features/chat/data/services/unread_message_count_notifier_test.dart",
+      "exit_code": 0,
+      "note": "+17 全绿（U-07 匹配器随组件化更新，计数恒 5，见 diff_or_evidence_only）"
+    },
+    {
+      "id": 9,
+      "purpose": "设计棘轮守卫四条",
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py && python3 scripts/guards/check_spacing_rhythm_ratchet.py && python3 scripts/guards/check_typography_rhythm_ratchet.py && python3 scripts/guards/check_dl_spec_ratchet.py",
+      "exit_code": 0,
+      "note": "UI-TOKENS PASS color=225/275 fontSize=634/727；SPACING PASS 1591/1623；TYPO PASS；DL-SPEC PASS（新文件零新增计数）"
+    },
+    {
+      "id": 10,
+      "purpose": "UI 证据落盘（三验收尺寸 + 像素 preview 档顶页截图与语义 dump）",
+      "command": "cd mobile && SHELL_EVIDENCE_DIR=<repo>/v4/evidence/V4-F04 flutter test test/core/navigation/shell/shell_evidence_test.dart",
+      "exit_code": 0,
+      "note": "4 PNG（dpr=2 整壳 RepaintBoundary，Ahem 测试字体块）+ 4 语义 dump（元素树口径，RenderSemanticsAnnotations+RenderParagraph；rootSemanticsNode 在本机 3.41.3 widget-test 泵内恒 null，F02 同口径复跑亦然，口径变更已注记在采集器头注释）"
+    }
+  ],
+  "artifacts": [
+    "shell_classic_360x800.png",
+    "shell_classic_360x800_semantics.txt",
+    "shell_classic_800x600.png",
+    "shell_classic_800x600_semantics.txt",
+    "shell_classic_1280x720.png",
+    "shell_classic_1280x720_semantics.txt",
+    "shell_pixel_paperDay_360x800.png",
+    "shell_pixel_paperDay_360x800_semantics.txt"
+  ],
+  "artifacts_sha256": {
+    "shell_classic_360x800.png": "61f2fee9fd42e3e0e645910b75a7bbce0caa8bc75b891c5f68bcd4f679a69e68",
+    "shell_classic_800x600.png": "d7c672531c775e89ed044c3a1acc81c94f28e1608c2872b00a19444d32645d89",
+    "shell_classic_1280x720.png": "e70b10a82b6767839bf1914b8daced3b2bd582b4e36782e08da010c477360e3c",
+    "shell_pixel_paperDay_360x800.png": "505cb6ba80f34771c71a5743e7b5be27b005fb6abe27292ad4059a14da25a9d9",
+    "shell_classic_360x800_semantics.txt": "c80580ddd960ce2110e8917bb3a77adecaf4d70965c404dc319cf4b4e87ab6e4",
+    "shell_classic_800x600_semantics.txt": "ce8406adc2c9ad76cd5fd7539db89cc95e61932ebcd22ccc8f02c61a4df400f3",
+    "shell_classic_1280x720_semantics.txt": "348d1f06372b03eb78102cd750d7fbe1f9962221f32d2620d9b749a37b2ba069",
+    "shell_pixel_paperDay_360x800_semantics.txt": "c80580ddd960ce2110e8917bb3a77adecaf4d70965c404dc319cf4b4e87ab6e4"
+  },
+  "screenshots_semantics_note": "截图为测试泵顶层整壳画面（Ahem 字体块，真实文案见同族 *_semantics.txt：驾驶舱/星图/对话/社群/我的 + ERROR_PROBE 探针 rect）；语义 dump 坐标即真实操作面——360 档五标签 y≈770（底栏）、1280 档 x=80（常驻侧栏）、错误探针恒在视口内。semantic finder 断言（bySemanticsLabel 星图/角标语义）另在 shell_classic_zero_delta_test 以测试形式常驻。",
+  "llm_usage": "本卡为纯工程实现（无模型调用），actual_model_and_usage = NOT_APPLICABLE",
+  "physical_device_scope": "无真机/模拟器触达；感官面（触觉/音效）仅保留调用时语义（SensoryFeedbackService.emit selection 调用原样），边界照 V4_DONE 注记"
+}

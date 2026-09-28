@@ -1,0 +1,78 @@
+{
+  "task": "V4-F04",
+  "date": "2026-09-28",
+  "scope": "mobile/lib/core/navigation/shell/（新组件族 4 文件 298 行）+ responsive_widgets.dart（ResponsiveScaffold 三档重构）+ shell_navigation.dart（目的地模型化）+ 新测试 7 文件 989 行 + U-07 契约钉匹配器随组件化更新",
+  "suites": [
+    {
+      "path": "mobile/test/core/navigation/shell/",
+      "tests": 29,
+      "passed": 29,
+      "failed": 0,
+      "note": "本卡新测试：nav_slot 11 / responsive_layout 4 / deep_link_back 3 / accessibility 3 / classic_zero_delta 4 / evidence 4（常规跑仅真实渲染断言）；每验收面一正一反"
+    },
+    {
+      "path": "mobile/test/core/navigation/",
+      "tests": 36,
+      "passed": 36,
+      "failed": 0,
+      "note": "含既有 shell_warm_refresh_flag_gate_test（真壳泵制）零改动通过"
+    },
+    {
+      "path": "mobile/test/core/design/",
+      "tests": 160,
+      "passed": 160,
+      "failed": 0,
+      "note": "F01 令牌 + F02 像素组件族回归，theme 通道零触碰的回归面"
+    },
+    {
+      "path": "mobile/test/widget/nav_decontextualization_contract_test.dart + achievement_single_channel + unread_message_count_notifier",
+      "tests": 17,
+      "passed": 17,
+      "failed": 0,
+      "note": "U-07 五Tab铁律（匹配器 NavigationDestination( → ShellDestination(，计数恒5）、N24 badge 机检、成就单通道——全部既有钉保持通过"
+    }
+  ],
+  "total": {
+    "tests": 242,
+    "passed": 242,
+    "failed": 0,
+    "denominator_note": "受影响模块全量：导航域 + design 域 + shell 触达契约钉；非全仓 test（全仓口径以夜间基线为准）"
+  },
+  "analyze": {
+    "command": "flutter analyze --no-pub",
+    "issues": 0,
+    "note": "No issues found!（worktree 复制 gitignored gen 后与主检出基线同口径；过程中无新增）"
+  },
+  "guards": [
+    {"name": "UI-TOKENS", "result": "PASS", "detail": "color=225/275 fontSize=634/727（新文件零计数）"},
+    {"name": "SPACING-RHYTHM", "result": "PASS", "detail": "spacingHalfStep=1591/1623（新文件零半步档）"},
+    {"name": "TYPO-RHYTHM", "result": "PASS", "detail": "sub12=232/234 w800=0/0 w900=6/6"},
+    {"name": "DL-SPEC", "result": "PASS", "detail": "15 维棘轮全降不升"}
+  ],
+  "acceptance_faces": [
+    {
+      "face": "全部旧深链能到同一对象、Back不丢上下文",
+      "tests": ["shell_deep_link_back_test.dart ×3"],
+      "result": "PASS"
+    },
+    {
+      "face": "360宽/800×600/1280×720下主操作和错误可见",
+      "tests": ["shell_nav_slot_test.dart ×11", "shell_responsive_layout_test.dart ×4"],
+      "artifacts": ["shell_classic_360x800.png", "shell_classic_800x600.png", "shell_classic_1280x720.png"],
+      "result": "PASS"
+    },
+    {
+      "face": "系统返回、文本200%、键盘打开不越界",
+      "tests": ["shell_accessibility_test.dart ×3"],
+      "result": "PASS"
+    },
+    {
+      "face": "classic 零差量（Shell 面随调用点举证，F02 N2 注记）",
+      "tests": ["shell_classic_zero_delta_test.dart ×4"],
+      "artifacts": ["shell_pixel_paperDay_360x800.png（反例对照档）"],
+      "result": "PASS"
+    }
+  ],
+  "verdict": "IMPLEMENTATION_SELF_CHECK_PASS",
+  "note": "自报完成不算完成——独立审查（1 位，normal 风险）落账前本卡 REVIEW_READY，非 DONE。"
+}

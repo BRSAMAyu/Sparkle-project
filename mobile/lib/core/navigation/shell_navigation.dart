@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/responsive_widgets.dart';
+import 'package:sparkle/core/navigation/shell/shell.dart';
 import 'package:sparkle/core/providers/release_flags_provider.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -301,34 +302,44 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
     final l10n = AppLocalizations.of(context)!;
     final unreadCount = ref.watch(unreadMessageCountProvider);
 
-    final badgeOverflowLabel = l10n.badgeOverflow;
+    // V4-F04：目的地改为语义数据模型（ShellDestination）——图标语义独立
+    // （semanticsLabel 显式携带，不派生自字形），底栏/rail/侧栏三档呈现
+    // 面共用；route ID 与五 Tab 合同零触碰。
     final destinations = [
-      NavigationDestination(
-        icon: const Icon(Icons.home_outlined),
-        selectedIcon: const Icon(Icons.home),
+      ShellDestination(
+        icon: Icons.home_outlined,
+        selectedIcon: Icons.home,
         label: l10n.home,
+        semanticsLabel: l10n.home,
       ),
-      NavigationDestination(
-        icon: const Icon(Icons.auto_awesome_outlined),
-        selectedIcon: const Icon(Icons.auto_awesome),
+      ShellDestination(
+        icon: Icons.auto_awesome_outlined,
+        selectedIcon: Icons.auto_awesome,
         label: l10n.galaxy,
+        semanticsLabel: l10n.galaxy,
       ),
-      NavigationDestination(
-        icon: const Icon(Icons.forum_outlined),
-        selectedIcon: const Icon(Icons.forum),
+      ShellDestination(
+        icon: Icons.forum_outlined,
+        selectedIcon: Icons.forum,
         label: l10n.chat,
+        semanticsLabel: l10n.chat,
       ),
-      NavigationDestination(
-        icon: _buildBadgedIcon(
-            Icons.groups_outlined, unreadCount, badgeOverflowLabel,),
-        selectedIcon:
-            _buildBadgedIcon(Icons.groups, unreadCount, badgeOverflowLabel),
+      ShellDestination(
+        icon: Icons.groups_outlined,
+        selectedIcon: Icons.groups,
         label: l10n.community,
+        semanticsLabel: l10n.community,
+        badgeCount: unreadCount,
+        badgeSemanticsLabel: unreadCount > 0
+            ? l10n.unreadNotifications(unreadCount)
+            : null,
+        badgeOverflowLabel: l10n.badgeOverflow,
       ),
-      NavigationDestination(
-        icon: const Icon(Icons.person_outlined),
-        selectedIcon: const Icon(Icons.person),
+      ShellDestination(
+        icon: Icons.person_outlined,
+        selectedIcon: Icons.person,
         label: l10n.profile,
+        semanticsLabel: l10n.profile,
       ),
     ];
 
@@ -353,42 +364,6 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         // Phase 1B: Close-to-unlock progress banner
         const AchievementProgressBanner(),
       ],
-    );
-  }
-
-  /// Builds a navigation icon with an unread count badge
-  Widget _buildBadgedIcon(IconData icon, int count, String badgeOverflowLabel) {
-    if (count == 0) return Icon(icon);
-    return Semantics(
-      label: AppLocalizations.of(context)!.unreadNotifications(count),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Icon(icon),
-          Positioned(
-            right: -8,
-            top: -4,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: DS.semanticError,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-              child: Text(
-                count > 9 ? badgeOverflowLabel : '$count',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
