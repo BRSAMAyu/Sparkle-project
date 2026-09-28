@@ -672,7 +672,9 @@ async def test_contract_lock_outcome_identity_single_derivation(db_session, reco
     assert ledger_entry is not None and ledger_entry.outcome_id == derived
 
     absorption = await GalaxyOutcomeAbsorber(db_session).absorb_outcome(payload)
-    assert absorption.action == "lit"
+    # V4-D04：裸任务完成（无独立检验证据）→ PRACTICED（参与足迹），身份推导
+    # 契约锁不变——本测主断言是 outcome 身份单一推导，action 随通道契约更新。
+    assert absorption.action == "practiced"
     status_row = await db_session.get(UserNodeStatus, (user.id, node.id))
     provenance = NodeWithStatus._graph_event_sources(status_row)
     assert any(

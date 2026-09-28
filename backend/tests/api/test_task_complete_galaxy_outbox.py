@@ -266,7 +266,9 @@ async def test_complete_task_persists_galaxy_outbox_event_and_returns_200(tasks_
     payload = json.loads(payload_raw)
     assert payload["user_id"] == str(user.id)
     assert payload["node_id"]
-    assert payload["mastery_score"] > 0
+    # V4-D04：纯时长完成 = 活动痕迹——outbox 事件照常发射（解锁/学习记录
+    # 传播），但 mastery_score 零增长（掌握度只由 VERIFIED 通道推进）。
+    assert payload["mastery_score"] == 0
 
 
 @pytest.mark.asyncio

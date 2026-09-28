@@ -525,9 +525,10 @@ async def test_check_rejects_uncited_or_out_of_set_draft(j06_db):
 # ============================================================================
 
 
-async def test_g02_absorption_lights_once_with_receipt_dedup(j06_db, bus_stub):
-    """完整旅程 → 用户确认 → 任务完成 outcome（POSITIVE）→ G-02 融合恰一次；
-    SUCCEEDED run receipt 同因合并 = duplicate（只补溯源）；双面重放幂等。"""
+async def test_g02_absorption_practiced_once_with_receipt_dedup(j06_db, bus_stub):
+    """完整旅程 → 用户确认 → 任务完成 outcome（POSITIVE）→ V4-D04 能力通道下
+    PRACTICED 恰一次（解锁+溯源，零融合）；SUCCEEDED run receipt 同因合并 =
+    duplicate（只补溯源）；双面重放幂等。"""
     from app.models.galaxy import UserNodeStatus
     from app.services.galaxy.outcome_absorption_service import (
         ABSORBED_OUTCOMES_SNAPSHOT_KEY,
@@ -588,12 +589,18 @@ async def test_g02_absorption_lights_once_with_receipt_dedup(j06_db, bus_stub):
         )
         return result.scalar_one()
 
-    # ① 任务完成 outcome（X-08 既有映射；G-02 既有消费者）→ 点亮
+    # ① 任务完成 outcome（X-08 既有映射；G-02 既有消费者）→ V4-D04 能力通道：
+    # hybrid journey 的确认面附着 agent run receipt 证据（无人类独立检验）→
+    # NON_HUMAN（Agent 产物不计人类能力）——零解锁零融合，只留溯源快照。
     absorber = await _absorb(j06_db, build_outcome_recorded_payload(build_task_outcome_capture(task)))
-    assert absorber is not None and absorber.action == "lit", "任务完成 outcome 必须真实点亮"
+    assert absorber is not None and absorber.action == "non_human", (
+        "Agent run receipt 证据 = NON_HUMAN（V4-D04：Agent 产物不计人类能力）"
+    )
     status = await _status()
+    # is_unlocked 可能已由任务完成 handler 的 spark_node 参与痕迹路径置位
+    # （与吸收器正交）；本测钉吸收器面：零融合零证据行。
     mastery_after_task = float(status.mastery_score)
-    assert len(await _audit_rows()) == 1, "证据行恰一条（append-only 幂等门）"
+    assert len(await _audit_rows()) == 0, "零融合 = 零证据行（掌握度不由 Agent 产物推进）"
 
     # ② 同因 run receipt（J-06 Outcome 段产出的 receipt 面）→ duplicate 只补溯源
     from app.models.agent_run import AgentRun
@@ -604,15 +611,17 @@ async def test_g02_absorption_lights_once_with_receipt_dedup(j06_db, bus_stub):
     receipt_result = await _absorb(
         j06_db, build_outcome_recorded_payload(build_run_receipt_outcome(run_row))
     )
-    assert receipt_result.action == "duplicate", "同因 receipt 不二次融合（不重复点亮）"
+    # V4-D04 非融合通道不做同因 receipt 去重（V3 去重保护的是「防二次点亮」，
+    # 无融合即无双计对象）；receipt 面独立落 NON_HUMAN 溯源，状态幂等。
+    assert receipt_result.action == "non_human", "receipt 面 = Agent 产物通道（独立溯源）"
     assert float((await _status()).mastery_score) == pytest.approx(mastery_after_task), "掌握度不双计"
-    assert len(await _audit_rows()) == 1
+    assert len(await _audit_rows()) == 0
 
     # ③ 双面重放 → 幂等（仍是恰一次点亮）
     await _absorb(j06_db, build_outcome_recorded_payload(build_task_outcome_capture(task)))
     await _absorb(j06_db, build_outcome_recorded_payload(build_run_receipt_outcome(run_row)))
     assert float((await _status()).mastery_score) == pytest.approx(mastery_after_task)
-    assert len(await _audit_rows()) == 1
+    assert len(await _audit_rows()) == 0
 
     # ④ 溯源：两个事件面都在 graph_event_sources 可追溯（reference_id = outcome id）
     status = await _status()
