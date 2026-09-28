@@ -12002,6 +12002,7 @@
     }
   },
   "calNoTimeSet": "未安排时间",
+  "calRescheduleAction": "改期",
   "calHeatView": "热力",
   "calNoHeatData": "暂无热力数据",
   "calStreakDetail": "保持你的成就节奏",

@@ -49,6 +49,29 @@ class GoalDetailNotifier extends StateNotifier<AsyncValue<GoalDetailData>> {
   final Ref _ref;
   final String _goalId;
 
+  /// V4-U08 统一行动语义 · 一次写入：目标页今日步骤的开始/撤销/完成写
+  /// 在飞时，重复点击（双击/连点）合流到同一次服务端写入，不重复 POST。
+  /// 在飞结束即摘除，随后的合法重试照常发起。
+  final Map<String, Future<Object?>> _inFlightStepWrites = {};
+
+  Future<T> _coalesceStepWrite<T>(String key, Future<T> Function() run) {
+    final existing = _inFlightStepWrites[key];
+    if (existing != null) {
+      return existing as Future<T>;
+    }
+    final future = run();
+    _inFlightStepWrites[key] = future;
+    unawaited(
+      future.whenComplete(() {
+        if (identical(_inFlightStepWrites[key], future)) {
+          // Map.remove 会返回被摘除的 Future，显式 ignore。
+          _inFlightStepWrites.remove(key)?.ignore();
+        }
+      }),
+    );
+    return future;
+  }
+
   Future<void> load() async {
     state = const AsyncValue.loading();
     try {
@@ -68,27 +91,34 @@ class GoalDetailNotifier extends StateNotifier<AsyncValue<GoalDetailData>> {
     }
   }
 
-  Future<void> startNextStep() async {
-    final taskId = state.valueOrNull?.todaysMinimalNextStep.taskId;
-    if (taskId == null || taskId.isEmpty) return;
-    try {
-      await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/start');
-      unawaited(load());
-    } catch (e) {
-      rethrow;
-    }
-  }
+  /// V4-U08：开始写在飞时重复点击合流为同一次 POST /start。
+  Future<void> startNextStep() => _coalesceStepWrite<void>('start', () async {
+        final taskId = state.valueOrNull?.todaysMinimalNextStep.taskId;
+        if (taskId == null || taskId.isEmpty) return;
+        try {
+          await _ref
+              .read(apiClientProvider)
+              .post<dynamic>('/tasks/$taskId/start');
+          unawaited(load());
+        } catch (e) {
+          rethrow;
+        }
+      });
 
-  Future<void> undoStartNextStep() async {
-    final taskId = state.valueOrNull?.todaysMinimalNextStep.taskId;
-    if (taskId == null || taskId.isEmpty) return;
-    try {
-      await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/pause');
-      unawaited(load());
-    } catch (e) {
-      rethrow;
-    }
-  }
+  /// V4-U08：撤销写在飞时重复点击合流为同一次 POST /pause。
+  Future<void> undoStartNextStep() =>
+      _coalesceStepWrite<void>('undoStart', () async {
+        final taskId = state.valueOrNull?.todaysMinimalNextStep.taskId;
+        if (taskId == null || taskId.isEmpty) return;
+        try {
+          await _ref
+              .read(apiClientProvider)
+              .post<dynamic>('/tasks/$taskId/pause');
+          unawaited(load());
+        } catch (e) {
+          rethrow;
+        }
+      });
 
   /// 完成今日最小步骤（J-08 闭环起点）。
   ///
@@ -102,29 +132,35 @@ class GoalDetailNotifier extends StateNotifier<AsyncValue<GoalDetailData>> {
   ///    （步骤标题在 reload 前捕获——完成后今日步骤会推进到下一步）。
   ///
   /// 失败路径 rethrow，由调用方按既有错误 snack 处理；未完成不受影响。
-  Future<GoalStepCelebration?> completeNextStep() async {
-    final data = state.valueOrNull;
-    final step = data?.todaysMinimalNextStep;
-    final taskId = step?.taskId;
-    if (data == null ||
-        step == null ||
-        taskId == null ||
-        taskId.isEmpty) {
-      return null;
-    }
-    try {
-      await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/complete');
-      _runCompletionTrajectoryHooks(taskId);
-      unawaited(load());
-      return GoalStepCelebration(
-        taskId: taskId,
-        stepTitle: step.title ?? '',
-        goalTitle: data.goal.title,
-      );
-    } catch (e) {
-      rethrow;
-    }
-  }
+  ///
+  /// V4-U08：完成写在飞时重复点击（双击确认按钮）合流为同一次
+  /// POST /complete——庆祝载荷也只发一次。
+  Future<GoalStepCelebration?> completeNextStep() =>
+      _coalesceStepWrite<GoalStepCelebration?>('complete', () async {
+        final data = state.valueOrNull;
+        final step = data?.todaysMinimalNextStep;
+        final taskId = step?.taskId;
+        if (data == null ||
+            step == null ||
+            taskId == null ||
+            taskId.isEmpty) {
+          return null;
+        }
+        try {
+          await _ref
+              .read(apiClientProvider)
+              .post<dynamic>('/tasks/$taskId/complete');
+          _runCompletionTrajectoryHooks(taskId);
+          unawaited(load());
+          return GoalStepCelebration(
+            taskId: taskId,
+            stepTitle: step.title ?? '',
+            goalTitle: data.goal.title,
+          );
+        } catch (e) {
+          rethrow;
+        }
+      });
 
   /// 服务端确认完成后的客户端轨迹钩子。全部消费既有 provider/事件链，
   /// 不新增存储；单条失败仅记日志——任务在服务端已是完成态。

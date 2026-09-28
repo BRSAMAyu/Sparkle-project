@@ -459,7 +459,10 @@ class _TaskDetailView extends ConsumerWidget {
         subtitle: task.guideContent?.split('\n').first ?? '',
         description: task.userNote,
         metadata: {
-          'duration': task.actualMinutes ?? task.estimatedMinutes,
+          // V4-U08 统一行动语义：分享卡「投入时长」只认实测分钟——估时
+          // （estimatedMinutes）是计划意图，不得冒充完成证据；无实测时
+          // 该指标整体缺席（海报端 null 即跳过），不拿计划数字顶替。
+          if (task.actualMinutes != null) 'duration': task.actualMinutes,
           'completed_at':
               (task.completedAt ?? task.updatedAt).toIso8601String(),
           'task_type': _taskTypeLabel(context, task.type),

@@ -27358,6 +27358,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calNoTimeSet => 'No time set';
 
   @override
+  String get calRescheduleAction => 'Reschedule';
+
+  @override
   String get calHeatView => 'Heat';
 
   @override
