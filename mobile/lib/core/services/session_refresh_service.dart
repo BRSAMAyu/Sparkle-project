@@ -23,6 +23,7 @@ import 'package:sparkle/features/home/presentation/providers/notification_provid
 import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
+import 'package:sparkle/features/journey/data/repositories/first_action_repository.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -57,6 +58,8 @@ final sessionBoundProvidersProvider = Provider<List<ProviderOrFamily>>(
     activeGoalProvider,
     multiGoalOverviewProvider,
     understandingSnapshotProvider,
+    // N-4 / V3-FIX-540：J-04 first-action 投影持有用户 goal（用户态数据面）
+    firstActionStateProvider,
     // N-4：驾驶舱增长/预测/考试冲刺/脊柱状态带（用户态数据面）
     homeGrowthDashboardSnapshotProvider,
     homeDailyContextLineProvider,

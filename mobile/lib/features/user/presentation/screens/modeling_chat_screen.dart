@@ -17,6 +17,7 @@ import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart'
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
 import 'package:sparkle/features/home/home_routes.dart';
+import 'package:sparkle/features/journey/data/repositories/first_action_repository.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
@@ -762,7 +763,12 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
 
   Future<void> _finish() async {
     await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
-    ref.invalidate(profileContextProvider);
+    ref
+      ..invalidate(profileContextProvider)
+      // V3-FIX-540：skip/完成即 journey 终点，首页 FirstActionCard 的
+      // first-action 投影在此刷新——push 进入时 dashboard 分支仍存活，
+      // 不失效则回首页读到 goal 落库前的缓存（R8 间歇缺失根因之一）。
+      ..invalidate(firstActionStateProvider);
     if (!mounted) return;
     final firstMessage = widget.postOnboardingMessage?.trim();
     if (firstMessage != null && firstMessage.isNotEmpty) {

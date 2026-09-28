@@ -62,6 +62,7 @@ import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 import 'package:sparkle/features/insights/presentation/widgets/return_case_file_card.dart';
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
+import 'package:sparkle/features/journey/data/repositories/first_action_repository.dart';
 import 'package:sparkle/features/journey/presentation/widgets/first_action_card.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
@@ -258,6 +259,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ..invalidate(understandingSnapshotProvider)
       ..invalidate(experienceGrowthDashboardProvider)
       ..invalidate(currentGoalDetailSnapshotProvider)
+      // V3-FIX-540：FirstActionCard 的投影同属 dashboard 刷新面——同屏
+      // 写路径（如 cockpit 设目标）后下拉刷新可恢复卡片，不必重开 App。
+      ..invalidate(firstActionStateProvider)
       ..invalidate(examSprintDashboardProvider);
 
     try {

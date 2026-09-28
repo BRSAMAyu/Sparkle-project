@@ -283,7 +283,15 @@ final firstActionRepositoryProvider = Provider<FirstActionRepository>((ref) {
 });
 
 /// 链路状态读面（挂载点自守门：无 goal / 未认证 → null → 卡片零布局影响）.
-final firstActionStateProvider = FutureProvider<FirstActionState?>((ref) {
+///
+/// V3-FIX-540：必须 autoDispose——快车道 goal 落库发生在 dashboard 卸载
+/// 期间（persona/modeling 是 shell 外顶层路由），非 autoDispose 的首次
+/// fetch（soft-wall 阶段 goal 仍为空）会被进程级缓存，skip 重回 dashboard
+/// 重挂载读旧缓存 → 卡片永不浮现（WT792 R 腿 6 跑 4 miss 的根因）。
+/// autoDispose 让每次 dashboard 挂载重查服务端真源，落库后重进必浮现；
+/// 进程重启重放语义不变（真源始终在服务端，本 provider 只是投影）。
+final firstActionStateProvider =
+    FutureProvider.autoDispose<FirstActionState?>((ref) {
   final repository = ref.watch(firstActionRepositoryProvider);
   return repository.fetchState();
 });

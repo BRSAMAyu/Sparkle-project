@@ -11,6 +11,7 @@ import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/journey/data/repositories/first_action_repository.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_onboarding_draft.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
@@ -429,7 +430,11 @@ class _PersonaOnboardingScreenState
         ..invalidate(transparentProfileProvider)
         ..invalidate(profileContextProvider)
         ..invalidate(inferredPreferencesProvider)
-        ..invalidate(activePoliciesProvider);
+        ..invalidate(activePoliciesProvider)
+        // V3-FIX-540：goal 已落库（memory_goals）——first-action 投影必须
+        // 立即失效。push 进入本屏时 dashboard 分支仍在下层存活（卡片仍
+        // listen，autoDispose 不释放），不失效则 pop 回首页读到落库前缓存。
+        ..invalidate(firstActionStateProvider);
       if (userId != null) {
         // 延后问保留在草稿：步进到第一个延后问（学习风格），重进续答
         // 不重填目标。目标已入库（memory_goals），草稿只承载剩余偏好。
@@ -613,7 +618,10 @@ class _PersonaOnboardingScreenState
         ..invalidate(transparentProfileProvider)
         ..invalidate(profileContextProvider)
         ..invalidate(inferredPreferencesProvider)
-        ..invalidate(activePoliciesProvider);
+        ..invalidate(activePoliciesProvider)
+        // V3-FIX-540：全量提交同样落库 learning_goal——first-action 投影
+        // 同步失效（与快车道同一写链纪律）。
+        ..invalidate(firstActionStateProvider);
       // 提交成功 → 引导闭环，草稿使命结束。
       unawaited(_clearDraft());
       if (mounted) {
