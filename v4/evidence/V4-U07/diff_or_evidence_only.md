@@ -6,7 +6,7 @@
 
 基线 commit `e50107fe`（开卡时 main）；分支 `agent/v4/u07`（worktree wtU07，未 push）。
 
-## 差量明细（产品码 6 文件 +201/-7 行，全部 additive 或门内扩展）
+## 差量明细（产品码 7 文件 +252/-7 行，全部 additive 或门内扩展；一审 C-1 勘误：原记 6 文件 +201 系聚合口径不精确，numstat 实测为准）
 
 | 文件 | 变更 | 内容 |
 |---|---|---|
@@ -64,4 +64,4 @@ l10n 再生判例遵循 F06 wt729 同款（arb+gen×3 同步再生成）。
 
 ## 交付物索引
 
-`run_manifest.json`（命令/exit code/版本/环境声明）、`test_results.json`（36 新测试 + 593 受影响面回归 + I09 49 / I03 77 锚明细）、`review_receipt.json`（PENDING，待独立会话在集成 SHA 复验）、`limitations.md`、`ui/`（顶页截图×2 + 语义 dump×2，Ahem 测试字体块形制同 F02 判例，真实文案由语义 txt 承载）。
+`run_manifest.json`（命令/exit code/版本/环境声明）、`test_results.json`（36 新测试 + 595 受影响面回归（一审 C-1 勘误：Δ+2=证据采集 2 个恒执行测试，原 593 为补文件前口径） + I09 49 / I03 77 锚明细）、`review_receipt.json`（PENDING，待独立会话在集成 SHA 复验）、`limitations.md`、`ui/`（顶页截图×2 + 语义 dump×2，Ahem 测试字体块形制同 F02 判例，真实文案由语义 txt 承载）。

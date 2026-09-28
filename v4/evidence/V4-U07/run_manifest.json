@@ -1,83 +1,85 @@
 {
-  "task": "V4-U07",
-  "title": "长对话、代码、RAG与快慢反馈",
-  "branch": "agent/v4/u07",
-  "worktree": "wtU07",
-  "base_commit": "e50107fe03ed4f6ae4d35066fa380923e4dd62f0",
-  "captured_at": "2026-09-29",
-  "lock": "ui-chat",
-  "environment": {
-    "os": "darwin 25.6.0 arm64",
-    "flutter": "3.41.3 stable (framework 48c32af034, engine 14e407f992)",
-    "python_backend_venv": "symlink -> Sparkle-project/backend/.venv（gitignored 产物复用，I09 同判例）",
-    "note": "mobile/lib/gen 与 backend/app/gen 为 gitignored 实体复制（自主检出拷贝，未入库、未手改）；backend/.venv 为符号链接，二者均不进 commit"
+ "task": "V4-U07",
+ "title": "长对话、代码、RAG与快慢反馈",
+ "branch": "agent/v4/u07",
+ "worktree": "wtU07",
+ "base_commit": "e50107fe03ed4f6ae4d35066fa380923e4dd62f0",
+ "captured_at": "2026-09-29",
+ "lock": "ui-chat",
+ "environment": {
+  "os": "darwin 25.6.0 arm64",
+  "flutter": "3.41.3 stable (framework 48c32af034, engine 14e407f992)",
+  "python_backend_venv": "symlink -> Sparkle-project/backend/.venv（gitignored 产物复用，I09 同判例）",
+  "note": "mobile/lib/gen 与 backend/app/gen 为 gitignored 实体复制（自主检出拷贝，未入库、未手改）；backend/.venv 为符号链接，二者均不进 commit"
+ },
+ "required_env_for_local_test_run": {
+  "SECRET_KEY": "test-secret-key-for-local-run（非生产密钥，仅 backend pytest 引导 Settings）",
+  "REDIS_URL": "redis://localhost:6379/0"
+ },
+ "commands": [
+  {
+   "purpose": "新增测试：U07 六文件（每验收面一正一反）",
+   "cmd": "flutter test test/unit/chat_lane_semantics_test.dart test/unit/chat_notifier_lane_capture_test.dart test/features/chat/presentation/providers/chat_scroll_anchor_test.dart test/core/widgets/sparkle_markdown_200_scale_test.dart test/features/chat/presentation/widgets/assistant_lane_marker_test.dart test/features/chat/presentation/widgets/assistant_citation_honesty_test.dart",
+   "exit_code": 0,
+   "summary": "34 passed（14 lane 语义 + 3 provider 捕获 + 4 滚动锚 + 6 缩放 + 4 标记 + 3 引用诚实）"
   },
-  "required_env_for_local_test_run": {
-    "SECRET_KEY": "test-secret-key-for-local-run（非生产密钥，仅 backend pytest 引导 Settings）",
-    "REDIS_URL": "redis://localhost:6379/0"
+  {
+   "purpose": "证据采集测试（真实渲染断言；设 U07_EVIDENCE_DIR 时落盘 PNG+语义 dump）",
+   "cmd": "U07_EVIDENCE_DIR=<evidence>/ui flutter test test/features/chat/presentation/widgets/u07_evidence_capture_test.dart",
+   "exit_code": 0,
+   "summary": "2 passed；落盘 ui/ 4 文件（无 U07_EVIDENCE_DIR 时零副作用，套件保持全绿）"
   },
-  "commands": [
-    {
-      "purpose": "新增测试：U07 六文件（每验收面一正一反）",
-      "cmd": "flutter test test/unit/chat_lane_semantics_test.dart test/unit/chat_notifier_lane_capture_test.dart test/features/chat/presentation/providers/chat_scroll_anchor_test.dart test/core/widgets/sparkle_markdown_200_scale_test.dart test/features/chat/presentation/widgets/assistant_lane_marker_test.dart test/features/chat/presentation/widgets/assistant_citation_honesty_test.dart",
-      "exit_code": 0,
-      "summary": "34 passed（14 lane 语义 + 3 provider 捕获 + 4 滚动锚 + 6 缩放 + 4 标记 + 3 引用诚实）"
-    },
-    {
-      "purpose": "证据采集测试（真实渲染断言；设 U07_EVIDENCE_DIR 时落盘 PNG+语义 dump）",
-      "cmd": "U07_EVIDENCE_DIR=<evidence>/ui flutter test test/features/chat/presentation/widgets/u07_evidence_capture_test.dart",
-      "exit_code": 0,
-      "summary": "2 passed；落盘 ui/ 4 文件（无 U07_EVIDENCE_DIR 时零副作用，套件保持全绿）"
-    },
-    {
-      "purpose": "受影响面回归：chat 全 feature + unit + core/widgets（含 I09/I03/I06/F02/F03 移动端消费面存量测试）",
-      "cmd": "flutter test test/features/chat test/unit test/core/widgets",
-      "exit_code": 0,
-      "summary": "593 passed, ~1 skipped（skip 为既有环境性跳过，非本卡引入）"
-    },
-    {
-      "purpose": "回归锚 I09（快慢分层引擎面 49 用例）——本卡零后端改动，锚证明消费契约两端未漂移",
-      "cmd": "SECRET_KEY=test-secret-key-for-local-run REDIS_URL=redis://localhost:6379/0 backend/.venv/bin/python -m pytest backend/tests/unit/test_deterministic_lane.py -q",
-      "exit_code": 0,
-      "summary": "49 passed in 18.92s"
-    },
-    {
-      "purpose": "回归锚 I03（受限语义选择器 77 用例）",
-      "cmd": "SECRET_KEY=test-secret-key-for-local-run REDIS_URL=redis://localhost:6379/0 backend/.venv/bin/python -m pytest backend/tests/unit/test_semantic_selector.py -q",
-      "exit_code": 0,
-      "summary": "77 passed in 9.71s"
-    },
-    {
-      "purpose": "静态检查（棘轮口径：零新增）",
-      "cmd": "flutter analyze",
-      "exit_code": 0,
-      "summary": "No issues found!（含全部存量面；新增代码 0 info/warning/error）"
-    },
-    {
-      "purpose": "设计棘轮守卫（UI-TOKENS / SPACING-RHYTHM / TYPO-RHYTHM）",
-      "cmd": "bash scripts/run_all_rule_guards.sh --rule UI-TOKENS | --rule SPACING-RHYTHM | --rule TYPO-RHYTHM",
-      "exit_code": 0,
-      "summary": "三守卫全 PASS：color=225/275, fontSize=634/727; spacingHalfStep=1591/1623; sub12FontSize=232/234, fontWeightW800=0/0, W900=6/6（本卡零新增硬编码令牌）"
-    }
-  ],
-  "scope_and_denominator": {
-    "new_tests": 36,
-    "affected_surface_regression": "mobile test/features/chat + test/unit + test/core/widgets = 594 collected（593 passed + 1 既有 skip）",
-    "backend_anchors": "I09 49 + I03 77（本卡 diff 零 backend 文件）",
-    "backend_diff_files": 0,
-    "mobile_product_diff": "6 文件 +201/-7（另 l10n arb×2 + gen×3 再生）"
+  {
+   "purpose": "受影响面回归：chat 全 feature + unit + core/widgets（含 I09/I03/I06/F02/F03 移动端消费面存量测试）",
+   "cmd": "flutter test test/features/chat test/unit test/core/widgets",
+   "exit_code": 0,
+   "summary": "595 passed, ~1 skipped（skip 为既有环境性跳过，非本卡引入）（C-1 勘误口径）"
   },
-  "artifacts_sha256": {
-    "ui/u07_lane_marker.png": "d1359a34e83c22e00686b0ee56d5c65499197052d9f7336e78d40dca0d56f571",
-    "ui/u07_lane_marker_semantics.txt": "a2823c47ad0e91d9d87db66d5eb3f9c72eb0a3e8f0cfd8dc2b9505aa983882d7",
-    "ui/u07_citation_unresolved.png": "054ce509f4d6bbf7675850aa0d25ee1161a7ad6b80af5992ec093871abe2dc9c",
-    "ui/u07_citation_unresolved_semantics.txt": "06a9c4e463412c9fcf7fbc20bd034dbc79bd4d9b8d4b0d4d1efa4e3761401f68"
+  {
+   "purpose": "回归锚 I09（快慢分层引擎面 49 用例）——本卡零后端改动，锚证明消费契约两端未漂移",
+   "cmd": "SECRET_KEY=test-secret-key-for-local-run REDIS_URL=redis://localhost:6379/0 backend/.venv/bin/python -m pytest backend/tests/unit/test_deterministic_lane.py -q",
+   "exit_code": 0,
+   "summary": "49 passed in 18.92s"
   },
-  "screenshots_and_semantics": {
-    "method": "u07_evidence_capture_test.dart 按需落盘（F02 pixel_story_evidence_test 同判例）：真机形制渲染于测试环境（Ahem 块状测试字体），布局/组件/交互为真实 Flutter 渲染与真实 tap 操作；真实文案由 *_semantics.txt 语义树承载",
-    "u07_lane_marker": "助手气泡形制容器内 SparkleMarkdown 模板应答 + 尾部「即时回复 · 问候」标记；语义 label=\"即时回复 · 问候\"",
-    "u07_citation_unresolved": "真实操作=点引用 chip 开定位 sheet；顶层画面含摘录与禁用态「前往文档」（未知引用不造超链接）；语义树 isButton=true 的前往文档节点 onPressed==null 由测试钉死"
+  {
+   "purpose": "回归锚 I03（受限语义选择器 77 用例）",
+   "cmd": "SECRET_KEY=test-secret-key-for-local-run REDIS_URL=redis://localhost:6379/0 backend/.venv/bin/python -m pytest backend/tests/unit/test_semantic_selector.py -q",
+   "exit_code": 0,
+   "summary": "77 passed in 9.71s"
   },
-  "actual_model_and_usage": "本卡零模型调用（纯呈现层消费 I09 既有帧契约；测试全部离线桩流，无 LLM 依赖）",
-  "physical_device_scope": "未涉及传感器/触觉真机面（SensoryFeedbackService 在测试中显式关声/震，不触碰平台通道）"
+  {
+   "purpose": "静态检查（棘轮口径：零新增）",
+   "cmd": "flutter analyze",
+   "exit_code": 0,
+   "summary": "No issues found!（含全部存量面；新增代码 0 info/warning/error）"
+  },
+  {
+   "purpose": "设计棘轮守卫（UI-TOKENS / SPACING-RHYTHM / TYPO-RHYTHM）",
+   "cmd": "bash scripts/run_all_rule_guards.sh --rule UI-TOKENS | --rule SPACING-RHYTHM | --rule TYPO-RHYTHM",
+   "exit_code": 0,
+   "summary": "三守卫全 PASS：color=225/275, fontSize=634/727; spacingHalfStep=1591/1623; sub12FontSize=232/234, fontWeightW800=0/0, W900=6/6（本卡零新增硬编码令牌）"
+  }
+ ],
+ "scope_and_denominator": {
+  "new_tests": 36,
+  "affected_surface_regression": "mobile test/features/chat + test/unit + test/core/widgets = 594 collected（593 passed + 1 既有 skip）",
+  "backend_anchors": "I09 49 + I03 77（本卡 diff 零 backend 文件）",
+  "backend_diff_files": 0,
+  "mobile_product_diff": "6 文件 +201/-7（另 l10n arb×2 + gen×3 再生）"
+ },
+ "artifacts_sha256": {
+  "ui/u07_lane_marker.png": "d1359a34e83c22e00686b0ee56d5c65499197052d9f7336e78d40dca0d56f571",
+  "ui/u07_lane_marker_semantics.txt": "a2823c47ad0e91d9d87db66d5eb3f9c72eb0a3e8f0cfd8dc2b9505aa983882d7",
+  "ui/u07_citation_unresolved.png": "054ce509f4d6bbf7675850aa0d25ee1161a7ad6b80af5992ec093871abe2dc9c",
+  "ui/u07_citation_unresolved_semantics.txt": "06a9c4e463412c9fcf7fbc20bd034dbc79bd4d9b8d4b0d4d1efa4e3761401f68"
+ },
+ "screenshots_and_semantics": {
+  "method": "u07_evidence_capture_test.dart 按需落盘（F02 pixel_story_evidence_test 同判例）：真机形制渲染于测试环境（Ahem 块状测试字体），布局/组件/交互为真实 Flutter 渲染与真实 tap 操作；真实文案由 *_semantics.txt 语义树承载",
+  "u07_lane_marker": "助手气泡形制容器内 SparkleMarkdown 模板应答 + 尾部「即时回复 · 问候」标记；语义 label=\"即时回复 · 问候\"",
+  "u07_citation_unresolved": "真实操作=点引用 chip 开定位 sheet；顶层画面含摘录与禁用态「前往文档」（未知引用不造超链接）；语义树 isButton=true 的前往文档节点 onPressed==null 由测试钉死"
+ },
+ "actual_model_and_usage": "本卡零模型调用（纯呈现层消费 I09 既有帧契约；测试全部离线桩流，无 LLM 依赖）",
+ "physical_device_scope": "未涉及传感器/触觉真机面（SensoryFeedbackService 在测试中显式关声/震，不触碰平台通道）",
+ "affected_surface_regression": "mobile test/features/chat + test/unit + test/core/widgets = 596 collected（595 passed + 1 既有 skip；一审 C-1 勘误：+2=证据采集恒执行测试）",
+ "mobile_product_diff": "7 文件 +252/-7（一审 C-1 勘误：numstat 实测；另 l10n arb×2 + gen×3 再生）"
 }
