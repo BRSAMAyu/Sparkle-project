@@ -919,6 +919,15 @@ class Settings(BaseSettings):
     # off is an explicit ops action (passthrough + no metadata) — wiring
     # guards turn removal of any final-gate call red.
     ENABLE_MEMORY_USE_SELFCHECK: bool = True
+    # V4-I02: optional-history utility gate after the M-03 prefilter in
+    # context_pack.build (stage-2 utility scoring + negative-transfer
+    # suppression on ranked episodic history). Default OFF (gray-release
+    # switch): off = zero behavior change (no gate call, no metadata);
+    # on = gate runs and its metadata lands in pack.metadata.
+    ENABLE_MEMORY_UTILITY_GATE: bool = False
+    # V4-I02: utility-gate budget (optional history TopK; dev-set frozen
+    # initial value per MEMORY_UTILITY_AND_CONFLICT, not a proven optimum).
+    MEMORY_UTILITY_GATE_TOP_K: int = 6
     ENABLE_CONTEXT_BRIEFING: bool = True
     ENABLE_CONTEXT_FOCUS_METADATA: bool = True
     ENABLE_FOCUS_DOCUMENT_CONTEXT: bool = True

@@ -335,6 +335,17 @@ MEMORY_PREFILTER_REJECTIONS_TOTAL = get_or_create_metric(
     ['dimension', 'reason']
 )
 
+# V4-I02 optional-history utility gate (app/services/memory_utility_gate):
+# post-prefilter stage-2 utility decisions on ranked episodic history.
+# outcome=selected/rejected; reason=score_ok/utility_low_score/
+# negative_transfer_cross_type/top_k_cap/required_memory_recall_miss.
+MEMORY_UTILITY_GATE_DECISIONS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_utility_gate_decisions_total',
+    'Optional-history utility gate decisions (V4-I02)',
+    ['outcome', 'reason']
+)
+
 # C-03 knowledge permission prefilter (app/services/context_retrieval_pipeline):
 # candidates cut before rerank/embedding, by dimension (identity/lifecycle) and
 # frozen reason (knowledge:wrong_user / group_inaccessible / unattributed /

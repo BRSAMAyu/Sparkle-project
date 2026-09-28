@@ -1,0 +1,65 @@
+{
+  "V4-I02_backup_before_edit_20260928": {
+    "id": "V4-I02",
+    "title": "合法历史的效用筛选与反向迁移抑制",
+    "depends_on": [
+      "V4-B01",
+      "V4-B03"
+    ],
+    "status": "PENDING",
+    "implementation_state": "NOT_STARTED",
+    "evidence_verdict": "NOT_RUN",
+    "kind": "implementation",
+    "required_locks": [
+      "context-memory"
+    ],
+    "heavy_token_required": false,
+    "risk": "high",
+    "independent_reviewers": 2,
+    "specs": [
+      "MASTER_DESIGN.md",
+      "03_intelligence/MEMORY_UTILITY_AND_CONFLICT.md",
+      "V4_DONE.md"
+    ],
+    "modules": [
+      "memory",
+      "cognitive"
+    ],
+    "source_anchors": [
+      "S03",
+      "S11"
+    ],
+    "objective": "在原Context Compiler预筛后增加optional history效用门；当前约束强制保留，旧失败只在同类型/有效时间影响候选。",
+    "work": "在原Context Compiler预筛后增加optional history效用门；当前约束强制保留，旧失败只在同类型/有效时间影响候选。记录选/拒用原因。",
+    "acceptance": [
+      "FIX52异类型失败不拉向skill/difficulty",
+      "required-memory场景有召回，全部拒用不能过门",
+      "已删/越权/过期/错scope任何条目不入prompt"
+    ],
+    "outputs": [
+      "diff_or_evidence_only.md",
+      "run_manifest.json",
+      "test_results.json",
+      "review_receipt.json",
+      "limitations.md"
+    ],
+    "evidence_required": {
+      "source_sha": true,
+      "build_id": true,
+      "commands_and_exit_codes": true,
+      "scope_and_denominator": true,
+      "artifacts_sha256": true,
+      "actual_model_and_usage_if_llm": true,
+      "screenshots_video_and_semantics_if_ui": true,
+      "physical_device_scope_if_sensory": true
+    },
+    "path_policy": "先按既有规范绑定本卡真实路径与只读依赖；工具/路由名为导航种子，禁止假设已存在或造第二权威。契约/迁移由单一owner单独合并，禁止手改生成文件。",
+    "stop_conditions": [
+      "发现权限/跨用户/删除复活/假成功立即隔离该变更，不绕门",
+      "预算或外部授权缺失→BLOCKED_EXPLICIT，切换其他可执行工作",
+      "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
+    ],
+    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
+    "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+  }
+}

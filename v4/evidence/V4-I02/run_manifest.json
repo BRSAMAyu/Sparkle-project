@@ -1,0 +1,162 @@
+{
+  "task": "V4-I02",
+  "session": "wtI02",
+  "branch": "agent/v4/i02",
+  "base_sha": "ebd878ffe93fe2f8d2581a09eb4d0af5f99be8a3",
+  "base_subject": "state(v4): B01 销账 DONE_REVIEWED（一审 PASS，mobile 子计以 receipt 勘误 +697/-402 为准）",
+  "workspace": "/Users/brsama/code/GitHub/wtI02 (git worktree of /Users/brsama/code/GitHub/Sparkle-project)",
+  "platform": "darwin arm64, macOS 25.6.0, python 3.11 (backend/.venv of main checkout)",
+  "push": "NONE（CI 守望期间零推送；commit 仅本地）",
+  "environment_notes": [
+    "fresh worktree 缺未跟踪生成物：从主检出复制 backend/app/gen（cp -RL 解引用 symlink）、backend/gateway/gen、mobile/lib/gen（仅本进程使用，均 git-ignore，不入 commit）",
+    "pytest 以 SECRET_KEY=x 环境变量运行（Settings 必填项；worktree 无 .env）",
+    "rule guards 经 scripts/run_all_rule_guards.sh（其自带 sqlite DATABASE_URL 钉扎）"
+  ],
+  "commands": [
+    {
+      "id": 1,
+      "command": "cd /Users/brsama/code/GitHub/Sparkle-project && git worktree add ../wtI02 -b agent/v4/i02",
+      "exit_code": 0,
+      "result": "worktree created at ebd878ff"
+    },
+    {
+      "id": 2,
+      "command": "pytest tests/unit/test_memory_utility_gate.py -q",
+      "exit_code": 0,
+      "result": "20 passed in 0.64s（首跑 10 后修 2 处实现/测试缺陷见 limitations）"
+    },
+    {
+      "id": 3,
+      "command": "pytest tests/unit/test_memory_utility_gate_wiring.py tests/unit/test_memory_utility_gate.py -q",
+      "exit_code": 0,
+      "result": "25 passed in 2.36s"
+    },
+    {
+      "id": 4,
+      "command": "pytest tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py tests/unit/test_memory_retrieval_prefilter.py tests/unit/test_context_pack.py tests/unit/test_context_hard_filter_wiring.py tests/unit/test_memory_use_selfcheck_wiring.py tests/unit/test_context_funnel.py tests/unit/test_past_session_memory_ranking.py tests/unit/test_context_retrieval_pipeline.py tests/test_context_manager.py tests/unit/test_context_manager_community_context.py -q",
+      "exit_code": 0,
+      "result": "173 passed, 1 warning in 9.57s"
+    },
+    {
+      "id": 5,
+      "command": "pytest tests/unit/test_context_pack_surface_observability.py tests/unit/test_context_pack_personalized_ranking.py tests/unit/test_preference_supersede_revive.py tests/unit/test_c06_context_budget_compaction.py tests/unit/test_citation_markers.py tests/unit/test_context_pack_conflicts.py tests/unit/test_context_focusing.py tests/unit/test_v3_fix70_deny_quiet_gate.py tests/unit/test_wt364_r2b_import_cycles_smoke.py tests/unit/test_conflict_resolution_context.py tests/unit/test_memory_revival_slim_and_grounding.py tests/unit/test_memory_invalidation_pipeline.py -q",
+      "exit_code": 0,
+      "result": "132 passed in 23.71s"
+    },
+    {
+      "id": 6,
+      "command": "pytest tests/services/test_experience_memory_projector.py tests/contract/test_experience_memory_contract.py -q && pytest tests/unit/test_c03_multi_agent_spine_context.py tests/unit/test_multi_agent_spine_context.py -q",
+      "exit_code": 0,
+      "result": "62 passed; 4 passed"
+    },
+    {
+      "id": 7,
+      "command": "bash scripts/ci/mypy_ratchet.sh",
+      "exit_code": 0,
+      "result": "mypy errors: 55 / baseline: 77（只降不升，未动基线文件）"
+    },
+    {
+      "id": 8,
+      "command": "mypy app/core/context_pack.py app/services/memory_utility_gate.py app/config/settings.py app/core/business_metrics.py --ignore-missing-imports | grep error: | wc -l （worktree） vs 同口径主检出（pre-change）",
+      "exit_code": 0,
+      "result": "30 == 30，diff 为空 → 受触文件 mypy 零漂移；新模块 memory_utility_gate.py 0 error"
+    },
+    {
+      "id": 9,
+      "command": "ruff check app/services/memory_utility_gate.py tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py app/core/context_pack.py app/config/settings.py app/core/business_metrics.py",
+      "exit_code": 0,
+      "result": "All checks passed!（首跑 2 处 SIM300/UP017 已修）"
+    },
+    {
+      "id": 10,
+      "command": "black --check 新增三文件（模块+两测试文件）",
+      "exit_code": 0,
+      "result": "clean；business_metrics/context_pack 的存量 black 债在主检出同样存在（pre-existing），本卡不重排版以保最小差量"
+    },
+    {
+      "id": 11,
+      "command": "bash scripts/run_all_rule_guards.sh",
+      "exit_code": 0,
+      "result": "首轮 K/Z/BG 环境性失败（worktree 复制 gen 含指回主检出的 symlink；缺未跟踪生成 Dart/Go）→ 解引用重拷后复跑，见命令 12"
+    },
+    {
+      "id": 12,
+      "command": "bash scripts/run_all_rule_guards.sh （复跑，gen symlink 修复后）",
+      "exit_code": 0,
+      "result": "全部守卫通过（final run 记录见 test_results.json.rule_guards_final）；ENUM-PARITY PASS 77 条 FAIL=0 WARN=7（既有 WARN），Rule K PASS 84+1389 files，Rule Z PASS，Rule BG PASS 7 protos"
+    }
+  ],
+  "llm_usage": "无模型调用（纯确定性规则门，零 live 预算；无 UI/无感官面）",
+  "r1_remediation": {
+    "trigger": "review_r1.md CHALLENGE-1（commit 91397ce8）：集成面未传 current_type_anchors → FIX52 硬拒在 flag-on 唯一集成面恒不触发（探针：essay_writing 失败 relevance=0.75 score=+0.04 被 SELECTED）",
+    "fix": "方案 (a)：context_pack.build 调用点经 derive_current_type_anchors 派生当次类型锚（结构化声明：plan_type / task by_type / route_intent→intent 回退；取不到传空 + metadata anchors_unavailable=true 如实登记）+ 高相关异类型失败集成回归测",
+    "date": "2026-09-28",
+    "commands": [
+      {
+        "id": "r1-1",
+        "command": "pytest tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py -q",
+        "exit_code": 0,
+        "result": "34 passed in 3.61s（原 25 测全绿 + 新增 9：1 AST 锚钉 + 5 锚派生/锚登记单测 + 探针回归 2 档参数化 + 无锚路径钉）"
+      },
+      {
+        "id": "r1-2",
+        "command": "pytest tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py tests/unit/test_memory_retrieval_prefilter.py tests/unit/test_context_pack.py tests/unit/test_context_hard_filter_wiring.py tests/unit/test_memory_use_selfcheck_wiring.py tests/unit/test_context_funnel.py tests/unit/test_past_session_memory_ranking.py tests/unit/test_context_retrieval_pipeline.py tests/test_context_manager.py tests/unit/test_context_manager_community_context.py -q",
+        "exit_code": 0,
+        "result": "182 passed in 10.50s（原 173 + 新增 9）"
+      },
+      {
+        "id": "r1-3",
+        "command": "pytest tests/unit/test_context_pack_surface_observability.py tests/unit/test_context_pack_personalized_ranking.py tests/unit/test_preference_supersede_revive.py tests/unit/test_c06_context_budget_compaction.py tests/unit/test_citation_markers.py tests/unit/test_context_pack_conflicts.py tests/unit/test_context_focusing.py tests/unit/test_v3_fix70_deny_quiet_gate.py tests/unit/test_wt364_r2b_import_cycles_smoke.py tests/unit/test_conflict_resolution_context.py tests/unit/test_memory_revival_slim_and_grounding.py tests/unit/test_memory_invalidation_pipeline.py -q",
+        "exit_code": 0,
+        "result": "132 passed in 22.23s"
+      },
+      {
+        "id": "r1-4",
+        "command": "pytest tests/services/test_experience_memory_projector.py tests/contract/test_experience_memory_contract.py -q && pytest tests/unit/test_c03_multi_agent_spine_context.py tests/unit/test_multi_agent_spine_context.py -q",
+        "exit_code": 0,
+        "result": "62 passed; 4 passed"
+      },
+      {
+        "id": "r1-5",
+        "command": "ruff check app/services/memory_utility_gate.py tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py app/core/context_pack.py",
+        "exit_code": 0,
+        "result": "All checks passed!"
+      },
+      {
+        "id": "r1-6",
+        "command": "black --check tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py app/services/memory_utility_gate.py",
+        "exit_code": 0,
+        "result": "3 files would be left unchanged"
+      },
+      {
+        "id": "r1-7",
+        "command": "bash scripts/ci/mypy_ratchet.sh",
+        "exit_code": 0,
+        "result": "mypy errors: 55 / baseline: 77（与整改前同值，零漂移）"
+      },
+      {
+        "id": "r1-8",
+        "command": "mypy app/core/context_pack.py --ignore-missing-imports（worktree vs 主检出逐行 diff）",
+        "exit_code": 0,
+        "result": "30 == 30，error 列表逐行 identical → 受触面 mypy 零漂移；context_pack.py/memory_utility_gate.py 自身 0 error"
+      },
+      {
+        "id": "r1-9",
+        "command": "bash scripts/run_all_rule_guards.sh",
+        "exit_code": 0,
+        "result": "all rule guards passed (86 rules)；ENUM-PARITY PASS 77 条 FAIL=0 WARN=7（既有 WARN）"
+      }
+    ],
+    "probe_regression_evidence": "test_flag_on_high_relevance_cross_type_failure_hard_rejected_at_pack_surface[0.75/1.0]：断言 selected=False + negative_transfer_cross_type ∈ reasons + score>0（软分阈上，整改前会入选）+ 不进 pack/prompt + current_type_anchors=[\"chat\"] + anchors_unavailable=false",
+    "existing_tests_modified": "1 处：test_flag_on_suppresses_negative_transfer_keeps_good_recall 的集成面拒用 reason 断言 utility_low_score → negative_transfer_cross_type（整改使集成面由软路径升级为硬拒，语义增强；测试总数 25→34）"
+  },
+  "denominator_scope": "受影响面=memory/context 选择面（context_pack 消费面+prefilter+selfcheck+experience）与新增模块测试；未跑全量 backend 套件（HEAVY=False 轻测边界，见 limitations）",
+  "artifacts": [
+    "v4/evidence/V4-I02/diff_or_evidence_only.md",
+    "v4/evidence/V4-I02/run_manifest.json",
+    "v4/evidence/V4-I02/test_results.json",
+    "v4/evidence/V4-I02/limitations.md"
+  ],
+  "artifacts_sha256": "见 test_results.json.artifacts_sha256（含本文件）",
+  "commit_after": "见 git log agent/v4/i02 首条（feat(v4): I02 合法历史效用筛选与反向迁移抑制）"
+}
