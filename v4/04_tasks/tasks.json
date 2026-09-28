@@ -1156,9 +1156,9 @@
         "V4-I03",
         "V4-B05"
       ],
-      "status": "in_progress",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS",
       "kind": "implementation",
       "required_locks": [
         "hybrid-policy"
@@ -1217,9 +1217,12 @@
       "evidence": "v4/evidence/V4-I07/ (diff_or_evidence_only.md, run_manifest.json, test_results.json, review_receipt.json, limitations.md)",
       "evidence_note": "交付于 wtI07@agent/v4/i07；29 新测试一正一反 + 接线级 RED 证据（stash 回退复跑 1 failed→复绿）；双审未做，evidence_verdict 保持 NOT_RUN（high 待双审）",
       "review": {
-        "r1": "PENDING",
-        "r2": "PENDING",
-        "challenge_preregistered": "review_receipt.json C1-C6（结算门覆盖面/同集防漂移/deliverable 后门/红化绕过/转移表降级/第二真源）"
+        "r1": "8b9ed9ba PASS_WITH_CHALLENGES（F1-F4）",
+        "remediation": "987b79ac 四项全闭+四突变自证",
+        "r2": "b60743de PASS（F3 独立 mutation 复核+五类调用点全查；候选键猎测命中 R2-1）",
+        "r2_1": "Leader 已落：explanation/correct_option/grading.correct 入集剥除（叶子 correct 键）+31 passed",
+        "r2_2_r2_3": "低优先随账（degrade WARN/未知版本从严、N3 备忘）",
+        "integration_reverify": "合并后 31 passed"
       }
     },
     {
