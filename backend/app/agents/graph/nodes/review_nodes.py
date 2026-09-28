@@ -340,6 +340,12 @@ def _should_skip_review(state: SparkleState) -> bool:
     if not enable_deep_review:
         return True
 
+    # V4-I09 快慢分层：确定性快路（零模型模板直出）无生成内容可审——
+    # 显式跳过 review/reflection（L1 不串无必要审查），不依赖长度启发式。
+    context_data_for_lane = _state_get(state, "context_data", {}) or {}
+    if str(context_data_for_lane.get("chat_lane") or "") == "deterministic":
+        return True
+
     # 获取审查配置
     review_config = _state_get(state, "review_config", {})
     config = {**REVIEW_CONFIG_DEFAULTS, **review_config}

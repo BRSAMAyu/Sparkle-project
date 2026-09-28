@@ -1,0 +1,89 @@
+{
+  "task": "V4-I09",
+  "captured_at": "2026-09-28",
+  "branch": "agent/v4/i09",
+  "base_commit": "c67e45a3",
+  "suites": [
+    {
+      "name": "new-tests",
+      "file": "backend/tests/unit/test_deterministic_lane.py",
+      "cmd": "pytest tests/unit/test_deterministic_lane.py -q",
+      "exit_code": 0,
+      "result": "48 passed",
+      "coverage_anchors": {
+        "L0_token0_no_model_attempt": [
+          "test_generation_node_greeting_zero_model_with_lane_marker（fail-if-called 桩：get_configured_llm_service / get_configured_llm_service_for_tier / build_system_prompt 任一被调即 fail；断言零 usage 帧 + lane 标记在场 + 模板 delta 必达 + __end__）",
+          "test_router_node_skips_router_on_deterministic_turn（RouterNode 构造即 fail → 零 embedding 隐含 attempt）",
+          "test_cleanup_zero_model_lane_records_no_synthetic_tokens（record_usage 0+0，估算 0+0）"
+        ],
+        "first_content_not_template_soup": [
+          "test_substantive_messages_fall_back_to_model[13 例：问候+请求复合句/真问题/身份问题/剥词残留/上下文依赖词/深度词/工具意图/个人数据意图/超长刷屏]"
+        ],
+        "routing_and_fallback_contract": [
+          "test_context_guards_block_fast_lane[7 例：tool_flow/chat_mode/deep/文档/专家/显式角色/文档级检索]",
+          "test_document_mode_blocked_via_retrieval_decision_alias",
+          "test_ack_after_assistant_question_falls_back（待提案守卫）",
+          "test_router_node_still_routes_substantive_turn（非快路路由行为保持）"
+        ],
+        "lane_observability": [
+          "test_record_writes_lane_context",
+          "test_generation_node_slow_path_regression_with_flag_off（真模型链路回归 + chat_lane=model + 无 deterministic 标记）",
+          "test_review_skipped_for_deterministic_lane / test_review_not_skipped_for_model_lane_long_content",
+          "test_cleanup_model_lane_keeps_synthetic_estimation（慢路既有估算行为不变）"
+        ],
+        "switch": [
+          "test_flag_defaults_off（ENABLE_DETERMINISTIC_FAST_LANE 默认 False）"
+        ],
+        "incidental_assembly_fix": [
+          "test_secure_messages_normalizes_uppercase_roles（USER→user 等；未知角色 fail-closed 回 user）",
+          "test_secure_messages_keeps_lowercase_roles"
+        ]
+      }
+    },
+    {
+      "name": "affected-regression",
+      "cmd": "pytest <受影响面 16 个测试文件> -q（见 run_manifest.json commands[0]）",
+      "exit_code": 0,
+      "result": "271 passed, 29 warnings in 32.76s",
+      "files": [
+        "tests/unit/test_deterministic_lane.py",
+        "tests/unit/test_capability_lane.py",
+        "tests/unit/test_review_skip_logic.py",
+        "tests/unit/test_review_error_skips_reflection.py",
+        "tests/unit/test_llm_wrapper_signature_contract.py",
+        "tests/unit/test_standard_workflow_generation_routing.py",
+        "tests/unit/test_q06_resilience_fastfail.py",
+        "tests/unit/test_stage_events_e03.py",
+        "tests/unit/test_generation_reasoning_progress.py",
+        "tests/unit/test_standard_workflow_executable_plan_fallback.py",
+        "tests/unit/test_v3_fix155_stream_eof_sentinel.py",
+        "tests/unit/test_v3_fix335_plan_checkpoint_resume.py",
+        "tests/unit/test_stage37_llm_safety_kill_switch.py",
+        "tests/unit/test_request_validator_log_redaction.py",
+        "tests/orchestration/test_response_builder_semantic_meta.py",
+        "tests/orchestration/test_orchestrator_process_stream_integration.py"
+      ]
+    },
+    {
+      "name": "ruff",
+      "cmd": "ruff check <8 个改动文件>",
+      "exit_code": 0,
+      "result": "All checks passed!"
+    },
+    {
+      "name": "mypy-drift-check",
+      "cmd": "mypy <7 个改动文件含 import 闭包>；基线对照 = 临时 worktree @ c67e45a3 同命令",
+      "exit_code": 0,
+      "result": "本分支 30 errors in 30 files = 基线 30 errors in 30 files；错误文件清单逐一对照一致，改动文件零错误 → 基线零漂移",
+      "note": "30 个既有错误全部位于依赖闭包（app/services/*、app/aurora/* 等），与本卡改动无关"
+    }
+  ],
+  "environment_notes": [
+    "运行目录为隔离 worktree（无 .env 入库），符合 tests/_dbguard 方案 2（自然落 sqlite/跳过）；本地 Settings 引导用 SECRET_KEY=test-secret-key-for-local-run",
+    "backend/.venv 与 backend/app/gen 为 gitignore 产物，symlink 复用主工作区（未入库、未手改生成文件）"
+  ],
+  "real_model_budget": {
+    "calls_made": 0,
+    "cap": "≤2 可选冒烟（未使用）；全部测试 mock/纯规则"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "task": "V4-I09",
+  "title": "真正零模型的确定性快路与快慢分层",
+  "branch": "agent/v4/i09",
+  "worktree": "wtI09",
+  "base_commit": "c67e45a3",
+  "captured_at": "2026-09-28",
+  "environment": {
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.11.15 (worktree venv symlink -> Sparkle-project/backend/.venv)",
+    "black": "26.3.1",
+    "note": "backend/.venv 与 backend/app/gen 为 gitignore 产物，经 symlink 复用主工作区（未入库）"
+  },
+  "required_env_for_local_test_run": {
+    "SECRET_KEY": "test-secret-key-for-local-run（非生产密钥，仅本地单测引导 Settings）",
+    "REDIS_URL": "redis://localhost:6379/0"
+  },
+  "commands": [
+    {
+      "purpose": "受影响面 pytest（新增 48 用例 + 既有受影响面回归）",
+      "cmd": "pytest tests/unit/test_deterministic_lane.py tests/unit/test_capability_lane.py tests/unit/test_review_skip_logic.py tests/unit/test_review_error_skips_reflection.py tests/unit/test_llm_wrapper_signature_contract.py tests/unit/test_standard_workflow_generation_routing.py tests/unit/test_q06_resilience_fastfail.py tests/unit/test_stage_events_e03.py tests/unit/test_generation_reasoning_progress.py tests/unit/test_standard_workflow_executable_plan_fallback.py tests/unit/test_v3_fix155_stream_eof_sentinel.py tests/unit/test_v3_fix335_plan_checkpoint_resume.py tests/unit/test_stage37_llm_safety_kill_switch.py tests/unit/test_request_validator_log_redaction.py tests/orchestration/test_response_builder_semantic_meta.py tests/orchestration/test_orchestrator_process_stream_integration.py -q",
+      "exit_code": 0,
+      "summary": "271 passed, 29 warnings in 32.76s"
+    },
+    {
+      "purpose": "ruff（全部改动文件）",
+      "cmd": "ruff check app/orchestration/deterministic_lane.py app/agents/standard_workflow.py app/orchestration/response_builder.py app/core/llm_secure_io.py app/core/metrics.py app/config/settings.py app/agents/graph/nodes/review_nodes.py tests/unit/test_deterministic_lane.py",
+      "exit_code": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "purpose": "mypy 改动文件（含 import 闭包）",
+      "cmd": "mypy app/orchestration/deterministic_lane.py app/agents/standard_workflow.py app/orchestration/response_builder.py app/core/llm_secure_io.py app/agents/graph/nodes/review_nodes.py app/core/metrics.py app/config/settings.py",
+      "exit_code": 0,
+      "summary": "Found 30 errors in 30 files（与基线逐文件对照，全部为既有依赖闭包错误，改动文件零错误）"
+    },
+    {
+      "purpose": "mypy 基线对照（临时 worktree @ c67e45a3，对照后已删除）",
+      "cmd": "git worktree add ../wtI09-base c67e45a3 && mypy <同一文件集>",
+      "exit_code": 0,
+      "summary": "基线同样 30 errors in 30 files，错误文件清单与本分支完全一致 → 零漂移"
+    }
+  ],
+  "model_budget": {
+    "real_model_calls": 0,
+    "note": "红线遵守：全部测试为 mock/纯规则，本卡零真实模型调用、零上游请求（冒烟真调用亦未使用）。B06 t3 探针（上游 400 + rescue 二次调用）为 B06 卡预算内的既有实证，本卡直接引用。"
+  },
+  "diff_summary": {
+    "new_files": [
+      "backend/app/orchestration/deterministic_lane.py",
+      "backend/tests/unit/test_deterministic_lane.py"
+    ],
+    "modified_files": [
+      "backend/app/agents/standard_workflow.py",
+      "backend/app/agents/graph/nodes/review_nodes.py",
+      "backend/app/orchestration/response_builder.py",
+      "backend/app/core/llm_secure_io.py",
+      "backend/app/core/metrics.py",
+      "backend/app/config/settings.py",
+      "v4/04_tasks/tasks.json"
+    ],
+    "stat": "8 files changed, ~250 insertions"
+  }
+}

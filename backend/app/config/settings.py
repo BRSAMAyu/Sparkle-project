@@ -935,6 +935,12 @@ class Settings(BaseSettings):
     # 回归（tier-3 原路径），LLM 失败仍回落确定性 compaction。
     ENABLE_DETERMINISTIC_COMPACTION: bool = True
     ENABLE_LLM_SESSION_SUMMARY: bool = False
+    # V4-I09：真正零模型的确定性快路（orchestration/deterministic_lane.py）——
+    # 问候/确认/无信息量轮走纯模板零上游调用路径（L0 铁律：已知问候不走
+    # 分类+生成双调用），lane=deterministic 与真模型慢路分层可观测。
+    # 默认关（release_flags 同族模式：权威在本 Settings 单例）：关闭时既有
+    # 真模型链路零变化。
+    ENABLE_DETERMINISTIC_FAST_LANE: bool = False
     COMPACTION_RECENT_WINDOW: int = 6
     COMPACTION_KEY_MESSAGE_CAP_TOKENS: int = 220
     # C-06：knowledge JIT（core/knowledge_jit.py）——大知识源只注入

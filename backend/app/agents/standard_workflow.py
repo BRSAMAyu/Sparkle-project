@@ -67,6 +67,12 @@ from app.orchestration.capability_lane import (
 )
 from app.orchestration.chat_modes import CHAT_MODE_TEAM_PREFIX, parse_team_spec
 from app.orchestration.context_focus import infer_route_intent_from_chat_mode
+from app.orchestration.deterministic_lane import (
+    CHAT_LANE_DETERMINISTIC,
+    CHAT_LANE_MODEL,
+    record_deterministic_lane_decision,
+    resolve_deterministic_lane,
+)
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.graph_rag import (
     GraphRAGRetriever,
@@ -1551,6 +1557,38 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     )
     record_capability_lane_decision(capability_lane_decision, context_data=state.context_data)
 
+    # V4-I09 真正零模型的确定性快路（L0 铁律：已知问候/确认不走分类+生成
+    # 双调用；B06 t3 实证问候语现行仍烧流式 400 + rescue 二次上游调用）：
+    # 命中即纯模板直出，零生成调用、零合成估算记账；lane=deterministic
+    # 可观测。开关关闭（默认）时本分支零行为。
+    deterministic_decision = (
+        resolve_deterministic_lane(user_message, state.context_data)
+        if settings.ENABLE_DETERMINISTIC_FAST_LANE
+        else None
+    )
+    if deterministic_decision is not None:
+        record_deterministic_lane_decision(deterministic_decision, context_data=state.context_data)
+        if stream_callback:
+            # WT373 缺陷扫雷#1：同 content oneof 顶字——状态帧（携带 lane 标记
+            # metadata）先行，模板应答文本随后必达。
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.GENERATING,
+                        details="已收到你的消息。",
+                        current_agent_name="Sparkle AI",
+                    ),
+                    metadata={
+                        "chat_lane": CHAT_LANE_DETERMINISTIC,
+                        "deterministic_lane_kind": deterministic_decision.kind.value,
+                    },
+                )
+            )
+            await stream_callback(agent_service_pb2.ChatResponse(delta=deterministic_decision.reply))
+        state.append_message("assistant", deterministic_decision.reply)
+        state.next_step = "__end__"
+        return state
+
     if memory_answer:
         if stream_callback:
             # WT373 缺陷扫雷#1：同 content oneof 顶字——拆两帧，状态先行、
@@ -1951,6 +1989,9 @@ Ask about their available time and current tasks if needed.
     last_flush_at = time.monotonic()
 
     state.context_data["active_generation_agent_role"] = str(getattr(generation_llm, "agent_role", agent_role))
+    # V4-I09 快慢分层：真实模型生成链显式标记 model 慢路（与 deterministic
+    # 快路互斥；gateway/客户端经终帧 metadata.chat_lane 分层观测）。
+    state.context_data["chat_lane"] = CHAT_LANE_MODEL
     selection = generation_llm.get_current_selection()
     run_ledger = state.context_data.get("run_ledger")
     if selection is not None:
@@ -3779,6 +3820,25 @@ async def router_node(state: WorkflowState) -> WorkflowState:
             state.context_data["router_decision"] = "generation"
         state.context_data["router_confidence"] = 1.0
         return state
+
+    # V4-I09 确定性快路：问候/确认/无信息量轮免路由——L0 不走分类+生成双
+    # 调用，RouterNode 的 embedding 相似度调用也是隐含模型 attempt，命中即
+    # 跳过（判定与 generation_node 同一纯函数，两处结论一致；遥测只在
+    # generation 执行点记一次）。显式专家角色优先（永不快路， guards 亦排除）。
+    if not selected_experts and settings.ENABLE_DETERMINISTIC_FAST_LANE:
+        _deterministic_at_router = resolve_deterministic_lane(
+            state.messages[-1]["content"] if state.messages else "",
+            state.context_data,
+        )
+        if _deterministic_at_router is not None:
+            logger.info(
+                "[DeterministicLane] router skip (kind={} trigger={})",
+                _deterministic_at_router.kind.value,
+                _deterministic_at_router.trigger,
+            )
+            state.context_data["router_decision"] = "generation"
+            state.context_data["router_confidence"] = 1.0
+            return state
 
     from app.routing.router_node import RouterNode
 

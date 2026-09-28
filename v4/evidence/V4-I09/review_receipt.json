@@ -1,0 +1,20 @@
+{
+  "task": "V4-I09",
+  "status": "PENDING",
+  "reviewer": null,
+  "note": "按舰队验收模型：本卡 normal 风险 = 1 位独立审查（未参与会话）在集成 SHA（= 本 commit）复验。自称完成不算完成；独立审查通过前本卡 REVIEW_READY 而非 DONE。",
+  "self_check_summary": {
+    "pytest_affected": "271 passed (16 files, 含新增 48 用例)",
+    "ruff": "All checks passed (8 changed files)",
+    "mypy": "改动文件零错误；30 个既有依赖闭包错误与基线 c67e45a3 逐一对照一致（零漂移）",
+    "real_model_calls": 0,
+    "switch_default": "ENABLE_DETERMINISTIC_FAST_LANE=False"
+  },
+  "review_anchors": [
+    "backend/app/orchestration/deterministic_lane.py（判定守卫是否足够保守——剥词校验/待提案守卫/上下文守卫）",
+    "backend/app/agents/standard_workflow.py（router_node 免路由与 generation_node 短路的判定一致性：同一纯函数，两处结论一致）",
+    "backend/app/orchestration/response_builder.py（_cleanup 快路 0+0 不污染；慢路估算行为不变）",
+    "backend/app/core/llm_secure_io.py（角色归一化是否为正交防御而非行为变更）",
+    "开关关闭时逐点零行为（tests/unit/test_deterministic_lane.py 全量）"
+  ]
+}

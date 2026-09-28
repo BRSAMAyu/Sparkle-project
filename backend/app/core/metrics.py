@@ -722,6 +722,17 @@ CHAT_CAPABILITY_LANE_TOTAL = get_or_create_metric(
     ["lane", "memory_class", "retrieval_mode", "trigger"],
 )
 
+# V4-I09 确定性快路（零模型）：问候/确认/无信息量轮零上游直出计数。
+# lane=deterministic 与真模型慢路（capability_lane fast/deliberate，经
+# CHAT_CAPABILITY_LANE_TOTAL）分层可观测；kind/trigger 为封闭枚举
+# （见 deterministic_lane.DeterministicLaneKind 与词表）。
+CHAT_DETERMINISTIC_LANE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_chat_deterministic_lane_total",
+    "Zero-model deterministic fast-lane (L0) template replies per chat turn",
+    ["kind", "trigger"],
+)
+
 # F-2：LLM 结构化输出（推送文案等）解析失败计数。stage=initial 首次解析失败
 # （触发一次"只输出 JSON"重试）；stage=retry 重试仍失败（本次调用落入静态降级
 # 文案）。用于消除"静默降级"：降级不再无遥测标记。

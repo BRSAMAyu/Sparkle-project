@@ -989,6 +989,11 @@ class ResponseBuilderMixin:
         response_metadata["generation_model_tier"] = generation_model_tier
         response_metadata["reasoning_mode"] = reasoning_mode
         response_metadata["chat_mode"] = chat_mode
+        # V4-I09 快慢分层：chat_lane ∈ {deterministic, model} 终帧透传，
+        # 客户端/网关可区分零模型快路与真模型慢路（缺省 = 既有行为，不带键）。
+        chat_lane = str(final_state.context_data.get("chat_lane") or "").strip()
+        if chat_lane:
+            response_metadata["chat_lane"] = chat_lane
         if used_fallback_response:
             response_metadata["response_fallback"] = "generated"
         if final_state.context_data.get("generation_stream_truncated"):
@@ -1649,7 +1654,17 @@ class ResponseBuilderMixin:
                 ).observe(latency)
                 prompt_tokens = total_prompt_tokens
                 completion_tokens = total_completion_tokens
-                if final_state is not None and prompt_tokens <= 0 and completion_tokens <= 0:
+                # V4-I09 快慢分层：确定性快路（零模型模板直出）生成模型从未
+                # 运行，真实 token 恒 0——跳过合成估算（B06 t3 实证模板/备援
+                # 路径曾被估入 44 tok 的 no_generation_model 隐含账）。真模型
+                # 慢路的估算行为保持既有（归 I10 计量卡收敛）。
+                deterministic_lane = str(context_data.get("chat_lane") or "") == "deterministic"
+                if (
+                    final_state is not None
+                    and not deterministic_lane
+                    and prompt_tokens <= 0
+                    and completion_tokens <= 0
+                ):
                     prompt_tokens = self._estimate_text_tokens(
                         self._extract_latest_user_message(final_state.messages),
                     )

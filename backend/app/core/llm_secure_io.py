@@ -140,6 +140,17 @@ def wrap_tool_result(text: str) -> str:
     return f"{_TOOL_RESULT_OPEN}\n{redacted}\n{_TOOL_RESULT_CLOSE}"
 
 
+# 上游 provider（OpenAI 兼容/dashscope 等）只接受小写角色名；大写（如网关/
+# 枚举名回显的 "USER"）会被 dashscope 以 400 Invalid parameter 拒绝
+# （V4-B06 t3 实证）。组装点统一归一化——白名单外的角色回落 "user"。
+_PROVIDER_ROLES = frozenset({"system", "developer", "user", "assistant", "tool", "function"})
+
+
+def _normalize_provider_role(role: Any) -> str:
+    normalized = str(role or "user").strip().lower()
+    return normalized if normalized in _PROVIDER_ROLES else "user"
+
+
 def secure_messages(
     messages: list[dict[str, Any]] | None,
     *,
@@ -152,13 +163,15 @@ def secure_messages(
         _record_bypass("messages")
         for message in messages or []:
             current = dict(message)
+            current["role"] = _normalize_provider_role(current.get("role"))
             content = current.get("content")
             current["content"] = _redact_string_values(content)
             secured.append(current)
         return secured
     for message in messages or []:
         current = dict(message)
-        role = str(current.get("role") or "user")
+        role = _normalize_provider_role(current.get("role"))
+        current["role"] = role
         content = current.get("content")
         if isinstance(content, str):
             safe_content = (
