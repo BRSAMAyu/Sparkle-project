@@ -454,3 +454,21 @@ def test_copy_routers_are_closed_and_pinned():
     }
     with pytest.raises(ValueError):
         copy_key_for_committed_subject("alien")
+
+
+def test_copy_table_canonical_pin_cross_end():
+    """F03 二审 CH-3：跨端 copy 表互钉——canonical sha256 与 mobile 侧
+    kExperienceCopyTable 互钉同一常量（mobile 侧同名测试）。任一侧单边改字/
+    增删键即红；双侧协同修改需同步更新两侧钉值（diff 可见）。"""
+    import hashlib
+    import json
+
+    from app.core.experience_copy import EXPERIENCE_COPY_TABLE
+
+    canonical = json.dumps(
+        EXPERIENCE_COPY_TABLE, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    assert (
+        hashlib.sha256(canonical).hexdigest()
+        == "949757daf0b81e7c31bad47f5ad4a47d6aa559270fd614ecafe6bf431862b200"
+    )

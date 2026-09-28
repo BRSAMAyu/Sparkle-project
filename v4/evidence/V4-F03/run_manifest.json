@@ -8,7 +8,7 @@
   "no_push": true,
   "locks": {
     "required": ["experience-presenter"],
-    "note": "sparkle-coordination-v2 远端未配置于本机（git fetch 无此 remote），租约登记 NOT_RUN；冲突面自证：backend 改动仅 3 文件且全为 additive 挂点/可观测面（action_command_service.py +12、action_proposals.py +8、intervention_record_service.py +11/-1），不触 metrics.py（D03/I04/I08 在航冲突面）、不触 experience_readouts.py（I08 在航）、不触 .env/proto/迁移/生成文件；mobile 改动全为新增文件，零既有文件修改"
+    "note": "sparkle-coordination-v2 远端未配置于本机（git fetch 无此 remote），租约登记 NOT_RUN；冲突面自证：backend 改动仅 3 文件且全为 additive 挂点/可观测面（action_command_service.py +11（二审 C-1' 勘误：原记 +12，numstat 实为 +11）、action_proposals.py +8、intervention_record_service.py +11/-1），不触 metrics.py（D03/I04/I08 在航冲突面）、不触 experience_readouts.py（I08 在航）、不触 .env/proto/迁移/生成文件；mobile 改动全为新增文件，零既有文件修改"
   },
   "commands": [
     {

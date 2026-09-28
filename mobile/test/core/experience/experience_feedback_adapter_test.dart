@@ -3,6 +3,9 @@
 // 契约：B05 §3（experience_event.v1）+ MOTION_AUDIO_HAPTICS 核心合同
 // （缺回执不发成功事件；恢复重放不重复音/震；文本状态仍恢复）。
 // 感官出口注入记录器（无插件依赖）；视觉状态断言走 PixelRunState。
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:sparkle/core/design/pixel/pixel_state.dart';
@@ -294,5 +297,21 @@ void main() {
       await adapter.emitSensory(expired);
       expect(sink.calls, <String>['warning'], reason: '明确操作失败警示一次，无连锁蜂鸣');
     });
+  });
+
+  test('copy 表跨端互钉：canonical sha256 与 backend 侧一致（F03 二审 CH-3）', () {
+    // 与 backend/tests/services/test_experience_presentation_adapter.py 的
+    // test_copy_table_canonical_pin_cross_end 互钉同一常量。任一侧单边改字/
+    // 增删键即红；双侧协同修改需同步更新两侧钉值。
+    final keys = kExperienceCopyTable.keys.toList()..sort();
+    final canonical = StringBuffer('{');
+    for (var i = 0; i < keys.length; i++) {
+      if (i > 0) canonical.write(',');
+      canonical.write('"${keys[i]}":"${kExperienceCopyTable[keys[i]]}"');
+    }
+    canonical.write('}');
+    final digest = sha256.convert(utf8.encode(canonical.toString()));
+    expect(digest.toString(),
+        '9cd2b356126b82428e48d281c9c459d014e726a8a92296ee0a896d76868858f7');
   });
 }

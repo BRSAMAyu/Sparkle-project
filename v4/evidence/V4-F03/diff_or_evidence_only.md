@@ -16,7 +16,7 @@
 | `mobile/lib/core/experience/experience_event.dart` | 新（模型面） | `experience_event.v1` 封闭解析（fail-safe：任何结构违规/E1·E2 破坏/词表外→null，调用方忽略+计数）；词表常量与 D01 逐字对齐 |
 | `mobile/lib/core/experience/experience_feedback_adapter.dart` | 新（呈现面） | 统一反馈入口：去重集合（event_id）→ replay 抑制（不重复震/音/庆祝、文本仍恢复）；version 校验（未知→unknown 态、不符→过期抑制）；subject 语义分层（成功面孔=task/goal/plan；memory→高亮+轻触；run/intervention→中性；证据登记→「证据已登记」）；失败面（version_conflict→conflict、其余→failed 徽章 + 警示触一次）；冻结文案表 17 键镜像 backend；声/触委托既有 SensoryFeedbackService（无第二路径），视觉唯一经 F02 PixelStateBadge/PixelSuccessBadge |
 | `mobile/test/core/experience/`（2 文件） | 新（测试） | 18 测（适配器 14 + 徽章绑定 4） |
-| `backend/app/services/action_command_service.py` | 改 +12 | 两个 additive 挂点：`approve` 成功落账后、`expire_stale_proposals` 过期转场后（均韧性壳，宿主语义零变更） |
+| `backend/app/services/action_command_service.py` | 改 +11（二审勘误） | 两个 additive 挂点：`approve` 成功落账后、`expire_stale_proposals` 过期转场后（均韧性壳，宿主语义零变更） |
 | `backend/app/api/v1/action_proposals.py` | 改 +8 | `approve` 错误面挂点：ActionCommandError → terminal_failed 呈现事件（HTTP 错误映射原样进行） |
 | `backend/app/services/intervention_record_service.py` | 改 +11/-1 | D01 二审 C-2 闭合：`mark_seen` 挂点不再丢弃投影结果——降级 reason 以稳定前缀 `experience_presentation.degraded` 留可观测 warning（转场不受影响） |
 
@@ -44,6 +44,6 @@
 ## 红线自查
 
 - 不碰 .env/proto/迁移/生成文件（`backend/app/gen`、`mobile/lib/gen` 为 gitignored 实体复制，不入库）；不碰 metrics.py（D03/I04/I08 在航冲突面）、experience_readouts.py（I08 在航）、RF-06 令牌面、五 Tab 路由。
-- 纯 additive 挂点：X-03 commit 链路、HTTP 错误映射、SEEN 转场语义零变更（X-03 服务 32 测 + API 16 测 + f507 9 测 + D01 44 测原样全绿）。
+- 纯 additive 挂点：X-03 commit 链路、HTTP 错误映射、SEEN 转场语义零变更（X-03 服务 29 测（二审 C-1 勘误：原记 32） + API 16 测 + f507 9 测 + D01 44 测原样全绿）。
 - 无权限语义字段进入事件与适配器表面（消费方不得由 kind/subject 推导写资格——I1）；无 Mock/人工改库冒充模型结果；零模型调用。
 - 不碰 I07 锁面（hybrid-policy）：未实现 mastery/deliverable 机制，只保证呈现层无精通词、无掌握度声明。
