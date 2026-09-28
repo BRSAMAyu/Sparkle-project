@@ -2405,9 +2405,9 @@
         "V4-F02",
         "V4-I07"
       ],
-      "status": "in_progress",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "PENDING_REVIEW",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS",
       "kind": "implementation",
       "required_locks": [
         "ui-learning"
@@ -2463,7 +2463,13 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "review": {
+        "r1": "03f1d8f1 APPROVE_WITH_CONDITIONS（F-1 出题门缺口+数字失实）",
+        "remediation": "24d8be9c a 案两面落位+词表 v2",
+        "r2": "43be8ee3 PASS（M1 撤 GET 门 2 红/M2 撤判分门 3 红；序列攻击 4 支全 fail-closed；数字五类复算 exact）",
+        "integration_reverify": "合并后（arb 双面并集解）learning 31+后端 journey 套件绿"
+      }
     },
     {
       "id": "V4-U11",
