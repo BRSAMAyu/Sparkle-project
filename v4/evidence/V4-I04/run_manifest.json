@@ -1,0 +1,107 @@
+{
+  "task": "V4-I04",
+  "title": "无动作仍可纠正与一次决策性澄清",
+  "branch": "agent/v4/i04",
+  "worktree": "wtI04",
+  "base_commit": "be495611",
+  "implementation_commit": "2be0be2a",
+  "captured_at": "2026-09-28",
+  "environment": {
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.11.15",
+    "black": "26.3.1 (line-length 120)",
+    "ruff": "0.15.8",
+    "mypy": "1.20.2",
+    "note": "backend/.venv 复用主检出（绝对路径调用）；backend/app/gen 为 gitignored 实体目录，从主检出处复制（不 symlink、永不提交）"
+  },
+  "required_env_for_local_test_run": {
+    "SECRET_KEY": "ci-test-key",
+    "DATABASE_URL": "sqlite://"
+  },
+  "commands": [
+    {
+      "purpose": "新增测试（验收①②③一正一反可失败面 + 接线三档 + I03 移交闭合）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_no_action_supplement.py -q",
+      "exit_code": 0,
+      "summary": "33 passed in 0.56s"
+    },
+    {
+      "purpose": "I03 回归（受限语义选择器；O-2 import 不变式随 import 面）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_semantic_selector.py -q",
+      "exit_code": 0,
+      "summary": "77 passed"
+    },
+    {
+      "purpose": "I09 回归（确定性快路；stuck-policy 域相邻面）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_deterministic_lane.py -q",
+      "exit_code": 0,
+      "summary": "49 passed"
+    },
+    {
+      "purpose": "stuck-policy 澄清预算/接线面回归（本卡直接改动面）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/services/test_friction_chat_wiring.py -q",
+      "exit_code": 0,
+      "summary": "76 passed"
+    },
+    {
+      "purpose": "A-03 引擎 + J-05 旅程 + A-05 patch 相邻面回归（澄清预算权威面）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_a03_friction_diagnosis.py tests/unit/test_j05_stuck_journey_migration_sqlite.py tests/unit/test_policy_patch_migration_sqlite.py -q",
+      "exit_code": 0,
+      "summary": "118 passed"
+    },
+    {
+      "purpose": "orchestration 全量（含 router 影子钩子/response_builder 消费面）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/orchestration -q",
+      "exit_code": 0,
+      "summary": "208 passed, 7 warnings in 47.10s"
+    },
+    {
+      "purpose": "契约测试全量（aurora_decision/干预目录等冻结面——本卡词表 import 只读）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/contract -q",
+      "exit_code": 0,
+      "summary": "352 passed"
+    },
+    {
+      "purpose": "ruff（全部改动文件）",
+      "cmd": "cd backend && ruff check app/aurora/no_action_supplement.py app/services/friction_chat_wiring.py app/orchestration/semantic_selector.py app/config/settings.py app/core/metrics.py tests/unit/test_no_action_supplement.py",
+      "exit_code": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "purpose": "black（改动文件，line-length 120）",
+      "cmd": "cd backend && black --check app/aurora/no_action_supplement.py app/services/friction_chat_wiring.py app/orchestration/semantic_selector.py app/config/settings.py app/core/metrics.py tests/unit/test_no_action_supplement.py",
+      "exit_code": 0,
+      "summary": "6 files would be left unchanged"
+    },
+    {
+      "purpose": "mypy 改动文件（含 import 闭包）",
+      "cmd": "cd backend && mypy app/aurora/no_action_supplement.py app/services/friction_chat_wiring.py app/orchestration/semantic_selector.py",
+      "exit_code": 0,
+      "summary": "改动三文件零错误（grep 文件名零命中；闭包内 30 errors 全部为既有依赖文件既有错误）"
+    },
+    {
+      "purpose": "mypy 棘轮门（全仓）",
+      "cmd": "bash scripts/ci/mypy_ratchet.sh",
+      "exit_code": 0,
+      "summary": "mypy errors: 55 / baseline: 77 —— 与派发时口径一致，零新增"
+    }
+  ],
+  "model_budget": {
+    "real_model_calls": 0,
+    "note": "红线遵守：全部测试为纯规则/引擎重放/fakeredis，本卡零真实模型调用、零上游请求、零 API key 环境（LLMRouter 27 configs 无 key 注册）下全绿。no_action_supplement 为契约层零 IO。"
+  },
+  "diff_summary": {
+    "new_files": [
+      "backend/app/aurora/no_action_supplement.py",
+      "backend/tests/unit/test_no_action_supplement.py",
+      "v4/evidence/V4-I04/*"
+    ],
+    "modified_files": [
+      "backend/app/services/friction_chat_wiring.py (+315/-6，v3→v4：三面接线，flag-gated)",
+      "backend/app/orchestration/semantic_selector.py (+6，I03 O-2 移交闭合：import 期不变式)",
+      "backend/app/config/settings.py (+8，NO_ACTION_CORRECTION_MODE=off)",
+      "backend/app/core/metrics.py (+10，1 计数器)",
+      "v4/04_tasks/tasks.json (I04 状态)"
+    ]
+  }
+}

@@ -1,0 +1,99 @@
+{
+    "task": "V4-I04",
+    "captured_at": "2026-09-28",
+    "python": "3.11.15",
+    "env": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite://",
+    "summary": {
+        "new_tests": 33,
+        "new_tests_file": "backend/tests/unit/test_no_action_supplement.py",
+        "regression_suites_run": 6,
+        "regression_all_green": true,
+        "quality_gates": {
+            "ruff": "pass (6 改动文件)",
+            "black": "pass (6 文件, line-length 120)",
+            "mypy_changed_files": "0 errors (no_action_supplement / friction_chat_wiring / semantic_selector)",
+            "mypy_ratchet": "55 / baseline 77 (≤ baseline，零新增；与派发口径一致)"
+        }
+    },
+    "suites": [
+        {
+            "purpose": "新增：无动作可纠正与一次决策性澄清（验收①②③）",
+            "cmd": "pytest tests/unit/test_no_action_supplement.py -q",
+            "exit_code": 0,
+            "result": "33 passed",
+            "coverage_map": {
+                "acceptance_1_no_proposal_correction": [
+                    "TestSupplementEntry (7 tests: 无提案面入口恒可达/no_action+abstain 可用/act+ask 反例/例子≤2 且不同后果+同名空+目录外 fail-closed/prior=None 翻转 act+合法经验记录/预算不递增/无证据不伪造行动)"
+                ],
+                "acceptance_2_temporary_constraint_and_difficulty": [
+                    "TestTemporaryConstraintAndDifficultyGuard (6 tests: 今日预算会话作用域/每周每次 fail-closed/写授权空集冻结/否定难度零权重归 dependency/否定词牌计分守卫反例/正向难度自报不误伤)"
+                ],
+                "acceptance_3_one_decisive_clarification_and_trace": [
+                    "TestOneDecisiveClarificationAndTrace (6 tests: 斜坡零追问/伪造保守方案拒绝/B1 预算声明出口/B2 不包装/追踪内容寻址+重开可见/跳过暂停封闭词表)"
+                ],
+                "wiring_modes": [
+                    "TestWiringModes (10 tests: off 第二问链保持/shadow 零载荷/live 压第二问出斜坡+追踪/门拦面入口恒可达/自由补充追踪+约束分类/跳过清 pending/暂停可见/live 显式 WARN 一次性/未知档 fail-closed)"
+                ],
+                "i03_handover_closures": [
+                    "TestI03HandoverClosures (3 tests: O-1 语料快照 23 条重算零 mismatch/O-2 干预名 import 不变式复核/档位默认 off 声明)"
+                ],
+                "regression_anchors": [
+                    "引擎预算常量 2/5 不动 + live WARN 标记结构锚 (2 tests)"
+                ]
+            }
+        },
+        {
+            "purpose": "I03 回归（受限语义选择器——O-2 改动面）",
+            "cmd": "pytest tests/unit/test_semantic_selector.py -q",
+            "exit_code": 0,
+            "result": "77 passed"
+        },
+        {
+            "purpose": "I09 回归（确定性快路）",
+            "cmd": "pytest tests/unit/test_deterministic_lane.py -q",
+            "exit_code": 0,
+            "result": "49 passed"
+        },
+        {
+            "purpose": "stuck-policy 接线面回归（本卡直接改动面：FrictionChatWiringService v3→v4）",
+            "cmd": "pytest tests/services/test_friction_chat_wiring.py -q",
+            "exit_code": 0,
+            "result": "76 passed（off 档下 V3 断言全保持——含第二问链/预算计数/pending 生命周期）"
+        },
+        {
+            "purpose": "A-03 引擎 + J-05 + A-05 patch 相邻面（澄清预算权威与旅程面）",
+            "cmd": "pytest tests/unit/test_a03_friction_diagnosis.py tests/unit/test_j05_stuck_journey_migration_sqlite.py tests/unit/test_policy_patch_migration_sqlite.py -q",
+            "exit_code": 0,
+            "result": "118 passed"
+        },
+        {
+            "purpose": "orchestration 全量（router 影子钩子/response_builder friction_decision 消费面）",
+            "cmd": "pytest tests/orchestration -q",
+            "exit_code": 0,
+            "result": "208 passed, 7 warnings"
+        },
+        {
+            "purpose": "契约测试全量（aurora_decision/干预目录冻结面）",
+            "cmd": "pytest tests/contract -q",
+            "exit_code": 0,
+            "result": "352 passed"
+        }
+    ],
+    "failable_evidence": {
+        "note": "每验收面含真实反例（实现撤除即红的具体断言）",
+        "acceptance_1": [
+            "test_entry_absent_on_act_and_ask_surfaces（act/ask 面入口恒缺席——入口恒可用式实现即红）",
+            "test_no_evidence_supplement_keeps_honest_uncertainty（零证据伪造 act 即红）"
+        ],
+        "acceptance_2": [
+            "test_non_today_horizon_fail_closed（每周口径误判即红——本卡实际修掉的正是一个未分组交替导致的此形态假阳）",
+            "test_difficulty_guard_catches_naive_wordmark_counting（否定词牌计分即红）",
+            "test_write_surfaces_structurally_empty（写授权面出现成员即红，import 期亦断言）"
+        ],
+        "acceptance_3": [
+            "test_exit_ramp_rejects_fabricated_conservative_option（无引擎背书保守方案即红）",
+            "test_live_mode_suppresses_second_ask_with_exit_ramp（第二问仍出面即红——off 档对照测试同形验证 V3 行为在）",
+            "test_skip_turn_clears_pending_with_conservative_or_honest_no_action / test_pause_turn_is_visible_user_choice_not_failure（跳过/暂停不可达即红）"
+        ]
+    }
+}
