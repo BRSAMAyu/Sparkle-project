@@ -2403,13 +2403,6 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Curiosity: $value%';
   }
 
-
-
-
-
-
-
-
   @override
   String get learningPathTitle => 'Learning Path';
 
@@ -2703,13 +2696,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaMyProfile => 'My Profile';
 
   @override
-  String get personaL1Title => 'L1 User Declaration';
+  String get personaL1Title => 'What you told me';
 
   @override
-  String get personaL2Title => 'L2 Collaborative Calibration';
+  String get personaL2Title => 'What we calibrated together';
 
   @override
-  String get personaL3Title => 'L3 System Inference';
+  String get personaL3Title => 'What I observed';
 
   @override
   String get personaL3Hint =>
@@ -26264,26 +26257,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get userLoading => 'Loading...';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   @override
   String get userDownloadDataSubtitle =>
       'Download account, learning, and memory data';
@@ -28778,7 +28751,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get acctSecRecentActivity =>
       'Review recent system updates and important account activity changes.';
 
-
   @override
   String modelChatTempFailed(Object error) {
     return 'Modeling chat temporarily unavailable: $error';
@@ -28793,8 +28765,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String modelChatPlanIssue(Object error) {
     return 'Plan generation encountered an issue: $error';
   }
-
-
 
   @override
   String get settGrowthChronicleSaving =>
@@ -33216,13 +33186,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get understandingScopeDomain => 'For related topics';
 
   @override
-  String get understandingScopeSession => 'This session only';
+  String get understandingScopeSession => 'Only in this conversation';
 
   @override
   String get understandingActionEdit => 'Edit';
 
   @override
-  String get understandingActionDelete => 'Delete';
+  String get understandingActionDelete => 'Forget';
 
   @override
   String get understandingActionPause => 'Pause';
@@ -33231,7 +33201,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get understandingActionResume => 'Resume';
 
   @override
-  String get understandingActionScope => 'Limit to a goal';
+  String get understandingActionScope => 'Only for this goal';
 
   @override
   String get understandingActionWhy => 'Why do I have this';
@@ -33243,7 +33213,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get understandingEditLabel => 'Change to';
 
   @override
-  String get understandingDeleteTitle => 'Delete this item?';
+  String get understandingDeleteTitle => 'Forget this item?';
 
   @override
   String get understandingDeleteBody =>
@@ -33280,7 +33250,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get understandingToastDeleted =>
-      'Deleted. Sparkle will no longer use this.';
+      'Forgotten. Sparkle will no longer use this.';
 
   @override
   String get understandingToastPaused =>
@@ -34664,4 +34634,160 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0 ($percent%)';
   }
+
+  @override
+  String get contextReceiptSectionTitle => 'This session\'s understanding';
+
+  @override
+  String contextReceiptIntro(Object role) {
+    return 'What Sparkle actually drew on in its most recent $role. Every item can be checked against its source, and changed or forgotten at any time.';
+  }
+
+  @override
+  String get contextReceiptRoleChatContext => 'conversation';
+
+  @override
+  String get contextReceiptRoleProposalBasis => 'proposal';
+
+  @override
+  String get contextReceiptRoleResumeView => 'session resume';
+
+  @override
+  String get contextReceiptRoleIntervention => 'check-in';
+
+  @override
+  String get contextReceiptRoleUnknown => 'decision';
+
+  @override
+  String get contextReceiptWhyNowTitle => 'Why now';
+
+  @override
+  String get contextReceiptWhyNowBandHigh => 'fairly confident';
+
+  @override
+  String get contextReceiptWhyNowBandMedium => 'somewhat confident';
+
+  @override
+  String get contextReceiptWhyNowBandLow => 'not very confident';
+
+  @override
+  String get contextReceiptWhyNowBandUnknown => 'not sure yet';
+
+  @override
+  String contextReceiptSelectedTitle(Object resolved, Object total) {
+    return 'Used $total item(s) this time; $resolved of them can be checked against their source.';
+  }
+
+  @override
+  String get contextReceiptSelectedNone =>
+      'No memory content was referenced this time.';
+
+  @override
+  String contextReceiptUnattributedSelected(Object count) {
+    return '$count of them can no longer be located (you may have deleted or changed them).';
+  }
+
+  @override
+  String get contextReceiptKindEpisodic => 'an experience record';
+
+  @override
+  String get contextReceiptKindPreference => 'a preference';
+
+  @override
+  String get contextReceiptKindGoal => 'a goal';
+
+  @override
+  String contextReceiptKindOther(Object kind) {
+    return 'a $kind record';
+  }
+
+  @override
+  String get contextReceiptSourceResolved => 'source verified';
+
+  @override
+  String get contextReceiptRejectedTitle => 'Not used this time, and why';
+
+  @override
+  String get contextReceiptReasonOutOfScope => 'outside this session\'s scope';
+
+  @override
+  String get contextReceiptReasonStale =>
+      'deleted or replaced by newer content';
+
+  @override
+  String get contextReceiptReasonLowUtility => 'judged not helpful this time';
+
+  @override
+  String get contextReceiptReasonConflicts =>
+      'conflicts with a preference you confirmed';
+
+  @override
+  String get contextReceiptReasonPermission =>
+      'you asked Sparkle not to use it';
+
+  @override
+  String get contextReceiptReasonBudget => 'only so much fits in one session';
+
+  @override
+  String get contextReceiptReasonDuplicate => 'duplicates other content';
+
+  @override
+  String get contextReceiptReasonExpired => 'no longer current';
+
+  @override
+  String contextReceiptReasonUnknownCount(Object count) {
+    return '$count item(s) have no stated reason.';
+  }
+
+  @override
+  String get contextReceiptBudgetNote =>
+      '\"Only so much fits\" describes that one choice, and never limits your ability to change or forget anything.';
+
+  @override
+  String get contextReceiptCandidatesUnknown =>
+      'This receipt is missing its candidate details.';
+
+  @override
+  String get contextReceiptModeOff =>
+      'Understanding receipts are not enabled yet.';
+
+  @override
+  String get contextReceiptModeShadow =>
+      'Understanding receipts are being recorded; showing them is not enabled yet.';
+
+  @override
+  String contextReceiptModeOther(Object mode) {
+    return 'Understanding receipts are not shown (current mode: $mode).';
+  }
+
+  @override
+  String get contextReceiptEmpty =>
+      'No understanding receipt was produced this time (for example, after a simple reply).';
+
+  @override
+  String get contextReceiptUnsupported =>
+      'This receipt version is not supported yet, so it was skipped as-is.';
+
+  @override
+  String get contextReceiptOffline =>
+      'Can\'t reach Sparkle right now — check back for this session\'s understanding later.';
+
+  @override
+  String contextReceiptOfflineDetail(Object detail) {
+    return 'Can\'t reach Sparkle right now ($detail) — check back later.';
+  }
+
+  @override
+  String get contextReceiptForgotten => 'forgotten';
+
+  @override
+  String get contextScopeConflictCopy =>
+      'This item was just changed somewhere else. Your change was stopped — nothing was overwritten.';
+
+  @override
+  String get contextConflictRefresh => 'Refresh and retry';
+
+  @override
+  String get personaQuickAccessThisTimeUnderstanding =>
+      'This session\'s understanding';
 }

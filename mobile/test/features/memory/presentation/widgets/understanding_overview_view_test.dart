@@ -16,7 +16,7 @@ import '../../../../shared/i18n_test_helper.dart';
 /// - 四组分组渲染（bucket_label 用户语言）；
 /// - 黑话移除断言（无「条判断 / 高置信百分比」主呈现）；
 /// - Why-this receipt 渲染（含 honest-unknown）；
-/// - 修改/删除/暂停操作调用真实 repository 契约。
+/// - 修改/忘记/暂停操作调用真实 repository 契约（V4-U03 黑话清理：删除→忘记）。
 class _FakeProvenanceRepository implements MemoryProvenanceRepository {
   List<ProvenanceMemoryItem> items = [];
   String? updatedContent;
@@ -402,10 +402,10 @@ void main() {
       ..items = [_entry(id: 'a', bucket: 'told', label: '你告诉我的')];
     await _pump(tester, repo);
 
-    await tester.tap(find.text('删除'));
+    await tester.tap(find.text('忘记'));
     await tester.pumpAndSettle();
-    // 确认对话框里的「删除」。
-    await tester.tap(find.widgetWithText(SparkleButton, '删除').last);
+    // 确认对话框里的「忘记」（V4-U03 黑话清理：删除→忘记）。
+    await tester.tap(find.widgetWithText(SparkleButton, '忘记').last);
     await tester.pumpAndSettle();
 
     expect(repo.revokedId, 'a');

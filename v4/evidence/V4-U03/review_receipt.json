@@ -1,0 +1,36 @@
+{
+  "card": "V4-U03",
+  "risk": "normal",
+  "independent_reviewers_required": 1,
+  "implementation_state": "REVIEW_READY",
+  "evidence_verdict": "NOT_RUN",
+  "reviewer_instructions": "以卡面三条验收为准（必须可失败）：①键盘与200%字体 ②并发 scope 版本冲突不静默覆盖 ③解释预算不限制纠正/删除权。逐条独立复跑（可失败性亲验：反转任一断言应红），红线清单见 diff_or_evidence_only.md 红线自查节。",
+  "status": "PENDING",
+  "pre_registered_challenges": [
+    {
+      "id": "CH-1",
+      "challenge": "写前核对是客户端「乐观锁近似」：GET /scope 与 PUT 之间仍有竞窗（TOCTOU）。后端 PUT 无 expected_version 入参（M-08 契约归其 owner），行锁+终态 409 兜底是否足以支撑「不静默覆盖」的强断言？建议审查者验证：终态（revoked）下 link/pause 的 409 路径真实可达（backend 测试已在库），以及本卡 409→冲突面映射无吞错。"
+    },
+    {
+      "id": "CH-2",
+      "challenge": "核对不可得（断网）放行写入——这是「不设新闸保删除权」（验收③方向）与「不静默覆盖」（验收②方向）的权衡点。请审查者评估该缺省方向是否符合卡面语义；反例测试钉死了放行路径，若裁决应改为「核对不到即停」，实现为一处守卫分支可改。"
+    },
+    {
+      "id": "CH-3",
+      "challenge": "回执面板「忘记」仅绑定 resolution=resolved 的 selected memory://（三类 kind）；unresolved selected 显式 unattributed 且无操作。请审查者验证：不得出现对不可定位 ref 的操作入口（防误删未知对象），同时未归因/不可定位不得被渲染成已理解内容或静默丢弃。"
+    },
+    {
+      "id": "CH-4",
+      "challenge": "F03 反向面的边界：本卡 memory 操作成功只有中性文案（无成功徽章/声触），PixelSuccessBadge findsNothing 已三处钉死。若审查中发现任何成功面孔路径（含 AppFeedback.success 在 V3 四组视图的既有用法——toast 性质、非成功模态），请裁决是否升级为 F03 语义违规或维持「toast=中性文本呈现」口径。"
+    },
+    {
+      "id": "CH-5",
+      "challenge": "黑话清理动了共享 l10n 键（understandingActionDelete/Scope/Session、personaL1-3Title），既有测试钉值随之更新。请审查者确认：更新仅限文案定位、无断言强度下降（删除流程断言仍走完整确认+revoke 链），且 en/zh 双语同步无漂移。"
+    },
+    {
+      "id": "CH-6",
+      "challenge": "证据截图为 Ahem 方块字形（测试环境无 CJK 字体，F04 同先例）——「顶层截图+语义」的组合是否满足卡面『有UI附顶层截图、语义与真实操作』的证据要求，请审查者按 F04 先例口径裁决。"
+    }
+  ],
+  "integration_reverify": "合并后需在集成 SHA 复跑：flutter test（全量，基线 +2817 ~23 全绿）+ flutter analyze（零 issue）+ 四棘轮守卫"
+}

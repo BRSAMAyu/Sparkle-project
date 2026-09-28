@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart'
@@ -22,6 +23,7 @@ class UnderstandingOverviewState {
     this.hasMore = false,
     this.scanCapped = false,
     this.pendingActionIds = const {},
+    this.conflictItemIds = const {},
     this.lastEffect,
   });
 
@@ -41,6 +43,10 @@ class UnderstandingOverviewState {
 
   /// 操作进行中的条目 id。
   final Set<String> pendingActionIds;
+
+  /// V4-U03：scope 校准冲突条目 id（写前读核对发现并发更改 / 后端 409）。
+  /// 命中条目呈现冲突面（conflict 徽章 + 重新核对），绝不静默覆盖。
+  final Set<String> conflictItemIds;
 
   /// 最近一次成功操作的可见效果（真实后端返回，绝不本地编造）。
   final UnderstandingEffect? lastEffect;
@@ -65,6 +71,7 @@ class UnderstandingOverviewState {
     bool? hasMore,
     bool? scanCapped,
     Set<String>? pendingActionIds,
+    Set<String>? conflictItemIds,
     Object? lastEffect = _sentinel,
   }) =>
       UnderstandingOverviewState(
@@ -76,6 +83,7 @@ class UnderstandingOverviewState {
         hasMore: hasMore ?? this.hasMore,
         scanCapped: scanCapped ?? this.scanCapped,
         pendingActionIds: pendingActionIds ?? this.pendingActionIds,
+        conflictItemIds: conflictItemIds ?? this.conflictItemIds,
         lastEffect: lastEffect == _sentinel
             ? this.lastEffect
             : lastEffect as UnderstandingEffect?,
@@ -102,6 +110,20 @@ class UnderstandingEffect {
   final ProvenanceMemoryItem? newItem;
 }
 
+/// V4-U03 · scope 校准冲突：写前读核对发现服务端状态与所见不一致
+/// （并发更改），或后端 409——绝不静默覆盖，操作就此停止并呈现冲突面。
+class MemoryScopeConflictError implements Exception {
+  const MemoryScopeConflictError(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+/// 判定一个错误是否 scope 校准冲突（类型化守卫 + 后端 409 同面）。
+bool isScopeConflict(Object error) =>
+    error is MemoryScopeConflictError ||
+    (error is DioException && error.response?.statusCode == 409);
+
 class UnderstandingOverviewNotifier
     extends StateNotifier<UnderstandingOverviewState> {
   UnderstandingOverviewNotifier(this._repository, this._ref)
@@ -111,7 +133,11 @@ class UnderstandingOverviewNotifier
   final Ref _ref;
 
   Future<void> load() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      conflictItemIds: const <String>{},
+    );
     try {
       final result = await _repository.listItems();
       if (!mounted) {
@@ -222,7 +248,8 @@ class UnderstandingOverviewNotifier
     ProvenanceMemoryItem item, {
     required bool paused,
   }) async {
-    await _runAction(item.id, () async {
+    await _guardedScopeWrite(item.id, () async {
+      await _ensureScopeUnchanged(item, expectedPaused: !paused);
       final result = await _repository.updateScope(
         item.kind,
         item.id,
@@ -241,7 +268,8 @@ class UnderstandingOverviewNotifier
     ProvenanceMemoryItem item, {
     required String planId,
   }) async {
-    await _runAction(item.id, () async {
+    await _guardedScopeWrite(item.id, () async {
+      await _ensureScopeUnchanged(item);
       final result = await _repository.updateScope(
         item.kind,
         item.id,
@@ -262,7 +290,8 @@ class UnderstandingOverviewNotifier
     ProvenanceMemoryItem item, {
     required String taskId,
   }) async {
-    await _runAction(item.id, () async {
+    await _guardedScopeWrite(item.id, () async {
+      await _ensureScopeUnchanged(item);
       final result = await _repository.updateScope(
         item.kind,
         item.id,
@@ -275,6 +304,73 @@ class UnderstandingOverviewNotifier
         memoryEpoch: (result['memory_epoch'] as num?)?.toInt(),
       );
     });
+  }
+
+  /// scope 写统一入口：写前核对与写后回执共用冲突登记位——守卫阶段
+  /// （写前核对）与真实变更链阶段（后端 409）的冲突同面呈现。
+  Future<void> _guardedScopeWrite(
+    String itemId,
+    Future<UnderstandingEffect> Function() action,
+  ) async {
+    try {
+      await _runAction(itemId, action);
+    } on MemoryScopeConflictError {
+      if (mounted) {
+        state = state.copyWith(
+          conflictItemIds: {...state.conflictItemIds, itemId},
+        );
+      }
+      rethrow;
+    }
+  }
+
+  /// V4-U03 验收②：scope 写前读核对——服务端当前状态与用户所见不一致
+  /// （并发更改）即停，抛 [MemoryScopeConflictError]，**绝不静默覆盖**。
+  ///
+  /// 核对以 GET /scope 的真实服务端投影为准：paused 位 + scope 投影
+  /// （level 与 plan/task 绑定）逐项一致才放行。核对请求本身失败（断网）
+  /// 不构成阻塞门：放行到真实变更链，由后端行锁 + 终态 409 兜底（对账
+  /// 语义同 F03——核对不到 ≠ 核对通过，失败面照常呈现）。
+  Future<void> _ensureScopeUnchanged(
+    ProvenanceMemoryItem item, {
+    bool? expectedPaused,
+  }) async {
+    Map<String, dynamic> current;
+    try {
+      current = await _repository.getScope(kind: item.kind, id: item.id);
+    } on MemoryScopeConflictError {
+      rethrow;
+    } catch (_) {
+      return; // 核对不可得：不预判，交给后端真实变更链裁决
+    }
+    if (current['editable'] == false) {
+      throw const MemoryScopeConflictError('memory no longer editable');
+    }
+    if (expectedPaused != null && (current['paused'] == true) != expectedPaused) {
+      throw MemoryScopeConflictError(
+          'paused state changed concurrently (${item.id})',);
+    }
+    final serverScope = current['scope'] is Map
+        ? Map<String, dynamic>.from(current['scope'] as Map)
+        : const <String, dynamic>{};
+    if (!_sameScope(serverScope, item.scope)) {
+      throw MemoryScopeConflictError('scope changed concurrently (${item.id})');
+    }
+  }
+
+  /// scope 投影等价（level 与 plan/task 绑定逐键一致；忽略呈现无关键）。
+  static bool _sameScope(Map<String, dynamic> a, Map<String, dynamic> b) {
+    if (a['level']?.toString() != b['level']?.toString()) {
+      return false;
+    }
+    for (final key in const ['plan_id', 'task_id']) {
+      final av = a[key]?.toString();
+      final bv = b[key]?.toString();
+      if ((av ?? '') != (bv ?? '')) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// Why-this receipt（查看来源）。
@@ -300,16 +396,28 @@ class UnderstandingOverviewNotifier
       state = state.copyWith(
         pendingActionIds:
             state.pendingActionIds.where((id) => id != itemId).toSet(),
+        conflictItemIds:
+            state.conflictItemIds.where((id) => id != itemId).toSet(),
         lastEffect: effect,
       );
       await _syncAfterMutation();
     } catch (e) {
       if (mounted) {
-        state = state.copyWith(
-          pendingActionIds:
-              state.pendingActionIds.where((id) => id != itemId).toSet(),
-          error: provenanceErrorDetail(e),
-        );
+        if (isScopeConflict(e)) {
+          // 冲突面（验收②）：登记条目冲突位供内联 conflict 徽章呈现，
+          // 不静默覆盖；错误仍上抛由调用方决定是否 toast。
+          state = state.copyWith(
+            pendingActionIds:
+                state.pendingActionIds.where((id) => id != itemId).toSet(),
+            conflictItemIds: {...state.conflictItemIds, itemId},
+          );
+        } else {
+          state = state.copyWith(
+            pendingActionIds:
+                state.pendingActionIds.where((id) => id != itemId).toSet(),
+            error: provenanceErrorDetail(e),
+          );
+        }
       }
       rethrow;
     }

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/memory/presentation/providers/context_receipt_provider.dart';
 import 'package:sparkle/features/memory/presentation/providers/understanding_overview_provider.dart';
+import 'package:sparkle/features/memory/presentation/widgets/context_receipt_panel.dart';
 import 'package:sparkle/features/memory/presentation/widgets/understanding_overview_view.dart';
 
 /// 「Sparkle 对我的理解」完整视图（U-03 四组 + Why-this receipt + 操作）。
@@ -11,6 +13,9 @@ import 'package:sparkle/features/memory/presentation/widgets/understanding_overv
 /// 30 秒测试（acceptance ①）：进入即见四组（你告诉我的 / 我从你的行动中
 /// 观察到的 / 我还不确定的 / 对你有效过的方法），每组条目自带来源与操作，
 /// 顶部一句话说明"这是什么、能改什么"。
+///
+/// V4-U03：顶部新增「这次的理解」回执面板（I06 context_selection_receipt
+/// 读面唯一呈现位）——最近一次 Sparkle 实际用到的理解，可核对来源并直接忘记。
 class UnderstandingScreen extends ConsumerWidget {
   const UnderstandingScreen({super.key});
 
@@ -37,12 +42,21 @@ class UnderstandingScreen extends ConsumerWidget {
         ),
         child: ContentConstraint(
           child: SparkleRefreshIndicator(
-            onRefresh: () =>
-                ref.read(understandingOverviewProvider.notifier).refresh(),
+            onRefresh: () async {
+              await ref.read(understandingOverviewProvider.notifier).refresh();
+              await ref.read(contextReceiptProvider.notifier).refresh();
+            },
             child: const SingleChildScrollView(
               physics: AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.all(DS.lg),
-              child: UnderstandingOverviewView(embedded: false),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ContextReceiptPanel(),
+                  SizedBox(height: DS.xl),
+                  UnderstandingOverviewView(embedded: false),
+                ],
+              ),
             ),
           ),
         ),

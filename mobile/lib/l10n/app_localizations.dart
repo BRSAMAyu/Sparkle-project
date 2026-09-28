@@ -4340,13 +4340,6 @@ abstract class AppLocalizations {
   /// **'好奇：{value}%'**
   String learningModeCuriosityValue(Object value);
 
-
-
-
-
-
-
-
   /// No description provided for @learningPathTitle.
   ///
   /// In zh, this message translates to:
@@ -4830,19 +4823,19 @@ abstract class AppLocalizations {
   /// No description provided for @personaL1Title.
   ///
   /// In zh, this message translates to:
-  /// **'L1 用户声明'**
+  /// **'你告诉我的'**
   String get personaL1Title;
 
   /// No description provided for @personaL2Title.
   ///
   /// In zh, this message translates to:
-  /// **'L2 协作校准'**
+  /// **'我们校准过的'**
   String get personaL2Title;
 
   /// No description provided for @personaL3Title.
   ///
   /// In zh, this message translates to:
-  /// **'L3 系统推断'**
+  /// **'我观察到的'**
   String get personaL3Title;
 
   /// No description provided for @personaL3Hint.
@@ -45934,26 +45927,6 @@ abstract class AppLocalizations {
   /// **'加载中…'**
   String get userLoading;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   /// No description provided for @userDownloadDataSubtitle.
   ///
   /// In zh, this message translates to:
@@ -50277,7 +50250,6 @@ abstract class AppLocalizations {
   /// **'回顾近期系统更新和重要账号行为变化。'**
   String get acctSecRecentActivity;
 
-
   /// No description provided for @modelChatTempFailed.
   ///
   /// In zh, this message translates to:
@@ -50295,8 +50267,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'计划生成遇到问题：{error}'**
   String modelChatPlanIssue(Object error);
-
-
 
   /// No description provided for @settGrowthChronicleSaving.
   ///
@@ -57868,7 +57838,7 @@ abstract class AppLocalizations {
   /// No description provided for @understandingScopeSession.
   ///
   /// In zh, this message translates to:
-  /// **'当前会话中'**
+  /// **'仅这次对话'**
   String get understandingScopeSession;
 
   /// No description provided for @understandingActionEdit.
@@ -57880,7 +57850,7 @@ abstract class AppLocalizations {
   /// No description provided for @understandingActionDelete.
   ///
   /// In zh, this message translates to:
-  /// **'删除'**
+  /// **'忘记'**
   String get understandingActionDelete;
 
   /// No description provided for @understandingActionPause.
@@ -57898,7 +57868,7 @@ abstract class AppLocalizations {
   /// No description provided for @understandingActionScope.
   ///
   /// In zh, this message translates to:
-  /// **'仅此 Goal'**
+  /// **'仅这个目标'**
   String get understandingActionScope;
 
   /// No description provided for @understandingActionWhy.
@@ -57922,13 +57892,13 @@ abstract class AppLocalizations {
   /// No description provided for @understandingDeleteTitle.
   ///
   /// In zh, this message translates to:
-  /// **'删除这条内容？'**
+  /// **'忘记这条内容？'**
   String get understandingDeleteTitle;
 
   /// No description provided for @understandingDeleteBody.
   ///
   /// In zh, this message translates to:
-  /// **'删除后 Sparkle 不会再使用它，下一次判断也会随之更新。'**
+  /// **'忘记后 Sparkle 不会再使用它，下一次判断也会随之更新。'**
   String get understandingDeleteBody;
 
   /// No description provided for @understandingPauseTitle.
@@ -57988,7 +57958,7 @@ abstract class AppLocalizations {
   /// No description provided for @understandingToastDeleted.
   ///
   /// In zh, this message translates to:
-  /// **'已删除。Sparkle 不会再使用这条内容。'**
+  /// **'已忘记。Sparkle 不会再使用这条内容。'**
   String get understandingToastDeleted;
 
   /// No description provided for @understandingToastPaused.
@@ -60361,6 +60331,264 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）'**
   String confidenceWithBand(String band, int percent);
+
+  /// No description provided for @contextReceiptSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次的理解'**
+  String get contextReceiptSectionTitle;
+
+  /// No description provided for @contextReceiptIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是 Sparkle 最近一次{role}实际用到的理解。每一条都能核对来源，也可以随时更改或忘记。'**
+  String contextReceiptIntro(Object role);
+
+  /// No description provided for @contextReceiptRoleChatContext.
+  ///
+  /// In zh, this message translates to:
+  /// **'对话回答'**
+  String get contextReceiptRoleChatContext;
+
+  /// No description provided for @contextReceiptRoleProposalBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'提案依据'**
+  String get contextReceiptRoleProposalBasis;
+
+  /// No description provided for @contextReceiptRoleResumeView.
+  ///
+  /// In zh, this message translates to:
+  /// **'接续视图'**
+  String get contextReceiptRoleResumeView;
+
+  /// No description provided for @contextReceiptRoleIntervention.
+  ///
+  /// In zh, this message translates to:
+  /// **'关心定向'**
+  String get contextReceiptRoleIntervention;
+
+  /// No description provided for @contextReceiptRoleUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'判断'**
+  String get contextReceiptRoleUnknown;
+
+  /// No description provided for @contextReceiptWhyNowTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么现在用它'**
+  String get contextReceiptWhyNowTitle;
+
+  /// No description provided for @contextReceiptWhyNowBandHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'把握较高'**
+  String get contextReceiptWhyNowBandHigh;
+
+  /// No description provided for @contextReceiptWhyNowBandMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'把握一般'**
+  String get contextReceiptWhyNowBandMedium;
+
+  /// No description provided for @contextReceiptWhyNowBandLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'把握较低'**
+  String get contextReceiptWhyNowBandLow;
+
+  /// No description provided for @contextReceiptWhyNowBandUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'还不确定'**
+  String get contextReceiptWhyNowBandUnknown;
+
+  /// No description provided for @contextReceiptSelectedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次用了 {total} 条，其中 {resolved} 条来源可核对。'**
+  String contextReceiptSelectedTitle(Object resolved, Object total);
+
+  /// No description provided for @contextReceiptSelectedNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次没有引用你的记忆内容。'**
+  String get contextReceiptSelectedNone;
+
+  /// No description provided for @contextReceiptUnattributedSelected.
+  ///
+  /// In zh, this message translates to:
+  /// **'其中 {count} 条来源已不可定位（可能已被你删除或修改）。'**
+  String contextReceiptUnattributedSelected(Object count);
+
+  /// No description provided for @contextReceiptKindEpisodic.
+  ///
+  /// In zh, this message translates to:
+  /// **'一段经历记录'**
+  String get contextReceiptKindEpisodic;
+
+  /// No description provided for @contextReceiptKindPreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'一个偏好'**
+  String get contextReceiptKindPreference;
+
+  /// No description provided for @contextReceiptKindGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'一个目标'**
+  String get contextReceiptKindGoal;
+
+  /// No description provided for @contextReceiptKindOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'一条 {kind} 记录'**
+  String contextReceiptKindOther(Object kind);
+
+  /// No description provided for @contextReceiptSourceResolved.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源已核对'**
+  String get contextReceiptSourceResolved;
+
+  /// No description provided for @contextReceiptRejectedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'没用上的原因'**
+  String get contextReceiptRejectedTitle;
+
+  /// No description provided for @contextReceiptReasonOutOfScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'不在这次的范围里'**
+  String get contextReceiptReasonOutOfScope;
+
+  /// No description provided for @contextReceiptReasonStale.
+  ///
+  /// In zh, this message translates to:
+  /// **'已删除或已被新内容替代'**
+  String get contextReceiptReasonStale;
+
+  /// No description provided for @contextReceiptReasonLowUtility.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次判断帮助不大'**
+  String get contextReceiptReasonLowUtility;
+
+  /// No description provided for @contextReceiptReasonConflicts.
+  ///
+  /// In zh, this message translates to:
+  /// **'与你确认过的偏好不一致'**
+  String get contextReceiptReasonConflicts;
+
+  /// No description provided for @contextReceiptReasonPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'你设置过不让使用'**
+  String get contextReceiptReasonPermission;
+
+  /// No description provided for @contextReceiptReasonBudget.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次能带上的内容有限'**
+  String get contextReceiptReasonBudget;
+
+  /// No description provided for @contextReceiptReasonDuplicate.
+  ///
+  /// In zh, this message translates to:
+  /// **'和其他内容重复'**
+  String get contextReceiptReasonDuplicate;
+
+  /// No description provided for @contextReceiptReasonExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'已过时效'**
+  String get contextReceiptReasonExpired;
+
+  /// No description provided for @contextReceiptReasonUnknownCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'未归因 {count} 条。'**
+  String contextReceiptReasonUnknownCount(Object count);
+
+  /// No description provided for @contextReceiptBudgetNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'「这次能带上的内容有限」只是当时的选择空间，不影响你随时更改或忘记任何内容。'**
+  String get contextReceiptBudgetNote;
+
+  /// No description provided for @contextReceiptCandidatesUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次回执暂缺候选明细。'**
+  String get contextReceiptCandidatesUnknown;
+
+  /// No description provided for @contextReceiptModeOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'理解回执尚未开启。'**
+  String get contextReceiptModeOff;
+
+  /// No description provided for @contextReceiptModeShadow.
+  ///
+  /// In zh, this message translates to:
+  /// **'理解回执在记录中，展示尚未开启。'**
+  String get contextReceiptModeShadow;
+
+  /// No description provided for @contextReceiptModeOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'理解回执展示未开启（当前模式：{mode}）。'**
+  String contextReceiptModeOther(Object mode);
+
+  /// No description provided for @contextReceiptEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次没有产生理解回执（例如只是简单回答时）。'**
+  String get contextReceiptEmpty;
+
+  /// No description provided for @contextReceiptUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'回执版本暂不支持，已按原样跳过。'**
+  String get contextReceiptUnsupported;
+
+  /// No description provided for @contextReceiptOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在连不上，理解回执稍后再看。'**
+  String get contextReceiptOffline;
+
+  /// No description provided for @contextReceiptOfflineDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在连不上（{detail}），理解回执稍后再看。'**
+  String contextReceiptOfflineDetail(Object detail);
+
+  /// No description provided for @contextReceiptForgotten.
+  ///
+  /// In zh, this message translates to:
+  /// **'已忘记'**
+  String get contextReceiptForgotten;
+
+  /// No description provided for @contextScopeConflictCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条内容刚在别处被修改，这次修改已停止，未做任何覆盖。'**
+  String get contextScopeConflictCopy;
+
+  /// No description provided for @contextConflictRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新后再试'**
+  String get contextConflictRefresh;
+
+  /// No description provided for @personaQuickAccessThisTimeUnderstanding.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次的理解'**
+  String get personaQuickAccessThisTimeUnderstanding;
 }
 
 class _AppLocalizationsDelegate

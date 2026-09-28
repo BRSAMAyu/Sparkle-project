@@ -1,0 +1,70 @@
+{
+  "card": "V4-U03",
+  "generated_at": "2026-09-29T00:32:00+08:00",
+  "framework": "flutter_test (Flutter 3.41.3)",
+  "final_full_suite": {
+    "command": "flutter test",
+    "passed": 2817,
+    "skipped": 23,
+    "failed": 0,
+    "note": "终验全绿；23 skip 为既有跳过项（非本卡引入）"
+  },
+  "new_tests_by_this_card": {
+    "total": 45,
+    "files": {
+      "mobile/test/features/memory/data/context_receipt_models_test.dart": {
+        "count": 14,
+        "covers": "版本门 fail-closed / note 结构性不入模 / 8+4+4 词表冻结 / parseMemoryRef / calibratableMemories 消费纪律(§7.1) / budgetLimited / candidates 缺失 unknown 语义（每面一正一反）"
+      },
+      "mobile/test/features/memory/presentation/providers/context_receipt_provider_test.dart": {
+        "count": 6,
+        "covers": "读面投影：live+回执→ready / off·shadow→modeGated / live 无回执→empty / 版本不支持→unsupported / 断网→offline / 5xx detail 透传"
+      },
+      "mobile/test/features/memory/presentation/providers/calibration_scope_conflict_test.dart": {
+        "count": 7,
+        "covers": "验收②：写前核对一致放行 / 服务端 paused 漂移冲突(PUT 零调用) / scope 投影漂移冲突 / 核对不可得不设门(反例) / 后端 409 同面 / editable=false 冲突 / isScopeConflict 判定"
+      },
+      "mobile/test/features/memory/presentation/widgets/context_receipt_panel_test.dart": {
+        "count": 11,
+        "covers": "ready 如实呈现+note 不渲染 / unresolved 显式 unattributed 无操作 / 空候选=没有引用 / candidates 缺失=暂缺明细 / modeGated 与 empty 分立(两测) / 断网诚实态 / 验收③预算面忘记走真实 revoke / 验收③反例无禁用态 / 忘记失败如实错误 / 验收①200% 字体 / 验收①键盘 Space 激活"
+      },
+      "mobile/test/features/memory/presentation/u03_plain_language_test.dart": {
+        "count": 5,
+        "covers": "黑话清理 zh（L1/L2/L3、仅这个目标、忘记、仅这次对话、确认链同步）+ en 同步 / UserPersona 活入口「这次的理解」按钮 / UnderstandingScreen 顶部回执面板接线"
+      },
+      "mobile/test/features/memory/presentation/screens/understanding_screen_evidence_test.dart": {
+        "count": 2,
+        "covers": "证据采集：ready/断网两态真实渲染断言（常态执行）；U03_EVIDENCE_DIR 设置时落盘截图+语义 dump（本卡证据 PNG/txt 由其产出）"
+      }
+    }
+  },
+  "modified_existing_tests": {
+    "mobile/test/features/memory/presentation/widgets/understanding_overview_view_test.dart": "文案钉值随黑话清理更新（删除→忘记，2 处 tap 定位），断言强度不变（revoke 流程仍走全链）；'仅此 Goal findsNothing' 断言原样保留",
+    "mobile/test/core/experience/experience_feedback_adapter_test.dart": "纯格式：1 处 expect 加尾逗号（本地分析器 require_trailing_commas），断言值零变更（CH-3 互钉 sha256 字面量原样）"
+  },
+  "acceptance_matrix": [
+    {
+      "acceptance": "任何记忆操作可键盘与200%字体使用",
+      "positive": "TextScaler.linear(2.0) 全面板渲染 takeException()==null 且忘记可走完 revoke",
+      "negative": "忘记按钮 Focus 可达 + Space 激活打开确认框（与点按等效）",
+      "result": "PASS"
+    },
+    {
+      "acceptance": "并发更改scope有版本冲突，不静默覆盖",
+      "positive": "服务端 paused/scope/editable 漂移→冲突、PUT 零调用、conflictItemIds 命中；409 同面",
+      "negative": "状态一致→PUT 恰一次；核对不可得→不设门放行真实链（防「核对」变成删除权新闸）",
+      "result": "PASS"
+    },
+    {
+      "acceptance": "解释次数预算不限制纠正/删除权",
+      "positive": "budget_exhausted 面如实显示且忘记可点、走完真实 revoke 链",
+      "negative": "预算面下忘记 disabled==false 断言（预算禁用即红）",
+      "result": "PASS"
+    }
+  ],
+  "regression_evidence": [
+    "全量 2817 passed / 0 failed（含 V3 U-03 四组视图既有套件、F02/F03/F04 设计与反馈套件、q03 visual probe）",
+    "flutter analyze 全仓 No issues found",
+    "四棘轮守卫（ui-tokens 225/275、typography、spacing 1591/1623、dl-spec 15 项）全 PASS"
+  ]
+}

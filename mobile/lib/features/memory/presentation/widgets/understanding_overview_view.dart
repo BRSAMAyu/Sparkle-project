@@ -11,6 +11,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/memory/data/memory_provenance_models.dart';
 import 'package:sparkle/features/memory/data/memory_provenance_repository.dart';
 import 'package:sparkle/features/memory/presentation/providers/understanding_overview_provider.dart';
+import 'package:sparkle/features/memory/presentation/widgets/context_receipt_panel.dart';
 import 'package:sparkle/features/memory/presentation/widgets/why_this_receipt_sheet.dart';
 
 const List<UnderstandingBucket> _bucketOrder = [
@@ -205,6 +206,7 @@ class UnderstandingItemCard extends ConsumerWidget {
     final l10n = context.l10n;
     final state = ref.watch(understandingOverviewProvider);
     final pending = state.pendingActionIds.contains(item.id);
+    final inConflict = state.conflictItemIds.contains(item.id);
     final scopeLabel = switch (item.scope['level']) {
       'goal' => l10n.understandingScopeGoal,
       'domain' => l10n.understandingScopeDomain,
@@ -273,6 +275,13 @@ class UnderstandingItemCard extends ConsumerWidget {
                     TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
               ),
               const SizedBox(height: DS.sm),
+              // V4-U03 验收②：scope 校准冲突内联面（conflict 徽章 +
+              // 如实文案 + 重新核对），绝不静默覆盖。
+              if (inConflict)
+                ScopeConflictBanner(
+                  onRetry: () =>
+                      ref.read(understandingOverviewProvider.notifier).refresh(),
+                ),
               Wrap(
                 spacing: DS.sm,
                 runSpacing: DS.sm,
@@ -340,6 +349,21 @@ class UnderstandingItemCard extends ConsumerWidget {
   void _openWhyThis(BuildContext context, WidgetRef ref) =>
       unawaited(unawaitedWhyThis(context, ref, item));
 
+  /// 操作失败面：scope 校准冲突已由内联 [ScopeConflictBanner] 呈现
+  /// （conflict 徽章，不静默覆盖也不再叠加通用 toast）；其余如实 toast。
+  void _actionErrorFeedback(BuildContext context, Object error) {
+    if (isScopeConflict(error)) {
+      return;
+    }
+    AppFeedback.error(
+      context,
+      context.l10n.understandingToastFailedDetail(
+        provenanceErrorDetail(error) ??
+            uiErrorMessage(context.l10n, categorizeUiError(error)),
+      ),
+    );
+  }
+
   Future<void> _edit(BuildContext context, WidgetRef ref) async {
     final notifier = ref.read(understandingOverviewProvider.notifier);
     final edited = await showUnderstandingEditDialog(context, item);
@@ -388,13 +412,7 @@ class UnderstandingItemCard extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(
-          context,
-          context.l10n.understandingToastFailedDetail(
-            provenanceErrorDetail(e) ??
-                uiErrorMessage(context.l10n, categorizeUiError(e)),
-          ),
-        );
+        _actionErrorFeedback(context, e);
       }
     }
   }
@@ -409,13 +427,7 @@ class UnderstandingItemCard extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(
-          context,
-          context.l10n.understandingToastFailedDetail(
-            provenanceErrorDetail(e) ??
-                uiErrorMessage(context.l10n, categorizeUiError(e)),
-          ),
-        );
+        _actionErrorFeedback(context, e);
       }
     }
   }
@@ -434,13 +446,7 @@ class UnderstandingItemCard extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(
-          context,
-          context.l10n.understandingToastFailedDetail(
-            provenanceErrorDetail(e) ??
-                uiErrorMessage(context.l10n, categorizeUiError(e)),
-          ),
-        );
+        _actionErrorFeedback(context, e);
       }
     }
   }
@@ -460,13 +466,7 @@ class UnderstandingItemCard extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(
-          context,
-          context.l10n.understandingToastFailedDetail(
-            provenanceErrorDetail(e) ??
-                uiErrorMessage(context.l10n, categorizeUiError(e)),
-          ),
-        );
+        _actionErrorFeedback(context, e);
       }
     }
   }

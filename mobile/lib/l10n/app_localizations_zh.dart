@@ -2282,13 +2282,6 @@ class AppLocalizationsZh extends AppLocalizations {
     return '好奇：$value%';
   }
 
-
-
-
-
-
-
-
   @override
   String get learningPathTitle => '学习路径';
 
@@ -2576,13 +2569,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personaMyProfile => '我的画像';
 
   @override
-  String get personaL1Title => 'L1 用户声明';
+  String get personaL1Title => '你告诉我的';
 
   @override
-  String get personaL2Title => 'L2 协作校准';
+  String get personaL2Title => '我们校准过的';
 
   @override
-  String get personaL3Title => 'L3 系统推断';
+  String get personaL3Title => '我观察到的';
 
   @override
   String get personaL3Hint => '以下内容来自系统分析，仅供参考';
@@ -25168,26 +25161,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get userLoading => '加载中…';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   @override
   String get userDownloadDataSubtitle => '下载账号、学习与记忆相关数据';
 
@@ -27592,7 +27565,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get acctSecRecentActivity => '回顾近期系统更新和重要账号行为变化。';
 
-
   @override
   String modelChatTempFailed(Object error) {
     return '建模对话暂时失败：$error';
@@ -27607,8 +27579,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String modelChatPlanIssue(Object error) {
     return '计划生成遇到问题：$error';
   }
-
-
 
   @override
   String get settGrowthChronicleSaving => '正在保存成长编年史可见性...';
@@ -31825,13 +31795,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get understandingScopeDomain => '相关话题中';
 
   @override
-  String get understandingScopeSession => '当前会话中';
+  String get understandingScopeSession => '仅这次对话';
 
   @override
   String get understandingActionEdit => '修改';
 
   @override
-  String get understandingActionDelete => '删除';
+  String get understandingActionDelete => '忘记';
 
   @override
   String get understandingActionPause => '暂时不用';
@@ -31840,7 +31810,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get understandingActionResume => '恢复使用';
 
   @override
-  String get understandingActionScope => '仅此 Goal';
+  String get understandingActionScope => '仅这个目标';
 
   @override
   String get understandingActionWhy => '为什么有这条';
@@ -31852,10 +31822,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get understandingEditLabel => '改成';
 
   @override
-  String get understandingDeleteTitle => '删除这条内容？';
+  String get understandingDeleteTitle => '忘记这条内容？';
 
   @override
-  String get understandingDeleteBody => '删除后 Sparkle 不会再使用它，下一次判断也会随之更新。';
+  String get understandingDeleteBody => '忘记后 Sparkle 不会再使用它，下一次判断也会随之更新。';
 
   @override
   String get understandingPauseTitle => '暂时不用这条？';
@@ -31885,7 +31855,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get understandingToastUpdated => '已更新。Sparkle 下一次判断会使用新内容。';
 
   @override
-  String get understandingToastDeleted => '已删除。Sparkle 不会再使用这条内容。';
+  String get understandingToastDeleted => '已忘记。Sparkle 不会再使用这条内容。';
 
   @override
   String get understandingToastPaused => '已暂停。Sparkle 暂时不再引用这条内容。';
@@ -33202,4 +33172,148 @@ class AppLocalizationsZh extends AppLocalizations {
     );
     return '$_temp0（$percent%）';
   }
+
+  @override
+  String get contextReceiptSectionTitle => '这次的理解';
+
+  @override
+  String contextReceiptIntro(Object role) {
+    return '这是 Sparkle 最近一次$role实际用到的理解。每一条都能核对来源，也可以随时更改或忘记。';
+  }
+
+  @override
+  String get contextReceiptRoleChatContext => '对话回答';
+
+  @override
+  String get contextReceiptRoleProposalBasis => '提案依据';
+
+  @override
+  String get contextReceiptRoleResumeView => '接续视图';
+
+  @override
+  String get contextReceiptRoleIntervention => '关心定向';
+
+  @override
+  String get contextReceiptRoleUnknown => '判断';
+
+  @override
+  String get contextReceiptWhyNowTitle => '为什么现在用它';
+
+  @override
+  String get contextReceiptWhyNowBandHigh => '把握较高';
+
+  @override
+  String get contextReceiptWhyNowBandMedium => '把握一般';
+
+  @override
+  String get contextReceiptWhyNowBandLow => '把握较低';
+
+  @override
+  String get contextReceiptWhyNowBandUnknown => '还不确定';
+
+  @override
+  String contextReceiptSelectedTitle(Object resolved, Object total) {
+    return '这次用了 $total 条，其中 $resolved 条来源可核对。';
+  }
+
+  @override
+  String get contextReceiptSelectedNone => '这次没有引用你的记忆内容。';
+
+  @override
+  String contextReceiptUnattributedSelected(Object count) {
+    return '其中 $count 条来源已不可定位（可能已被你删除或修改）。';
+  }
+
+  @override
+  String get contextReceiptKindEpisodic => '一段经历记录';
+
+  @override
+  String get contextReceiptKindPreference => '一个偏好';
+
+  @override
+  String get contextReceiptKindGoal => '一个目标';
+
+  @override
+  String contextReceiptKindOther(Object kind) {
+    return '一条 $kind 记录';
+  }
+
+  @override
+  String get contextReceiptSourceResolved => '来源已核对';
+
+  @override
+  String get contextReceiptRejectedTitle => '没用上的原因';
+
+  @override
+  String get contextReceiptReasonOutOfScope => '不在这次的范围里';
+
+  @override
+  String get contextReceiptReasonStale => '已删除或已被新内容替代';
+
+  @override
+  String get contextReceiptReasonLowUtility => '这次判断帮助不大';
+
+  @override
+  String get contextReceiptReasonConflicts => '与你确认过的偏好不一致';
+
+  @override
+  String get contextReceiptReasonPermission => '你设置过不让使用';
+
+  @override
+  String get contextReceiptReasonBudget => '这次能带上的内容有限';
+
+  @override
+  String get contextReceiptReasonDuplicate => '和其他内容重复';
+
+  @override
+  String get contextReceiptReasonExpired => '已过时效';
+
+  @override
+  String contextReceiptReasonUnknownCount(Object count) {
+    return '未归因 $count 条。';
+  }
+
+  @override
+  String get contextReceiptBudgetNote =>
+      '「这次能带上的内容有限」只是当时的选择空间，不影响你随时更改或忘记任何内容。';
+
+  @override
+  String get contextReceiptCandidatesUnknown => '这次回执暂缺候选明细。';
+
+  @override
+  String get contextReceiptModeOff => '理解回执尚未开启。';
+
+  @override
+  String get contextReceiptModeShadow => '理解回执在记录中，展示尚未开启。';
+
+  @override
+  String contextReceiptModeOther(Object mode) {
+    return '理解回执展示未开启（当前模式：$mode）。';
+  }
+
+  @override
+  String get contextReceiptEmpty => '这次没有产生理解回执（例如只是简单回答时）。';
+
+  @override
+  String get contextReceiptUnsupported => '回执版本暂不支持，已按原样跳过。';
+
+  @override
+  String get contextReceiptOffline => '现在连不上，理解回执稍后再看。';
+
+  @override
+  String contextReceiptOfflineDetail(Object detail) {
+    return '现在连不上（$detail），理解回执稍后再看。';
+  }
+
+  @override
+  String get contextReceiptForgotten => '已忘记';
+
+  @override
+  String get contextScopeConflictCopy => '这条内容刚在别处被修改，这次修改已停止，未做任何覆盖。';
+
+  @override
+  String get contextConflictRefresh => '刷新后再试';
+
+  @override
+  String get personaQuickAccessThisTimeUnderstanding => '这次的理解';
 }

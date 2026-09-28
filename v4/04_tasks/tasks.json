@@ -1944,8 +1944,8 @@
         "V4-F02",
         "V4-I06"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
+      "status": "in_progress",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
       "kind": "implementation",
       "required_locks": [
@@ -1996,7 +1996,10 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "evidence_pointer": "v4/evidence/V4-U03/",
+      "evidence_summary": "「这次的理解」回执面板进既有 /memory/understanding 顶部（零路由变更）：数据源唯一为 I06 读面（候选集/归因码/why-now 如实投影，unresolved 显式 unattributed，debug note 结构性不入用户面），五态分立（ready/modeGated/empty/unsupported/offline）；UserPersona 活入口去黑话（L1/L2/L3→用户语言、仅此 Goal→仅这个目标、删除→忘记、当前会话中→仅这次对话，en 同步）+「这次的理解」活入口；校准走既有 M-08 链：忘记=真实 revoke（revoked=true 诚实契约），scope 写前 GET 核对+409 同面→内联冲突面（PixelStateBadge conflict，绝不静默覆盖），budget_exhausted 只作说明不禁用更改/忘记（验收③）。F03 反向面：memory 操作永不成功面孔。新增 45 测（模型14/读面provider6/冲突守卫7/面板11/黑话+入口5/证据采集2）+2 既有测试文案钉值更新（断言强度不变）；全量 +2817 ~23 全绿、analyze 零 issue、四棘轮 PASS；截图+语义落盘（Ahem 字形，F04 同先例）；零模型调用、零 backend/proto/迁移/路由触碰。source_sha=555346fe（base）；待 1 位独立审查（normal）+集成 SHA 复验（review_receipt.json PENDING，挑战点预登记 6 条）",
+      "progress_note": "2026-09-29 wtU03：REVIEW_READY 交付（worktree wtU03，分支 agent/v4/u03，未 push）。已知边界如实登记：scope 并发为客户端读前核对+后端行锁兜底（expected_version 乐观锁归 contract-owner，limitations #1）；F03 呈现事件无 memory 修正生产方（反向面落地，limitations #2）；「这次」为显示语义非可写档位（#3）；回执候选无内容字段（契约形状，#4）；证据截图 Ahem 字形（#6）；cognitive 模块零改动（#9）——见 v4/evidence/V4-U03/limitations.md（9 条限制 + 6 条审查挑战预登记）"
     },
     {
       "id": "V4-U04",

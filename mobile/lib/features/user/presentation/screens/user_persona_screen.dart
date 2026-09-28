@@ -336,11 +336,18 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             onPressed: () => context.push(UserRoutes.systemUpdates),
             label: l10n.personaQuickAccessSystemUpdates,
           ),
-          if (AppFeatureFlags.enableUserMemoryControls)
+          if (AppFeatureFlags.enableUserMemoryControls) ...[
+            // V4-U03：活入口——「这次的理解」回执面（/memory/understanding，
+            // 复用既有活界面，不造第二理解真源、不复活孤儿界面）。
+            SparkleButton.ghost(
+              onPressed: () => context.push(MemoryRoutes.understanding),
+              label: l10n.personaQuickAccessThisTimeUnderstanding,
+            ),
             SparkleButton.ghost(
               onPressed: () => context.push(MemoryRoutes.settings),
               label: l10n.personaQuickAccessMemorySettings,
             ),
+          ],
         ],
       ),
     );
