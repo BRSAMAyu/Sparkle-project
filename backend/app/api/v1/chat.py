@@ -205,19 +205,34 @@ async def chat_with_task_context(
     )
 
     # Inject Task Context specifically
+    # V4-I07（hybrid-policy 锁）：独立检验答案不进可见/可检索上下文（验收③）——
+    # guide_json 投影进模型上下文前过红化门；带 independent_check 标记节点内的
+    # 答案键剥除（判分权威留在服务端 guide_json 本体）。同时投影脚手架链当前态
+    # （stage/hint_level，答案面之外），供「示例→尝试→独立检验」建议面消费。
+    from app.core.hybrid_policy import task_guide_context_projection
+
+    _clean_guide_json, _scaffold, _removed_answer_paths = task_guide_context_projection(task.guide_json)
+    if _removed_answer_paths:
+        logger.info(
+            "V4-I07 独立检验答案已从聊天任务上下文剥除 (task_id={}, paths={})",
+            task.id,
+            list(_removed_answer_paths),
+        )
     task_context = {
         "id": str(task.id),
         "title": task.title,
         "type": task.type,
         "status": task.status,
         "guide_content": task.guide_content,
-        "guide_json": task.guide_json,
+        "guide_json": _clean_guide_json,
         "ai_prompt": task.ai_prompt,
         "phase_index": task.phase_index,
         "success_criteria": task.success_criteria,
         "estimated_minutes": task.estimated_minutes,
         "current_focus": "The user is currently working on this task.",
     }
+    if _scaffold is not None:
+        task_context["scaffold"] = _scaffold
     if task_state:
         task_context["task_state"] = task_state
     user_context["current_task"] = task_context

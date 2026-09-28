@@ -69,10 +69,22 @@ from app.core.event_registry import (
     EventSource,
     build_event_metadata,
 )
+from app.core.hybrid_policy import (
+    GOAL_PURPOSE_DELIVERABLE,
+    GOAL_PURPOSE_MASTERY,
+    GOAL_PURPOSES,
+)
 from app.models.execution_intent import ExecutionMode
 from app.models.task import CognitiveOwnership, RiskClass, TaskType
 
-ALLOCATION_POLICY_VERSION = "allocation.v1.1"
+# v1 → v1.1（2026-09-19 R2 返修）：OFFER_VERDICT_REASONS +2 个 R5 拒收码。
+# v1.1 → v1.2（2026-09-28 V4-I07，locks: hybrid-policy）：AllocationFactors
+# +goal_purpose/+human_required 因子（V4-I07 目的维度；词表 =
+# app.core.hybrid_policy.GOAL_PURPOSES，import 不复制）；+G5 守卫
+# （human_required 步骤 agent 不可行）；goal_purpose=mastery 显式激活 G1、
+# =deliverable 解除 task_type 启发式（user_core/learning_goal 仍守）。
+# 决策记录 schema 不变（新因子走既有 annotations 通道）。
+ALLOCATION_POLICY_VERSION = "allocation.v1.2"
 
 ALLOCATION_EVENT_NAME = "allocation.decision_recorded"
 
@@ -151,6 +163,8 @@ ALLOCATION_REASONS: frozenset[str] = frozenset(
         # 学习守卫配套
         "G1.learning_guard_no_agent",
         "G2.learning_evidence_user_authored",
+        # V4-I07 目的维度守卫（hybrid-policy 锁）
+        "G5.human_required_step_no_agent",
         # 语义层 / 降级
         "S1.semantic_refined",
         "S2.semantic_outside_feasible_rejected",
@@ -250,6 +264,11 @@ class AllocationFactors:
     confidence: float | None = None  # 系统已知是否足够（0..1）
     time_pressure: str | None = None  # relaxed/tight/urgent
     user_preference: str | None = None  # prefer_agent/prefer_human/prefer_mixed
+    # V4-I07 目的维度（hybrid-policy 锁；词表 app.core.hybrid_policy.GOAL_PURPOSES）：
+    # mastery=学会 / deliverable=交付 / mixed=拆清。None=未知（走既有启发式）。
+    goal_purpose: str | None = None
+    # 用户必须亲自完成的步骤标记（V4-I07）：True 时 agent 不可行（G5 硬规则）。
+    human_required: bool | None = None
 
     @classmethod
     def coerce(cls, raw: AllocationFactors | Mapping[str, Any] | None) -> AllocationFactors:
@@ -281,11 +300,20 @@ class AllocationFactors:
             confidence=_norm_confidence(raw.get("confidence")),
             time_pressure=_norm_enum(raw.get("time_pressure"), TIME_PRESSURE_LEVELS),
             user_preference=_norm_enum(raw.get("user_preference"), USER_PREFERENCES),
+            goal_purpose=_norm_enum(raw.get("goal_purpose"), GOAL_PURPOSES),
+            human_required=_norm_bool(raw.get("human_required")),
         )
 
     @classmethod
     def from_task(cls, task: Any, **overrides: Any) -> AllocationFactors:
-        """从 Task ORM 行投影因子（X-01 V3 列 → 八维）。缺省维度留 None 进灰区。"""
+        """从 Task ORM 行投影因子（X-01 V3 列 → 八维）。缺省维度留 None 进灰区。
+
+        V4-I07：策略块（``guide_json["v4_hybrid_policy"]``，解析失败按缺省
+        None 进灰区——分配面不做权限裁决，脏块降级不阻断）投影
+        goal_purpose / human_required；调用方可显式覆盖。
+        """
+        from app.core.hybrid_policy import parse_policy_block
+
         raw: dict[str, Any] = {
             "task_ref": f"task://{getattr(task, 'id', '')}" if getattr(task, "id", None) else None,
             "task_type": getattr(task, "type", None),
@@ -293,6 +321,13 @@ class AllocationFactors:
             "risk_class": getattr(task, "risk_class", None),
             "reversible": getattr(task, "reversible", None),
         }
+        try:
+            block, _degrade = parse_policy_block(getattr(task, "guide_json", None))
+        except Exception:  # noqa: BLE001 — 因子投影永不阻断分配
+            block = None
+        if block is not None:
+            raw["goal_purpose"] = block.goal_purpose
+            raw["human_required"] = block.human_required
         raw.update(overrides)
         return cls.coerce(raw)
 
@@ -379,7 +414,28 @@ class AgentOfferVerdict:
 
 
 def _learning_guard_active(factors: AllocationFactors) -> bool:
-    """学习守卫：该步骤本身是用户要获得的能力/判断/创作 → agent 不可全自动。"""
+    """学习守卫：该步骤本身是用户要获得的能力/判断/创作 → agent 不可全自动。
+
+    V4-I07 目的维度（hybrid-policy 锁）：
+    - ``goal_purpose=mastery``（学会目标，含 human_required 步骤）→ 守卫显式生效；
+    - ``goal_purpose=deliverable``（交付目标）→ goal 层交付语义**解除 task_type
+      启发式**（合法代办不触发守卫，验收②），但步骤自身的显式学习信号
+      （learning_goal / user_core）仍守——该步本身即用户要获得的能力时，
+      交付目标也代写不了；
+    - 未知/None → 既有启发式（task_type / learning_goal / ownership）不变。
+    """
+    if factors.goal_purpose == GOAL_PURPOSE_MASTERY:
+        return True
+    if factors.goal_purpose == GOAL_PURPOSE_DELIVERABLE:
+        if factors.learning_goal is True:
+            return True
+        if factors.cognitive_ownership == CognitiveOwnership.USER_CORE.value:
+            return True
+        if factors.human_required is True:
+            return True
+        return False
+    if factors.human_required is True:
+        return True
     if factors.learning_goal is True:
         return True
     if factors.cognitive_ownership == CognitiveOwnership.USER_CORE.value:
@@ -464,6 +520,12 @@ def _decide(factors: AllocationFactors) -> AllocationDecision:
     if learning:
         feasible.discard("agent")
         why.append("G1.learning_guard_no_agent")
+    if factors.human_required is True:
+        # V4-I07 G5：human_required 步骤是「人必须亲自完成」的门——agent 不可行
+        # （任何目的、任何显式意图下；hybrid 准备面仍可行）。与 G1 独立判据、
+        # 独立留痕（两守卫可同时命中，各自记录）。
+        feasible.discard("agent")
+        why.append("G5.human_required_step_no_agent")
     if factors.confidence is not None and factors.confidence < 0.4:
         feasible.discard("agent")
         why.append("R6.low_system_confidence")
@@ -581,7 +643,13 @@ def _decide(factors: AllocationFactors) -> AllocationDecision:
         requires_user_authored_evidence=requires_user_evidence,
         recommended_evidence_kinds=USER_AUTHORED_EVIDENCE_KINDS if requires_user_evidence else (),
         recommended_cognitive_ownership=_recommend_ownership(mode, factors, learning),
-        annotations={"semantic_eligible": semantic_eligible, "tier": tier, "learning_guard": learning},
+        annotations={
+            "semantic_eligible": semantic_eligible,
+            "tier": tier,
+            "learning_guard": learning,
+            "goal_purpose": factors.goal_purpose,
+            "human_required": factors.human_required,
+        },
     )
 
 

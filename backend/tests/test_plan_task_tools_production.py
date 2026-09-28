@@ -548,6 +548,24 @@ class TestUpdateTaskStatusTool:
             assert call_kwargs.kwargs.get("actual_minutes") == 30 or (len(call_kwargs.args) > 2 and call_kwargs.args[2] == 30)
 
     @pytest.mark.asyncio
+    async def test_completed_passes_agent_evidence_source(self, db_session, user_id):
+        """V4-I07 F3：agent 工具链完成断言如实标 evidence_source="agent"。
+
+        缺省 "user" 会把 agent 代完成记成用户证据，使 I07 结算门
+        （settlement_for_task_row）的 BLOCK 分支在生产对话面不可达。
+        """
+        task = _make_task(estimated_minutes=30)
+        with (
+            patch("app.tools.task_tools.TaskService.get_by_id", new_callable=AsyncMock, return_value=task),
+            patch("app.tools.task_tools.TaskService.complete", new_callable=AsyncMock, return_value=_make_task(status=TaskStatus.COMPLETED, actual_minutes=30)) as mock_complete,
+        ):
+            tool = UpdateTaskStatusTool()
+            params = UpdateTaskStatusParams(task_id=str(task.id), status="completed", actual_minutes=30)
+            result = await tool.execute(params, user_id, db_session)
+            assert result.success is True
+            assert mock_complete.call_args.kwargs.get("evidence_source") == "agent"
+
+    @pytest.mark.asyncio
     async def test_completed_uses_estimated_when_no_actual(self, db_session, user_id):
         task = _make_task(estimated_minutes=45)
         with (

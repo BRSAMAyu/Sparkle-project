@@ -177,7 +177,15 @@ class UpdateTaskStatusTool(BaseTool):
                 task = await TaskService.start(db_session, task)
             elif new_status == "completed":
                 actual_minutes = params.actual_minutes or task.estimated_minutes
-                task = await TaskService.complete(db_session, task, actual_minutes=actual_minutes)
+                # V4-I07 一审 F3 整改：本工具由 agent 工具链调用，完成断言属
+                # agent 产出——evidence_source 如实穿参 "agent"。缺省会落默认
+                # "user"，把 agent 代完成记成用户证据，I07 人类掌握结算门
+                # （settlement_for_task_row）的 BLOCK 分支在生产对话面不可达。
+                # X-04 诚实回落口径不变：agent 无证据 → system_event（绝不
+                # 伪造 user_confirmation）；mastery 任务完成照常、掌握不冒记。
+                task = await TaskService.complete(
+                    db_session, task, actual_minutes=actual_minutes, evidence_source="agent"
+                )
             elif new_status == "abandoned":
                 task = await TaskService.abandon(db_session, task, reason="User requested via chat")
 

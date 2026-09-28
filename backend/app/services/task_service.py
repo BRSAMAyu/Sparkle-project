@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.action_plan import clear_action_plan
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus, event_bus_reliable
+from app.core.hybrid_policy import settlement_for_task_row
 from app.event_publishers.srl_events import publish_srl_event
 from app.gen.sparkle.inference.v1 import inference_pb2
 from app.gen.sparkle.signals.v1 import signals_pb2
@@ -813,10 +814,30 @@ class TaskService:
                 )
 
         task_id_for_log = str(db_obj.id)
+        # V4-I07 结算门（hybrid-policy 锁）：mastery 目标（含 human_required 步骤）
+        # 中非用户产出（agent 代执行/system 自动化）的完成**不结算人类掌握**——
+        # 「完成任务≠能力掌握」；deliverable 目标合法代办照常结算（验收②）。
+        # 结算面 = sprint pack 节点掌握（galaxy update_node_mastery，人类掌握真源）。
         try:
-            await TaskService._update_sprint_pack_mastery_for_completed_task(db, db_obj)
-        except Exception as exc:
-            logger.warning("Failed to update sprint mastery for completed task {}: {}", task_id_for_log, exc)
+            settlement = settlement_for_task_row(db_obj, evidence_source=evidence_source)
+        except Exception as exc:  # noqa: BLE001 — 判定异常按保守阻断（宁可不记掌握，不冒记）
+            settlement = None
+            logger.warning("V4-I07 settlement gate evaluation failed for task {}: {}", task_id_for_log, exc)
+        if settlement is not None and not settlement.allowed:
+            logger.warning(
+                "V4-I07 人类掌握结算被拦截 (task_id={} reason={} purpose={} human_required={} "
+                "completed_by={})——任务完成与 outcome 照常，掌握不记",
+                task_id_for_log,
+                settlement.reason,
+                settlement.goal_purpose,
+                settlement.human_required,
+                settlement.completed_by,
+            )
+        else:
+            try:
+                await TaskService._update_sprint_pack_mastery_for_completed_task(db, db_obj)
+            except Exception as exc:
+                logger.warning("Failed to update sprint mastery for completed task {}: {}", task_id_for_log, exc)
 
         # Publish task completion event for cognitive analysis
         from app.core.event_bus import TaskCompleted
@@ -1603,7 +1624,6 @@ class TaskService:
 
             raise NotFoundError(message="Task not found")
         return await TaskService.rescope(db, task, fields, reason)
-
 
     @staticmethod
     async def delete(db: AsyncSession, db_obj: Task) -> None:

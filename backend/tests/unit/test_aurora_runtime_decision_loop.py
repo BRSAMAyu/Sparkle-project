@@ -11,7 +11,7 @@ from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
 from app.aurora.runtime_v1.control_surface import ActivityProfile, AuroraHardBounds, ControlSurfaceReading, DndWindow
 from app.aurora.runtime_v1.dashboard import DashboardReadout, DashboardReadoutBuilder
 from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop
-from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
+from app.aurora.runtime_v1.service import CORRECT_ANSWER_MASTERY_DAILY_NODE_CAP, AuroraRuntimeV1Service
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.aurora.runtime_v1.write_pipeline import AURORA_CLAIM_KEY_TEMPLATE
@@ -1523,6 +1523,95 @@ async def test_plan_turn_updates_galaxy_mastery_for_correct_answer_node() -> Non
     assert update["node_id"] == "cn.tcp_handshake"
     assert update["new_mastery"] == pytest.approx(0.55)
     assert update["reason"] == "aurora_completion_check_correct"
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_correct_answer_mastery_writes_still_apply_under_daily_cap() -> None:
+    """F1 正例：同一 (user, node) 当日未到封顶 → 模型自判答对的掌握写照常逐次应用。"""
+    galaxy_service = _FakeGalaxyService()
+    service = AuroraRuntimeV1Service(
+        decision_loop=_StaticDecisionLoop(
+            AuroraDecision(
+                action="emit_message",
+                state_updates={"correct_answer_node": "cn.tcp_handshake"},
+                chat_directive={"intent": "completion_check"},
+            )
+        ),
+        chat_adapter=_StaticChatAdapter(),
+        galaxy_service=galaxy_service,
+        self_model_service=_StubSelfModelService(),
+    )
+    user_id = str(uuid4())
+    kwargs = {
+        "active_db": None,
+        "user_id": user_id,
+        "surface": "aurora_modeling",
+        "user_message": "SYN，SYN+ACK，ACK。",
+        "request_extra_context": {
+            "cold_start_context": {
+                "goal_type": "exam",
+                "sprint_pack_nodes": ["cn.tcp_handshake"],
+                "galaxy_mastery": {"cn.tcp_handshake": 0.4},
+            }
+        },
+        "conversation_context": {},
+        "user_context_payload": {},
+    }
+    for turn in range(CORRECT_ANSWER_MASTERY_DAILY_NODE_CAP):
+        await service.plan_turn(
+            conversation_id=f"conv-cap-under-{turn}",
+            request_id=f"req-cap-under-{turn}",
+            **kwargs,
+        )
+
+    assert (
+        len(galaxy_service.mastery_updates) == CORRECT_ANSWER_MASTERY_DAILY_NODE_CAP
+    ), "未到封顶前模型自判答对的掌握写照常应用（守卫不误伤正常完成检验面）"
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_caps_correct_answer_mastery_writes_per_day() -> None:
+    """F1 反例：同 (user, node) 当日到达封顶 → 超限增量不应用（cap 后零新增写，WARN 不静默）。"""
+    galaxy_service = _FakeGalaxyService()
+    service = AuroraRuntimeV1Service(
+        decision_loop=_StaticDecisionLoop(
+            AuroraDecision(
+                action="emit_message",
+                state_updates={"correct_answer_node": "cn.tcp_handshake"},
+                chat_directive={"intent": "completion_check"},
+            )
+        ),
+        chat_adapter=_StaticChatAdapter(),
+        galaxy_service=galaxy_service,
+        self_model_service=_StubSelfModelService(),
+    )
+    user_id = str(uuid4())
+    kwargs = {
+        "active_db": None,
+        "user_id": user_id,
+        "surface": "aurora_modeling",
+        "user_message": "我答对了。",
+        "request_extra_context": {
+            "cold_start_context": {
+                "goal_type": "exam",
+                "sprint_pack_nodes": ["cn.tcp_handshake"],
+                "galaxy_mastery": {"cn.tcp_handshake": 0.4},
+            }
+        },
+        "conversation_context": {},
+        "user_context_payload": {},
+    }
+    for turn in range(CORRECT_ANSWER_MASTERY_DAILY_NODE_CAP + 2):
+        await service.plan_turn(
+            conversation_id=f"conv-cap-{turn}",
+            request_id=f"req-cap-{turn}",
+            **kwargs,
+        )
+
+    assert (
+        len(galaxy_service.mastery_updates) == CORRECT_ANSWER_MASTERY_DAILY_NODE_CAP
+    ), "+15/次 无上限的模型自判掌握写被封顶（F1：进程级 (user,node,日) 计数）"
+    assert all(u["reason"] == "aurora_completion_check_correct" for u in galaxy_service.mastery_updates)
 
 
 @pytest.mark.asyncio

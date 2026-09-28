@@ -1,0 +1,94 @@
+{
+  "task": "V4-I07",
+  "title": "学习/交付目标的人机权限与脚手架",
+  "branch": "agent/v4/i07",
+  "worktree": "wtI07",
+  "base_commit": "1063abb3",
+  "captured_at": "2026-09-28",
+  "environment": {
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.11.15（worktree .venv symlink -> Sparkle-project/backend/.venv）",
+    "black": "26.3.1（line-length 120）",
+    "ruff": "0.15.8",
+    "mypy": "1.20.2",
+    "note": "backend/.venv 为 gitignore 产物经 symlink 复用主工作区；backend/app/gen 为 gitignored 实体目录，从主检出复制（不 symlink、永不提交）"
+  },
+  "required_env_for_local_test_run": {
+    "SECRET_KEY": "ci-test-key",
+    "DATABASE_URL": "sqlite://"
+  },
+  "changed_paths": [
+    "backend/app/core/hybrid_policy.py（新增：目的维度/human_required/结算门/脚手架链/独立检验答案红化，纯函数策略层，零 IO）",
+    "backend/app/services/action_allocation_policy.py（X-02 v1.1→v1.2：+goal_purpose/+human_required 因子、+G5 守卫、mastery 显式激活 G1、deliverable 解除 task_type 启发式、from_task 读策略块）",
+    "backend/app/services/task_service.py（complete() 掌握结算门前置 V4-I07 结算门，仅此增量）",
+    "backend/app/api/v1/chat.py（task_context 的 guide_json 注入过红化门 + 脚手架面投影）",
+    "backend/tests/unit/test_action_allocation_policy.py（4 个冻结测试按协议刻意更新）",
+    "backend/tests/unit/test_hybrid_policy.py（新增 29 测试）",
+    "v4/04_tasks/tasks.json（V4-I07 状态推进）",
+    "v4/evidence/V4-I07/*（五件套）"
+  ],
+  "commands": [
+    {
+      "purpose": "新增验收面（验收①②③+脚手架，29 测试一正一反）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_hybrid_policy.py -q",
+      "exit_code": 0,
+      "summary": "29 passed in 10.47s"
+    },
+    {
+      "purpose": "RED 证据：回退两处 service 接线（git stash push -- backend/app/services/task_service.py backend/app/api/v1/chat.py）后单跑新增面",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_hybrid_policy.py -q",
+      "exit_code": 1,
+      "summary": "1 failed, 28 passed — FAILED test_complete_by_agent_does_not_settle_sprint_mastery（旧代码 agent 完成照常触发掌握写面；验收①面确为可失败）。stash pop 复原后全绿",
+      "evidence": "结算面是行为增量而非仅新文件：模块级 RED（base 无 hybrid_policy → ModuleNotFoundError）+ 接线级 RED（stash 复跑）双重锚定"
+    },
+    {
+      "purpose": "X-02 分配面回归（冻结协议 v1.2 重冻结后）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_action_allocation_policy.py tests/unit/test_action_allocation_guard.py tests/unit/test_action_allocation_eval.py -q",
+      "exit_code": 0,
+      "summary": "112 passed in 1.08s"
+    },
+    {
+      "purpose": "受影响面回归（X-01 契约 / I01 接续视图 / I03 选择器 / galaxy 耦合 / 任务服务）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_hybrid_policy.py tests/unit/test_action_allocation_policy.py tests/unit/test_action_allocation_guard.py tests/unit/test_action_allocation_eval.py tests/unit/test_action_plan_contract.py tests/unit/test_episode_resume_view_contract.py tests/unit/test_semantic_selector.py -q",
+      "exit_code": 0,
+      "summary": "277 passed in 11.74s"
+    },
+    {
+      "purpose": "契约测试全量（B05 等冻结面）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/contract -q",
+      "exit_code": 0,
+      "summary": "352 passed in 13.24s"
+    },
+    {
+      "purpose": "journey/outcome/补桥/exam-sprint 回归（卡面模块面）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_j06_hybrid_journey.py tests/unit/test_error_replan_bridge.py tests/unit/test_exam_sprint_review_service.py tests/unit/test_action_command_service.py tests/unit/test_x08_outcome_capture.py tests/unit/test_outcome_ledger_contract.py tests/services/test_j08_goal_trajectory.py tests/services/test_x08_outcome_ledger_gj.py -q",
+      "exit_code": 0,
+      "summary": "122 passed in 299.71s"
+    },
+    {
+      "purpose": "chat 注入面回归",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/api/test_chat_legacy_user_context.py tests/unit/test_v3_fix53_chat_stream_route_sse.py tests/unit/test_v3_fix57_tool_continuation_empty_retry.py tests/unit/test_v3_fix166_length_truncation_family.py -q",
+      "exit_code": 0,
+      "summary": "21 passed in 22.38s"
+    },
+    {
+      "purpose": "ruff（全部改动文件）",
+      "cmd": "cd backend && ruff check app/core/hybrid_policy.py app/services/action_allocation_policy.py app/services/task_service.py app/api/v1/chat.py tests/unit/test_hybrid_policy.py tests/unit/test_action_allocation_policy.py",
+      "exit_code": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "purpose": "black（line-length 120，改动文件）",
+      "cmd": "cd backend && black --check --line-length 120 app/core/hybrid_policy.py tests/unit/test_hybrid_policy.py tests/unit/test_action_allocation_policy.py app/api/v1/chat.py app/services/action_allocation_policy.py",
+      "exit_code": 0,
+      "summary": "All checks passed（task_service.py 无关行的 black 漂移已手工还原，其本卡增量手工对齐既有文件风格；该文件未纳入 --check 是因为仓内既有行与 black 26 存在历史漂移，非本卡引入）"
+    },
+    {
+      "purpose": "mypy 零新增（棘轮对照）",
+      "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// mypy app/core/hybrid_policy.py app/services/action_allocation_policy.py app/services/task_service.py app/api/v1/chat.py",
+      "exit_code": 0,
+      "summary": "Found 30 errors in 30 files — 与 base 主检出对同批文件基线（30 errors，action_allocation_policy 同一既有 arg-type 仅行号漂移 713→781）逐项一致；hybrid_policy.py 自身 0 错误"
+    }
+  ],
+  "artifacts_sha256_note": "证据文件在本卡 commit 内；审查者以 commit sha 重算即可（I03 同口径，未单独落 .artifacts_sha256 旁证文件）"
+}
