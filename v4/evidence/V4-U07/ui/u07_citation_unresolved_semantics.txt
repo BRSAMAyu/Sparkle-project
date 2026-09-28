@@ -1,0 +1,14 @@
+- label="" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 800.0, 1200.0)
+  - label="" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 400.0, 600.0)
+    - label="纱罩" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 400.0, 273.0)
+    - label="" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 400.0, 600.0)
+      - label="对话框" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 400.0, 600.0)
+        - label="未定位来源" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 80.8, 24.0)
+        - label="" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 326.0, 44.0)
+          - label="模型给出了参考，但上游未提供可解析的来源定位目标。" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 326.0, 44.0)
+        - label="前往文档" isButton=true rect=Rect.fromLTRB(0.0, 0.0, 360.0, 48.0)
+        - label="这条引用对你有帮助吗？" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 136.4, 16.0)
+        - label="有帮助
+有帮助" isButton=true rect=Rect.fromLTRB(0.0, 0.0, 79.5, 31.0)
+        - label="没帮助
+没帮助" isButton=true rect=Rect.fromLTRB(0.0, 0.0, 79.5, 31.0)

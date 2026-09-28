@@ -18537,6 +18537,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatInterrupted => '已中断';
 
   @override
+  String get chatInstantReply => '即时回复';
+
+  @override
+  String get chatLaneKindGreeting => '问候';
+
+  @override
+  String get chatLaneKindAcknowledgment => '应答';
+
+  @override
+  String get chatLaneKindFarewell => '告别';
+
+  @override
   String get chatContextDetail => '上下文资料详情';
 
   @override

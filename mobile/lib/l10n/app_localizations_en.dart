@@ -19322,6 +19322,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInterrupted => 'Interrupted';
 
   @override
+  String get chatInstantReply => 'Instant reply';
+
+  @override
+  String get chatLaneKindGreeting => 'greeting';
+
+  @override
+  String get chatLaneKindAcknowledgment => 'acknowledgment';
+
+  @override
+  String get chatLaneKindFarewell => 'farewell';
+
+  @override
   String get chatContextDetail => 'Context detail';
 
   @override

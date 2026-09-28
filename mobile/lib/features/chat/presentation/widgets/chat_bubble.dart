@@ -27,6 +27,7 @@ import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_citation_strip.dart';
+import 'package:sparkle/features/chat/presentation/widgets/assistant_lane_marker.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
 import 'package:sparkle/features/chat/presentation/widgets/aurora_message_group.dart';
 import 'package:sparkle/features/chat/presentation/widgets/capability_ceiling_card.dart';
@@ -1279,6 +1280,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                               ),
                                             ],
                                           ),
+                                        ),
+                                      // V4-U07 快慢反馈：零模型快路（I09
+                                      // deterministic lane）模板应答的诚实
+                                      // 标记——ack 与首个有用内容可分辨，
+                                      // 模板直出不伪装成真模型生成。
+                                      if (chatMessage
+                                              ?.isDeterministicLaneReply ??
+                                          false)
+                                        AssistantLaneMarker(
+                                          kind:
+                                              chatMessage?.deterministicLaneKind,
                                         ),
                                     ],
                                   ),
