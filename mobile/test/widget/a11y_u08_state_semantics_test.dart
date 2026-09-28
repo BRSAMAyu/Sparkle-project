@@ -5,11 +5,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/state/staged_loading.dart';
 import 'package:sparkle/core/state/surface_state.dart';
 import 'package:sparkle/core/state/surface_state_view.dart';
+import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/today_cockpit_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/today_cockpit_card.dart';
+import 'package:sparkle/features/memory/presentation/providers/context_receipt_provider.dart';
 import 'package:sparkle/l10n/app_localizations_zh.dart';
 
 import '../shared/i18n_test_helper.dart';
@@ -237,6 +240,14 @@ void main() {
                 runIsActive: true,
               ),
             ),
+            // V4-U01：接续条消费面（episodeResumeProvider）钉确定性空态，
+            // 本用例不触真实网络（run 条语义断言与接续条缺席正交）。
+            homeGrowthStateProvider.overrideWith(
+              (ref) => const HomeGrowthState.empty(),
+            ),
+            contextReceiptProvider.overrideWith(
+              (ref) => _U08ContextReceiptStub(),
+            ),
           ],
           child: testMaterialApp(routerConfig: router),
         ),
@@ -275,4 +286,26 @@ void main() {
       semantics.dispose();
     });
   });
+}
+
+/// V4-U01：回执读面零网络桩（modeGated；接续条如实缺席）。
+class _U08ContextReceiptStub extends ContextReceiptNotifier {
+  _U08ContextReceiptStub() : super(_U08UnreachableApiClient()) {
+    state = const ContextReceiptState(
+      phase: ContextReceiptPhase.modeGated,
+      mode: 'off',
+    );
+  }
+
+  @override
+  Future<void> load() async {}
+
+  @override
+  Future<void> refresh() async {}
+}
+
+class _U08UnreachableApiClient implements ApiClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('u08 stub must not hit network');
 }

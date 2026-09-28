@@ -14340,6 +14340,25 @@
       }
     }
   },
+  "homeResumeEyebrow": "Pick up where you left off",
+  "homeResumeLastStep": "Last time: {step}",
+  "@homeResumeLastStep": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "homeResumeNextStep": "Next: {step}",
+  "@homeResumeNextStep": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "homeResumeStaleLine": "Your last progress info may be out of date — recalibrate in the task before continuing",
+  "homeResumeContinueCta": "Continue this step",
   "dashboardEstimatedMinutes": "{minutes} min",
   "@dashboardEstimatedMinutes": {
     "placeholders": {

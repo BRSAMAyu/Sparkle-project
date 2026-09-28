@@ -1846,8 +1846,8 @@
         "V4-F04",
         "V4-I01"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
+      "status": "in_progress",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
       "kind": "implementation",
       "required_locks": [
@@ -1898,7 +1898,10 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "evidence_pointer": "v4/evidence/V4-U01/",
+      "evidence_summary": "首页接续走 TodayCockpitCard 同款模式（新组件 EpisodeResumeStrip 挂 cockpit 卡内；RF-06 三冲突面/五 Tab 路由/classic 通道零 diff）：数据源唯一为 I01 episode_resume_view.v1 读模型 + I06 回执读面（仅 selection_role=resume_view 可作接续依据），fail-closed 解析（版本门/必需键）、字段级降级不连坐、过期判定=resume_view_stale_reason 客户端子集（expires_at）。fresh 视图「上次/下一步」如实可见、主 CTA 标签收敛「继续这一步」（同任务同既有链路，只改标签不改目标，stalled 不收敛）；stale 只渲染不确定性说明不接续（B05 §9 反例）；无回执/无任务/视图降级零渲染（零假历史）；退出重进零自动播放（纯静态，transientCallbackCount==0 钉死）。新增 24 测（模型6/provider9/集成7/证据2，每验收面一正一反）+2 既有测试补零网络桩（断言强度不变）；全量 +2915 ~23 全绿、analyze 零 issue、四棘轮 PASS（spacing 棘轮捕获新文件半步 token 3 处→改 4pt 栅格，不刷基线）；截图+语义落盘（Ahem 字形，F04/U03 同先例）；零模型调用、零 backend/proto/迁移/路由触碰。source_sha=e50107fe（base）；待 1 位独立审查（normal）+集成 SHA 复验（review_receipt.json PENDING，挑战点预登记 6 条）",
+      "progress_note": "2026-09-29 wtU01：REVIEW_READY 交付（worktree wtU01，分支 agent/v4/u01，未 push）。已知边界如实登记：memory_epoch 陈旧判定客户端不判（epoch 读侧无真源，TTL 短+装载重算兜底，limitations #1）；回执读面 off/shadow 默认档下接续面契约性缺席（mode=live 自动生效，#2）；D01 mark_seen 不接线（非 intervention record 无权威回执可指，造 ref 违 I2；F03 resume_available 消费面就绪待 WS 帧，#3/#4）；「可调整」复用既有 ghost 次级入口未新增显式控件（#5，审查挑战 CH-U01-3）；证据截图 Ahem 字形（#6）——见 v4/evidence/V4-U01/limitations.md（6 条限制）+ review_receipt.json（6 条审查挑战预登记）"
     },
     {
       "id": "V4-U02",

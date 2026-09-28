@@ -1,0 +1,114 @@
+{
+  "card": "V4-U01",
+  "task": "首页接续与有价值的第一主动作（goal接续+一主行动+可展开依据；零假历史；stale 不接续）",
+  "agent": "wtU01",
+  "branch": "agent/v4/u01",
+  "base_sha": "e50107fe03ed4f6ae4d35066fa380923e4dd62f0",
+  "generated_at_local": "2026-09-29",
+  "kind": "implementation",
+  "risk": "normal",
+  "independent_reviewers_required": 1,
+  "product_code_changed": true,
+  "environment": {
+    "worktree": "wtU01（git worktree add ../wtU01 -b agent/v4/u01 main；无 .env 触碰，测试自然落桩，不触 dev DB）",
+    "flutter": "3.41.3 stable（48c32af034）",
+    "generated_artifacts": "backend/app/gen、backend/gateway/gen、mobile/lib/gen 由主检出 cp -R 实体目录复制（非 symlink）；git check-ignore 确认忽略，永不提交"
+  },
+  "no_llm_used": true,
+  "commands": [
+    {
+      "purpose": "建立 worktree",
+      "cmd": "git worktree add ../wtU01 -b agent/v4/u01 main",
+      "exit_code": 0,
+      "evidence": "HEAD=e50107fe03ed4f6ae4d35066fa380923e4dd62f0（U10 销账点）"
+    },
+    {
+      "purpose": "复制 gitignored 生成产物（测试需要，永不提交）",
+      "cmd": "cp -R backend/app/gen backend/gateway/gen mobile/lib/gen → wtU01 对应路径；git check-ignore mobile/lib/gen",
+      "exit_code": 0,
+      "evidence": "COPIED + gitignored OK"
+    },
+    {
+      "purpose": "新文件静态检查",
+      "cmd": "flutter analyze",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "evidence": "No issues found!（全仓零 issue；中途曾报 17 → 逐项清零，含 spacing 棘轮捕获的半步 token 3 处改 4pt 栅格）"
+    },
+    {
+      "purpose": "U01 新增测试（模型解析/过期判定 + provider 组合门 + 集成三验收面 + 证据两面）",
+      "cmd": "flutter test test/features/home/data/episode_resume_models_test.dart test/features/home/presentation/providers/episode_resume_provider_test.dart test/features/home/presentation/widgets/today_cockpit_resume_integration_test.dart test/features/home/presentation/widgets/today_cockpit_resume_evidence_test.dart test/features/home/presentation/widgets/today_cockpit_card_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "evidence": "+33 passed（新增 24 + 存量 cockpit 9，存量断言零改动）"
+    },
+    {
+      "purpose": "受影响面回归（home 全部 + memory 回执读面 + a11y U-08 + style preview）",
+      "cmd": "flutter test test/features/home test/features/memory test/widget/a11y_u08_state_semantics_test.dart test/core/design/style_preview",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "evidence": "+277 passed（含溢出修复后重跑；探针用例已删除）"
+    },
+    {
+      "purpose": "全量回归（最终跑，含本卡全部改动）",
+      "cmd": "flutter test",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "evidence": "见 test_results.json（2915+ passed ~23 skipped；首轮 2911 passed 在 spacing token 修正前，最终跑覆盖全部改动）"
+    },
+    {
+      "purpose": "四棘轮守卫",
+      "cmd": "python3 scripts/guards/check_ui_design_tokens_ratchet.py && python3 scripts/guards/check_typography_rhythm_ratchet.py && python3 scripts/guards/check_spacing_rhythm_ratchet.py && python3 scripts/guards/check_dl_spec_ratchet.py",
+      "exit_code": 0,
+      "evidence": "四守卫全 PASS；spacing 棘轮首轮 FAIL（新文件 spacingHalfStep=3）→ 改 4pt 栅格（6→8、10→12）后 PASS，不降阈值不刷基线"
+    },
+    {
+      "purpose": "UI 证据落盘（顶层截图 + 语义树 dump）",
+      "cmd": "U01_EVIDENCE_DIR=<evidence dir> flutter test test/features/home/presentation/widgets/today_cockpit_resume_evidence_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "evidence": "+2 passed；u01_resume_ready_360x800.png/_semantics.txt、u01_resume_stale_360x800.png/_semantics.txt 落盘"
+    },
+    {
+      "purpose": "红线自证（冲突面/路由/像素通道零 diff）",
+      "cmd": "git diff main -- mobile/lib/features/home/presentation/screens/dashboard_screen.dart mobile/lib/app/routes.dart mobile/lib/core/design/theme_manager.dart | wc -l",
+      "exit_code": 0,
+      "evidence": "0（dashboard_screen / routes / theme_manager 零 diff；compact_status_bar 与 task_execution_screen 同为零 diff）"
+    }
+  ],
+  "scope_and_denominator": {
+    "deliverables": [
+      "mobile/lib/features/home/data/episode_resume_models.dart（新增）",
+      "mobile/lib/features/home/presentation/providers/episode_resume_provider.dart（新增）",
+      "mobile/lib/features/home/presentation/widgets/episode_resume_strip.dart（新增）",
+      "mobile/lib/features/home/presentation/widgets/today_cockpit_card.dart（挂载 + CTA 标签收敛）",
+      "mobile/lib/core/network/api_endpoints.dart（endpoint 常量）",
+      "mobile/lib/l10n/app_zh.arb + app_en.arb + gen-l10n 产物（5 词条）",
+      "mobile/lib/core/design/style_preview/style_preview_faces.dart（preview 离线合同补钉）",
+      "mobile/test/features/home/dashboard_test_harness.dart（回执读面确定性默认桩）",
+      "mobile/test/widget/a11y_u08_state_semantics_test.dart（同款零网络桩，断言不变）",
+      "mobile/test/features/home/data/episode_resume_models_test.dart（新增）",
+      "mobile/test/features/home/presentation/providers/episode_resume_provider_test.dart（新增）",
+      "mobile/test/features/home/presentation/widgets/today_cockpit_resume_integration_test.dart（新增）",
+      "mobile/test/features/home/presentation/widgets/today_cockpit_resume_evidence_test.dart（新增）"
+    ],
+    "untouched_by_policy": [
+      "mobile/lib/features/home/presentation/screens/dashboard_screen.dart（RF-06 冲突面）",
+      "compact_status_bar / task_execution_screen（RF-06 冲突面）",
+      "mobile/lib/app/routes.dart（五 Tab 路由合同）",
+      "design_system.dart / theme_manager.dart / tokens_v2（classic 通道）",
+      "backend/ gateway/ proto/ 迁移（零触碰；I01 后端已合并，本卡纯消费）",
+      "mobile/lib/gen 等生成产物（gitignored，实体复制）"
+    ]
+  },
+  "artifacts": {
+    "v4/evidence/V4-U01/u01_resume_ready_360x800.png": "f43f701f566780c073ae0eb5d4877f1da2b11ae92df158488f73e9fe586ad961",
+    "v4/evidence/V4-U01/u01_resume_ready_360x800_semantics.txt": "c1555c98b90e5ae78b70a25081b55132ec4c60109cbef61d085f71045695ab76",
+    "v4/evidence/V4-U01/u01_resume_stale_360x800.png": "be22d0844a4e88be5e63bc061f25a9e20cea16536ce6184f7843d202e217e0a7",
+    "v4/evidence/V4-U01/u01_resume_stale_360x800_semantics.txt": "fcc147ee268aed5d9951ec68b83d669dbce2cd9a111db2c0ca191fbd1c343579"
+  },
+  "screenshots_semantics_note": "截图为测试泵顶层整屏（360×800 dpr2；测试环境无 CJK 字体，字形呈 Ahem 方块——同 F04/U03 证据先例），真实文案以同族 *_semantics.txt 为准（元素树口径语义 dump）。ready 截图 = 新鲜视图（eyebrow「Pick up where you left off」+ Last time/Next 两行 + 主 CTA「Continue this step」于首屏 y≈410）；stale 截图 = 过期诚实态（「may be out of date — recalibrate」单行 + 主 CTA 照旧「Start Here」，上次/下一步零渲染）。两图 MD5 不同、语义行互斥（ready 含 Last time/Next、stale 零 Last time/Next），对应可失败断言在 evidence 测试内钉死。",
+  "llm_usage": "本卡为纯工程实现（无模型调用），actual_model_and_usage = NOT_APPLICABLE",
+  "physical_device_scope": "无真机/模拟器触达；360 首屏以 tester.view.physicalSize + ensureVisible/rect 断言实证；退出重进以卸载重挂实证（transientCallbackCount==0 钉零 auto-play）",
+  "no_duplicate_evidence": "V3 J-03 cockpit 四态与 F-9 账本口径原样保留不重写（存量 cockpit 测试 9 测全绿零改动）；I01 backend 证据归 V4-I01（DONE_REVIEWED），本卡仅举证其移动端消费面此前零命中（episode-resume 在 mobile/lib 此前仅 l10n 文案表一处无关命中），本卡为首个呈现位"
+}

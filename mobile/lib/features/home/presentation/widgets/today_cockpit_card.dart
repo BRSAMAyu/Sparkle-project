@@ -9,8 +9,10 @@ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/home/presentation/providers/episode_resume_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/today_cockpit_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
+import 'package:sparkle/features/home/presentation/widgets/episode_resume_strip.dart';
 import 'package:sparkle/features/recovery/presentation/widgets/stuck_journey_sheet.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -66,6 +68,18 @@ class _CockpitContent extends ConsumerWidget {
     final accent = _accentColor();
     final headline = _headline(l10n);
     final why = _whyLine(l10n);
+    // V4-U01：goal 接续依据（I01 读模型如实投影）。有新鲜 pending step 时
+    // 主 CTA 标签收敛为「继续这一步」（同一任务、同一条既有跳转链路，只
+    // 改标签不改目标）；stale / 无视图时照旧——stale 不接续。
+    final resumeState =
+        ref.watch(episodeResumeProvider).valueOrNull;
+    final continueStep =
+        (vm.action == TodayCockpitAction.startTask && !vm.isLoading)
+            ? resumeState?.continueStepFor(
+                vm.taskToStart?.id,
+                now: DateTime.now(),
+              )
+            : null;
 
     return Column(
       key: const ValueKey('today-cockpit-content'),
@@ -143,11 +157,17 @@ class _CockpitContent extends ConsumerWidget {
           const SizedBox(height: DS.spacing12),
           _CurrentRunStrip(runLabel: vm.runLabel),
         ],
+        // V4-U01：接续证据条（「上次到哪 + 下一步」）。零假历史（无视图零
+        // 渲染）、stale 只说明不接续、纯静态零可点目标——首屏唯一 primary
+        // CTA 仍是下方主按钮。
+        const EpisodeResumeStrip(),
         const SizedBox(height: DS.spacing16),
         // 唯一 primary CTA —— 首屏 filled 按钮只此一个。
         SparkleButton.primary(
           key: const ValueKey('today-cockpit-primary-cta'),
-          label: _primaryLabel(l10n),
+          label: continueStep != null
+              ? l10n.homeResumeContinueCta
+              : _primaryLabel(l10n),
           icon: Icon(_primaryIcon()),
           expand: true,
           onPressed: () => _executePrimary(context, ref),

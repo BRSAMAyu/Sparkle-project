@@ -28,12 +28,15 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/pixel/pixel_state.dart';
 import 'package:sparkle/core/design/style_preview/style_preview_seed.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/presentation/widgets/task_stuck_card.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_background_painter.dart';
+import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/today_cockpit_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/today_cockpit_card.dart';
+import 'package:sparkle/features/memory/presentation/providers/context_receipt_provider.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -204,9 +207,42 @@ class StylePreviewHomeFace extends StatelessWidget {
       key: ValueKey('style-preview-cockpit-$step'),
       overrides: [
         todayCockpitProvider.overrideWithValue(seedCockpitVm(step)),
+        // V4-U01：接续条消费面（episodeResumeProvider → 回执读面/today
+        // 选择流）在 preview 离线合同内钉死——回执读面 off（modeGated）、
+        // growth 读面空态，零网络（与 F05「provider 钉 seed，离线不拉真源」
+        // 同一合同；接续条如实缺席）。
+        homeGrowthStateProvider.overrideWith(
+          (ref) => const HomeGrowthState.empty(),
+        ),
+        contextReceiptProvider.overrideWith(
+          (ref) => _PreviewContextReceiptNotifier(),
+        ),
       ],
       child: const TodayCockpitCard(),
     );
+}
+
+/// preview 离线合同：回执读面钉 off（modeGated），零网络。
+class _PreviewContextReceiptNotifier extends ContextReceiptNotifier {
+  _PreviewContextReceiptNotifier() : super(_PreviewUnreachableApiClient()) {
+    // 构造期即钉 modeGated（provider 工厂被覆写后无人调用 load()）。
+    state = const ContextReceiptState(
+      phase: ContextReceiptPhase.modeGated,
+      mode: 'off',
+    );
+  }
+
+  @override
+  Future<void> load() async {}
+
+  @override
+  Future<void> refresh() async {}
+}
+
+class _PreviewUnreachableApiClient implements ApiClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('style preview must not hit network');
 }
 
 /// 卡住 sheet 面：真实 [TaskStuckCard] 内嵌 + 真实 `showModalBottomSheet`

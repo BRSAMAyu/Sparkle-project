@@ -247,6 +247,9 @@ class ApiEndpoints {
   // V4-U03: I06 context_selection_receipt.v1 读面（这次的理解回执）。
   static const String experienceContextReceiptLatest =
       '/experience/context-receipts/latest';
+  // V4-U01: I01 episode_resume_view.v1 读模型（首页接续；唯一 REST 入口）。
+  static String episodeResumeTask(String taskId) =>
+      '/episode-resume/tasks/$taskId';
   static const String experienceGrowthDashboard =
       '/experience/growth-dashboard';
   static const String experienceCommunityAccountability =
