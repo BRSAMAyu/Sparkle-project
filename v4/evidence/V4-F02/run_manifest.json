@@ -12,7 +12,9 @@
     "gen_note": "mobile/lib/gen 为 gitignored 实体目录：自主检出 cp -R 复制进 worktree（非 symlink，未入库）；l10n 生成文件曾被 flutter pub get 误触再生成（-90 行），已 git checkout 还原，不在 diff 中"
   },
   "locks": {
-    "required": ["design-components"],
+    "required": [
+      "design-components"
+    ],
     "note": "sparkle-coordination-v2 远端未配置于本机（git fetch 无此 remote），租约登记 NOT_RUN；冲突面自证：diff 不含 features/ 文件、不含 dashboard_screen/compact_status_bar/task_execution_screen、不含路由文件"
   },
   "commands": [
@@ -68,7 +70,7 @@
       "purpose": "主题敏感面回归（app 壳 + a11y + 冒烟）",
       "command": "flutter test test/app test/widget/a11y_semantic_labels_test.dart test/widget_test.dart",
       "exit_code": 0,
-      "result": "+45 ~1 All tests passed!（~1 为既有 tearDownAll 挂起残记，与 main 基线同口径）"
+      "result": "+45 ~1 All tests passed!（~1 实为 test/widget_test.dart:69 既有 skip:true 用例（~ = skip，非挂起）——F02 一审 C1 勘误，基线口径材料事实不变）"
     },
     {
       "id": 9,
