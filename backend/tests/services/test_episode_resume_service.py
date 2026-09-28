@@ -420,6 +420,37 @@ async def test_recompute_is_deterministic_same_authorities_same_view(db_session)
     assert a.view == b.view
 
 
+async def test_outcome_scan_overflow_returns_honest_null(db_session, monkeypatch):
+    """I01-R1 C1：有界扫描压顶（>3 页全不匹配且游标不断）→ last_valid_outcome
+    诚实 null——不报错、不以替代指标呈现、不死循环。若移除 _OUTCOME_SCAN_MAX_PAGES
+    有界性，本测试将挂起/超时（可失败性来源）。"""
+    from types import SimpleNamespace
+
+    from app.services import episode_resume_service as _ers
+
+    class _StubLedger:
+        def __init__(self, db):
+            self.db = db
+
+        async def query(self, *, user_id, until, limit, cursor):
+            entry = SimpleNamespace(
+                outcome_id="outc_stub",
+                truth_class=SimpleNamespace(value="self_reported"),
+                occurred_at=_NOW - timedelta(minutes=5),
+                correlation={"task_id": "other-task"},
+            )
+            return SimpleNamespace(items=[entry] * limit, next_cursor="next")
+
+    monkeypatch.setattr(_ers, "OutcomeLedgerService", _StubLedger)
+    user = await _make_user(db_session)
+    _, task = await _make_episode(db_session, user)
+    result = await EpisodeResumeService(db_session).build_resume_view(
+        user_id=user.id, task_id=task.id, context_receipt_ref=_RECEIPT, now=_NOW
+    )
+    assert result.view is not None
+    assert result.view["last_valid_outcome"] is None
+
+
 async def test_ttl_validation(db_session):
     user = await _make_user(db_session)
     _, task = await _make_episode(db_session, user)

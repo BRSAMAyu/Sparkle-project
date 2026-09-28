@@ -56,4 +56,4 @@
 
 ## 7. 边界与既知限制
 
-见 `limitations.md`（goal 内容级变更检测受限于无 goal 版本绑定列、why_now 物理落点未绑死故经 `getattr(task,"why_now",None)` 前向兼容读取、receipt 本体未实现故入口只绑 ref 等 5 项）。
+见 `limitations.md`（goal 内容级变更检测受限于无 goal 版本绑定列、why_now 物理落点未绑死故经 `getattr(task,"why_now",None)` 前向兼容读取、receipt 本体未实现故入口只绑 ref 等 7 项）。
