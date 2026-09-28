@@ -1,0 +1,114 @@
+{
+  "task": "V4-S03",
+  "title": "平台语义触觉与去重",
+  "date": "2026-09-29",
+  "executor": "wtS03（worktree /Users/brsama/code/GitHub/wtS03，分支 agent/v4/s03，自 main@c3baf168 开出）",
+  "source_sha_base": "c3baf168c79ea5caa06a4af5810fbd2c04058e4e",
+  "source_sha_head": "见台账（evidence 提交后的分支头；实现提交 17490a3a9c578b022a3810593c3b7cb4a729f383，本文件所在提交即证据面）",
+  "source_sha_base_note": "git rev-parse c3baf168 实测=c3baf168c79ea5caa06a4af5810fbd2c04058e4e（2026-09-29 state(fleet): P01 销账 43/58+机械门三捕+S03 补位）",
+  "no_push": true,
+  "risk": "normal",
+  "required_locks": [
+    "haptic-policy"
+  ],
+  "locks": {
+    "note": "sparkle-coordination-v2 远端未配置于本机（git remote 仅 origin，与 S02/U14/F06 同状），租约登记 NOT_RUN；冲突面自证：diff 不含 RF-06 三冲突面（dashboard_screen/compact_status_bar/task_execution_screen）、不含 app/routes.dart、不含 backend/、proto/、迁移、gen 产物、l10n arb；触达面 = 新增 semantic_haptics.dart + F03 适配器默认出口 SensoryFeedbackSink 触侧接线（+50/−5，声侧零变化）+ 1 测试文件。与在航 S02（audio-policy）零文件交集：S02 改 sensory_feedback_service.dart 的音频区（焦点订阅/独立音量），本卡不改该文件，仅适配器出口处按槽位分离声（走服务）/触（走锁面）——haptic-policy 与 audio-policy 锁面正交。"
+  },
+  "toolchain": {
+    "flutter": "3.41.3 stable (revision 48c32af034, 2026-02-27)",
+    "dart": "3.11.1 stable",
+    "host": "darwin 25.6.0 arm64 (macOS)",
+    "gen_note": "worktree 自主检出后 cp -RL 复制主检出 gitignored gen 目录（mobile/lib/gen + backend/app/gen + gateway/gen，U14/J-05/S02 同处置）；本卡无 l10n 变更（触觉无 UI 文案，arb/生成物零 diff，S01 同例）",
+    "haptic_sdk_note": "HapticFeedback 官方七 API（vibrate/light/medium/heavy/selectionClick/successNotification/warningNotification/errorNotification）为 Flutter 3.41 SDK 面；success/warning/error notification 三枚系 SDK 已固化官方语义触觉（iOS UINotificationFeedbackGenerator / Android HapticFeedbackConstants API30+），非本卡自造"
+  },
+  "model_usage": {
+    "llm_used": true,
+    "model": "GLM（会话模型 GLM-5.3-Flash，ZCode 代理会话）",
+    "token_count": "NOT_EXPOSED（宿主未暴露 token 计数接口，如实登记不伪造）",
+    "pricing_source": "账户侧计费，本卡无独立可引用价目（与 U14/S02 同口径）"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtS03 -b agent/v4/s03 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "复制 gitignored 生成物目录（mobile/lib/gen + backend/app/gen + gateway/gen）",
+      "command": "cp -RL 主检出 gen 目录 → worktree",
+      "exit_code": 0
+    },
+    {
+      "id": 3,
+      "purpose": "依赖解析（新 worktree 无 .dart_tool）",
+      "command": "cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "2 packages discontinued（既有口径）；pubspec.lock 零改动（无新增依赖——触觉全部复用 Flutter SDK 内建 HapticFeedback，未加任何插件/平台通道）"
+    },
+    {
+      "id": 4,
+      "purpose": "静态检查（全库）",
+      "command": "cd mobile && flutter analyze --no-pub",
+      "exit_code": 0,
+      "note": "No issues found!（最终态；中途 57→19→5→0 的收敛过程均为本卡新文件的 trailing-comma/冗余参数风格项，逐轮清零，无 ignore 豁免残留——仅 H 组 1 处 currentSubjectVersionToken: null 带 ignore 注释，系反例钉的显式语义锚，卡面有说明）"
+    },
+    {
+      "id": 5,
+      "purpose": "本卡新测试（22 用例：每验收面一正一反 + 反例钉 + 通道级集成）",
+      "command": "cd mobile && flutter test test/core/design/semantic_haptics_s03_test.dart",
+      "exit_code": 0,
+      "note": "+22 全绿；首试 H 组 3 败为测试装置缺陷（通道记录器跨用例未清零），修复后全绿——非产品码缺陷"
+    },
+    {
+      "id": 6,
+      "purpose": "受影响域：experience（F03 适配器默认出口改动回归）",
+      "command": "cd mobile && flutter test test/core/experience/",
+      "exit_code": 0,
+      "note": "+19 全绿（注入型 sink 19 用例不受默认出口改动影响）"
+    },
+    {
+      "id": 7,
+      "purpose": "受影响域：services（U14 偏好权威/感官服务回归）",
+      "command": "cd mobile && flutter test test/core/services/",
+      "exit_code": 0,
+      "note": "+98 全绿"
+    },
+    {
+      "id": 8,
+      "purpose": "受影响域：design（S01 语义动效/DS 全量 + 本卡新套）",
+      "command": "cd mobile && flutter test test/core/design/",
+      "exit_code": 0,
+      "note": "+261 全绿（含本卡 22）"
+    },
+    {
+      "id": 9,
+      "purpose": "消费方回归：设置面/聊天组件/社区",
+      "command": "cd mobile && flutter test test/widget/unified_settings_bgm_test.dart test/widget/unified_settings_ambient_toggle_test.dart test/features/chat/presentation/widgets/collapsible_widget_wrapper_test.dart test/features/chat/presentation/widgets/assistant_citation_honesty_test.dart test/features/chat/presentation/widgets/u07_evidence_capture_test.dart test/features/community/presentation/screens/squad_detail_screen_test.dart",
+      "exit_code": 0,
+      "note": "+20 全绿（auth 状态检查 warning 为既有 retryable 日志，非本卡引入）"
+    },
+    {
+      "id": 10,
+      "purpose": "消费方回归：q03 视觉 QA harness + home 域",
+      "command": "cd mobile && flutter test test/goldens/q03_visual_qa/ test/features/home/",
+      "exit_code": 0,
+      "note": "+139 全绿；harness 运行再生的 v3-output/WT401-Q03-VISUAL probe JSON 已 git checkout 还原（会话产物不入本卡 diff）"
+    },
+    {
+      "id": 11,
+      "purpose": "治理守卫（提交前基线）",
+      "command": "bash scripts/run_all_rule_guards.sh",
+      "exit_code": 0,
+      "note": "all rule guards passed (88 rules)；既有 WARN=7 为 ENUM-PARITY 既有宽免面，无新增"
+    }
+  ],
+  "evidence_scope": {
+    "simulator_conclusion": "模拟器/测试环境（flutter test，无物理设备）：**调用级正确**成立——SystemChannels.platform 真方法通道 mock 记录证明：committed 回执事件 → 恰一次 HapticFeedback.vibrate:HapticFeedbackType.successNotification；偏好关闭/重播/版本未知/nativeHandled/窗内去重 → 0 次触觉调用；四槽模式选择与官方 API 语义一一对应。",
+    "physical_device_conclusion": "DEVICE_UNVERIFIED——真机触感舒适度/强度/时延未测（本机无 iOS/Android 物理设备接入本工作区）。卡验收 3 明示两层结论分开出具；真机能力矩阵与舒适度判据归 Q06（全感官关闭/重放/真机能力矩阵），本卡证据不冒充真机面。",
+    "denominator": "本卡触达面 = 2 新文件 + 1 适配器触侧出口改（+50/−5）；全库 analyze 零 issue + 受影响域五组套件 + 88 治理守卫为分母；未跑全量 mobile 测试套件（与 S01/S02 同口径：受影响域切片 + 消费方回归）"
+  },
+  "artifacts_sha256_cmd": "cd v4/evidence/V4-S03 && shasum -a 256 diff_or_evidence_only.md run_manifest.json test_results.json review_receipt.json limitations.md > artifacts_sha256.txt",
+  "artifacts_sha256_note": "artifacts_sha256.txt 由本提交前最后一刻生成（对四份文本证据 + 本文件清单）；实现提交 17490a3a 的树哈希可由 git 复核"
+}

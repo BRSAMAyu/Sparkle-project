@@ -1,0 +1,33 @@
+{
+  "task": "V4-S03",
+  "review_state": "NOT_RUN",
+  "independent_reviewers_required": 1,
+  "note": "普通风险卡：需 1 份独立未参与会话审查 + 集成 SHA 可失败复验后才能销账。本文件为占位，R1 receipt 由审查会话另行落盘（review_r1.md），审查结论回写本文件 review_state。审查基线 = agent/v4/s03 实现 commit 17490a3a9c578b022a3810593c3b7cb4a729f383（base c3baf168c79ea5caa06a4af5810fbd2c04058e4e）。",
+  "pre_registered_challenges": [
+    {
+      "id": "R1-C1",
+      "challenge": "锁面新增 SemanticHapticDispatcher 是不是「第二震动路径」（违反 F03「无第二发声/震动路径」纪律）？",
+      "defense": "F03 原纪律指「适配器不得绕开统一出口直调插件」。本卡是 haptic-policy 锁面卡（required_locks=haptic-policy）：V4 语义面的触觉物理出口收敛到 SparkleHapticChannel 一处，且比原路径更收口——原出口 SensoryFeedbackService.emit 声触合一，现在触侧单列经锁面、声侧 enableHaptic:false 继续走原服务（各恰一条物理出口）。V3 服务内部 HapticFeedback 调用不动（卡 rollback 条款保留 V3 路径）。审查可核：全 diff 中 HapticFeedback 引用只在锁面枚举官方 API 直引一处，适配器零直调。"
+    },
+    {
+      "id": "R1-C2",
+      "challenge": "success 槽映射 successNotification（Android API<30 无效果）是否构成「假反馈」或回归（原路径 success→mediumImpact 有效果）？",
+      "defense": "乐谱原文就是「系统success一次」——successNotification 是该词的官方语义载体（iOS UINotificationFeedbackGenerator success）；Android API<30 平台自身无效果 = 平台策略，与乐谱「不支持则不震，不能拿蜂鸣替代」同向，limitations 已如实登记。V3 服务（success→mediumImpact）未改动——该差异只作用于 V4 语义面（experience_event 呈现链），V3 UI 词表面行为零变化。"
+    },
+    {
+      "id": "R1-C3",
+      "challenge": "适配器默认出口改动是否影响 F03 既有验收（声触合一假设）？",
+      "defense": "F03 既有 19 用例全为注入型 sink（_RecordingSink），不触默认出口——19/19 复证全绿；默认出口新行为由本卡 H 组通道级 4 用例钉死（committed 恰一次 / 重播 0 / 版本未知 0 / 偏好关 0）。声侧调用参数仅增 enableHaptic:false（原出口本就检查 isHapticEnabled，声侧行为逐字节等价）。"
+    },
+    {
+      "id": "R1-C4",
+      "challenge": "去重窗 500ms 取值依据？是不是拍脑袋常数？",
+      "defense": "乐谱未给触觉窗值；500ms 覆盖同一交互内叠加调用（框架 enableFeedback 与应用反馈的典型同帧/邻帧栈）且小于任何乐谱动效窗口（最长 milestone 650ms 也不会被窗吞——不同槽不互去重）。窗口=派发器构造参数可注入，常量 kSparkleHapticDedupeWindow 与测试互钉；改值=改契约须同步 MOTION 文档（S01 预算表同纪律）。若审查判值不当，属契约参数修订，不构成机制缺陷。"
+    },
+    {
+      "id": "R1-C5",
+      "challenge": "nativeHandled 位目前没有生产接线点，是否是死代码/未生效面？",
+      "defense": "位置如实：当前 V4 语义面（F03 出口）均为回执驱动呈现，不落在原生触觉控件上，故默认出口传 false；位面被 E 组反例钉死且对 F03 出口语义正确（按压/成功不可合并）。把具体 Material 控件（enableFeedback/选择器滚轮）调用点逐一审计接线是调用点纪律面，登记 limitations L4；去重窗是系统级兜底（同槽短窗不重复触发）——即使调用点漏标 nativeHandled，窗内叠加也被吞。不冒充「全 app 双震已清零」。"
+    }
+  ]
+}

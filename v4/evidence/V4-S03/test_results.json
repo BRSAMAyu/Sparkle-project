@@ -1,0 +1,77 @@
+{
+  "task": "V4-S03",
+  "date": "2026-09-29",
+  "environment": "flutter 3.41.3 stable / dart 3.11.1 / darwin arm64 / 无物理设备",
+  "suites": [
+    {
+      "path": "test/core/design/semantic_haptics_s03_test.dart",
+      "kind": "new",
+      "tests": 22,
+      "failed": 0,
+      "note": "A± 偏好门 2 / B± 重播门 2 / C± 相位门 4（终态正 1 + pending/unknown/相错配反例钉 3）/ D± 能力门 2 / E± native双震门 2 / F± 去重窗 3（窗外正/窗内反例钉/跨槽不合并）/ G 映射+棘轮 3 / H 通道级集成 4（committed 正例 + 重播钉 + 版本未知钉 + 关闭偏好钉）",
+      "flaky_history": "首试 H 组 3 败 = 测试装置通道记录器跨用例未清零（装置缺陷），修复后 22/22 稳定；产品码零改动"
+    },
+    {
+      "path": "test/core/experience/",
+      "kind": "regression",
+      "tests": 19,
+      "failed": 0,
+      "note": "F03 适配器（注入型 sink）+ badge 测试全绿——默认出口改动零影响"
+    },
+    {
+      "path": "test/core/services/",
+      "kind": "regression",
+      "tests": 98,
+      "failed": 0,
+      "note": "U14 偏好权威/感官服务/用户偏好服务全绿"
+    },
+    {
+      "path": "test/core/design/",
+      "kind": "regression",
+      "tests": 261,
+      "failed": 0,
+      "note": "含本卡 22；S01 语义动效/DS 原子/像素组件族全绿"
+    },
+    {
+      "path": "消费方 6 套（unified_settings_bgm / unified_settings_ambient_toggle / collapsible_widget_wrapper / assistant_citation_honesty / u07_evidence_capture / squad_detail_screen）",
+      "kind": "regression",
+      "tests": 20,
+      "failed": 0,
+      "note": "设置面/聊天/社区消费方全绿；auth 状态检查 warning 为既有 retryable 日志"
+    },
+    {
+      "path": "test/goldens/q03_visual_qa/ + test/features/home/",
+      "kind": "regression",
+      "tests": 139,
+      "failed": 0,
+      "note": "q03 harness + home 域全绿；harness 再生的 v3-output probe JSON 已还原，不入本卡 diff"
+    }
+  ],
+  "static_analysis": {
+    "command": "cd mobile && flutter analyze --no-pub",
+    "result": "No issues found!",
+    "scope": "全库"
+  },
+  "governance_guards": {
+    "command": "bash scripts/run_all_rule_guards.sh",
+    "result": "all rule guards passed (88 rules)",
+    "note": "既有 WARN=7（ENUM-PARITY 宽免面）非本卡新增；无断言删改"
+  },
+  "totals": {
+    "new_tests": 22,
+    "regression_tests": 537,
+    "failed": 0
+  },
+  "not_run": [
+    {
+      "item": "真机触觉舒适度/强度/时延",
+      "reason": "无物理设备",
+      "disposition": "DEVICE_UNVERIFIED，归 V4-Q06 真机能力矩阵"
+    },
+    {
+      "item": "全量 mobile 测试套件",
+      "reason": "受影响域切片 + 消费方回归口径（S01/S02 同例）",
+      "disposition": "集成 SHA 复验时由合并方按需补跑"
+    }
+  ]
+}
