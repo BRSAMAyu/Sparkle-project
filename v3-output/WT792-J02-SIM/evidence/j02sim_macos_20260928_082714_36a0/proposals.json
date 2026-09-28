@@ -1,0 +1,12 @@
+{
+  "proposals": {
+    "PX3": "你的第一步 | 边学 React 边做出 3 个能放进作品集的前端项目。 | 初始化项目1并渲染Hello World | 终端运行npx create-react-app portfolio-project-1，打开src/App.js，将return改为<h1>Project 1</h1>并保存。 | 产出 | 本地启动成功，浏览器显示'Project 1'页面，项目骨架就绪。 | 完成证据 | 可检查的完成证据 | 轮到谁 | 一起做 · 约 10 分钟 | 开始这一步 | 这个不合适 | 编辑",
+    "PX5": "你的第一步 | 持续产出学习类播客，第一个月先发出 2 期。 | 确定首期播客选题并撰写300字大纲 | 打开文档，写下首期播客的暂定标题、核心知识点及3个关键论点。 | 产出 | 一份结构清晰的首期播客内容大纲（文本文件）。 | 完成证据 | 产出一件可见的东西 | 轮到谁 | 你做 · 约 15 分钟 | 开始这一步 | 这个不合适 | 编辑"
+  },
+  "pairwise_distinct_in_process": null,
+  "pairwise_note": "cross-process comparison by executor; proposals only exist for passes whose R8 ran (V3-FIX-539 miss otherwise)",
+  "texts": {
+    "PX3": "你的第一步 | 边学 React 边做出 3 个能放进作品集的前端项目。 | 初始化项目1并渲染Hello World | 终端运行npx create-react-app portfolio-project-1，打开src/App.js，将return改为<h1>Project 1</h1>并保存。 | 产出 | 本地启动成功，浏览器显示'Project 1'页面，项目骨架就绪。 | 完成证据 | 可检查的完成证据 | 轮到谁 | 一起做 · 约 10 分钟 | 开始这一步 | 这个不合适 | 编辑",
+    "PX5": "你的第一步 | 持续产出学习类播客，第一个月先发出 2 期。 | 确定首期播客选题并撰写300字大纲 | 打开文档，写下首期播客的暂定标题、核心知识点及3个关键论点。 | 产出 | 一份结构清晰的首期播客内容大纲（文本文件）。 | 完成证据 | 产出一件可见的东西 | 轮到谁 | 你做 · 约 15 分钟 | 开始这一步 | 这个不合适 | 编辑"
+  }
+}

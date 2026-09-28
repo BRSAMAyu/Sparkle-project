@@ -1,0 +1,40 @@
+{
+  "run_id": "j02sim_macos_20260928_082714_36a0",
+  "card": "J-02 simulator evidence (E3 closure attempt) — executor wt792",
+  "base_sha": "7de5e46edc9a9864e94af8ad9fe40052bc9307ff",
+  "final_sha": "79051620 (this commit: driver harness fixes + evidence; base 7de5e46e)",
+  "branch": "agent/node-b/wt792/j02exec",
+  "lane": "macos (darwin-arm64 desktop integration-test channel, J-01 wt398 precedent)",
+  "device": "host macOS (Flutter 3.41.3), real rendered frames fullyLive",
+  "fresh_install": "dart-driver wipeLocalState() (secure storage + SharedPreferences) at process start; one process per persona (runbook §2.1 macOS semantics); MEASURED LEAK: auto-login from previous run's session 3/5 times when the previous process ended logged-in (disclosed, harness note in notes.md)",
+  "matrix": "Leg R x5 personas (PX1-PX5 own processes; PX3 aborted once then rerun) + full-legs process PX5(R,G,U) + G,U-only attempts x3 (env-launch failure, disclosed). Leg G completed in full-legs process (g2 seed scan + g3 real-lane demo chat, reply-not-detected recorded). Leg U: UI face blocked by V3-FIX-538 (x2 consistent) + degraded-path conversion-card gate measurement; API-level in-place flip probe (instrumented, disclosed).",
+  "stack_policy": "use-only, no restart/no modification (gateway :8080 / engine :8000 / gRPC :50051 / 3 containers healthy throughout)",
+  "started_at": "2026-09-28T08:27:14+08:00",
+  "finished_at": "2026-09-28T09:25:00+08:00",
+  "build_failures": [
+    {
+      "log": "logs/run_macos_px1.buildfail.log",
+      "cause": "missing macos/Flutter/Flutter-Debug.xcconfig shim (Runner/Configs include chain); fixed per runbook §1.2",
+      "status": "env, not product"
+    }
+  ],
+  "driver_changes_disclosed": [
+    "R0 auto-login walk: bare productLogout -> ensureAtLogin (provider-logout fallback, J-01-style disclosed instrumentation) — after px3 first-run abort",
+    "G1 recovery: on DashboardScreen timeout, walk 驾驶舱 tab (real-user path); g1 landing divergence still recorded FAIL (V3-FIX-540 not papered over)",
+    "flutter analyze clean after both edits; product code untouched"
+  ],
+  "key_findings": {
+    "V3-FIX-538": "macOS desktop register submit tap systematically ineffective, zero feedback (O3 family) 5/5 R passes; API-register+UI-login fallback used, excluded from the ≤3min claim per runbook §6-2",
+    "V3-FIX-539": "FirstActionCard intermittently missing after fast-path skip (4/6 R-run miss; goal persisted in DB each time) — blocks R8 stopwatch on missing runs",
+    "V3-FIX-540": "guest/auto-login lands on Profile tab, not dashboard (session stable, no persona loop; router semantics say /home)"
+  },
+  "budget_results": {
+    "PX3": 121754,
+    "PX5": 114583,
+    "budget_ms": 180000,
+    "others": "R8 not reached (V3-FIX-539) — recorded, not fabricated"
+  },
+  "new_defect_registry": "notes.md only (fleet discipline: DYNAMIC_ISSUES edit right belongs to the integration session); numbering from V3-FIX-538 (grep-verified free)",
+  "status": "READY_FOR_REVIEW",
+  "evidence_commit": "79051620"
+}

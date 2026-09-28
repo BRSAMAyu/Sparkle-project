@@ -1,0 +1,479 @@
+{
+  "driver": "integration_test/j02_fastpath_journey_test.dart",
+  "spec": "v3-output/WT784-J02PREP/runbook.md §3/§4/§8",
+  "budget_ms": 180000,
+  "collected_at": "2026-09-28T01:25:54.004309+00:00",
+  "note": "combined from per-process logs' J02_SUMMARY lines by wt792 collect_timings.py",
+  "processes": [
+    {
+      "log": "run_macos_gu.log",
+      "pass_param": "0",
+      "legs": [
+        "G",
+        "U"
+      ],
+      "harness_t0": "2026-09-28T09:06:42.729676",
+      "finished_at": "2026-09-28T09:06:43.977064",
+      "failures": [
+        "leg G: could not reach the login screen",
+        "leg U: GuestConversionCard CTA not visible (degraded to the login register link; card-visibility claim=false)"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_gu_rerun.log",
+      "pass_param": "0",
+      "legs": [
+        "G",
+        "U"
+      ],
+      "harness_t0": "2026-09-28T09:11:12.842185",
+      "finished_at": "2026-09-28T09:11:13.047671",
+      "failures": [
+        "leg G: could not reach the login screen",
+        "leg U: GuestConversionCard CTA not visible (degraded to the login register link; card-visibility claim=false)"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_gu_rerun2.log",
+      "pass_param": "0",
+      "legs": [
+        "G",
+        "U"
+      ],
+      "harness_t0": "2026-09-28T09:12:27.284958",
+      "finished_at": "2026-09-28T09:12:27.492388",
+      "failures": [
+        "leg G: could not reach the login screen",
+        "leg U: GuestConversionCard CTA not visible (degraded to the login register link; card-visibility claim=false)"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px1.log",
+      "pass_param": "0",
+      "legs": [
+        "R",
+        "G",
+        "U"
+      ],
+      "harness_t0": "2026-09-28T08:29:32.032950",
+      "finished_at": "2026-09-28T08:34:28.469578",
+      "failures": [
+        "screenshot PX1/04b-register-bounce.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX1/04b-register-bounce.png' (OS Error: No such file or directory, errno = 2)",
+        "pass PX1: UI register silent bounce (O3 family)",
+        "pass PX1: FirstActionCard generate entry not found",
+        "leg G: guest dashboard never appeared",
+        "leg U: GuestConversionCard CTA not visible (degraded to the login register link; card-visibility claim=false)",
+        "leg U: upgrade did not flip in place (dashboard=false, login_bounce=false, source=)",
+        "screenshot PX1/15-upgraded-session.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX1/15-upgraded-session.png' (OS Error: No such file or directory, errno = 2)",
+        "leg U: persona onboarding not reachable after upgrade",
+        "screenshot PX1/16-upgraded-persona-reachable.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX1/16-upgraded-persona-reachable.png' (OS Error: No such file or directory, errno = 2)"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px2.log",
+      "pass_param": "1",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T08:40:48.487164",
+      "finished_at": "2026-09-28T08:42:45.135570",
+      "failures": [
+        "screenshot PX2/04b-register-bounce.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX2/04b-register-bounce.png' (OS Error: No such file or directory, errno = 2)",
+        "pass PX2: UI register silent bounce (O3 family)",
+        "pass PX2: FirstActionCard generate entry not found"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px3.log",
+      "pass_param": "2",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T08:44:03.770028",
+      "finished_at": "2026-09-28T08:45:08.357754",
+      "failures": [
+        "pass PX3: register link not found on login"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px3_rerun.log",
+      "pass_param": "2",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T08:50:56.112875",
+      "finished_at": "2026-09-28T08:54:14.359280",
+      "failures": [
+        "screenshot PX3/04b-register-bounce.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX3/04b-register-bounce.png' (OS Error: No such file or directory, errno = 2)",
+        "pass PX3: UI register silent bounce (O3 family)",
+        "pass PX3: proposal confirm did not reach the committed face"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px4.log",
+      "pass_param": "3",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T08:56:18.530245",
+      "finished_at": "2026-09-28T08:58:39.404008",
+      "failures": [
+        "screenshot PX4/04b-register-bounce.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX4/04b-register-bounce.png' (OS Error: No such file or directory, errno = 2)",
+        "pass PX4: UI register silent bounce (O3 family)",
+        "pass PX4: FirstActionCard generate entry not found"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px5.log",
+      "pass_param": "4",
+      "legs": [
+        "R"
+      ],
+      "harness_t0": "2026-09-28T09:01:24.948423",
+      "finished_at": "2026-09-28T09:04:36.383556",
+      "failures": [
+        "screenshot PX5/04b-register-bounce.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX5/04b-register-bounce.png' (OS Error: No such file or directory, errno = 2)",
+        "pass PX5: UI register silent bounce (O3 family)",
+        "pass PX5: proposal confirm did not reach the committed face"
+      ],
+      "guest_username": null,
+      "upgraded_username": null
+    },
+    {
+      "log": "run_macos_px5_full.log",
+      "pass_param": "4",
+      "legs": [
+        "R",
+        "G",
+        "U"
+      ],
+      "harness_t0": "2026-09-28T09:15:20.263738",
+      "finished_at": "2026-09-28T09:22:46.976089",
+      "failures": [
+        "screenshot PX5/04b-register-bounce.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX5/04b-register-bounce.png' (OS Error: No such file or directory, errno = 2)",
+        "pass PX5: UI register silent bounce (O3 family)",
+        "pass PX5: FirstActionCard generate entry not found",
+        "leg G: guest dashboard never appeared",
+        "leg U: GuestConversionCard CTA not visible (degraded to the login register link; card-visibility claim=false)",
+        "leg U: upgrade did not flip in place (dashboard=false, login_bounce=false, source=)",
+        "screenshot PX5/15-upgraded-session.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX5/15-upgraded-session.png' (OS Error: No such file or directory, errno = 2)",
+        "leg U: persona onboarding not reachable after upgrade",
+        "screenshot PX5/16-upgraded-persona-reachable.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX5/16-upgraded-persona-reachable.png' (OS Error: No such file or directory, errno = 2)"
+      ],
+      "guest_username": "guest_d2f70de3b47c",
+      "upgraded_username": null
+    }
+  ],
+  "passes": [
+    {
+      "persona": {
+        "id": "PX1",
+        "name": "比赛 Builder",
+        "arc": "deadline",
+        "goal": "两周内做出一个可展示的算法可视化比赛作品，至少能完整跑起来给评委演示。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": null,
+      "t_register_done_ms": null,
+      "t_action_ready_ms": null,
+      "total_ms": null,
+      "clicks": null,
+      "failures": null,
+      "source_log": "run_macos_gu.log"
+    },
+    {
+      "persona": {
+        "id": "PX1",
+        "name": "比赛 Builder",
+        "arc": "deadline",
+        "goal": "两周内做出一个可展示的算法可视化比赛作品，至少能完整跑起来给评委演示。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": null,
+      "t_register_done_ms": null,
+      "t_action_ready_ms": null,
+      "total_ms": null,
+      "clicks": null,
+      "failures": null,
+      "source_log": "run_macos_gu_rerun.log"
+    },
+    {
+      "persona": {
+        "id": "PX1",
+        "name": "比赛 Builder",
+        "arc": "deadline",
+        "goal": "两周内做出一个可展示的算法可视化比赛作品，至少能完整跑起来给评委演示。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": null,
+      "t_register_done_ms": null,
+      "t_action_ready_ms": null,
+      "total_ms": null,
+      "clicks": null,
+      "failures": null,
+      "source_log": "run_macos_gu_rerun2.log"
+    },
+    {
+      "persona": {
+        "id": "PX1",
+        "name": "比赛 Builder",
+        "arc": "deadline",
+        "goal": "两周内做出一个可展示的算法可视化比赛作品，至少能完整跑起来给评委演示。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 7426,
+      "t_register_done_ms": 47336,
+      "t_action_ready_ms": null,
+      "total_ms": null,
+      "clicks": null,
+      "failures": null,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "register_ui_bounce": true,
+      "register_error_markers": [],
+      "api_register_status": 200,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 54072,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 61857,
+      "t_fastpath_submitted_ms": 66121,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "source_log": "run_macos_px1.log"
+    },
+    {
+      "persona": {
+        "id": "PX2",
+        "name": "科研 Builder",
+        "arc": "stalled",
+        "goal": "推进毕业论文：两周内跑完实验并写出前三节初稿。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 4372,
+      "t_register_done_ms": 43952,
+      "t_action_ready_ms": null,
+      "total_ms": null,
+      "clicks": null,
+      "failures": null,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "register_ui_bounce": true,
+      "register_error_markers": [],
+      "api_register_status": 200,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 57076,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 64890,
+      "t_fastpath_submitted_ms": 69675,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "source_log": "run_macos_px2.log"
+    },
+    {
+      "persona": {
+        "id": "PX3",
+        "name": "作品集 Builder",
+        "arc": "stalled",
+        "goal": "边学 React 边做出 3 个能放进作品集的前端项目。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 773,
+      "t_register_done_ms": null,
+      "t_action_ready_ms": null,
+      "total_ms": null,
+      "clicks": null,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": false,
+      "login_cta_no_scroll_visible": false,
+      "welcome_subtitle_present": false,
+      "source_log": "run_macos_px3.log"
+    },
+    {
+      "persona": {
+        "id": "PX3",
+        "name": "作品集 Builder",
+        "arc": "stalled",
+        "goal": "边学 React 边做出 3 个能放进作品集的前端项目。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 2095,
+      "t_register_done_ms": 78454,
+      "t_action_ready_ms": 121754,
+      "total_ms": 189832,
+      "clicks": 15,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "register_ui_bounce": true,
+      "register_error_markers": [],
+      "api_register_status": 200,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 91704,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 99510,
+      "t_fastpath_submitted_ms": 104094,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "loading_feedback_observed": true,
+      "within_3min_budget": true,
+      "honest_error_face_shown": false,
+      "t_confirm_ms": 189832,
+      "action_confirmed": false,
+      "source_log": "run_macos_px3_rerun.log"
+    },
+    {
+      "persona": {
+        "id": "PX4",
+        "name": "课程 Builder",
+        "arc": "deadline",
+        "goal": "7天后《计算机网络》期末考试，目前基本没学，目标是别挂科。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 1844,
+      "t_register_done_ms": 77758,
+      "t_action_ready_ms": null,
+      "total_ms": null,
+      "clicks": null,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "register_ui_bounce": true,
+      "register_error_markers": [],
+      "api_register_status": 200,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 84508,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 92363,
+      "t_fastpath_submitted_ms": 96890,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "source_log": "run_macos_px4.log"
+    },
+    {
+      "persona": {
+        "id": "PX5",
+        "name": "Creator",
+        "arc": "completion",
+        "goal": "持续产出学习类播客，第一个月先发出 2 期。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 1608,
+      "t_register_done_ms": 77805,
+      "t_action_ready_ms": 114583,
+      "total_ms": 182821,
+      "clicks": 15,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "register_ui_bounce": true,
+      "register_error_markers": [],
+      "api_register_status": 200,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 84595,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 92458,
+      "t_fastpath_submitted_ms": 96998,
+      "deferred_questions_not_asked": true,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "loading_feedback_observed": true,
+      "within_3min_budget": true,
+      "honest_error_face_shown": false,
+      "t_confirm_ms": 182821,
+      "action_confirmed": false,
+      "source_log": "run_macos_px5.log"
+    },
+    {
+      "persona": {
+        "id": "PX5",
+        "name": "Creator",
+        "arc": "completion",
+        "goal": "持续产出学习类播客，第一个月先发出 2 期。"
+      },
+      "route": "j02_fastpath",
+      "warm_process": false,
+      "t_first_surface_ms": 1933,
+      "t_register_done_ms": 78089,
+      "t_action_ready_ms": null,
+      "total_ms": null,
+      "clicks": null,
+      "failures": null,
+      "auto_login_after_wipe": true,
+      "login_cta_present": true,
+      "login_cta_no_scroll_visible": true,
+      "welcome_subtitle_present": true,
+      "register_tos_tiles": 2,
+      "register_ui_bounce": true,
+      "register_error_markers": [],
+      "api_register_status": 200,
+      "soft_wall_resume_card": true,
+      "t_persona_step1_ms": 84762,
+      "fast_path_cta_absent_when_goal_empty": true,
+      "fast_path_cta_appeared": true,
+      "fast_path_hint_appeared": true,
+      "t_goal_cta_visible_ms": 92610,
+      "t_fastpath_submitted_ms": 97395,
+      "deferred_questions_not_asked": false,
+      "post_skip_route": "chat",
+      "post_skip_landed": true,
+      "source_log": "run_macos_px5_full.log"
+    }
+  ],
+  "proposals": {
+    "PX3": "你的第一步 | 边学 React 边做出 3 个能放进作品集的前端项目。 | 初始化项目1并渲染Hello World | 终端运行npx create-react-app portfolio-project-1，打开src/App.js，将return改为<h1>Project 1</h1>并保存。 | 产出 | 本地启动成功，浏览器显示'Project 1'页面，项目骨架就绪。 | 完成证据 | 可检查的完成证据 | 轮到谁 | 一起做 · 约 10 分钟 | 开始这一步 | 这个不合适 | 编辑",
+    "PX5": "你的第一步 | 持续产出学习类播客，第一个月先发出 2 期。 | 确定首期播客选题并撰写300字大纲 | 打开文档，写下首期播客的暂定标题、核心知识点及3个关键论点。 | 产出 | 一份结构清晰的首期播客内容大纲（文本文件）。 | 完成证据 | 产出一件可见的东西 | 轮到谁 | 你做 · 约 15 分钟 | 开始这一步 | 这个不合适 | 编辑"
+  }
+}

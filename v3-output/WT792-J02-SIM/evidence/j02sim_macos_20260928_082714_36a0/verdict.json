@@ -1,0 +1,168 @@
+{
+  "budget_ms": 180000,
+  "per_pass": {
+    "PX1": [
+      {
+        "log": "run_macos_gu.log",
+        "legs": [
+          "G",
+          "U"
+        ],
+        "t_action_ready_ms": null,
+        "action_ready_within_180s": false,
+        "total_ms": null,
+        "budget_metric_note": "runbook §3-R8: t_action_ready - t_pass_start ≤ 180000; total_ms includes the 60s r9 confirm-face wait",
+        "f2_login_cta_no_scroll": null,
+        "soft_wall_resume_card": null,
+        "register_ui_bounce": false,
+        "auto_login_after_wipe": false
+      },
+      {
+        "log": "run_macos_gu_rerun.log",
+        "legs": [
+          "G",
+          "U"
+        ],
+        "t_action_ready_ms": null,
+        "action_ready_within_180s": false,
+        "total_ms": null,
+        "budget_metric_note": "runbook §3-R8: t_action_ready - t_pass_start ≤ 180000; total_ms includes the 60s r9 confirm-face wait",
+        "f2_login_cta_no_scroll": null,
+        "soft_wall_resume_card": null,
+        "register_ui_bounce": false,
+        "auto_login_after_wipe": false
+      },
+      {
+        "log": "run_macos_gu_rerun2.log",
+        "legs": [
+          "G",
+          "U"
+        ],
+        "t_action_ready_ms": null,
+        "action_ready_within_180s": false,
+        "total_ms": null,
+        "budget_metric_note": "runbook §3-R8: t_action_ready - t_pass_start ≤ 180000; total_ms includes the 60s r9 confirm-face wait",
+        "f2_login_cta_no_scroll": null,
+        "soft_wall_resume_card": null,
+        "register_ui_bounce": false,
+        "auto_login_after_wipe": false
+      },
+      {
+        "log": "run_macos_px1.log",
+        "legs": [
+          "R",
+          "G",
+          "U"
+        ],
+        "t_action_ready_ms": null,
+        "action_ready_within_180s": false,
+        "total_ms": null,
+        "budget_metric_note": "runbook §3-R8: t_action_ready - t_pass_start ≤ 180000; total_ms includes the 60s r9 confirm-face wait",
+        "f2_login_cta_no_scroll": true,
+        "soft_wall_resume_card": true,
+        "register_ui_bounce": true,
+        "auto_login_after_wipe": false
+      }
+    ],
+    "PX2": [
+      {
+        "log": "run_macos_px2.log",
+        "legs": [
+          "R"
+        ],
+        "t_action_ready_ms": null,
+        "action_ready_within_180s": false,
+        "total_ms": null,
+        "budget_metric_note": "runbook §3-R8: t_action_ready - t_pass_start ≤ 180000; total_ms includes the 60s r9 confirm-face wait",
+        "f2_login_cta_no_scroll": true,
+        "soft_wall_resume_card": true,
+        "register_ui_bounce": true,
+        "auto_login_after_wipe": false
+      }
+    ],
+    "PX3": [
+      {
+        "log": "run_macos_px3.log",
+        "legs": [
+          "R"
+        ],
+        "t_action_ready_ms": null,
+        "action_ready_within_180s": false,
+        "total_ms": null,
+        "budget_metric_note": "runbook §3-R8: t_action_ready - t_pass_start ≤ 180000; total_ms includes the 60s r9 confirm-face wait",
+        "f2_login_cta_no_scroll": false,
+        "soft_wall_resume_card": null,
+        "register_ui_bounce": false,
+        "auto_login_after_wipe": true
+      },
+      {
+        "log": "run_macos_px3_rerun.log",
+        "legs": [
+          "R"
+        ],
+        "t_action_ready_ms": 121754,
+        "action_ready_within_180s": true,
+        "total_ms": 189832,
+        "budget_metric_note": "runbook §3-R8: t_action_ready - t_pass_start ≤ 180000; total_ms includes the 60s r9 confirm-face wait",
+        "f2_login_cta_no_scroll": true,
+        "soft_wall_resume_card": true,
+        "register_ui_bounce": true,
+        "auto_login_after_wipe": true
+      }
+    ],
+    "PX4": [
+      {
+        "log": "run_macos_px4.log",
+        "legs": [
+          "R"
+        ],
+        "t_action_ready_ms": null,
+        "action_ready_within_180s": false,
+        "total_ms": null,
+        "budget_metric_note": "runbook §3-R8: t_action_ready - t_pass_start ≤ 180000; total_ms includes the 60s r9 confirm-face wait",
+        "f2_login_cta_no_scroll": true,
+        "soft_wall_resume_card": true,
+        "register_ui_bounce": true,
+        "auto_login_after_wipe": true
+      }
+    ],
+    "PX5": [
+      {
+        "log": "run_macos_px5.log",
+        "legs": [
+          "R"
+        ],
+        "t_action_ready_ms": 114583,
+        "action_ready_within_180s": true,
+        "total_ms": 182821,
+        "budget_metric_note": "runbook §3-R8: t_action_ready - t_pass_start ≤ 180000; total_ms includes the 60s r9 confirm-face wait",
+        "f2_login_cta_no_scroll": true,
+        "soft_wall_resume_card": true,
+        "register_ui_bounce": true,
+        "auto_login_after_wipe": true
+      },
+      {
+        "log": "run_macos_px5_full.log",
+        "legs": [
+          "R",
+          "G",
+          "U"
+        ],
+        "t_action_ready_ms": null,
+        "action_ready_within_180s": false,
+        "total_ms": null,
+        "budget_metric_note": "runbook §3-R8: t_action_ready - t_pass_start ≤ 180000; total_ms includes the 60s r9 confirm-face wait",
+        "f2_login_cta_no_scroll": true,
+        "soft_wall_resume_card": true,
+        "register_ui_bounce": true,
+        "auto_login_after_wipe": true
+      }
+    ],
+    "G": [
+      {
+        "log": "run_macos_px5_full.log",
+        "guest_username": "guest_d2f70de3b47c"
+      }
+    ]
+  }
+}

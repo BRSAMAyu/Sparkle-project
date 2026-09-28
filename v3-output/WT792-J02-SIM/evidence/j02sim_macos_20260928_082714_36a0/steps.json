@@ -1,0 +1,148 @@
+{
+  "steps": [
+    {
+      "leg": "R",
+      "step": "r0_first_surface",
+      "status": "PASS",
+      "note": "F2 primary CTA no-scroll=true",
+      "ts": "2026-09-28T09:15:59.766986"
+    },
+    {
+      "leg": "R",
+      "step": "r1_register_nav",
+      "status": "PASS",
+      "note": "retry cap ×3",
+      "ts": "2026-09-28T09:16:01.052254"
+    },
+    {
+      "leg": "R",
+      "step": "r2_register_filled",
+      "status": "PASS",
+      "note": "username=j02px58161428",
+      "ts": "2026-09-28T09:16:02.438838"
+    },
+    {
+      "leg": "R",
+      "step": "r3_register_submit",
+      "status": "FAIL",
+      "note": "bounce; fallback ok=true",
+      "ts": "2026-09-28T09:16:41.163818"
+    },
+    {
+      "leg": "R",
+      "step": "r3_softwall_resume_card",
+      "status": "PASS",
+      "note": "A2a registered-side session face",
+      "ts": "2026-09-28T09:16:41.438841"
+    },
+    {
+      "leg": "R",
+      "step": "r4_resume_persona",
+      "status": "PASS",
+      "note": "persona step 1 visible",
+      "ts": "2026-09-28T09:16:52.386238"
+    },
+    {
+      "leg": "R",
+      "step": "r5_cta_negative_gate",
+      "status": "PASS",
+      "note": "wt764: empty goal must not show the fast-path CTA",
+      "ts": "2026-09-28T09:16:52.387548"
+    },
+    {
+      "leg": "R",
+      "step": "r5_goal_typed",
+      "status": "PASS",
+      "note": "hint visible=true",
+      "ts": "2026-09-28T09:16:52.998432"
+    },
+    {
+      "leg": "R",
+      "step": "r6_deferred_semantics",
+      "status": "FAIL",
+      "note": "modeling reached without persona steps 2-5",
+      "ts": "2026-09-28T09:16:59.831048"
+    },
+    {
+      "leg": "R",
+      "step": "r7_modeling_skip",
+      "status": "PASS",
+      "note": "landing=chat (code: chat when post-onboarding message present; runbook table said home — recorded as measured)",
+      "ts": "2026-09-28T09:17:02.983535"
+    },
+    {
+      "leg": "R",
+      "step": "r7_first_action_entry",
+      "status": "FAIL",
+      "note": "FirstActionCard generate entry visible",
+      "ts": "2026-09-28T09:17:41.190953"
+    },
+    {
+      "leg": "G",
+      "step": "g0_reach_login",
+      "status": "PASS",
+      "note": "",
+      "ts": "2026-09-28T09:18:10.905901"
+    },
+    {
+      "leg": "G",
+      "step": "g1_guest_home",
+      "status": "FAIL",
+      "note": "wait timeout after 60s",
+      "ts": "2026-09-28T09:19:12.775582"
+    },
+    {
+      "leg": "G",
+      "step": "g1_guest_session_stable",
+      "status": "PASS",
+      "note": "A2b: guest lands and STAYS on the dashboard (no persona loop)",
+      "ts": "2026-09-28T09:19:16.088961"
+    },
+    {
+      "leg": "G",
+      "step": "g2_seed_scan",
+      "status": "PASS",
+      "note": "seeded_goal_words=true declared_example_marker=false (missing marker is measurement data per J-01 O1)",
+      "ts": "2026-09-28T09:19:25.818618"
+    },
+    {
+      "leg": "G",
+      "step": "g3_demo_chat",
+      "status": "PASS",
+      "note": "sent=true reply_seen=false (demo round; memory isolation is proven by the orchestrator G4 probes)",
+      "ts": "2026-09-28T09:21:04.126034"
+    },
+    {
+      "leg": "U",
+      "step": "u1_upgrade_form",
+      "status": "PASS",
+      "note": "conversion_card=false (A2c upgrade face)",
+      "ts": "2026-09-28T09:21:52.461068"
+    },
+    {
+      "leg": "U",
+      "step": "u2_upgrade_submit",
+      "status": "FAIL",
+      "note": "in_place=false (dashboard=false login_bounce=false registration_source=) — V3-FIX-205 family",
+      "ts": "2026-09-28T09:22:26.595114"
+    },
+    {
+      "leg": "U",
+      "step": "u3_persona_reachable",
+      "status": "FAIL",
+      "note": "resume_card=false persona_screen=false (router_smoke upgrade face)",
+      "ts": "2026-09-28T09:22:46.826347"
+    }
+  ],
+  "failures": [
+    "screenshot PX5/04b-register-bounce.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX5/04b-register-bounce.png' (OS Error: No such file or directory, errno = 2)",
+    "pass PX5: UI register silent bounce (O3 family)",
+    "pass PX5: FirstActionCard generate entry not found",
+    "leg G: guest dashboard never appeared",
+    "leg U: GuestConversionCard CTA not visible (degraded to the login register link; card-visibility claim=false)",
+    "leg U: upgrade did not flip in place (dashboard=false, login_bounce=false, source=)",
+    "screenshot PX5/15-upgraded-session.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX5/15-upgraded-session.png' (OS Error: No such file or directory, errno = 2)",
+    "leg U: persona onboarding not reachable after upgrade",
+    "screenshot PX5/16-upgraded-persona-reachable.png failed: PathNotFoundException: Cannot retrieve length of file, path = '/Users/brsama/code/GitHub/Sparkle-sysrev/wt792-j02exec/v3-output/WT792-J02-SIM/evidence/j02sim_macos_20260928_082714_36a0/screenshots/PX5/16-upgraded-persona-reachable.png' (OS Error: No such file or directory, errno = 2)"
+  ]
+}

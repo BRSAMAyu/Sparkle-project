@@ -485,12 +485,11 @@ Future<void> legRRegistered({
     print(
       'J02_FINDING pass=$passId auto-login after secure-storage+prefs wipe',
     );
-    await productLogout(tester, passId, failures);
-    await waitUntil(
-      tester,
-      () => find.byType(LoginScreen).evaluate().isNotEmpty,
-      timeout: const Duration(seconds: 20),
-    );
+    // wt792 harness fix (disclosed in WT792-J02-SIM notes): the original bare
+    // productLogout left the journey dead when the logout tap itself was
+    // ineffective (V3-FIX-538 family) — ensureAtLogin adds the DISCLOSED
+    // provider-logout fallback (J-01 同款), so the pass can proceed honestly.
+    await ensureAtLogin(tester, passId, failures);
     await safeSettle(tester);
     await shot('$passId/01b-after-logout.png');
   }
@@ -1029,7 +1028,28 @@ Future<String?> legGGuest({
   );
   if (!dashReady) {
     failures.add('leg G: guest dashboard never appeared');
-    return null;
+    // wt792 harness recovery (disclosed): V3-FIX-540 measured the guest
+    // landing on the PROFILE tab (session alive, no persona loop) — walk the
+    // real-user 驾驶舱 tab so G2/G3 can still be collected; g1 stays recorded
+    // FAIL above via waitTracked (landing divergence is NOT papered over).
+    final homeTab = textAny(['驾驶舱', 'Home']);
+    if (homeTab != null) {
+      clicks[0]++;
+      await tester.tap(homeTab, warnIfMissed: false);
+      await waitUntil(
+        tester,
+        () => find.byType(DashboardScreen).evaluate().isNotEmpty,
+        timeout: const Duration(seconds: 20),
+      );
+    }
+    if (find.byType(DashboardScreen).evaluate().isEmpty) {
+      await shot('9x-g1-walk-home-failed.png');
+      return null;
+    }
+    // ignore: avoid_print
+    print(
+        'J02_FINDING leg G guest landing walked to dashboard via home tab '
+        '(real-user path; landing divergence recorded as V3-FIX-540)');
   }
   // Session stability: stay put — no persona onboarding redirect loop.
   await tester.pump(const Duration(seconds: 3));
