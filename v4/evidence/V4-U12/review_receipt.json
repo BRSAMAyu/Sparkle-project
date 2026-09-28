@@ -1,0 +1,36 @@
+{
+  "card": "V4-U12",
+  "risk": "normal",
+  "independent_reviewers_required": 1,
+  "implementation_state": "REVIEW_READY",
+  "evidence_verdict": "NOT_RUN",
+  "reviewer_instructions": "以卡面三条验收为准（必须可失败）：①不恢复全站综合榜或不以 flame_level 冒充付费身份 ②余额/兑换来自真账本、重复兑换幂等 ③可关闭庆祝、核心记忆纠正/隐私不收费。逐条独立复跑（可失败性亲验：反转任一断言应红）；实现差量极小（2 屏 + arb 勘误），重点在差量举证面的真伪核验与 HIDDEN 商店不开、受限奖励/免费核心语义保持。",
+  "status": "PENDING",
+  "pre_registered_challenges": [
+    {
+      "id": "CH-1",
+      "challenge": "「幂等」主实现只有 +18 行重入守卫——是否不足以支撑验收 2？请审查者区分两层：客户端守卫钉（同帧双击=1 确认面 1 调用；成功后封口零重放）+ 服务端月顶屏障（月顶即幂等：重复请求同结果不重复扣减，conftest 真库测试 concurrent_redeem_exactly_one_success 亲跑）。若审查认为引擎侧还需接 X-Idempotency-Key（当前该端点忽略该头），请裁决为「契约变更移交单 owner」还是「本卡阻断面」。"
+    },
+    {
+      "id": "CH-2",
+      "challenge": "「一致像素语法」零 PixelFrame 换装是否属漏做？本卡立场：两屏已是一致令牌语法（U11 同家族判例=DS 令牌呈现即零重写），换装会破 classic 零差量红线（发布默认主题不换）。请审查者验证两屏 UI 面确无硬编码像素/颜色（context.colors/typo/space + DS.* 全覆盖），并裁决 limitations #1 的边界登记是否成立。"
+    },
+    {
+      "id": "CH-3",
+      "challenge": "arb 勘误（leaderboardSelfAnchorLoadFailed 去 {error} 占位）是修改非纯新增——是否违反铁律 6「arb 源+gen-l10n 再生纯增量」？本卡立场：U11「勘误」同口径，属 N9 守卫协议内 cleanup batch（棘轮 260→256/72/77 基线随卡下调入库，守卫 PASS），键名保留、唯一调用面同步、既有文案前缀断言不破坏。请审查者亲跑 N9 守卫并复核 gen-l10n 可再生。"
+    },
+    {
+      "id": "CH-4",
+      "challenge": "庆祝关闭钉的正反判别对只覆盖 rare 弹窗彩带（SparkleConfetti 抑制链），成就弹窗本体在低刺激档仍会出现（信息回执）——「可关闭庆祝」的口径是否被满足？本卡立场：关闭=关庆祝效果（彩带/声/触）而非拦截信息回执，弹窗一键可关（barrierDismissible+关闭钮）。请审查者裁决该口径；若判「低刺激应连弹窗都不弹」，实现位=shell_navigation._showAchievementDialog 加档位检查（独立小改）。"
+    },
+    {
+      "id": "CH-5",
+      "challenge": "词表/源扫描钉的绕过面：flame_level 分离钉、付费墙反例钉、HIDDEN 商店钉均为源码词表扫描（注释豁免）——注释外字符串拼接（如 base64/动态构造 '/shop'）可绕过。请审查者评估：在零动态路由构造的 Flutter 代码库（路由全部常量字面量）里，该残留风险是否可接受；以及行为面（engine user.py entitlement 列注释红线 + D17 冻结）是否构成足够的服务端真源兜底。"
+    },
+    {
+      "id": "CH-6",
+      "challenge": "module=achievement 的实现差量为零是否属漏做？本卡立场：MODULE_MATRIX achievement 行处置（轻庆祝/缺席不惩罚/不改账本）已满足且钉入测（弹窗可关+庆祝可关正反对），语义 owner=D04，本卡不重写。请审查者复核该裁决与 acceptance 3 的关系。"
+    }
+  ],
+  "integration_reverify": "合并后需在集成 SHA 复跑：flutter analyze（零 issue）+ flutter test（全量）+ N9/COMM-LB/BA-ROUTES 三守卫 + backend photon 两套（23 用例）"
+}

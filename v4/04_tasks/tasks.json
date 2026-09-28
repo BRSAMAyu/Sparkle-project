@@ -2593,9 +2593,10 @@
     "V4-F02",
     "V4-U11"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
+   "status": "in_progress",
+   "implementation_state": "REVIEW_READY",
    "evidence_verdict": "NOT_RUN",
+   "progress_note": "2026-09-29 wtU12：REVIEW_READY 交付（worktree wtU12，分支 agent/v4/u12，自 main@c94afbe4 开出，实现头 7cadd507，未 push）。实现差量极小（no_duplicate_rule 口径）：①photon_redeem_pro_screen 幂等重入守卫（同帧双击=1 确认面 1 调用；成功终态封口——服务端月顶屏障之上的客户端第一道闸）②self_anchor_screen 失败面 N9 勘误（{error} 占位通道关闭，人话固定模板+N9 棘轮 260→256/72/77 基线随卡下调）③三新测试 14 用例（每验收面一正一反：幂等重放钉/账本真值钉/全站榜反钉/庆祝关闭正反判别对/HIDDEN 商店钉/flame_level 分离钉/付费墙反例钉）。其余卡面（活路由复用/像素语法/受限奖励/免费核心/HIDDEN 商店/成就轻庆祝）按家族判例差量举证零重写（U11 同判）。已知边界如实登记 8 条 + 审查挑战预登记 6 条（CH-1 幂等双闸分工与引擎侧 idempotency-key 缺位裁决；CH-2 零 PixelFrame 换装边界；CH-3 arb 勘误非纯新增；CH-4 庆祝关闭口径=关效果非拦回执；CH-5 词表钉绕过面；CH-6 achievement 零差量裁决）——见 v4/evidence/V4-U12/limitations.md 与 review_receipt.json。",
    "kind": "implementation",
    "required_locks": [
     "ui-rewards"

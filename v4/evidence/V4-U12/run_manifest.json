@@ -1,0 +1,122 @@
+{
+  "task": "V4-U12",
+  "title": "自我锚与光子：保留最新商业决定",
+  "date": "2026-09-29",
+  "executor": "wtU12（worktree /Users/brsama/code/GitHub/wtU12，分支 agent/v4/u12，自 main@c94afbe4 开出）",
+  "source_sha_base": "c94afbe4（state(fleet): U11 销账 42/58+U12 解锁即派；其父 6df347b0 = 卡面所记 U11 收口 merge，两 commit 均无代码差量）",
+  "source_sha_head_impl": "7cadd507（feat(u12) 实现头；证据提交 SHA 见台账）",
+  "no_push": true,
+  "toolchain": {
+    "flutter": "3.41.3 stable（worktree 内 flutter analyze/test 实测）",
+    "python": "主检出 backend/.venv（pytest 23 用例后端证据）",
+    "host": "darwin 25.6.0 arm64",
+    "gen_note": "mobile/lib/gen 与 backend/app/gen 为 gitignored 实体目录：自主检出 cp -R 复制进 worktree（F06/U11/U14 同处置）；本卡 l10n 变更经 arb 源 + flutter gen-l10n 再生（勘误 1 键×2 语言，零新增零删键）"
+  },
+  "locks": {
+    "required": [
+      "ui-rewards"
+    ],
+    "note": "sparkle-coordination-v2 远端未配置于本机（git remote 仅 origin，与 F06/U11/U14 同状），租约登记 NOT_RUN；冲突面自证：diff 不含 RF-06 三文件（dashboard_screen/compact_status_bar/task_execution_screen）、不含 app/routes.dart、不含 tokens_v2/theme 通道、不含 backend/（OpenAPI/BA-ROUTES 机械门不触发，BA-ROUTES 亲跑 PASS）；触达面 = leaderboard/photon 两屏 + l10n self-anchor 单键 + N9 守卫基线 + 3 新测试文件，与在航会话（wtQ04 wtS02 wtS03 wtU02 wtU09，见主检出 git worktree list）卡面无文件交集，由派发方（协调者）按 ui-rewards 键裁决"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtU12 -b agent/v4/u12 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "会话本地环境补齐（gitignored 实体：l10n/grpc 生成物 + .env）",
+      "command": "cp -R Sparkle-project/mobile/lib/gen wtU12/mobile/lib/gen && cp -R Sparkle-project/backend/app/gen wtU12/backend/app/gen && cp Sparkle-project/backend/.env wtU12/backend/.env",
+      "exit_code": 0,
+      "note": "backend/.env 仅跑真服类命令需要；后端 pytest 前按 conftest 守卫口径移出（防演示库误写），跑后移回 /tmp 备份不入库"
+    },
+    {
+      "id": 3,
+      "purpose": "依赖解析（新 worktree 无 .dart_tool）",
+      "command": "cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "Got dependencies! 2 packages discontinued（既有口径）"
+    },
+    {
+      "id": 4,
+      "purpose": "arb 勘误后 l10n 再生（arb 源 + 官方生成器，非手改）",
+      "command": "cd mobile && flutter gen-l10n",
+      "exit_code": 0,
+      "note": "leaderboardSelfAnchorLoadFailed zh/en 由 {error} 占位模板改人话固定模板（勘误），生成物签名 getter 化逐字可再生；零新增键零删键"
+    },
+    {
+      "id": 5,
+      "purpose": "静态检查（零 issue 口径）",
+      "command": "cd mobile && flutter analyze --no-pub",
+      "exit_code": 0,
+      "note": "No issues found!（全库零 issue；过程修复 2 条：unused_import/avoid_redundant_argument_values；dart format 误扩散已 revert 重施最小 diff）"
+    },
+    {
+      "id": 6,
+      "purpose": "本卡新测试（14 用例：幂等 5 + 自我锚边界 3 + 家族边界 6）",
+      "command": "cd mobile && flutter test test/features/photon/presentation/screens/photon_redeem_idempotency_u12_test.dart test/features/leaderboard/presentation/screens/self_anchor_boundary_u12_test.dart test/widget/rewards_family_boundary_u12_test.dart",
+      "exit_code": 0,
+      "note": "+14 全绿（mutation 判别对：庆祝正例 ConfettiWidget 在场/低刺激缺席；常量错开值 4321/1777/9 vs 1500/7 判别 server-first）；分套实录见 test_results.json"
+    },
+    {
+      "id": 7,
+      "purpose": "受影响域回归：leaderboard+photon 全套 + 成就解锁弹窗",
+      "command": "cd mobile && flutter test test/features/leaderboard/ test/features/photon/ test/widget/achievement_unlock_dialog_test.dart",
+      "exit_code": 0,
+      "note": "67 passed（既有 self_anchor_screen_test 4 用例原样全绿——人话模板前缀断言不破坏；photon_surface_norm_test 全绿——错误面/幽灵面处置零回归）"
+    },
+    {
+      "id": 8,
+      "purpose": "后端受影响回归（验收 2 引擎面证据：真账本+幂等屏障+反刷）",
+      "command": "cd backend && SECRET_KEY=test <main-venv python> -m pytest tests/unit/test_dcomm2_photon_redeem_pro.py tests/unit/test_photon_redeem_pro_status.py -q",
+      "exit_code": 0,
+      "note": "23 passed（307s；含 monthly_cap_blocks_second_redeem_and_converges、concurrent_redeem_exactly_one_success、transfer_in_excluded_from_redeemable_base；backend/app 本卡零触碰，纯证据跑）"
+    },
+    {
+      "id": 9,
+      "purpose": "N9 棘轮守卫（cleanup batch 协议内下调）",
+      "command": "python3 scripts/guards/check_n9_raw_exception_leak.py && python3 scripts/guards/check_n9_raw_exception_leak.py --update-baseline && python3 scripts/guards/check_n9_raw_exception_leak.py",
+      "exit_code": 0,
+      "note": "PASS：arb {error} 260→256、bareCatchVar 76→72、catchVarToString 78→77；--update-baseline 后棘轮持平 PASS（256/256），基线 JSON 差量随本卡入库"
+    },
+    {
+      "id": 10,
+      "purpose": "COMM-LB 守卫（验收 1 全站榜不复活）",
+      "command": "python3 scripts/guards/check_rule_comm_lb_leaderboard_unrouted.py",
+      "exit_code": 0,
+      "note": "PASS（mobile 无 LeaderboardScreen 路由，gateway leaderboards wildcard-only，自我锚唯一产品面）"
+    },
+    {
+      "id": 11,
+      "purpose": "BA-ROUTES 机械门（backend 零触碰自证）",
+      "command": "python3 scripts/guards/check_rule_ba_routes_parity.py",
+      "exit_code": 0,
+      "note": "PASS（621 gateway ↔ 1015 engine，61 catch-all groups，169 ledgered diffs 与基线持平；OpenAPI 门不触发）"
+    },
+    {
+      "id": 12,
+      "purpose": "全量套件（analyze+test 双侧过口径）",
+      "command": "cd mobile && flutter analyze --no-pub && flutter test --reporter compact > /tmp/u12_full_test.log",
+      "exit_code": 0,
+      "note": "analyze：No issues found!；test（实现头 7cadd507 终态）：+3104 passed / ~23 skipped / 0 failed（23718 行完整实录）。首跑同码态 -3 为 live 网关类环境抖动（q03_visual_qa_longtail tearDownAll 等，U11 同例已登记；与并行会话全量跑时点重叠），完整日志复跑全绿——环境归因不计回归"
+    }
+  ],
+  "evidence_required_coverage": {
+    "source_sha": "本文件 source_sha_base/head_impl + 证据提交 SHA（台账）",
+    "build_id": "flutter 3.41.3 stable；worktree wtU12@agent/v4/u12；后端证据 = 本仓 backend 代码 + 主检出 venv（引擎进程未起，纯单测证据面）",
+    "commands_and_exit_codes": "本文件 commands[]",
+    "scope_and_denominator": "test_results.json（新测 14 + 受影响回归 67 + 后端 23 + 守卫 3 + 全量套件）",
+    "artifacts_sha256": {
+      "diff_or_evidence_only.md": "354ebf2fc411bff7d20bdab1498abd2d88e78aebf4a01b58f1cc880bfd39ff97",
+      "test_results.json": "7034465da278a132d0e19f8982d7f31a3c8e0b96fa1566b6fe93b964d19cb7e7",
+      "review_receipt.json": "f8113f8bcf7847c3fd82c135064efb8630d7d79daae751adaa8db1eca6c4513f",
+      "limitations.md": "231f76c5abc0a3995856723550d58b215ccf1ef919d606267aac70fa9c4022bc",
+      "run_manifest.json": "self-referential：本文件定稿后不可自哈希；以其提交对象 SHA 为锚"
+    },
+    "actual_model_and_usage_if_llm": "executor 模型 = GLM（account:bigmodel-individual-coding-plan，GLM-5.3-Flash reasoning agent，ZCode 会话）；精确 token 计数未暴露给会话，如实记 NOT_EXPOSED；全部断言零依赖 LLM 输出（纯 widget/源扫描/引擎单测）",
+    "screenshots_video_and_semantics_if_ui": "UI 面为兑换动作守卫与自我锚失败面：语义以 widget 测试断言（中文文案/ValueKey 定位/类型在场缺席）代替截图语义 dump（F06/U11/U14 同等语义文本口径）；真机截图未采（无接入设备），记 limitations #3",
+    "physical_device_scope_if_sensory": "本卡零触觉/音频面改动（庆祝关闭钉走视觉粒子抑制链）；无真实设备，记 DEVICE_UNVERIFIED 不适用口径"
+  }
+}
