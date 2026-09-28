@@ -4,8 +4,8 @@
 >
 > **终门结果：PASS（2026-09-28 08:19，JOURNEY 7/7）**
 >
-> **当前版本**：v0.8（2026-09-28 04:36——冷读可用性轮：名词表 24 条/O-Q 线长句拆解/§10 散点收敛/changelog 时序修复；v0.7 已修 5 项 P0）
-> **维护者**：Sparkle v3 舰队协调会话（主会话）｜**权威数据源**：v3/.sparkle_v3_fleet_state.json notes 流、v3/07_tasks/tasks.json（102/107 已核正）、v3/06_agent_fleet/DYNAMIC_ISSUES.md（FIX 台账 364 行，口径=状态格行首枚举）
+> **当前版本**：v0.9（2026-09-28 14:19——门后进展刷新轮：CI 第 5 绿+31 在跑/FIX-547 已修（wt807 分支在途）/Q-08 预裁③④⑥ 备忘完成（wt808 分支在途）/O-01 TCC 解锁+浏览器腿在途/台账刷新 379 行）
+> **维护者**：Sparkle v3 舰队协调会话（主会话）｜**权威数据源**：v3/.sparkle_v3_fleet_state.json notes 流、v3/07_tasks/tasks.json（102/107 已核正）、v3/06_agent_fleet/DYNAMIC_ISSUES.md（FIX 台账 379 行，口径=FIX 编号行+状态格首词枚举）
 
 ---
 
@@ -20,7 +20,7 @@
 
 - **wtNNN**：舰队 worker 会话编号；交付物在 `v3-output/WTNNN-<任务名>/`，工作分支 `agent/<node>/wtNNN/<task>`。
 - **门 / 门后**：day7 JOURNEY 终门（2026-09-28 08:00，/tmp/gate_day7.py）；「门后」=终门后的集中执行窗口。
-- **TCC**：macOS 隐私与安全性授权（用户勾选 ZCode 辅助功能权限+重启 App）——O-01 浏览器取阿里云凭据的前置，**非云侧机制**。
+- **TCC**：macOS 隐私与安全性授权（用户勾选 ZCode 辅助功能权限+重启 App）——O-01 浏览器取阿里云凭据的前置，**非云侧机制**（**09-28 已解锁**）。
 - **L0/L1/L2/L3（E 线口径）**：请求分层——L0 直答/L1 轻量/L2 中量/L3 重（SLO 六项挂其上）；「L0 首帧前移」=L0 层首帧优化。
 - **L1–L5（U 线口径）**：UI 质量闸门层级（L2=双审查 APPROVE、L4=闸门注册、L5=headless 契约层，详 U-line.md）——**与 E 线 L 层不同体系**。
 - **台账**：v3/06_agent_fleet/DYNAMIC_ISSUES.md，V3 缺陷/动态登记表；FIX-NNN=行号。
@@ -78,14 +78,14 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 **当前：102/107 done**。三源核验（wt759，2026-09-28）：15 张三源齐 + 84 张销账核正；此后 S-01（wt763 APPROVE）→100、O-05（wt782 APPROVE+销账前置全履）→102。余 5 张见下表。
 
-**剩余 3 张（104/107，2026-09-28 12:00）——J-02/E-08 已销账（见上划线条目），wt802 补测批在航做 J-02 全量闭环**：
+**剩余 3 张（104/107，2026-09-28 14:19）——J-02/E-08 已销账（见上划线条目），wt802 补测批在航做 J-02 全量闭环**：
 | 卡 | 状态 | 阻塞点 |
 |---|---|---|
 | ~~J-02~~ | **done（2026-09-28）**：E3 实测销账（wt792 降级口径+wt800/799 双修+wt802 补测批在航闭环） | — |
 | ~~E-08~~ | **done（2026-09-28）**：四段证据链销账（wt372+修正波+wt798 重采+wt801 验收复测 SLO 4P/2F+wt803 APPROVE；C1 义务=FIX-545） | — |
-| O-01 公网 Staging HTTPS/WSS 一键部署 | 未启动 | 云凭据（用户 TCC 授权解锁后立即可做；ECS i-2ze439t934c2gsdqm778 已配） |
+| O-01 公网 Staging HTTPS/WSS 一键部署 | 未启动（凭据前置在途） | **TCC 已解锁（09-28）**；浏览器腿在途——阿里云 RAM 控制台会话已确认在博仁 profile，AK 轮转创建流程进行中（截至本档刷新凭据未产出）；ECS i-2ze439t934c2gsdqm778 已配 |
 | Q-07 Chaos/Recovery/Offline/Restore Storm 终验 | 未启动 | 依赖 O-01 |
-| Q-08 V3 Final Gate Audit / Commercial RC | 未启动 | 压轴（Q-07 后；day7 终门 09-28 08:00 先行） |
+| Q-08 V3 Final Gate Audit / Commercial RC | 未启动 | 压轴（Q-07 后；day7 终门 09-28 08:00 先行；骨架与预裁①②③④⑥进展见 §4 Q 线第 4 点） |
 
 已销账补记（均为 v0.5-v0.5.1 时点）：
 - **O-06**：wt765 交付 + wt771 审查 APPROVE（真栈 shadow 回滚事故实录=验收模型教科书样本）；ops 面 OPS_SURFACE.md。
@@ -112,7 +112,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 - **S 线 Community（5/5，已深挖，详章 v3-output/WT775-DOC-UPSG/S-line.md）**：S-01 五面真相（M-3 消解、实时走引擎内 ConnectionManager——**多实例是 V4 第一个重设计点**、CQRS community 投影零生产者=FIX-495 三路裁量素材）；S-02 红线守卫在库，orphan-by-design 豁免移除条件=群 AI 面接入（V4 义务）。
 - **G 线 Galaxy（5/5，已深挖，详章 v3-output/WT775-DOC-UPSG/G-line.md）**：星图三路写入亲证——**主流量（任务完成 spark）仍走 legacy 时间公式封顶 40**；outcome 走 Kalman（TASK_OUTCOME 0.6/SELF_REPORT 隔离/TIME_ON_TASK 0）；「证据地图」主张真实但打折——**把 X-01 completion evidence 分型接进完成链是 V4 最低成本杠杆**。AGE 真实使用=GraphRAG 读侧活+graph_sync 消费者活，但写侧镜像零生产流量；outcome 撤销→已吸收效果回滚未闭环。
 - **O 线 Ops（6/7 done，已深挖，详章 v3-output/WT779-DOC-OQ/O-line.md）**——四要点：
-  1. **就绪度必须三层分开看，混读会高估**：机制层（O-02/03/04/07 四卡 09-21 R2 PASS+O-06 双审查链，O+Q 线 445 用例本次实跑绿）＞演练层（O-06 真栈 shadow 回滚、O-05 一次性容器栈——全 localhost 形态，staging 级演练从未发生）＞生产部署层（O-01 零交付，卡用户 TCC 凭据 H-002；/tmp 弹药易失；但工程面准备度其实很高：compose.prod+deploy 六脚本在库）。
+  1. **就绪度必须三层分开看，混读会高估**：机制层（O-02/03/04/07 四卡 09-21 R2 PASS+O-06 双审查链，O+Q 线 445 用例本次实跑绿）＞演练层（O-06 真栈 shadow 回滚、O-05 一次性容器栈——全 localhost 形态，staging 级演练从未发生）＞生产部署层（O-01 零交付不变；**前置已松动（09-28 门后）：用户 TCC 已解锁，阿里云 RAM 控制台会话已确认在博仁 profile，AK 轮转创建流程进行中——浏览器腿在途，截至本档 v0.9 刷新凭据未产出**；/tmp 弹药易失；但工程面准备度其实很高：compose.prod+deploy 六脚本在库）。
   2. **全舰队供血最多的被依赖线**：O-04 entitlement 判官被 O-07 budget_matrix 消费；O-07 背压/安全错误面是 Q-06 修复落点基底；O-06 release manifest 是 Q-08 RC 前身；O-05 INV-1..7 是 Q-07 现成判据——**V4 裁撤任何面前先查依赖网**。
   3. 单卡要点：O-02 trace 脊柱 9 阶段+finish-in-finally 亲证在位，但运行级 GJ 重建证据全库缺一口；O-04 双侧单一判官且 D-REDEEM 扩展存活；O-06 是唯一走完「审查抓真运行级缺陷→补丁→APPROVE」全链的卡。
   4. **O-05 重大发现=备份链此前静默失效**（MinIO 容器无 tar→cron 夜备份从未产出完整包；restore 曾吞 2156 SQL 错=假成功），已修+INV 校验器+GJ03 11/11 演练（详 FIX-531/505/532 行）。
@@ -120,11 +120,11 @@ Flutter Mobile (Riverpod+GoRouter, :app)
   1. **「诚实 FAIL」是合法交付形态且已行使两次**：Q-04 总判定 FAIL（precision 0.0/invalid 硬门×10/overpersonalization 41.67%/uplift 0.0pp 原样交付）；Q-02 首轮 13 PASS/6 FAIL/1 RESTRICTED、0 waive 全转动态卡——全库诚实性教义最重的两个样本。
   2. **「修而不复跑」是 Q 线最大结构残差**：Q-02/Q-04 修复全部闭账但均无修复后全量重跑，终态=首轮诚实判定+逐缺陷修复+局部复验/锁级证据——Q-08 必须显式三选一裁决（补全量重跑/按锁级证据判/NOT_REMEASURED，驱动都在库可复跑）。
   3. 证据形态好于 D/E 线（四产物目录在库、台账零死链）。Q-01 260 场景亲数（integration 54/model 122/simulator 84，V3-001..260 无缺无重）且 **verdict_semantics=contract-simulation 钉死——「260 全绿」≠「产品全绿」**（model 型走 mock-provider、simulator 型是 stub，证据强度按路由分层）；Q-06 L3-ACK 400 样本 7.03s FAIL→0.06s 转、SLO 4/6（L0/L2 FAIL=E-08 族未修）。
-  4. **Q-04 uplift 0.0pp + A-08 no_memory 双指标反超=两个独立 eval 同向：记忆/个性化面净贡献未证明为正——V4 最重负面输入，任何「越用越懂我」叙事必须先回答这两个数字**。Q-07/Q-08 执行计划已草案（DoD V3-0..V3-10 逐 gate 证据图+四个预裁决项+release-manifest 缺 git SHA 缺口；FIX-530 系 Q-07 直接前置缺陷建议先修；**详章 §Q.4：v3-output/WT779-DOC-OQ/Q-line.md**）。
+  4. **Q-04 uplift 0.0pp + A-08 no_memory 双指标反超=两个独立 eval 同向：记忆/个性化面净贡献未证明为正——V4 最重负面输入，任何「越用越懂我」叙事必须先回答这两个数字**。Q-07/Q-08 执行计划已草案（DoD V3-0..V3-10 逐 gate 证据图+四个预裁决项+release-manifest 缺 git SHA 缺口；FIX-530 系 Q-07 直接前置缺陷**已修@92179f4c（wt793，主干在册），P1 OPEN 清零**；**详章 §Q.4：v3-output/WT779-DOC-OQ/Q-line.md**）。**Q-08 预裁进展（09-28 门后）**：骨架已入库（v3-output/WT804-Q08SKELETON/FINAL_V3_GATE_REPORT.md 草案，全部预判带「待 Q-08 正式裁决」标记）；预裁①已裁（B-01Δ 入册，main@cf8d6c16）②备忘完成（V3-2 映射，wt806，main@e1445a14）**③④⑥备忘完成（wt808 分支@5173df8e，草案口径待正式拍板）**——③SLO=「A+B 复合分治」：L0（1.781s）不修订判 FAIL 派 V4 工作项、L2 保 FAIL 事实+修订口径 R1（deep 档 p95≤75s，附重校准触发与两条伴随硬门）、tier 账本判「存在但有计量盲区」（FIX-545 承接）；④三端=Android/Web/macOS（权威两处互证）、双口径=真机段 BLOCKED vs API 级+渲染器/桌面集成 PASS（与 sqlite/真模型轴正交，禁止互相替代）；⑥V3-5×507=丙（机制口径 PASS+P1 只读探针，全 0 不构成断链反证）。
 
 ## 5. 质量与可靠性态势（FIX 台账模式学）
 
-**台账规模**：V3-FIX-001→534（364 行，FIXED 273/OPEN 60/CLOSED 3/WONTFIX 1+27 行旧格式自由态——口径=状态格行首枚举机器可复算，与 §9 同口径）。**零假账纪律**贯穿：每个 FIXED@ 指针经「集成即纠指」指向主干可达 SHA。
+**台账规模**：V3-FIX-001→547（**379 行**；2026-09-28 14 时许@1f62b36c 机器复算：**FIXED 303/OPEN 45/CLOSED 4/WONTFIX 1**+余 26 行自由态/混合格——口径=FIX 编号行数+状态格首词枚举，机器可复算，与 §9 同口径；wt807 分支闭账 FIX-547 后为 304/44，合入主干即翻转）。**P1 OPEN 已清零**（FIX-530 已修@92179f4c，wt793）。台账 verify 复核零畸形（FIX-546 行曾因管数形态被 verify 抓获即整行重写，f0ac1b4c）。**零假账纪律**贯穿：每个 FIXED@ 指针经「集成即纠指」指向主干可达 SHA。
 
 **修复族谱（暴露的系统性弱点与已收口状态）**——这是 V4 最应读的一节：
 1. **竞态/并发族**（全收口）：UserStreakStats 三入口（451/457/467+479，uuid5 同源三件套+PG 实证）；aurora 融合跨进程锁（418）；状态估计 claim（193）
@@ -138,14 +138,14 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 ## 6. 测试与 CI 态势
 
 - **测试规模**（首次完整裁决时点数；当前规模详 §9）：backend ~12,340（139F/12,340P 裁决时）→现 13,799；gateway 692→现 746 测试函数（静态 grep 口径）；flutter 2,636→现 2,628（差值=group 包裹/参数化计数口径，详 metrics.md L131-L132）；integration/e2e 面多层
-- **CI：两连绿基线确立（第 23 次 36343384107 + 第 25 次 36350830485，2026-09-28）**——第 24 次红系 wt777 FIX-510 调用形状修复（不在 23 次树）暴露的测试钉旧 bug 形状+ope_gatekeeper 预存孤儿（FIX-537）双问题，均已正修；mypy 基线按 CI 实数对齐 77（本地口径 55）；首绿时点 04:15——22 次失败后洋葱 21 层剥尽（proto 双布局→goimports→PEL 竞态→OpenAPI 重冻结→BA-ROUTES→backend 三分片→flutter→coverage merge→build artifacts→journey smoke）；12 个执行 job 全 ✓（Simulation Benchmark 系 PR 事件专属设计跳过）。**V4 教训固化：从未全量跑过的管线自带腐烂——21 层缺陷没有一层能在部分运行中暴露，V4 初期就应建立全绿基线**
-- **mypy 棘轮**：922→132→113→94→91→76→70→**55**（十一批+wt777 探针，零 cast/零 ignore/真 bug 停手登记纪律——顺带挖出 491/492/529 等真 bug；CI 侧口径差异待第 24 次实测对齐）
+- **CI：第 5 绿达成（2026-09-28）**——五绿序列=第 23 次 36343384107 / 第 25 次 36350830485 / 第 27 次 36365191735 / 第 29 次 rerun 36372459978 / 第 30 次 36378341486（gh run list 逐条实核）；**CI 31 在跑（push 1f62b36c，10 个提交）**。**CI 29 attempt1 真红=FIX-547**（chat_value_signal_test「failed after test completion」：chat_provider.dart:1388 sendMessage 的 fire-and-forget 续延在 CI 负载下落到 container dispose 后写 subscriptionsProvider state 抛 Bad state——rerun 过系负载敏感 flake 非真修），**已由 wt807 修复（分支 agent/wt807/fix547@45336b1b，截至本档刷新未并主干）**：harness 覆写 subscriptionsProvider 为确定性空订阅（语义等价零网络）+_settle 80ms 固定墙钟改 8 轮 Duration.zero 事件循环 drain（FIX-544 先例形制，不删断言不动产品码）；修后目标测试 5/5 次全绿+同目录 provider 测 80 全绿。第 24 次红系 wt777 FIX-510 调用形状修复（不在 23 次树）暴露的测试钉旧 bug 形状+ope_gatekeeper 预存孤儿（FIX-537）双问题，均已正修；mypy 基线按 CI 实数对齐 77（本地口径 55）；首绿时点 04:15——22 次失败后洋葱 21 层剥尽（proto 双布局→goimports→PEL 竞态→OpenAPI 重冻结→BA-ROUTES→backend 三分片→flutter→coverage merge→build artifacts→journey smoke）；12 个执行 job 全 ✓（Simulation Benchmark 系 PR 事件专属设计跳过）。**V4 教训固化：从未全量跑过的管线自带腐烂——21 层缺陷没有一层能在部分运行中暴露，V4 初期就应建立全绿基线**
+- **mypy 棘轮**：922→132→113→94→91→76→70→**55**（十一批+wt777 探针，零 cast/零 ignore/真 bug 停手登记纪律——顺带挖出 491/492/529 等真 bug；CI 侧基线已按第 23 次首绿实测对齐 77，greens 27/29-rerun/30 连过门，与本地 55 差异详 §9）
 - **ruff/l10n**：evidence 目录全净；en/zh 10061 键双向零缺失；EN 占位符清零
 
 ## 7. 已知债务与未决清单
 
 **待产品/用户裁量**：FIX-495（community post CQRS 闲置接线：零生产者零消费者，S-01 证实现状实时走引擎内进程——裁决建议：留档 post-RC 接线或拆除）；EXACT 带 8 草稿键（chatConfidence×3/chatCompletion×5）；FIX-465 已裁决派修中。
-**等用户解锁**：H-001~009（HUMAN_INBOX：FIX-293 生产回填、云端 TCC、Dependabot #111-113、T36 B/D、49 冻结键、FIX-97/290、FIX-189 env 审计；**H-009=真机段汇总行**——U-09 45 张矩阵/G-05 FPS 批/U-08 a11y/B-04 走查/U-06 simulator 段/WT394 波次箱等 10 子项，wt783 回填、20 锚点零死指针，详 v3-output/WT783-HUMANINBOX/notes.md）。
+**等用户解锁**：H-001~009（HUMAN_INBOX：FIX-293 生产回填、云端 TCC（**09-28 已解锁**——凭据办理在途，见 §3 O-01 行）、Dependabot #111-113、T36 B/D、49 冻结键、FIX-97/290、FIX-189 env 审计；**H-009=真机段汇总行**——U-09 45 张矩阵/G-05 FPS 批/U-08 a11y/B-04 走查/U-06 simulator 段/WT394 波次箱等 10 子项，wt783 回填、20 锚点零死指针，详 v3-output/WT783-HUMANINBOX/notes.md）。
 **技术债登记**：KNOWN_CODE_DEBT_LEDGER（动统计/排行榜/card_protocol 前先读）；FIX-443③ stage34 死绑定（稳定性优先缓修）；FIX-375/379②③（post-10/4 结构性）。
 **挂起待集成**：wt755 分支 938e845c（E-08 SLO L0，热路径门后集成；其新登记撞号项改 498——**预编号**，集成时才建行，当前无台账行非断链；wt785 预审 APPROVE 含重编号三处同步点）。
 
@@ -162,16 +162,16 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 - **代码规模**：手写生产 ~113.5 万行——backend/app 1,356 文件/533k 行；mobile/lib 手写 1,187 文件/564k 行（排除 vendored 与生成物）；gateway 105 文件/38k 行（+141 测试文件 27k 行）。测试文件：backend 1,443 + gateway 141 + mobile 518。
 - **模块依赖**：35 顶层包/192 边/34 对双向依赖；最重边 services→core 314、services→models 310；**core↔services 双向对是 V4 分层解环首批对象**。
 - **测试分布**：backend/tests 收集 **13,799 用例 0 错误**（unit 占 70.8%）；tests_e2e 36+1 收集错误（死文件 FIX-528）；gateway 746 测试函数（静态 grep；运行口径 692，差值详 metrics.md L131）；flutter 2,628（静态）。测量卫生：worktree 需先补 gen 否则数字失真。
-- **FIX 台账**：364 条数据行，**FIXED 273（75%）/OPEN 60/CLOSED 3/WONTFIX 1**+27 行旧格式自由态（计数口径=状态格行首枚举，机器可复算：awk -F'|' 取 NF-1 首词）；P0 5/5 全闭；P1 OPEN 仅 **FIX-530**（engine FastAPI 进程被 Redis 瞬时断连杀死——billing 消费循环异常上抛整进程退出，2026-09-28 03:02 实录死亡 30 分钟，心跳探活抓获，已复活+门后派修；「唯一 OPEN P1=FIX-53」系 FIX-53 行混合状态格机器误报，FIX-512 已当场纠指收口）；底重金字塔（P3 占 44%——分母=全部数据行）。热点 top4：services 90/mobile 68/models 45/orchestration 45（完整 top10 详 metrics.md FIX 统计节）。
+- **FIX 台账**：**v0.9 刷新（2026-09-28 14 时许@1f62b36c 复算）=379 行，FIXED 303/OPEN 45/CLOSED 4/WONTFIX 1+26 行自由态/混合格**（口径=FIX 编号行+状态格首词枚举，机器可复算；wt780 03:25 原快照=364 行 FIXED 273/OPEN 60/CLOSED 3/WONTFIX 1+27 旧格式，系状态格行首枚举口径——两口径分母不同，不做跨口径折算，各自按时点保留）；**P1 OPEN 清零**（原唯一 OPEN P1=FIX-530 已修@92179f4c wt793：billing 消费循环 Redis 断连韧性壳——单循环异常不再杀死 engine 进程；03:02 实录死亡 30 分钟那单由心跳探活抓获复活；「唯一 OPEN P1=FIX-53」旧误报系 FIX-53 行混合状态格机器误报，FIX-512 已当场纠指收口）；P0 5/5 全闭；底重金字塔（P3 占 44%）与热点 top4（services 90/mobile 68/models 45/orchestration 45）为 wt780 时点数，未随本刷新重算（完整 top10 详 metrics.md FIX 统计节）。
 - mypy **55**（本日 922→70→55：wt777 集成 −6 + wt778 批十一 −15，合并态冷缓存实测与台账逐数对账；CI 侧 77=第 23 次首绿实测、基线已对齐 77；与本地 55 差 22 条系 runner 平台 python/mypy stub 代际差，方向稳定）；卡片 **102/107**（O-05 已销账：wt782 独立审查 APPROVE+前置全履）；本地栈三容器 healthy、gateway 200+engine /health 200（engine 03:02 曾死 30 分钟已复活，见 FIX-530；生产部署 N/A）。
 
-## 10. V4 设计建议输入（v0.8 收敛版）
+## 10. V4 设计建议输入（v0.8 收敛版；v0.9 仅刷新第 8 点）
 
 初版要点（基于 V3 执行观察）：
 1. **结构性限制**：不增加 Java 后端/双数据库/第二套身份记忆系统（本阶段资源选择，ADR-0011）；proto→生成物/Alembic 唯一入口的治理结构值得 V4 延续
 2. **高杠杆机会**：E 线首帧前移的 L1/L2/L3 已勘察未实施（StreamChat 前奏/门并行化/拥塞治理——wt755 notes 有完整归因）；Galaxy evidence-aware 接线（G-02 后的深化）
 3. **避免重蹈**：账本三源漂移（V4 应从第一天用主干 SHA 记账）；worker 报告与实际交付的错位模式（本档 §5 的验收模型已解决，V4 沿用）；CI 从未完整跑过的管线自带腐烂（V4 初期就要全量绿基线）
-4. **散点收敛清单（v0.8 自 §4 十四线提炼）**：①记忆/个性化净贡献未证为正（Q-04 uplift 0 + A-08 no_memory 反超）——任何相关叙事先回答这两个数字；②数据飞轮中段断链（FIX-507：D-05 lifecycle 写路径零生产调用方，friction/helped 洞察卡生产零数据）；③O 线依赖网裁撤前必查（§4 O 线第 2 点）；④orphan-by-design 接线义务清单（community_context_boundary 群 AI 面/J-06 hybrid 旅程面 FIX-535/C-05 冲突澄清参数/C-08 真模型消融）；⑤S 线多实例重设计（实时面走引擎内 ConnectionManager）；⑥G 线最低成本杠杆（X-01 completion evidence 分型接进完成链）；⑦单进程栈可用性单点（FIX-530：进程守护必上）；⑧CI 从未全绿=管线自带腐烂（V4 初期建全绿基线）；⑨账本三源漂移（V4 第一天起主干 SHA 记账）；⑩worker 报告错位模式→验收模型（READY_FOR_REVIEW→receipt）沿用；⑪A-05 五层硬约束面范式（六面白名单 sha256 双钉）值得延续到 V4 所有边界机制
+4. **散点收敛清单（v0.8 自 §4 十四线提炼）**：①记忆/个性化净贡献未证为正（Q-04 uplift 0 + A-08 no_memory 反超）——任何相关叙事先回答这两个数字；②数据飞轮中段断链（FIX-507：D-05 lifecycle 写路径零生产调用方，friction/helped 洞察卡生产零数据）；③O 线依赖网裁撤前必查（§4 O 线第 2 点）；④orphan-by-design 接线义务清单（community_context_boundary 群 AI 面/J-06 hybrid 旅程面 FIX-535/C-05 冲突澄清参数/C-08 真模型消融）；⑤S 线多实例重设计（实时面走引擎内 ConnectionManager）；⑥G 线最低成本杠杆（X-01 completion evidence 分型接进完成链）；⑦单进程栈可用性单点（FIX-530：进程守护必上）；⑧CI 首绿前 22 连红=管线自带腐烂（第 5 绿已于 09-28 达成、基线已立——V4 初期建全绿基线的教训不变）；⑨账本三源漂移（V4 第一天起主干 SHA 记账）；⑩worker 报告错位模式→验收模型（READY_FOR_REVIEW→receipt）沿用；⑪A-05 五层硬约束面范式（六面白名单 sha256 双钉）值得延续到 V4 所有边界机制
 
 ---
 
@@ -179,6 +179,7 @@ Flutter Mobile (Riverpod+GoRouter, :app)
 
 （排序=新→旧；v0.1 时间戳原误写 03:00 已按 git 实取修正为 02:03；v0.2-v0.5 段时间系撰写估写±数分钟，v0.5.1 起为 commit 实取）
 
+- v0.9（2026-09-28 14:19，实跑 date）：**门后进展刷新轮**（wt811 文档卡，吸收 09-28 午后六项事实）：①CI 第 5 绿达成（五绿序列 23/25/27/29-rerun/30，gh 逐条实核）+CI 31 在跑（push 1f62b36c，10 个提交）——§6 叙事由「两连绿基线」改写；②**FIX-547 已修**（CI 29 Flutter 真红根因：chat_value_signal dispose 竞态；wt807 harness 覆写确定性空订阅+8 轮事件循环 drain，分支@45336b1b 5/5 绿——在途未并主干，§6 如实标注分支归属）；③**Q-08 预裁③④⑥备忘完成**（wt808 分支@5173df8e：③SLO=A+B 复合分治/④三端双口径/⑥V3-5×507=丙；连同骨架 wt804、预裁①②一并写入 §4 Q 线第 4 点）；④**O-01 前置松动**：TCC 已解锁、阿里云 RAM 会话确认在博仁 profile、AK 轮转创建在途（浏览器腿）——§3 卡表/§4 O 线/§0.5 名词表/§7 H-00x 同步，104/107 不变；⑤台账刷新：379 行（FIXED 303/OPEN 45/CLOSED 4/WONTFIX 1+26 自由态，FIX 编号行口径；wt780 快照 364 系旧口径分母不同如实并注不折算）；**P1 OPEN 清零**（FIX-530 已修@92179f4c）；verify 零畸形（§5/§9）；⑥wt805 归因纠错在册（FIX-546 startup_screen 从未红，@c3d2205c）随台账数字一并呈现。§10 第 8 点随 CI 五绿刷新表述。卡片 102/107（剩余 3 张）无变化。
 - v0.8（2026-09-28 04:36）：**冷读可用性轮**（wt787 审计 P1 批量修复）：新增 §0.5 名词表 24 条（wt 代号/门/TCC/双 L 层体系/诚实 FAIL/contract-simulation 等——G2/G3/G4/G5/G7/G8/U2 七项一并治）；O/Q 线与「已销账补记」三段超长句拆编号 bullet（U1）；§6/§9 测试规模桥接+口径补全（C6/G9）；§8.1 真模型清单扩至 E-04/M-09/A-08（C8）；§10 第 4 条 ⏳ 兑现为 11 点散点收敛清单（G6）；changelog 时序重排+v0.1 时间 git 实取修正（C7）；Q-07/Q-08 计划路径/ADR-0011 出处补指针（G10/G11）。P2=15 项留后续打磨。
 - v0.7（2026-09-28 04:20）：**P0 勘正轮**（wt787 冷读审计 34 条中 P0=5 全修）：①文首元数据 v0.5→v0.7 与全文对齐（102/107、364 行）；②§3 头条 100/107→102/107（wt759 时点数未标时点的病）；③**线数 13→14**（tasks.json stream 权威=14，「13 条产品线」系计数错误，历史更新日志原文保留不回改）；④§5/§9 台账数字统一为同口径 364 行 FIXED 273/OPEN 60（并写明机器可复算口径）；⑤A-08 四臂终值补臂名与指标口径（照抄 A-line.md:146 原始锚）。附修：FIX-498 标注预编号非断链、P/S/G 详章补链接。P1=14/P2=15 清单见 v3-output/WT787-DOCAUDIT/report.md（门后打磨轮执行）。
 - v0.6（2026-09-28 03:54）：**13/13 线深挖全部完成**——O/Q 收官章并入（wt779 五源逐卡核验：主干 SHA 祖先亲证+代码开文件+O/Q 线 445 用例实跑绿+产物抽读+台账逐行复核）。§3 修正 Q 线实为 6/8（Q-01~Q-06 全有交付；「Q 线 1/8」系陈旧口径）。**FIX-512 当场收口**：FIX-53 行「OPEN 补记FIXED@」混合状态格系机器误报源，「唯一 OPEN P1=FIX-53」不成立——收口后 **P1 OPEN 仅剩 FIX-530**。FIX-511 闭账（wt783：H-009+10 子项入中央箱，20 锚点零死指针，补漏 5 组含 WT394 波次箱全量）。新登 FIX-513（42 feature portfolio 双真源词表分裂——DoD 五态 vs MODULE_PORTFOLIO 扩展词表，V3-0「唯一状态」文档层不可直接满足，Q-08 前须裁决）/FIX-514（O-05 交付 commit 幻影号勘误：号 504/520 均无效，检索锚=commit 1680d16c 本体）。台账终态 362 行 FIXED 273。
