@@ -1,0 +1,129 @@
+{
+  "task": "V4-U07",
+  "generated_at": "2026-09-29",
+  "overall": "PASS",
+  "suites": [
+    {
+      "file": "mobile/test/unit/chat_lane_semantics_test.dart",
+      "purpose": "I09 词表消费门 + S18 胶囊门 + 消息级判据（每面一正一反）",
+      "tests": 14,
+      "passed": 14,
+      "failed": 0,
+      "key_cases": [
+        "正：快路状态帧 metadata → deterministic+greeting；空白/大小写归一",
+        "正：慢路 chat_lane=model 解析",
+        "反：集合外 lane 值整体拒识（不猜不降级）",
+        "反：缺键 metadata（旧后端）→ 全 null",
+        "正：慢路/未携带 lane 等待期照旧进三段胶囊（既有语义零变化）",
+        "反：零模型快路轮不进三段胶囊（不展示假检索/思考）",
+        "正/反：copyWith clearChatLane 清轮级标记；无关字段更新不丢失",
+        "正：快路模板消息判定即时回复并携带形态词",
+        "反：真模型消息/无键消息/集合外值不判定为即时回复"
+      ]
+    },
+    {
+      "file": "mobile/test/unit/chat_notifier_lane_capture_test.dart",
+      "purpose": "ChatNotifier 真实事件流捕获链（StatusUpdateEvent/TextEvent → state → 终帧消息 rawMetadata）",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "key_cases": [
+        "正：快路轮状态帧捕获 lane；等待期 shouldShowPhaseCapsule=false；终帧消息 isDeterministicLaneReply=true；run 终态轮级清零",
+        "反：集合外 lane 值不捕获，等待面保持既有胶囊语义；chat_lane=model 不误标",
+        "反：无键慢路轮全程无 lane 标记（I09 开关关=旧后端零变化）"
+      ]
+    },
+    {
+      "file": "mobile/test/features/chat/presentation/providers/chat_scroll_anchor_test.dart",
+      "purpose": "滚动主权锚（chat_screen 同款 reversed ListView + 真实滚动物理）",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "key_cases": [
+        "正：贴底时到达性滚动继续跟随最新端（既有行为保持）",
+        "反：上滑阅读历史后新内容到达不拉回视口，阅读位置保留（卡面核心反例）",
+        "反/正：阈值语义——离开即解除；恢复只经 forceFollow 或滑回贴底",
+        "正：用户显式动作 forceFollow 恢复跟随（发送消息路径）"
+      ]
+    },
+    {
+      "file": "mobile/test/core/widgets/sparkle_markdown_200_scale_test.dart",
+      "purpose": "验收1：200% 长中文/代码/公式不横向破屏",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "key_cases": [
+        "正：200% 长中文段落 360 宽零溢出",
+        "正：200% 长代码块零溢出 + 代码卡横向滚动消化路径在场",
+        "正：200% 长公式（LaTeX 源文 + 无空格长 token）零溢出",
+        "正：200% 表格+列表混排零溢出",
+        "反（对照）：必然溢出的无约束 Row 被同款断言抓到（判别力自证）",
+        "正：更紧约束（气泡真实内容宽 288）长 SQL/长公式零溢出"
+      ]
+    },
+    {
+      "file": "mobile/test/features/chat/presentation/widgets/assistant_lane_marker_test.dart",
+      "purpose": "验收3 呈现层：即时回复诚实标记",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "key_cases": [
+        "正：greeting/acknowledgment/farewell → 「即时回复 · 问候/应答/告别」",
+        "反：缺形态词只显示「即时回复」本体（不臆造标签）",
+        "反：未知形态词不透传成用户可见标签"
+      ]
+    },
+    {
+      "file": "mobile/test/features/chat/presentation/widgets/assistant_citation_honesty_test.dart",
+      "purpose": "验收2：reference 点击真来源，未知引用不造超链接",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "key_cases": [
+        "正：真来源引用 chip → 定位 sheet →「前往文档」可点 → GoRouter 真实导航 TASK-DETAIL:task-123",
+        "反：外部 url-only 引用（不可解析）→「前往文档」禁用；摘录仍如实展示",
+        "反：无目标引用 + 伪造 sparkle 类型引用 → 均禁用（不造可用链接）"
+      ]
+    },
+    {
+      "file": "mobile/test/features/chat/presentation/widgets/u07_evidence_capture_test.dart",
+      "purpose": "证据采集（真实渲染断言恒执行；落盘按需）",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "key_cases": [
+        "快路「即时回复」标记真实渲染（语义 label=\"即时回复 · 问候\"）",
+        "未知引用 sheet 真实 tap 操作 → 顶层画面（禁用态前往文档）"
+      ]
+    },
+    {
+      "file": "受影响面回归（mobile）",
+      "cmd": "flutter test test/features/chat test/unit test/core/widgets",
+      "tests": 594,
+      "passed": 593,
+      "skipped": 1,
+      "failed": 0,
+      "note": "skip 为存量环境性跳过；含 I09/I03/I06/F02/F03 移动端消费面与 chat 域全部存量测试"
+    },
+    {
+      "file": "回归锚（backend，本卡零后端 diff）",
+      "tests": 126,
+      "passed": 126,
+      "failed": 0,
+      "detail": "I09 tests/unit/test_deterministic_lane.py 49 passed；I03 tests/unit/test_semantic_selector.py 77 passed"
+    }
+  ],
+  "static_checks": {
+    "flutter_analyze": "No issues found!（0 新增；含存量面全绿）",
+    "guards": {
+      "UI-TOKENS": "PASS (color=225/275, fontSize=634/727)",
+      "SPACING-RHYTHM": "PASS (spacingHalfStep=1591/1623)",
+      "TYPO-RHYTHM": "PASS (sub12FontSize=232/234, fontWeightW800=0/0, fontWeightW900=6/6)"
+    }
+  },
+  "totals": {
+    "new_tests": 36,
+    "regression_tests": 720,
+    "failures": 0
+  }
+}

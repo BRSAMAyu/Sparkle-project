@@ -39,6 +39,7 @@ import 'package:sparkle/features/chat/presentation/providers/aurora_status_provi
 import 'package:sparkle/features/chat/presentation/providers/chat_draft_store_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_scroll_anchor.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
@@ -186,6 +187,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   static const double _chatBottomSurfaceHorizontalInset = DS.spacing16;
 
   final ScrollController _scrollController = ScrollController();
+  // V4-U07「上滑后不自动拉回」：滚动主权锚——用户离开最新端后，到达性
+  // 滚动（新消息/新组件）不再拉回；仅用户显式动作（发送/跳最新）恢复跟随。
+  final ChatScrollAnchor _scrollAnchor = ChatScrollAnchor();
   // C-11 填入式草稿：chat 屏持有输入草稿控制器与焦点（传给 ChatInput），
   // 建议话术 chip 点按只填入+聚焦，不直接发送。
   final TextEditingController _draftController = TextEditingController();
@@ -239,7 +243,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         chatProvider.select((state) => state.messages),
         (previous, next) {
           if (next.length > (previous?.length ?? 0)) {
-            _scrollToBottom();
+            // V4-U07：用户自己的消息（发送/重试/快捷动作）= 显式用户动作，
+            // 恢复跟随并滚到最新；助手消息/组件到达 = 到达性滚动，仅当
+            // 用户仍停留在最新端附近才跟随（上滑阅读不拉回）。
+            final appendedByUser = next.last.role == MessageRole.user;
+            _scrollToBottom(force: appendedByUser);
           }
           // Scroll when the latest assistant message gains new widgets
           // (accessories arriving asynchronously after text generation).
@@ -861,7 +869,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final restoreKey = _restoreTargetKey;
       final targetContext = restoreKey?.currentContext;
       if (targetContext == null) {
-        _scrollToBottom();
+        // V4-U07：定位回退（目标键失效）属显式定位动作——强制回最新端。
+        _scrollToBottom(force: true);
         if (_restoreTargetKey == restoreKey) {
           setState(() {
             _restoreTargetKey = null;
@@ -963,7 +972,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _continueFromComebackBanner() {
     _dismissComebackBanner();
-    _scrollToBottom();
+    // V4-U07：显式用户动作——恢复跟随并回最新端。
+    _scrollToBottom(force: true);
   }
 
   Future<void> _resumeComebackCoreSession() async {
@@ -1309,6 +1319,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
     final position = _scrollController.position;
+    // V4-U07：先更新滚动主权锚（用户上滑离开最新端即解除跟随），再做
+    // 历史预载判定。
+    _scrollAnchor.updateFromPosition(position);
     if (position.maxScrollExtent <= 0) {
       return;
     }
@@ -1771,9 +1784,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 // S18 阶段胶囊：首流前（无任何已到内容）
                                 // 以单行「检索→思考→生成」胶囊承接等待，
                                 // 吸收原 AiStatusIndicator 与三点动画。
+                                // V4-U07 快慢反馈：胶囊门收进 ChatState
+                                // （shouldShowPhaseCapsule）——零模型快路
+                                // 轮（I09 deterministic lane）不存在检索/
+                                // 思考阶段，不展示三段假进度；等待以真实
+                                // 状态行呈现，模板应答即刻到达。
                                 final showPhaseCapsule =
-                                    chatState.hasActiveRun &&
-                                        chatState.streamingContent.isEmpty;
+                                    chatState.shouldShowPhaseCapsule;
 
                                 if (isStatusShowing && index == 0) {
                                   if (showPhaseCapsule) {
@@ -1872,7 +1889,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     );
                                   }
 
-                                  if (!isStatusShowing && !isReasoningShowing) {
+                                  if (!isStatusShowing &&
+                                      !isReasoningShowing &&
+                                      // V4-U07：快路轮同样不进三段胶囊。
+                                      showPhaseCapsule) {
                                     // S18：三点 `_TypingIndicator` 退役，
                                     // 统一走阶段胶囊（含取消与预期时长）。
                                     return ChatRunPhaseIndicator(
@@ -2988,8 +3008,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
       );
 
-  void _scrollToBottom() {
+  /// V4-U07：滚动到最新端。
+  ///
+  /// [force] = 用户显式动作（发送消息/回横幅继续/定位回退），恢复跟随并
+  /// 滚动；默认为到达性滚动——仅当用户仍停留在最新端附近
+  /// （[ChatScrollAnchor] 跟随态）才执行，上滑阅读历史时不再自动拉回。
+  void _scrollToBottom({bool force = false}) {
     if (!_scrollController.hasClients) return;
+    if (force) {
+      _scrollAnchor.forceFollow();
+    } else if (!_scrollAnchor.shouldFollow) {
+      return;
+    }
     unawaited(
       _scrollController.animateTo(
         0,

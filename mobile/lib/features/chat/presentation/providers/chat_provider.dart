@@ -298,6 +298,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       clearActiveRunId: true,
       runPhase: phase,
       clearActiveRunSummary: true,
+      // V4-U07：run 终止即清快慢路标记（下一轮由帧 metadata 重新裁决）。
+      clearChatLane: true,
       transparencyPresentationState:
           state.transparencyPresentationState.copyWith(
         isExpanded: false,
@@ -326,6 +328,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       activeRunId: runId,
       runPhase: ChatRunPhase.sending,
       activeRunSummary: ActiveRunSummary(startedAtEpochMs: nowMs),
+      // V4-U07：新 run 开始即清上一轮快慢路标记（lane 只属于单轮语义）。
+      clearChatLane: true,
       transparencyPresentationState:
           state.transparencyPresentationState.copyWith(
         isExpanded: false,
@@ -391,6 +395,20 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return priority != 'low';
     }
     return true;
+  }
+
+  /// V4-U07 快慢反馈：从帧 metadata 捕获 I09 快慢路标记。
+  /// 封闭集（ChatLaneValues）；缺键/集合外值零影响（= 旧后端既有行为）。
+  /// 状态/增量/终帧任一携带即可，同轮后到覆盖先到（后到为准，单值语义）。
+  void _captureChatLaneFromMetadata(Map<String, dynamic>? metadata) {
+    if (metadata == null) {
+      return;
+    }
+    final (lane, kind) = ChatLaneValues.parseFromMetadata(metadata);
+    if (lane == null) {
+      return;
+    }
+    state = state.copyWith(chatLane: lane, deterministicLaneKind: kind);
   }
 
   List<String> _parseSelectedExperts(dynamic raw) {
@@ -1364,6 +1382,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
         clearActiveRunId: true,
         runPhase: phase,
         clearActiveRunSummary: true,
+        // V4-U07：终态清快慢路标记（消息级判据已随 rawMetadata 收口）。
+        clearChatLane: true,
         transparencyPresentationState:
             state.transparencyPresentationState.copyWith(
           isExpanded: false,
@@ -1530,6 +1550,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
             if (metadata != null) {
               accumulatedMeta.addAll(metadata);
               accumulatedRawMetadata.addAll(metadata);
+              // V4-U07：快路 delta 帧携带 lane 标记（I09 模板直出无独立
+              // 终帧），随增量帧捕获；终帧消息 rawMetadata 同步收口。
+              _captureChatLaneFromMetadata(metadata);
               _appendExecutionWidgets(accumulatedWidgets, metadata);
               captureCitationMetadata(metadata['citations']);
               captureStructuredAdjustments(metadata);
@@ -1711,6 +1734,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             // E-03 阶段去抖：aiStatus 只吃稳定器提交值——首帧/同类立即提交，
             // 跨类需 300ms 稳定窗（回摆即吞，段落高亮不闪烁）；被扣住的事件
             // 整体跳过（status 与其 ux_progress 文案成对生效，不出现错配）。
+            _captureChatLaneFromMetadata(event.metadata);
             _aiStageStabilizer.offer(
               event.state,
               apply: () {
@@ -1743,6 +1767,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             if (metadata != null) {
               accumulatedMeta.addAll(metadata);
               accumulatedRawMetadata.addAll(metadata);
+              _captureChatLaneFromMetadata(metadata);
               _appendExecutionWidgets(accumulatedWidgets, metadata);
               captureCitationMetadata(metadata['citations']);
               captureStructuredAdjustments(metadata);

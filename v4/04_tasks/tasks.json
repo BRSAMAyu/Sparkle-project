@@ -2235,9 +2235,9 @@
     "V4-I09",
     "V4-I06"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "PASS_WITH_CHALLENGES",
    "kind": "implementation",
    "required_locks": [
     "ui-chat"
@@ -2287,7 +2287,12 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "a6c2c287 PASS_WITH_CHALLENGES（全亲验复跑：36 新测/回归 595+1skip/I09 49+I03 77/analyze 0/四件 sha256 全等/gen-l10n 零漂移；R-3 判定成立=冻结测试 3 mutation 全红非恒绿；R-1 回底入口不属本卡面建议微卡；R-4 空白槽=诚实直接后果不占位；C-1 证据勘误已修 729939f9：7 文件+252/-7+回归 595；C-2 reuse 重试不 force 滚动→FIX-566；C-3 L2 引注失准登记）",
+    "remediation": "729939f9 C-1 证据数字勘误（零代码改动）",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑"
+   }
   },
   {
    "id": "V4-U08",

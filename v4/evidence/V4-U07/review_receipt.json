@@ -1,0 +1,23 @@
+{
+  "task": "V4-U07",
+  "state": "REVIEW_READY",
+  "review_model": "独立未参与会话 1 位（normal 风险），在集成 SHA 复验",
+  "self_review_verdict": "PASS_WITH_LIMITATIONS",
+  "receipt_status": "PENDING",
+  "claims_for_reviewer": [
+    "验收3（首个有用内容与ack区分/慢任务不循环假思考）为本卡新行为：消费 I09 帧 metadata（chat_lane/deterministic_lane_kind），封闭集消费门 + 快路轮胶囊门 + 气泡「即时回复」诚实标记；I09 引擎契约未动（backend diff 为 0）",
+    "验收1（200% 不破屏）与验收2（引用真来源/未知引用不造链接）判定为「既有栈已满足，差量举证」：零产品码改动，以 6+3 个可失败测试冻结行为；评审请核对判定是否成立（若有既有行为不满足处应转新行为而非仅举证）",
+    "上滑不自动拉回为最小新增：ChatScrollAnchor 纯阈值判定（≤240 逻辑像素=贴底），chat_screen 四处接线；旧后端/无 lane 场景全部零触发",
+    "classic 零差量声明：lane 缺省时 shouldShowPhaseCapsule 与旧表达式逐值等价；messages 监听对用户消息追加保持 force 滚动（等价旧行为），助手消息/组件到达在贴底初始态下行为同旧",
+    "l10n 4 新键经 flutter gen-l10n 再生（arb+gen×3，非手改 gen）；无 proto/迁移/.env 触碰",
+    "回归面：mobile chat 全 feature + unit + core/widgets（593+1skip）；I09 49 / I03 77 锚全绿；flutter analyze 0 issue；UI/SPACING/TYPO 三棘轮 PASS"
+  ],
+  "challenges_pre_registered": [
+    "R-1（预登记）：滚动锚阈值判定与历史预载共用 240px 档——用户停在 240~maxScrollExtent 之间的中段阅读时，新消息不拉回（预期）但也不再有「回到底部」的显式入口（本卡未加「跳最新」按钮，见 limitations L3）；评审可挑战该 UX 缺口是否属本卡验收面",
+    "R-2（预登记）：chat_screen 的 messages 监听以 next.last.role==user 判定「显式用户动作」——重试/快捷动作/纠正等全部走 sendMessage 追加用户消息路径，均触发 force 滚动；若存在不追加用户消息的隐式发送路径（未发现），其到达性滚动会被门住",
+    "R-3（预登记）：验收1/2 的「已满足」判定依赖既有实现（sparkle_markdown 换行/代码卡横滚；citation strip resolveRoute 禁用态）——评审应抽验测试反例的判别力（对照 Row 用例、伪造 sparkle 类型用例）确认非恒_green 断言",
+    "R-4（预登记）：快路轮在状态帧到达前的极短窗口（发送→首帧）渲染空白槽（SizedBox.shrink）——这是「不展示假阶段」的直接后果；评审可挑战是否需要中性占位"
+  ],
+  "integration_sha_recheck": "待独立审查会话在集成 SHA 复验（本 receipt 以 base e50107fe 记录）",
+  "reviewer_notes_slot": "由独立审查会话填写"
+}

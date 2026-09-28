@@ -233,6 +233,50 @@ class ChatMessageModel {
       );
 
   List<ChatCitation> get citations => ChatCitation.listFromMessage(this);
+
+  /// V4-U07 快慢反馈：本轮 I09 快慢路标记（帧 metadata 终帧收口，
+  /// 封闭集校验；缺键/集合外值 → null = 既有行为）。
+  String? get chatLane => _laneInfo.$1;
+
+  /// 快路形态词（greeting/acknowledgment/farewell；未知值原样透传，
+  /// 由呈现层决定是否翻译——不臆造标签）。
+  String? get deterministicLaneKind => _laneInfo.$2;
+
+  /// 本条助手消息是否零模型快路模板应答（「即时回复」诚实标记的判据）。
+  bool get isDeterministicLaneReply => chatLane == ChatLaneValues.deterministic;
+
+  (String?, String?) get _laneInfo =>
+      ChatLaneValues.parseFromMetadata(rawMetadata);
+}
+
+/// V4-U07 快慢反馈：I09 快慢分层的移动端消费词表。
+///
+/// 权威在引擎帧 metadata：快路（零模型确定性模板）状态/增量帧携带
+/// `chat_lane=deterministic` + `deterministic_lane_kind`（greeting/
+/// acknowledgment/farewell），真模型慢路终帧透传 `chat_lane=model`
+/// （缺键 = 旧后端/开关关闭 = 既有行为）。本类只做封闭集读取门，
+/// 不生产 lane 值、不臆造缺省。
+abstract final class ChatLaneValues {
+  static const String deterministic = 'deterministic';
+  static const String model = 'model';
+
+  /// 封闭值域：集合外值一律按「未携带」处理（不猜、不降级解释）。
+  static const Set<String> knownValues = {deterministic, model};
+
+  /// 从帧 metadata 解析 (lane, kind)。lane 不在封闭集 → (null, null)；
+  /// kind 仅在 lane=deterministic 时随行透传。
+  static (String?, String?) parseFromMetadata(Map<String, dynamic>? metadata) {
+    if (metadata == null) {
+      return (null, null);
+    }
+    final lane = metadata['chat_lane']?.toString().trim().toLowerCase();
+    if (!knownValues.contains(lane)) {
+      return (null, null);
+    }
+    final kindRaw = metadata['deterministic_lane_kind']?.toString().trim();
+    final kind = (kindRaw == null || kindRaw.isEmpty) ? null : kindRaw;
+    return (lane, kind);
+  }
 }
 
 String _normalizeRoleJsonValue(Object? rawRole) {

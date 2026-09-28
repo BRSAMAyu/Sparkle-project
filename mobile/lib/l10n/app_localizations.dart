@@ -33750,6 +33750,30 @@ abstract class AppLocalizations {
   /// **'已中断'**
   String get chatInterrupted;
 
+  /// No description provided for @chatInstantReply.
+  ///
+  /// In zh, this message translates to:
+  /// **'即时回复'**
+  String get chatInstantReply;
+
+  /// No description provided for @chatLaneKindGreeting.
+  ///
+  /// In zh, this message translates to:
+  /// **'问候'**
+  String get chatLaneKindGreeting;
+
+  /// No description provided for @chatLaneKindAcknowledgment.
+  ///
+  /// In zh, this message translates to:
+  /// **'应答'**
+  String get chatLaneKindAcknowledgment;
+
+  /// No description provided for @chatLaneKindFarewell.
+  ///
+  /// In zh, this message translates to:
+  /// **'告别'**
+  String get chatLaneKindFarewell;
+
   /// No description provided for @chatContextDetail.
   ///
   /// In zh, this message translates to:

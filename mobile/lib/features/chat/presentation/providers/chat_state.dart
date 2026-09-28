@@ -168,6 +168,8 @@ class ChatState {
     this.spineDegraded = false,
     this.pendingCausalTraceId,
     this.causalTraceCount = 0,
+    this.chatLane,
+    this.deterministicLaneKind,
   });
 
   static const int maxRetainedMessages = 500;
@@ -253,6 +255,24 @@ class ChatState {
 
   /// Spine: count of causal traces generated in this session.
   final int causalTraceCount;
+
+  /// V4-U07 快慢反馈：本轮快慢路标记（I09 帧 metadata 消费面）。
+  /// `deterministic` = 零模型快路模板应答；`model` = 真模型慢路；
+  /// null = 旧后端/未携带（既有行为）。
+  final String? chatLane;
+
+  /// 快路形态（greeting/acknowledgment/farewell，I09 词表；未知值原样
+  /// 透传，由呈现层决定是否翻译——不臆造标签）。
+  final String? deterministicLaneKind;
+
+  /// 本轮是否零模型快路。
+  bool get isDeterministicLane => chatLane == ChatLaneValues.deterministic;
+
+  /// S18 阶段胶囊门（V4-U07 扩展）：检索→思考→生成三段进度只对真模型
+  /// 慢路成立。零模型快路轮（I09 模板直出）不存在检索/思考阶段，展示
+  /// 三段进度即「假思考」——快路轮不进胶囊，等待以真实状态行呈现。
+  bool get shouldShowPhaseCapsule =>
+      hasActiveRun && streamingContent.isEmpty && !isDeterministicLane;
 
   static List<ChatMessageModel> _boundedMessages(
     List<ChatMessageModel> messages,
@@ -357,6 +377,9 @@ class ChatState {
     bool? spineDegraded,
     String? pendingCausalTraceId,
     int? causalTraceCount,
+    String? chatLane,
+    bool clearChatLane = false,
+    String? deterministicLaneKind,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -467,5 +490,9 @@ class ChatState {
         spineDegraded: spineDegraded ?? this.spineDegraded,
         pendingCausalTraceId: pendingCausalTraceId ?? this.pendingCausalTraceId,
         causalTraceCount: causalTraceCount ?? this.causalTraceCount,
+        chatLane: clearChatLane ? null : chatLane ?? this.chatLane,
+        deterministicLaneKind: clearChatLane
+            ? null
+            : deterministicLaneKind ?? this.deterministicLaneKind,
       );
 }

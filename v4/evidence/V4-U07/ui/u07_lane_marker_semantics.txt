@@ -1,0 +1,6 @@
+- label="" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 800.0, 1200.0)
+  - label="" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 400.0, 600.0)
+    - label="" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 400.0, 600.0)
+      - label="" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 400.0, 600.0)
+        - label="你好！我是 Sparkle，很高兴见到你。可以随时告诉我你现在想推进什么。" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 254.0, 69.0)
+        - label="即时回复 · 问候" isButton=false rect=Rect.fromLTRB(0.0, 0.0, 146.3, 23.0)
