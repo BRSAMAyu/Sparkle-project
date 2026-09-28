@@ -263,6 +263,11 @@ class SensoryFeedbackService {
     if (decision.state == AudioFocusState.stoppedByUser) {
       // 耳机拔出/用户停止：停止而非暂停——不自续（MOTION：耳机拔出不转
       // 扬声器大声续播）。
+      // D1 整改（一审 COND-1）：同步清空运行场景态。否则 playAmbient 的
+      // 同场景早返把「停止后显式重选同一场景」静默吞掉——「唯一再播路径
+      // = 用户显式点播」对同场景重选失效（探针实录 played=false）。
+      // 只清运行态，不动持久化场景偏好（与 stopAmbient 同口径）。
+      _currentScene = AmbientScene.none;
       _ambientPausedByFocus = false;
       _currentAmbientOutputVolume = 0;
       unawaited(_fadeAmbientTo(0, duration: Duration.zero, steps: 1));
@@ -579,11 +584,16 @@ class SensoryFeedbackService {
     final player = _ambientPlayer;
     if (player == null) return;
     final previousScene = _currentScene;
-    _currentScene = scene;
-    await _saveAmbientScene(scene);
 
     final path = scene.assetPath;
-    if (path == null) return;
+    if (path == null) {
+      // 显式选「无」（setAmbientScene 的 none 分支同语义）：持久化偏好后走
+      // 停止面——停止不是播放点播，不经会话审批；运行态由 stopAmbient 清空
+      // （停止路径零残留，与 D1 同源）。
+      await _saveAmbientScene(scene);
+      await stopAmbient();
+      return;
+    }
 
     // S04 合法资产门（运行时消费面）：未许可资产静默跳过（fallback=silent），
     // 任务流不受影响；打包面由 S04 守卫拦截（L003/L004）。
@@ -602,11 +612,17 @@ class SensoryFeedbackService {
 
     // S02：显式点播（用户选场景/开始专注）才进入 USER_PLAYING；录音/通话
     // 抢占期间点播被拒（返回 false）——录音不回录背景床。
+    // D2 整改（一审 COND-2）：会话获批**之后**才提交 _currentScene 写入与
+    // 持久化——被拒路径零残留。此前：被拒时运行态/prefs 已改写为新场景，
+    // endRecording 恢复的却是旧物理音轨（探针实录：currentScene=ocean 而
+    // resume 的是 rain），出现「场景态与实际音轨错位」且污染重开缺省。
     final sessionStarted =
         AudioFocusController.instance.beginUserPlaybackSession();
     if (!sessionStarted) {
       return;
     }
+    _currentScene = scene;
+    await _saveAmbientScene(scene);
 
     final volume = await getAmbientVolume();
     if (previousScene != AmbientScene.none) {

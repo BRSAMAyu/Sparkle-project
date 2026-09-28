@@ -117,6 +117,14 @@ void main() {
 
       expect(AudioFocusController.instance.state, AudioFocusState.userPlaying);
     });
+
+    test('值锚·duck 系数钉死字面量 0.25（一审次级建议：防常量漂移全绿）',
+        () {
+      // 一审 M2 对照实证：duck 断言全部对常量自比，常量 0.25→0.5 全绿。
+      // 本锚把值钉在字面量上——改值必须显式改本断言（规格未规定 0.25，
+      // 属设计定值，变更须过审留痕）。
+      expect(kTtsAmbientDuckFactor, 0.25);
+    });
   });
 
   group('S02 录音抢占（录音不回录提示音）', () {

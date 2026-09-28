@@ -29,3 +29,7 @@ q03 harness 测试会按需刷新 `v3-output/WT401-Q03-VISUAL/` 下探针 JSON �
 
 ## L9 · 本地 main 领先本分支基线
 作业期间本机 main 由他机推进（dce840da → b5872ce4，fleet 心跳/state 提交族）。本分支不追不并不 push；集成时按台账以 dce840da 为本卡基线，冲突预期为零（触达面无交集）。
+
+## L10 · sfx 音量在 native SystemSound fallback 路径不生效（平台限制，一审 COND-3 登记补缺）
+提示音音量的合成点（`spec.volume × sfxVolume`）只进 AudioPlayer pool 路径——真机/profile 的生产路径，调用级钉 0.22×用户音量。debug 期 native fallback（iOS/Android 模拟器稳定性考量）与播放失败诚实降级两条路径走 `SystemSound.play`，**系统点击无音量参数**（平台限制），sfx 音量在这两条路径不生效。不影响触觉与任务流；R1-C6 已在 review_receipt.json 披露，本条为 limitations 登记补缺。
+

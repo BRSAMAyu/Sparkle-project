@@ -23,6 +23,9 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 /// - 验收2「TTS 可 duck/暂停环境床」：TTS 抢占 → 环境床输出音量压低至
 ///   用户音量 × kTtsAmbientDuckFactor；结束复原。
 /// - 两独立音量：sfx 音量与环境音量互不连带（键级隔离钉）。
+/// - 一审整改面：D1「耳机拔出后同场景显式重选真实可达」（stoppedByUser 清
+///   运行场景态）与 D2「录音中改选场景被拒零残留」（会话获批后才提交
+///   _currentScene 写入+持久化）——探针形态复现见对应 group。
 ///
 /// 口径：audioplayers 经平台接口假体逐调用记账（模拟器只认调用与录制证据；
 /// 真扬声器未测，DEVICE_UNVERIFIED 归 Q06）。
@@ -295,9 +298,78 @@ void main() {
         isEmpty,
       );
 
-      // 唯一再播路径 = 用户显式点播。
+      // 唯一再播路径 = 用户显式点播：停止后**同场景**显式重选必须真实可达。
+      // D1 整改（一审 COND-1）：stoppedByUser 分支清空 _currentScene，同场景
+      // 早退不再吞掉重选——整改前此处 played=false（原注释声称「rain→none
+      // 由 stop 清空后可重播」与实现不符，已随本断言一并修正）。
       await SensoryFeedbackService.playAmbient(AmbientScene.rain);
-      // 同场景早退（currentScene 已是 rain→none 由 stop 清空后可重播）。
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(platform.played, isTrue);
+      expect(SensoryFeedbackService.currentScene, AmbientScene.rain);
+      expect(AudioFocusController.instance.state, AudioFocusState.userPlaying);
+    });
+  });
+
+  group('S02 · 录音中改选场景（D2 整改：会话被拒零残留）', () {
+    test('正·录音抢占中点播新场景被拒：运行态/prefs 零残留，结束恢复同轨',
+        () async {
+      await SensoryFeedbackService.setAmbientEnabled(true);
+      await SensoryFeedbackService.init();
+      await SensoryFeedbackService.playAmbient(AmbientScene.rain);
+      expect(
+        await SensoryFeedbackService.getSavedAmbientScene(),
+        AmbientScene.rain,
+      );
+
+      AudioFocusController.instance.beginRecording();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      platform.calls.clear();
+
+      // 一审 D2 探针形态复现：录音抢占中改选 ocean。会话被拒——场景运行态
+      // 与持久化都不得改写（整改前：currentScene/prefs 已变 ocean）。
+      await SensoryFeedbackService.playAmbient(AmbientScene.ocean);
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      expect(SensoryFeedbackService.currentScene, AmbientScene.rain);
+      expect(
+        await SensoryFeedbackService.getSavedAmbientScene(),
+        AmbientScene.rain,
+      );
+      expect(platform.played, isFalse);
+
+      // 结束录音按平台惯例恢复：恢复的音轨与 currentScene 指向一致（整改前
+      // 错位：currentScene=ocean 实际 resume 的是 rain 音轨）。
+      AudioFocusController.instance.endRecording();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(platform.calls, contains('resume'));
+      expect(SensoryFeedbackService.currentScene, AmbientScene.rain);
+    });
+
+    test('反例钉·被拒点播零残留，使录音结束后同请求真实换轨可达', () async {
+      await SensoryFeedbackService.setAmbientEnabled(true);
+      await SensoryFeedbackService.init();
+      await SensoryFeedbackService.playAmbient(AmbientScene.rain);
+
+      AudioFocusController.instance.beginRecording();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      await SensoryFeedbackService.playAmbient(AmbientScene.ocean);
+      AudioFocusController.instance.endRecording();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      // 录音结束后重发同一请求（改选 ocean）：若被拒路径残留了 ocean 态，
+      // 这里会被同场景早退吞掉（整改前 played=false 的探针下游实测）。
+      platform.calls.clear();
+      await SensoryFeedbackService.playAmbient(AmbientScene.ocean);
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      expect(platform.played, isTrue);
+      expect(SensoryFeedbackService.currentScene, AmbientScene.ocean);
+      expect(
+        await SensoryFeedbackService.getSavedAmbientScene(),
+        AmbientScene.ocean,
+      );
+      // 换轨：旧音轨被显式停掉再起新轨。
+      expect(platform.calls, contains('stop'));
     });
   });
 
