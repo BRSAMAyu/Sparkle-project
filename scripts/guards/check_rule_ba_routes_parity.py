@@ -485,6 +485,7 @@ GATEWAY_ONLY: dict[str, str] = {
     "/api/v1/inventory": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
     "/api/v1/journey": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
     "/api/v1/leaderboards": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
+    "/api/v1/learning-journey": "registerREST bare group artifact — engine serves GET /tasks/{task_id} + POST check/enter|submit sub-paths only (V4-U10 learning_journey.v1; ledger 2026-09-28, episode-resume 同款)",
     "/api/v1/learning-reports": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
     "/api/v1/memory": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",
     "/api/v1/multi-agent": "registerREST helper uniform 5-method bare registration — pre-wt647 shape was parser-invisible; engine serves subset, extra methods 405 pass-through (ledger 2026-09-27 single-arg parser fix)",

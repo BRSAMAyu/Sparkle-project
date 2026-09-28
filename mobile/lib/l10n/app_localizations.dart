@@ -4340,13 +4340,6 @@ abstract class AppLocalizations {
   /// **'好奇：{value}%'**
   String learningModeCuriosityValue(Object value);
 
-
-
-
-
-
-
-
   /// No description provided for @learningPathTitle.
   ///
   /// In zh, this message translates to:
@@ -45934,26 +45927,6 @@ abstract class AppLocalizations {
   /// **'加载中…'**
   String get userLoading;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   /// No description provided for @userDownloadDataSubtitle.
   ///
   /// In zh, this message translates to:
@@ -50277,7 +50250,6 @@ abstract class AppLocalizations {
   /// **'回顾近期系统更新和重要账号行为变化。'**
   String get acctSecRecentActivity;
 
-
   /// No description provided for @modelChatTempFailed.
   ///
   /// In zh, this message translates to:
@@ -50295,8 +50267,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'计划生成遇到问题：{error}'**
   String modelChatPlanIssue(Object error);
-
-
 
   /// No description provided for @settGrowthChronicleSaving.
   ///
@@ -60361,6 +60331,198 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{band, select, high{我比较确定} medium{有一定把握} low{我还不太确定} other{把握}}（{percent}%）'**
   String confidenceWithBand(String band, int percent);
+
+  /// No description provided for @learningJourneyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习旅程'**
+  String get learningJourneyTitle;
+
+  /// No description provided for @learningJourneyLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'旅程加载失败'**
+  String get learningJourneyLoadFailed;
+
+  /// No description provided for @learningJourneyRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get learningJourneyRetry;
+
+  /// No description provided for @learningSegmentMaterials.
+  ///
+  /// In zh, this message translates to:
+  /// **'资料'**
+  String get learningSegmentMaterials;
+
+  /// No description provided for @learningSegmentErrors.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题'**
+  String get learningSegmentErrors;
+
+  /// No description provided for @learningSegmentPractice.
+  ///
+  /// In zh, this message translates to:
+  /// **'练习'**
+  String get learningSegmentPractice;
+
+  /// No description provided for @learningSegmentCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'独立检验'**
+  String get learningSegmentCheck;
+
+  /// No description provided for @learningContinuePractice.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续当前动作：先练习'**
+  String get learningContinuePractice;
+
+  /// No description provided for @learningContinueCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续当前动作：完成独立检验'**
+  String get learningContinueCheck;
+
+  /// No description provided for @learningMaterialsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'该目标还没有关联资料'**
+  String get learningMaterialsEmpty;
+
+  /// No description provided for @learningErrorsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'该目标还没有关联错题'**
+  String get learningErrorsEmpty;
+
+  /// No description provided for @learningManualInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'OCR 无法识别这一份——请直接输入文本替代'**
+  String get learningManualInputHint;
+
+  /// No description provided for @learningManualInputSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存文本'**
+  String get learningManualInputSave;
+
+  /// No description provided for @learningManualInputSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存手输文本（不声称自动识别）'**
+  String get learningManualInputSaved;
+
+  /// No description provided for @learningParseParsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已解析'**
+  String get learningParseParsed;
+
+  /// No description provided for @learningParsePending.
+  ///
+  /// In zh, this message translates to:
+  /// **'解析中'**
+  String get learningParsePending;
+
+  /// No description provided for @learningParseFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'解析失败'**
+  String get learningParseFailed;
+
+  /// No description provided for @learningParseUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'不支持'**
+  String get learningParseUnsupported;
+
+  /// No description provided for @learningParseManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'手输文本'**
+  String get learningParseManual;
+
+  /// No description provided for @learningReviewCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复习 {count} 次'**
+  String learningReviewCount(Object count);
+
+  /// No description provided for @learningCheckEnterHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据支持后即可进行独立检验'**
+  String get learningCheckEnterHint;
+
+  /// No description provided for @learningCheckHoldHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'先完成一轮练习——检验会等你'**
+  String get learningCheckHoldHint;
+
+  /// No description provided for @learningCheckDegraded.
+  ///
+  /// In zh, this message translates to:
+  /// **'检验内容未通过安全门，已拒显'**
+  String get learningCheckDegraded;
+
+  /// No description provided for @learningCheckAnswerHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'用自己的话作答'**
+  String get learningCheckAnswerHint;
+
+  /// No description provided for @learningCheckSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交答案'**
+  String get learningCheckSubmit;
+
+  /// No description provided for @learningCheckPassed.
+  ///
+  /// In zh, this message translates to:
+  /// **'检验通过：这一步由你独立完成。'**
+  String get learningCheckPassed;
+
+  /// No description provided for @learningCheckFailedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次未通过：回到练习段再试一次，检验会保留。'**
+  String get learningCheckFailedHint;
+
+  /// No description provided for @learningContextGoalSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前目标：{title}'**
+  String learningContextGoalSemantics(Object title);
+
+  /// No description provided for @learningContinueActionSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续当前动作：{label}'**
+  String learningContinueActionSemantics(Object label);
+
+  /// No description provided for @learningSourceBadgeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源 {id} 版本 {version}'**
+  String learningSourceBadgeLabel(Object id, Object version);
+
+  /// No description provided for @learningSourceTapSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看来源片段 {label}'**
+  String learningSourceTapSemantics(Object label);
+
+  /// No description provided for @learningSourceCompactLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源 · 版本 {version}'**
+  String learningSourceCompactLabel(Object version);
 }
 
 class _AppLocalizationsDelegate

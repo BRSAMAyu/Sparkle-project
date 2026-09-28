@@ -15977,5 +15977,37 @@
         "type": "int"
       }
     }
-  }
+  },
+  "learningJourneyTitle": "学习旅程",
+  "learningJourneyLoadFailed": "旅程加载失败",
+  "learningJourneyRetry": "重试",
+  "learningSegmentMaterials": "资料",
+  "learningSegmentErrors": "错题",
+  "learningSegmentPractice": "练习",
+  "learningSegmentCheck": "独立检验",
+  "learningContinuePractice": "继续当前动作：先练习",
+  "learningContinueCheck": "继续当前动作：完成独立检验",
+  "learningMaterialsEmpty": "该目标还没有关联资料",
+  "learningErrorsEmpty": "该目标还没有关联错题",
+  "learningManualInputHint": "OCR 无法识别这一份——请直接输入文本替代",
+  "learningManualInputSave": "保存文本",
+  "learningManualInputSaved": "已保存手输文本（不声称自动识别）",
+  "learningParseParsed": "已解析",
+  "learningParsePending": "解析中",
+  "learningParseFailed": "解析失败",
+  "learningParseUnsupported": "不支持",
+  "learningParseManual": "手输文本",
+  "learningReviewCount": "已复习 {count} 次",
+  "learningCheckEnterHint": "证据支持后即可进行独立检验",
+  "learningCheckHoldHint": "先完成一轮练习——检验会等你",
+  "learningCheckDegraded": "检验内容未通过安全门，已拒显",
+  "learningCheckAnswerHint": "用自己的话作答",
+  "learningCheckSubmit": "提交答案",
+  "learningCheckPassed": "检验通过：这一步由你独立完成。",
+  "learningCheckFailedHint": "这次未通过：回到练习段再试一次，检验会保留。",
+  "learningContextGoalSemantics": "当前目标：{title}",
+  "learningContinueActionSemantics": "继续当前动作：{label}",
+  "learningSourceBadgeLabel": "来源 {id} 版本 {version}",
+  "learningSourceTapSemantics": "查看来源片段 {label}",
+  "learningSourceCompactLabel": "来源 · 版本 {version}"
 }

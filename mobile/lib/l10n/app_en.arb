@@ -16165,5 +16165,37 @@
         "type": "int"
       }
     }
-  }
+  },
+  "learningJourneyTitle": "Learning Journey",
+  "learningJourneyLoadFailed": "Couldn't load the journey",
+  "learningJourneyRetry": "Retry",
+  "learningSegmentMaterials": "Materials",
+  "learningSegmentErrors": "Error Book",
+  "learningSegmentPractice": "Practice",
+  "learningSegmentCheck": "Independent Check",
+  "learningContinuePractice": "Continue current action: practice first",
+  "learningContinueCheck": "Continue current action: take the independent check",
+  "learningMaterialsEmpty": "No materials attached to this goal yet",
+  "learningErrorsEmpty": "No goal-linked errors yet",
+  "learningManualInputHint": "OCR can't read this one — type the text instead",
+  "learningManualInputSave": "Save text",
+  "learningManualInputSaved": "Manual text saved (no auto parse claimed)",
+  "learningParseParsed": "Parsed",
+  "learningParsePending": "Processing",
+  "learningParseFailed": "Parse failed",
+  "learningParseUnsupported": "Not supported",
+  "learningParseManual": "Manual text",
+  "learningReviewCount": "Reviewed {count}x",
+  "learningCheckEnterHint": "You can take the independent check once evidence supports it",
+  "learningCheckHoldHint": "Do one practice round first — the check will wait for you",
+  "learningCheckDegraded": "Check content failed the safety gate and was withheld",
+  "learningCheckAnswerHint": "Answer in your own words",
+  "learningCheckSubmit": "Submit answer",
+  "learningCheckPassed": "Check passed: you completed this step independently.",
+  "learningCheckFailedHint": "Not this time: go back to practice — the check will wait.",
+  "learningContextGoalSemantics": "Current goal: {title}",
+  "learningContinueActionSemantics": "Continue current action: {label}",
+  "learningSourceBadgeLabel": "Source {id} version {version}",
+  "learningSourceTapSemantics": "View source fragment {label}",
+  "learningSourceCompactLabel": "Source version {version}"
 }

@@ -22,6 +22,7 @@ import 'package:sparkle/features/goal/presentation/widgets/goal_step_completion_
 import 'package:sparkle/features/goal/presentation/widgets/goal_trajectory_card.dart';
 import 'package:sparkle/features/goal/presentation/widgets/journey_progress_card.dart';
 import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card.dart';
+import 'package:sparkle/features/learning/learning.dart'; // V4-U10：目标上下文学习旅程入口（只增）
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/recovery/presentation/widgets/stuck_journey_sheet.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -78,6 +79,26 @@ class GoalDetailScreen extends ConsumerWidget {
             icon: Icon(Icons.refresh_rounded, color: DS.textSecondary),
             onPressed: () =>
                 ref.read(goalDetailProvider(goalId).notifier).load(),
+          ),
+          // V4-U10：目标上下文学习旅程入口（资料→错题→练习→检验）。
+          // 上下文在起飞前校验（LearningJourneyContext.fromLaunch），
+          // 空标题/空 id 不起飞——不会跳进无上下文的工具空页。
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            semanticLabel: l10n.learningJourneyTitle,
+            icon: Icon(Icons.route_rounded, color: DS.textSecondary),
+            onPressed: () {
+              final data = state.valueOrNull;
+              if (data == null) return;
+              unawaited(
+                context.push(
+                  LearningJourneyRoutes.journeyUri(
+                    goalId: goalId,
+                    goalTitle: data.goal.title,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),

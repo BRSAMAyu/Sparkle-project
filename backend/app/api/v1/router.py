@@ -71,6 +71,7 @@ from app.api.v1 import (
     inventory,
     journey,  # J-04 First Meaningful Action 链路入口面（/journey/first-action）
     leaderboards,
+    learning_journey,  # V4-U10 资料→错题→练习→检验旅程（learning_journey.v1 REST 入口）
     learning_paths,
     learning_reports,
     llm_health_admin,
@@ -198,6 +199,7 @@ api_router.include_router(goal_intent.router, prefix="/goals", tags=["goals"])
 api_router.include_router(error_book.router)  # Prefix is defined in router itself (/errors)
 api_router.include_router(error_book.error_book_router)  # Prefix is defined in router itself (/error-book)
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
+api_router.include_router(learning_journey.router)  # V4-U10：/learning-journey 前缀（旅程读模型 + 检验 enter/submit）
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(aurora.router)
 api_router.include_router(aurora_receipts.router)  # A-06：/aurora/receipts 前缀（Why-this 回执四动作纠偏）

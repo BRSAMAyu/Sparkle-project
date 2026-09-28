@@ -1,0 +1,94 @@
+{
+  "card": "V4-U10",
+  "date": "2026-09-28",
+  "env": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite://（worktree 无 .env，sqlite 口径）",
+  "suites": [
+    {
+      "name": "tests/core/test_learning_journey.py（本卡契约新测试）",
+      "cmd": "pytest tests/core/test_learning_journey.py -q",
+      "exit_code": 0,
+      "passed": 18,
+      "failed": 0
+    },
+    {
+      "name": "tests/services/test_learning_journey_service.py（本卡服务层 sqlite 测试）",
+      "cmd": "pytest tests/services/test_learning_journey_service.py -q",
+      "exit_code": 0,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "name": "tests/api/test_learning_journey_api.py（本卡 REST 入口测试）",
+      "cmd": "pytest tests/api/test_learning_journey_api.py -q",
+      "exit_code": 0,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "name": "受影响面回归：I07 hybrid 31 + I08 深任务返回控制 24 + D02 归因 38（合并跑）",
+      "cmd": "pytest tests/unit/test_hybrid_policy.py tests/unit/test_v4_i08_deep_task_return_control.py tests/core/test_attribution.py -q",
+      "exit_code": 0,
+      "passed": 93,
+      "failed": 0
+    },
+    {
+      "name": "新测+回归合并跑（单命令口径）",
+      "cmd": "pytest tests/core/test_learning_journey.py tests/services/test_learning_journey_service.py tests/api/test_learning_journey_api.py tests/unit/test_v4_i08_deep_task_return_control.py tests/unit/test_hybrid_policy.py tests/core/test_attribution.py -q",
+      "exit_code": 0,
+      "passed": 122,
+      "failed": 0
+    },
+    {
+      "name": "网关路由测试（LearningJourney 2 测）+ 全量 go test",
+      "cmd": "cd backend/gateway && go test ./internal/handler/ -run LearningJourney -count=1 && go test ./...",
+      "exit_code": 0,
+      "passed": "2 新测 ok；gateway 全包 ok（handler/logsafe/middleware/service/worker）",
+      "failed": 0
+    },
+    {
+      "name": "移动端本卡新测试（redaction 7 + models 18 + 旅程页 widget 5 + 证据采集 1）",
+      "cmd": "flutter test test/features/learning",
+      "exit_code": 0,
+      "passed": 31,
+      "failed": 0
+    },
+    {
+      "name": "移动端受影响面回归（路由 smoke+deep-link 18；shell+error_book 57）",
+      "cmd": "flutter test test/app/router_smoke_test.dart test/app/router_deep_link_test.dart test/core/navigation/shell/ test/features/error_book/",
+      "exit_code": 0,
+      "passed": 75,
+      "failed": 0
+    },
+    {
+      "name": "治理守卫全量",
+      "cmd": "bash scripts/run_all_rule_guards.sh",
+      "exit_code": 0,
+      "passed": "all rule guards passed (88 rules)",
+      "failed": 0
+    }
+  ],
+  "static_checks": {
+    "ruff": "5 个新后端文件 All checks passed（0.15.8）",
+    "black": "5 个新后端文件格式通过（26.3.1）",
+    "mypy": "本卡 3 个生产文件 0 error（1.20.2；全仓跨文件既有噪声与主检出逐同，零新增）",
+    "flutter_analyze": "lib/features/learning + test/features/learning + lib/app/routes.dart + goal_detail_screen.dart → No issues found",
+    "gofmt": "GOFMT-GW PASS（守卫内置）"
+  },
+  "acceptance_mapping": [
+    {
+      "acceptance": "不会从目标跳入无上下文的工具空页",
+      "positive": "core: request_independent_check 证据支持推进 + journey_segment_for_scaffold(attempt)=practice；service: 装配带 goal 上下文 + enter_check HOLD 不推进；mobile: 上下文头/三段全渲染 + fromLaunch 守卫",
+      "negative": "core: 脏 stage 回落 practice + 证据不支持 HOLD.evidence_not_supported；service: 无证据 enter_check 不出题不持久；mobile: fromLaunch 空 id/标题抛 ArgumentError（起飞前失败）；模型脏值回落 practice 断言"
+    },
+    {
+      "acceptance": "答案不泄漏到检验用户可读状态",
+      "positive": "core: 归一比对判分成立 + to_client_payload 出口探针；service/api: 判分响应零答案材料；mobile: 题面经 sanitize 放行、判分面允许表校验",
+      "negative": "core: 载荷含 independent_check 节点答案键 → assert_client_payload_clean raise；mobile: 服务端泄漏载荷 → 降级拒显（题面不出现在树中）+ 判分面契约外字段断言失败"
+    },
+    {
+      "acceptance": "真实文件/图片失败无伪造解析，来源版本正确",
+      "positive": "core: failed/unsupported 构造期拒绝 text（ValueError 'no fake parse'）+ ensure_source_version_current 一致放行；service: stored_files 真实行映射（failed 无文本/图片 unsupported/在途 pending）+ 来源版本=行 updated_at 装配时点读出；mobile: failed/unsupported 显示手输替代入口 + parsed 展示真实版本 badge",
+      "negative": "core: 陈旧版本声明 → SourceVersionMismatchError；service: failed 面无 text 键（结构上不可能伪造）；mobile: 状态面携带 text 键 → 断言失败 + 缺手输标记 → 断言失败"
+    }
+  ]
+}

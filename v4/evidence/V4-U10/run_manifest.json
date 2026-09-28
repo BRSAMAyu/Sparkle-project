@@ -1,0 +1,106 @@
+{
+  "card": "V4-U10",
+  "task": "资料→错题→练习→检验连续体验（目标上下文入口 + 检验答案隔离 + 解析诚实与来源版本）",
+  "agent": "wtU10",
+  "branch": "agent/v4/u10",
+  "base_sha": "331740ff39434cee505bb08d1fca7542f2fbbd69",
+  "generated_at_local": "2026-09-28",
+  "kind": "implementation",
+  "risk": "high",
+  "independent_reviewers_required": 2,
+  "product_code_changed": true,
+  "environment": {
+    "worktree": "wtU10（git worktree add ../wtU10 -b agent/v4/u10 main；无 .env，测试自然落 sqlite，不触 dev DB）",
+    "python": "3.11.15（venv 共享主检出 /Users/brsama/code/GitHub/Sparkle-project/backend/.venv）",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2 (compiled: yes)",
+    "ruff": "0.15.8",
+    "black": "26.3.1 (compiled: yes)",
+    "flutter": "3.41.3 stable（48c32af034）",
+    "go": "go1.25.7 darwin/arm64",
+    "generated_artifacts": "backend/app/gen、backend/gateway/gen、mobile/lib/gen 由主检出 cp -R 实体目录复制（非 symlink）；git check-ignore 确认忽略，永不提交"
+  },
+  "no_llm_used": true,
+  "commands": [
+    {
+      "purpose": "建立 worktree",
+      "cmd": "git worktree add ../wtU10 -b agent/v4/u10 main",
+      "exit_code": 0,
+      "evidence": "HEAD=331740ff39434cee505bb08d1fca7542f2fbbd69（F04 销账点）"
+    },
+    {
+      "purpose": "复制 gitignored 生成产物（测试需要，永不提交）",
+      "cmd": "cp -R backend/app/gen backend/gateway/gen mobile/lib/gen → wtU10 对应路径；git check-ignore backend/app/gen",
+      "exit_code": 0,
+      "evidence": "COPIED + gitignored OK"
+    },
+    {
+      "purpose": "后端契约新测试（18 测：段映射守门/检验入口证据门/判分与泄漏探针/红化消费 I07/解析诚实构造期拒绝/来源版本新鲜门）",
+      "cmd": "pytest tests/core/test_learning_journey.py -q",
+      "exit_code": 0,
+      "evidence": "18 passed"
+    },
+    {
+      "purpose": "后端服务层 sqlite 测试（8 测：装配带上下文/跨用户 404/检验 HOLD 不推进/证据放行推进并持久 guide_json/判分零答案/无判分权威 HOLD/解析状态与来源版本真实行映射/legacy 降级警示）",
+      "cmd": "pytest tests/services/test_learning_journey_service.py -q",
+      "exit_code": 0,
+      "evidence": "8 passed"
+    },
+    {
+      "purpose": "REST 入口测试（3 测：装配直通+跨用户 404 / 判分响应零答案材料+422 / 检验入口 HOLD 不出题）",
+      "cmd": "pytest tests/api/test_learning_journey_api.py -q",
+      "exit_code": 0,
+      "evidence": "3 passed"
+    },
+    {
+      "purpose": "本卡新测 + 受影响面回归合并跑（I07 hybrid 31 + I08 深任务返回控制 24 + D02 归因 38）",
+      "cmd": "pytest tests/core/test_learning_journey.py tests/services/test_learning_journey_service.py tests/api/test_learning_journey_api.py tests/unit/test_v4_i08_deep_task_return_control.py tests/unit/test_hybrid_policy.py tests/core/test_attribution.py -q",
+      "exit_code": 0,
+      "evidence": "122 passed in 32.24s（29 新 + 93 回归，零回归）"
+    },
+    {
+      "purpose": "网关新路由测试（learning-journey 直通注册 + 未认证不可达后端）",
+      "cmd": "cd backend/gateway && go test ./internal/handler/ -run LearningJourney -count=1",
+      "exit_code": 0,
+      "evidence": "ok（2 测）；全量 go test ./... 全绿"
+    },
+    {
+      "purpose": "移动端新功能测试（红化门 7 + 模型 18 + 旅程页 widget 5 + 证据采集 1）",
+      "cmd": "flutter test test/features/learning",
+      "exit_code": 0,
+      "evidence": "31 passed（含验收1/2/3 一正一反与泄漏降级拒显）"
+    },
+    {
+      "purpose": "移动端受影响面回归（路由 smoke/deep-link + Shell + 错题档案）",
+      "cmd": "flutter test test/app/router_smoke_test.dart test/app/router_deep_link_test.dart test/core/navigation/shell/ test/features/error_book/",
+      "exit_code": 0,
+      "evidence": "18 + 57 passed（零回归）"
+    },
+    {
+      "purpose": "静态检查（新文件零问题；mypy 新文件零错误，跨文件既有噪声与主检出逐同）",
+      "cmd": "ruff check <5 新后端文件> && black --check <同上> && mypy app/core/learning_journey.py app/services/learning_journey_service.py app/api/v1/learning_journey.py；flutter analyze lib/features/learning test/features/learning lib/app/routes.dart lib/features/goal/presentation/screens/goal_detail_screen.dart",
+      "exit_code": 0,
+      "evidence": "ruff All checks passed / black 通过 / mypy 本卡文件 0 error / flutter analyze No issues found"
+    },
+    {
+      "purpose": "治理守卫全量（含 I18N / L10N-PARITY / SPACING-RHYTHM / BA-ROUTES 四面收口后）",
+      "cmd": "bash scripts/run_all_rule_guards.sh",
+      "exit_code": 0,
+      "evidence": "all rule guards passed (88 rules)；BA-ROUTES 621 gateway ↔ 1015 engine，169 ledgered diffs（+1 行 learning-journey registerREST bare-group 登记，episode-resume 同款）"
+    },
+    {
+      "purpose": "UI 顶层证据采集（真实渲染截图 + 语义枚举；U02TestFonts 宿主字体装载）",
+      "cmd": "LEARNING_JOURNEY_EVIDENCE_DIR=v4/evidence/V4-U10 flutter test test/features/learning/learning_journey_evidence_test.dart",
+      "exit_code": 0,
+      "evidence": "learning_journey_hub.png（目标上下文头+资料/错题/检验三段+来源badge+OCR 手输替代）/ learning_journey_check.png（检验题面+作答+提交）/ learning_journey_semantics.txt（Semantics/Tooltip 枚举，当前目标：力学单元巩固 等）"
+    }
+  ],
+  "artifacts": {
+    "screenshots": [
+      "v4/evidence/V4-U10/learning_journey_hub.png",
+      "v4/evidence/V4-U10/learning_journey_check.png"
+    ],
+    "semantics": "v4/evidence/V4-U10/learning_journey_semantics.txt",
+    "note": "截图为 flutter test 真实渲染顶层画面（dpr=2，宿主 Hiragino 字体），非栈底 RepaintBoundary 复用；语义为 widget 树 Semantics/Tooltip 枚举（真值）。"
+  }
+}
