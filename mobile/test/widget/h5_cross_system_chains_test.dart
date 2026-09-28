@@ -98,6 +98,10 @@ void main() {
 
     await tester.tap(find.text('open-sheet'));
     await tester.pumpAndSettle();
+    // V4-U05：详情新增能力证据与来源面（可滚动 sheet 内容变长）——
+    // 与 node_detail_sheet_test 同款先滚动后点按，避免点中视口外目标。
+    await tester.ensureVisible(find.text('开始复习'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('开始复习'));
     await tester.pumpAndSettle();
 

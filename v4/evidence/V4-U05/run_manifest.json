@@ -1,0 +1,117 @@
+{
+  "card": "V4-U05",
+  "title": "星图轨迹与证据详情视觉",
+  "generated_at": "2026-09-29T02:45:00+08:00",
+  "executor": "V4 fleet implementation agent (U05)",
+  "branch": "agent/v4/u05",
+  "worktree": "wtU05",
+  "base_commit": "20f1d99f45fd3f0244f61599fbddab34c5fd2ce7",
+  "design_approval": "卡面 + SCREEN_FAMILIES 星图家族 + D04 数据面（已合并）为设计真源；无视觉新审批面（标准 DS 组件，无 pixel 主题新增）",
+  "environment": {
+    "flutter": "3.41.3 stable (revision 48c32af034)",
+    "os": "darwin 25.6.0 arm64",
+    "note": "macOS 实体机；mobile/lib/gen 与 backend/app/gen、backend/gateway/gen 为 gitignored 生成物，自主检出复制（未 symlink、未入库、未手改）"
+  },
+  "commands": [
+    {
+      "purpose": "依赖解析",
+      "command": "flutter pub get",
+      "cwd": "mobile",
+      "exit_code": 0
+    },
+    {
+      "purpose": "l10n 再生成（arb 双语 +44 键 → 生成 dart ×3）",
+      "command": "flutter gen-l10n",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "note": "生成文件仅追加本卡新键（与 U03 不同：无既有键改动、无空白规范化副作用）"
+    },
+    {
+      "purpose": "静态分析全量（lib+test）",
+      "command": "flutter analyze --no-pub lib test",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "No issues found!",
+      "note": "tool/openclaw_connection_smoke.dart 既有报错为 main 既有（开卡前），不在 lib/test 分析面"
+    },
+    {
+      "purpose": "新增单测（视觉档/词表/模型解析）",
+      "command": "flutter test test/features/galaxy/unit/capability_channel_visual_test.dart test/features/galaxy/unit/galaxy_a11y_channel_suffix_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+20 All tests passed!"
+    },
+    {
+      "purpose": "新增抽屉 widget 测试（一正一反+200% 字体）",
+      "command": "flutter test test/features/galaxy/widget/node_detail_capability_section_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+6 All tests passed!"
+    },
+    {
+      "purpose": "证据采集测试（截图+语义 dump 落盘）",
+      "command": "U05_EVIDENCE_DIR=../v4/evidence/V4-U05/screenshots flutter test test/features/galaxy/widget/u05_evidence_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+3 All tests passed!（5 文件落盘，sha256 见下）"
+    },
+    {
+      "purpose": "galaxy 全套 + 受影响 widget 链（含 KEYNAV/CTA 避让差量举证）",
+      "command": "flutter test test/features/galaxy/ test/widget/galaxy_node_preview_card_test.dart test/widget/error_card_galaxy_echo_test.dart test/widget/h5_cross_system_chains_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+192 ~1 All tests passed!（~1 为既有 skip）"
+    },
+    {
+      "purpose": "顶层 widget 全套（h5 chain A 适配后复跑）",
+      "command": "flutter test test/widget/",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+467 ~4 All tests passed!"
+    },
+    {
+      "purpose": "GalaxyNodeModel 其余消费面回归（goal/knowledge/design；theater 目录为空路径加载错，main 同样）",
+      "command": "flutter test test/features/goal/ test/features/knowledge/ test/core/design/",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "全绿（+222 同批含 theater 目录项 -1，该 -1 为目录路径加载错，main 复现同样 -1，非本卡回归）"
+    },
+    {
+      "purpose": "insights/journey 回归",
+      "command": "flutter test test/features/insights/ test/features/journey/",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+24 All tests passed!"
+    },
+    {
+      "purpose": "全量治理守卫（88 条）",
+      "command": "bash scripts/run_all_rule_guards.sh",
+      "cwd": ".",
+      "exit_code": 0,
+      "result": "all rule guards passed (88 rules)"
+    },
+    {
+      "purpose": "四条设计棘轮守卫（单列复跑留痕）",
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py && python3 scripts/guards/check_dl_spec_ratchet.py && python3 scripts/guards/check_typography_rhythm_ratchet.py && python3 scripts/guards/check_spacing_rhythm_ratchet.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "result": "UI-TOKENS PASS (color=225/275, fontSize=634/727); DL-SPEC PASS; TYPO-RHYTHM PASS; SPACING-RHYTHM PASS"
+    }
+  ],
+  "artifacts_sha256": {
+    "mobile/lib/features/galaxy/domain/capability_channel.dart": "ab92ae25689ea170754da4f842c275e4c21b07a5d0ddd99a031f90750bb65dfb",
+    "v4/evidence/V4-U05/screenshots/u05_sheet_verified.png": "23f9c347ea54d6aa96b89854da47cfeb9447aa7ad913171bbc870bffe2946496",
+    "v4/evidence/V4-U05/screenshots/u05_sheet_practiced.png": "dccc43dd886058211d01cdc84c2b599d2ee506cece6f58cc7c62f069d4c98e04",
+    "v4/evidence/V4-U05/screenshots/u05_sheet_verified_semantics.txt": "2dfa0f2dfa2f89790b287557eee45a342e06a9860f91eef2e2406e4ba49743d3",
+    "v4/evidence/V4-U05/screenshots/u05_sheet_practiced_semantics.txt": "db9765523524f8152525a0052c7815dfacf6d60d4d45baf331307de9e3b30672",
+    "v4/evidence/V4-U05/screenshots/u05_galaxy_tiers_semantics.txt": "fb3a1b49704d960baf0c976473511c5e9cd8344251be93c562437d8fec93f3bf"
+  },
+  "screenshots_semantics": {
+    "convention": "F04 同先例：widget test 环境为 Ahem 方块字形（无 CJK 字体），真实文案由同帧语义 dump（元素树 RenderParagraph 口径）承载",
+    "u05_sheet_verified.png": "节点详情顶层：能力证据与来源面（独立检验通过徽章+说明+溯源行+投影版本 v7），85% 掌握度条在上方",
+    "u05_sheet_practiced.png": "同结构 practiced 变体：练习过 · 未独立检验 + 不代表已掌握文案 + 学习时长记录溯源行 + 投影版本 v7；语义 txt 逐行含上述真实文案",
+    "u05_galaxy_tiers_semantics.txt": "星图页语义树（painter 集成断言同测：三通道节点全部进入 painter.nodesById）"
+  },
+  "actual_model_and_usage": "无 LLM 调用（纯 UI 消费面卡）",
+  "physical_device_scope": "无真机面；headless widget test + macOS 实体机守卫"
+}

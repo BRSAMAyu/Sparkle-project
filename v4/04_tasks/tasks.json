@@ -2100,8 +2100,8 @@
         "V4-F02",
         "V4-D04"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
+      "status": "in_progress",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
       "kind": "implementation",
       "required_locks": [
@@ -2151,7 +2151,8 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "progress_note": "2026-09-29 wtU05：REVIEW_READY 交付（worktree wtU05，分支 agent/v4/u05，未 push）。移动端消费 D04 数据面：封闭四值通道词表（fail-closed unknown）+ 星图四态视觉档（verified 唯一允许掌握档亮度/脉冲/双环；practiced 与痕迹/Agent 产物/无数据封顶 SHINING 档）+ 节点详情「能力证据与来源」抽屉（同图快照同源：通道+溯源行+投影 version）+ 读屏通道如实后缀。新测 29（每验收面一正一反，含 PRACTICED 92 分绝不渲染已掌握亮度反例钉）；galaxy 套件 192/顶层 widget 467 全绿；analyze 零 issue；88 守卫+四棘轮全过。已知边界如实登记：星图画布 headless 无像素截图（纯函数钉+语义 dump 承载，limitations #1）；证据截图 Ahem 字形（#2）；gRPC 形状无通道数据 fail-closed 降级（#3）；J-08 既有 verified 图标未改（#4）；节点级通道为二值+None（#5）；D06 水位语义未接星图 UI（#6）；色温未封顶（#7，审查裁决点）；读屏后缀加长（#8）——见 v4/evidence/V4-U05/limitations.md（8 条限制 + 6 条审查挑战预登记）。"
     },
     {
       "id": "V4-U06",

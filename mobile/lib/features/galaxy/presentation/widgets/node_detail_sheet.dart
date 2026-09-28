@@ -12,6 +12,7 @@ import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
 import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/domain/capability_channel.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/node_source_materials_provider.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -34,6 +35,8 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
     this.packId,
     this.initialHistory,
     this.outcomeEvidenceIds = const [],
+    this.capability,
+    this.graphEventSources = const [],
     this.onStartReview,
     this.onViewErrors,
     this.onAddMaterial,
@@ -51,6 +54,13 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
   /// 成果证据，不渲染证据行。
   final List<String> outcomeEvidenceIds;
 
+  /// V4-U05：能力证据投影（D04 通道 + 投影版本；与节点轨迹同一图快照）。
+  /// null = 调用方未带快照（按 unknown 诚实降级，不声称检验）。
+  final GalaxyNodeCapabilityEvidence? capability;
+
+  /// V4-U05：节点溯源行（graph_event_sources 快照，与能力通道同一投影）。
+  final List<Map<String, dynamic>> graphEventSources;
+
   final NodeReviewContextCallback? onStartReview;
   final NodeErrorFilterCallback? onViewErrors;
   final NodeAddMaterialCallback? onAddMaterial;
@@ -62,6 +72,8 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
     required String nodeLabel,
     String? packId,
     List<String> outcomeEvidenceIds = const [],
+    GalaxyNodeCapabilityEvidence? capability,
+    List<Map<String, dynamic>> graphEventSources = const [],
     NodeAddMaterialCallback? onAddMaterial,
     NodeGenerateLearningPlanCallback? onGenerateLearningPlan,
   }) =>
@@ -77,6 +89,8 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
           nodeLabel: nodeLabel,
           packId: packId,
           outcomeEvidenceIds: outcomeEvidenceIds,
+          capability: capability,
+          graphEventSources: graphEventSources,
           onAddMaterial: onAddMaterial,
           onGenerateLearningPlan: onGenerateLearningPlan,
         ),
@@ -145,8 +159,12 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
     );
   }
 
-  Widget _historyBody(GalaxyNodeHistory? initialHistory) =>
-      initialHistory != null
+  Widget _historyBody(GalaxyNodeHistory? initialHistory) {
+    final capabilitySection = _CapabilityEvidenceSection(
+      capability: widget.capability ?? const GalaxyNodeCapabilityEvidence(),
+      graphEventSources: widget.graphEventSources,
+    );
+    return initialHistory != null
           ? _HistoryContent(
               history: initialHistory,
               fallbackLabel: widget.nodeLabel,
@@ -155,6 +173,7 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
               onViewErrors: _handleViewErrors,
               onAddMaterial: _handleAddMaterial,
               onGenerateLearningPlan: _handleGenerateLearningPlan,
+              capabilitySection: capabilitySection,
             )
           : FutureBuilder<GalaxyNodeHistory>(
               future: _historyFuture,
@@ -172,6 +191,10 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
                       const SizedBox(height: DS.spacing16),
                       _SheetHeader(label: widget.nodeLabel),
                       const SizedBox(height: DS.spacing12),
+                      // V4-U05：能力通道/来源面来自图快照（非异步历史），
+                      // 加载期即呈现——「点开看到来源」不等网络。
+                      capabilitySection,
+                      const SizedBox(height: DS.spacing12),
                       const _HistoryLoadingState(height: 120),
                     ],
                   );
@@ -188,9 +211,11 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
                   onViewErrors: _handleViewErrors,
                   onAddMaterial: _handleAddMaterial,
                   onGenerateLearningPlan: _handleGenerateLearningPlan,
+                  capabilitySection: capabilitySection,
                 );
               },
             );
+  }
 
   void _retry() {
     setState(() {
@@ -328,6 +353,7 @@ class _HistoryContent extends StatelessWidget {
     required this.onViewErrors,
     required this.onAddMaterial,
     required this.onGenerateLearningPlan,
+    required this.capabilitySection,
   });
 
   final GalaxyNodeHistory history;
@@ -337,6 +363,9 @@ class _HistoryContent extends StatelessWidget {
   final void Function(GalaxyNodeHistory history) onViewErrors;
   final void Function(GalaxyNodeHistory history) onAddMaterial;
   final void Function(String nodeId, String label) onGenerateLearningPlan;
+
+  /// V4-U05：能力证据与来源面（图快照同源，见 [_CapabilityEvidenceSection]）。
+  final Widget capabilitySection;
 
   @override
   Widget build(BuildContext context) {
@@ -414,6 +443,8 @@ class _HistoryContent extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: DS.spacing20),
+          capabilitySection,
           const SizedBox(height: DS.spacing20),
           _SourceMaterialsSection(nodeId: nodeId, nodeLabel: label),
           const SizedBox(height: DS.spacing20),
@@ -1380,6 +1411,253 @@ class _MetricChip extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// V4-U05：能力证据与来源面（卡面「节点点开来源与投影 version 一致」）。
+///
+/// 数据源**唯一** = 节点所在的图响应快照（[GalaxyNodeCapabilityEvidence] +
+/// graph_event_sources 溯源行，galaxy_screen 从同一 [GalaxyNodeModel] 传入）
+/// ——通道、来源行、投影版本三者同快照，「一致」由同源结构性保证，不与
+/// 异步历史（/history）混渲。呈现纪律：
+/// - D04 通道语义如实：verified/practiced/non_human/trace_only/unknown 各有
+///   用户语言标签与说明；**practiced 绝不显示为已掌握**（文案明示「不代表
+///   已掌握」）；unknown（无数据）如实说明且不显示掌握进度。
+/// - 无数据不造进度：来源行为空显示「暂无来源记录」，版本缺失显示
+///   「投影版本未知」，绝不编造行或版本号。
+/// - 不开特效仍理解全部信息：纯静态文本+图标，无动效承载。
+class _CapabilityEvidenceSection extends StatelessWidget {
+  const _CapabilityEvidenceSection({
+    required this.capability,
+    required this.graphEventSources,
+  });
+
+  final GalaxyNodeCapabilityEvidence capability;
+  final List<Map<String, dynamic>> graphEventSources;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final channel = capability.channel;
+    final (label, copy, icon, color) = switch (channel) {
+      GalaxyCapabilityChannel.verified => (
+          l10n.galaxyCapabilityVerifiedLabel,
+          l10n.galaxyCapabilityVerifiedCopy,
+          Icons.verified_outlined,
+          DS.success,
+        ),
+      GalaxyCapabilityChannel.practiced => (
+          l10n.galaxyCapabilityPracticedLabel,
+          l10n.galaxyCapabilityPracticedCopy,
+          Icons.directions_walk_rounded,
+          DS.info,
+        ),
+      GalaxyCapabilityChannel.traceOnly => (
+          l10n.galaxyCapabilityTraceOnlyLabel,
+          l10n.galaxyCapabilityTraceOnlyCopy,
+          Icons.schedule_rounded,
+          DS.textSecondary,
+        ),
+      GalaxyCapabilityChannel.nonHuman => (
+          l10n.galaxyCapabilityNonHumanLabel,
+          l10n.galaxyCapabilityNonHumanCopy,
+          Icons.smart_toy_outlined,
+          DS.textSecondary,
+        ),
+      GalaxyCapabilityChannel.unknown => (
+          l10n.galaxyCapabilityUnknownLabel,
+          l10n.galaxyCapabilityUnknownCopy,
+          Icons.help_outline,
+          DS.textSecondary,
+        ),
+    };
+    final sources = graphEventSources
+        .map(_CapabilitySourceRow.fromMap)
+        .whereType<_CapabilitySourceRow>()
+        .toList(growable: false);
+
+    return Column(
+      key: const ValueKey<String>('galaxy-capability-section'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.galaxyCapabilitySectionTitle,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: DS.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: DS.spacing10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
+            color: DS.surfacePanel,
+            borderRadius: BorderRadius.circular(DS.radius8),
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: DS.iconSizeXs, color: color),
+                  const SizedBox(width: DS.spacing4),
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: color,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing4),
+              Text(
+                copy,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              if (sources.isEmpty)
+                Text(
+                  l10n.galaxyCapabilitySourceEmpty,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textDisabled,
+                      ),
+                )
+              else
+                ...sources.take(5).map(
+                      (row) => Padding(
+                        padding: const EdgeInsets.only(bottom: DS.spacing4),
+                        child: Row(
+                          children: [
+                            const SizedBox(width: DS.spacing4),
+                            Icon(
+                              Icons.subdirectory_arrow_right_rounded,
+                              size: DS.iconSizeXs,
+                              color: DS.textDisabled,
+                            ),
+                            const SizedBox(width: DS.spacing4),
+                            Expanded(
+                              child: Text(
+                                row.describe(context.l10n),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: DS.textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+              const SizedBox(height: DS.spacing4),
+              Text(
+                capability.projectionVersion == null
+                    ? l10n.galaxyCapabilityProjectionUnknown
+                    : l10n.galaxyCapabilityProjectionVersion(
+                        capability.projectionVersion!,
+                      ),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: DS.textDisabled,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 溯源行投影（graph_event_sources 条目的诚实呈现形状）。
+class _CapabilitySourceRow {
+  const _CapabilitySourceRow({
+    required this.sourceType,
+    this.label,
+    this.recordedAt,
+  });
+
+  /// 缺 source_type 的行诚实剔除（不编造「未知来源」假行）。
+  static _CapabilitySourceRow? fromMap(Map<String, dynamic> map) {
+    final sourceType = map['source_type']?.toString();
+    if (sourceType == null || sourceType.isEmpty) {
+      return null;
+    }
+    final label = map['label']?.toString();
+    return _CapabilitySourceRow(
+      sourceType: sourceType,
+      label: (label == null || label.trim().isEmpty) ? null : label.trim(),
+      recordedAt: DateTime.tryParse(map['recorded_at']?.toString() ?? ''),
+    );
+  }
+
+  final String sourceType;
+  final String? label;
+  final DateTime? recordedAt;
+
+  String describe(AppLocalizations l10n) {
+    final typeLabel = _capabilitySourceTypeLabel(sourceType, l10n);
+    final timeSuffix = recordedAt == null
+        ? ''
+        : ' · ${_HistoryContent._relativeTime(recordedAt!, l10n)}';
+    return label == null ? '$typeLabel$timeSuffix' : '$typeLabel · $label$timeSuffix';
+  }
+
+  /// source_type → 用户语言（封闭映射；词表外诚实显示原始码，不猜语义）。
+  static String _capabilitySourceTypeLabel(
+    String sourceType,
+    AppLocalizations l10n,
+  ) {
+    switch (sourceType) {
+      case 'outcome_ledger':
+        return l10n.galaxyCapabilitySourceOutcome;
+      case 'quiz_feedback':
+      case 'quiz':
+        return l10n.galaxyCapabilitySourceQuiz;
+      case 'task':
+      case 'task_completion':
+      case 'task_feedback':
+      case 'sprint':
+      case 'sprint_pack':
+        return l10n.galaxyCapabilitySourceTask;
+      case 'document':
+      case 'document_import':
+      case 'source_document':
+      case 'file':
+      case 'seed':
+      case 'seed_item':
+      case 'seed_library':
+        return l10n.galaxyCapabilitySourceDocument;
+      case 'error':
+      case 'error_book':
+      case 'error_analysis':
+        return l10n.galaxyCapabilitySourceError;
+      case 'translation':
+        return l10n.galaxyCapabilitySourceTranslation;
+      case 'focus_session':
+      case 'study_record':
+        return l10n.galaxyCapabilitySourceFocus;
+      case 'community_share':
+      case 'community_adopted':
+        return l10n.galaxyCapabilitySourceCommunity;
+      case 'chat_turn':
+      case 'chat_preference':
+        return l10n.galaxyCapabilitySourceChat;
+      case 'knowledge_node':
+      case 'concept':
+      case 'starter_graph':
+      case 'galaxy':
+        return l10n.galaxyCapabilitySourceGraph;
+      default:
+        return l10n.galaxyCapabilitySourceFallback(sourceType);
+    }
+  }
 }
 
 class _PillLabel extends StatelessWidget {

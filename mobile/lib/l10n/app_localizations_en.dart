@@ -30456,6 +30456,105 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get galaxyCapabilitySectionTitle => 'Capability evidence & sources';
+
+  @override
+  String get galaxyCapabilityVerifiedLabel => 'Independently verified';
+
+  @override
+  String get galaxyCapabilityVerifiedCopy =>
+      'Mastery is supported by independent checks (e.g., quizzes).';
+
+  @override
+  String get galaxyCapabilityPracticedLabel => 'Practiced · not verified';
+
+  @override
+  String get galaxyCapabilityPracticedCopy =>
+      'Real participation is recorded; mastery has not passed an independent check yet — not a mastery claim.';
+
+  @override
+  String get galaxyCapabilityTraceOnlyLabel => 'Activity trace only';
+
+  @override
+  String get galaxyCapabilityTraceOnlyCopy =>
+      'Only participation records (e.g., study time); they do not count toward mastery.';
+
+  @override
+  String get galaxyCapabilityNonHumanLabel => 'Agent-produced';
+
+  @override
+  String get galaxyCapabilityNonHumanCopy =>
+      'This work was done by an agent; it does not count as personal capability.';
+
+  @override
+  String get galaxyCapabilityUnknownLabel => 'Evidence channel unknown';
+
+  @override
+  String get galaxyCapabilityUnknownCopy =>
+      'Current data has no verification info; no mastery progress is shown here.';
+
+  @override
+  String get galaxyCapabilitySourceEmpty => 'No source records yet';
+
+  @override
+  String galaxyCapabilityProjectionVersion(int version) {
+    return 'Projection v$version';
+  }
+
+  @override
+  String get galaxyCapabilityProjectionUnknown => 'Projection version unknown';
+
+  @override
+  String galaxyCapabilitySourceFallback(String code) {
+    return 'Source · $code';
+  }
+
+  @override
+  String get galaxyCapabilitySourceOutcome => 'Outcome record';
+
+  @override
+  String get galaxyCapabilitySourceQuiz => 'Independent quiz';
+
+  @override
+  String get galaxyCapabilitySourceTask => 'Task completion';
+
+  @override
+  String get galaxyCapabilitySourceDocument => 'Study material';
+
+  @override
+  String get galaxyCapabilitySourceError => 'Error notebook';
+
+  @override
+  String get galaxyCapabilitySourceTranslation => 'Translation';
+
+  @override
+  String get galaxyCapabilitySourceFocus => 'Study-time log';
+
+  @override
+  String get galaxyCapabilitySourceCommunity => 'Community share';
+
+  @override
+  String get galaxyCapabilitySourceChat => 'Conversation';
+
+  @override
+  String get galaxyCapabilitySourceGraph => 'Graph building';
+
+  @override
+  String get galaxyA11yChannelVerified => 'independently verified';
+
+  @override
+  String get galaxyA11yChannelPracticed => 'practiced, not verified';
+
+  @override
+  String get galaxyA11yChannelTraceOnly => 'activity trace only';
+
+  @override
+  String get galaxyA11yChannelNonHuman => 'agent-produced';
+
+  @override
+  String get galaxyA11yChannelUnknown => 'verification unknown';
+
+  @override
   String get intentSuggestedActionLabel => 'A low-cost first step';
 
   @override

@@ -2013,6 +2013,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       packId: widget.initialPackId,
       // J-08：星图侧成果证据（同一 outcome id 与 Goal 页轨迹卡同源）。
       outcomeEvidenceIds: node.outcomeEvidenceIds,
+      // V4-U05：能力通道/溯源行与节点轨迹同一图快照——来源抽屉与
+      // 投影 version 一致由同源结构性保证。
+      capability: node.capability,
+      graphEventSources: node.graphEventSources,
       onAddMaterial: _handleNodeMaterialUploadRequested,
       onGenerateLearningPlan: _handleNodeLearningPlanRequested,
     );
