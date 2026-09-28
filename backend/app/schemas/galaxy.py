@@ -336,6 +336,13 @@ class MasteryEvidenceInfo(BaseModel):
     is_legacy_estimate=True 表示该 mastery 来自 legacy 时间公式且没有任何
     真实证据（quiz/task_outcome/chat_signal/material_ref）支撑——UI 可区分
     展示；真实证据融合后旗标摘除。
+
+    V4-D04 能力通道（数据面区分「练习过 vs 独立检验通过」；词表 =
+    ``capability_channel.CapabilityChannel``）：
+    - ``verified``：节点有独立检验级证据（quiz/task_outcome 账本行）——
+      唯一可支撑能力描述（含 BRILLIANT/MASTERED 标签）的通道；
+    - ``practiced``：仅参与/弱证据/legacy 时间存量——参与足迹，标签不得
+      声称掌握（状态标签按 verified 封顶，见 ``NodeWithStatus._calculate_status``）。
     """
 
     is_legacy_estimate: bool = True
@@ -343,6 +350,7 @@ class MasteryEvidenceInfo(BaseModel):
     self_report_count: int = 0
     breakdown: dict[str, int] = Field(default_factory=dict)
     last_evidence_type: str | None = None
+    capability_channel: str | None = None
 
 
 class UserStatusInfo(BaseModel):
@@ -374,6 +382,10 @@ class UserStatusInfo(BaseModel):
     # G-01: mastery 的证据溯源（None = 未评估；is_legacy_estimate=True = legacy 时间估算）
     mastery_evidence: MasteryEvidenceInfo | None = None
 
+    # V4-D04：投影版本（user_node_status.revision 透传；撤回重算 +1 新 version
+    # 发布——节点/列表/insight 各面读同一行同一字段，即「同 version」载体）。
+    projection_version: int | None = None
+
 
 class NodeWithStatus(NodeBase):
     """节点 + 用户状态"""
@@ -403,6 +415,7 @@ class NodeWithStatus(NodeBase):
         goal_node_ids: set[UUID] | None = None,
         blocked_by_prerequisite_node_ids: list[UUID] | None = None,
         evidence_count: int | None = None,
+        verified_evidence_count: int | None = None,
     ):
         user_status = None
         blocked_by_prerequisite_node_ids = blocked_by_prerequisite_node_ids or []
@@ -417,8 +430,18 @@ class NodeWithStatus(NodeBase):
             blocked_by_prerequisite_node_ids=blocked_by_prerequisite_node_ids,
         )
         if status:
-            # 计算视觉状态
-            visual_status = cls._calculate_status(status)
+            # V4-D04 能力通道（数据面）：verified = 有独立检验级证据行。
+            # None = 未装配证据查询的展示兼容路径（不封顶，注册为限制）。
+            from app.services.galaxy.capability_channel import node_capability_channel
+
+            verified = bool(verified_evidence_count) if verified_evidence_count is not None else None
+            capability_channel = node_capability_channel(
+                verified_evidence_count=verified_evidence_count,
+                unlocked=bool(status.is_unlocked),
+            )
+            # 计算视觉状态（未检验节点不展示能力标签：80+ 的 BRILLIANT/MASTERED
+            # 封顶为 SHINING——「标签不能叫精通」；亮度仍按存量分数=参与足迹）
+            visual_status = cls._calculate_status(status, verified=verified)
             brightness = cls._calculate_brightness(status)
             mastery_last_updated_at = next(
                 (
@@ -453,10 +476,12 @@ class NodeWithStatus(NodeBase):
                 days_since_mastery_update=float(getattr(review_signal, "days_since_mastery_update", 0.0) or 0.0),
                 status=visual_status,
                 brightness=brightness,
+                projection_version=int(getattr(status, "revision", 0) or 0),
                 mastery_evidence=(
                     MasteryEvidenceInfo(
                         is_legacy_estimate=not evidence_count,
                         evidence_count=evidence_count,
+                        capability_channel=capability_channel,
                     )
                     if evidence_count is not None
                     else None
@@ -589,13 +614,24 @@ class NodeWithStatus(NodeBase):
         return read_graph_event_sources(status)
 
     @staticmethod
-    def _calculate_status(status) -> NodeStatus:
+    def _calculate_status(status, verified: bool | None = None) -> NodeStatus:
+        """视觉状态（V4-D04 能力标签封顶）。
+
+        ``verified``：节点是否有独立检验级证据（None = 未装配证据查询的展示
+        兼容路径——不封顶，行为与 D04 前逐字节一致）。``verified=False`` 时
+        80+ 的 BRILLIANT/MASTERED 是无检验支撑的能力声明——「标签不能叫精通」，
+        封顶为 SHINING（亮度仍按存量分数渲染=参与足迹）；未解锁/坍缩分支不变。
+        """
         if status.is_collapsed:
             return NodeStatus.COLLAPSED
         if not status.is_unlocked:
             return NodeStatus.LOCKED
 
         score = status.mastery_score
+        if verified is False and score >= 80:
+            # 未检验节点的掌握标签封顶（数据面通道字段照发 practiced，见
+            # MasteryEvidenceInfo.capability_channel——视觉/数据双区分）。
+            return NodeStatus.SHINING
         if score >= 95:
             return NodeStatus.MASTERED
         elif score >= 80:
@@ -689,6 +725,21 @@ class GalaxyUserStats(BaseModel):
     streak_days: int = 0  # 连续学习天数
 
 
+class CapabilityReadStateInfo(BaseModel):
+    """V4-D04：用户级能力投影读门出口（撤回重算期 UI/工具同门两出口）。
+
+    语义 = D03 ``retraction.recompute.v1`` ``evaluate_read_gate``（同一门的
+    透传，不在 schema 层重造判定）：pending 或世代落后 ⇒ ``stale=True`` 且
+    ``suggestions_allowed=False``。节点/列表/insight 各面消费同一门 ⇒
+    「撤回证据后节点、列表、insight 同 version」。
+    """
+
+    stale: bool = False
+    suggestions_allowed: bool = True
+    ui_marker: str | None = None
+    status: str = "fresh"
+
+
 class GalaxyGraphResponse(BaseModel):
     """星图完整数据响应"""
 
@@ -697,6 +748,9 @@ class GalaxyGraphResponse(BaseModel):
     edges: list[NodeRelationInfo] | None = None  # Flutter expects this field name
     user_stats: GalaxyUserStats
     user_flame_intensity: float = 0.85  # Flutter expects this field (0.0-1.0)
+    # V4-D04：能力投影读门（撤回登记未重算 ⇒ stale_recomputing + 建议禁用）。
+    # None = 读门不适用（用户无撤回事件/读门查询降级）。
+    capability_read_state: CapabilityReadStateInfo | None = None
 
 
 class SparkEvent(BaseModel):

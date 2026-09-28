@@ -206,6 +206,16 @@ class RetractionRecomputeService:
         pipeline = MemoryInvalidationPipeline(self.db, self.redis)
         await pipeline.invalidate_derived_caches(user_id=user_id, kinds=set())
 
+        # V4-D04 消费面接线：撤回登记后即时失效星图图面视图缓存（ttl=600），
+        # 让「撤回 → 节点/列表/insight 同 version（读门过期标记）」不被读面
+        # TTL 吞掉。best-effort：失败只降级（TTL 自然过期），不回滚登记事务。
+        try:
+            from app.services.galaxy.outcome_absorption_service import invalidate_galaxy_graph_view_cache
+
+            await invalidate_galaxy_graph_view_cache(user_id)
+        except Exception as exc:  # noqa: BLE001 — 读投影失效失败不阻断登记
+            logger.warning("galaxy graph view cache invalidation after retraction failed: {}", exc)
+
         logger.info(
             "retraction registered user_id={u} retraction_id={r} kind={k} target={t} "
             "tombstoned={n} nodes={nodes} epoch={e}",
@@ -301,12 +311,16 @@ class RetractionRecomputeService:
 
             # trace 行恒写（projection，重放跳过）：它是读门「登记 < 重算」
             # 比对的重算时点信号——即使值未变，重算确实发生了。
+            # V4-D04（D03 R2-C1/C-3 移交落地）：重算把所钉世代写进 request_id
+            # 空位（``epoch=N``），读门因此切换为主判定=世代比对（墙钟只作
+            # 迁移前行兜底）——同秒撤回/交错窗口不再系统性漏检。
             await self._write_recompute_trace_row(
                 user_id=user_id,
                 node_id=node_id,
                 old_mastery=old_mastery,
                 new_mastery=new_mastery,
                 revision=int(getattr(status, "revision", 0) or 0),
+                base_epoch=current_epoch,
             )
             if value_changed:
                 await self._write_mastery_update_event(
@@ -326,9 +340,53 @@ class RetractionRecomputeService:
                 )
             )
 
-        if dirty:
-            await self.db.commit()
+        if not dirty:
+            return tuple(results)
+
+        # V4-D04（D03 R2-C1 移交落地·commit 前重读为辅）：重算窗口内若又落下
+        # 撤回（epoch 前进），本次结果整体丢弃——不部分应用、不把含被撤回效果
+        # 的值写回（栅栏快照是窗口起点的，提交前重读闭合交错窗口）。
+        allowed, final_epoch = await self._commit_epoch_gate(user_id, base_epoch)
+        if not allowed:
+            await self.db.rollback()
+            logger.warning(
+                "recompute discarded at commit gate: epoch advanced mid-recompute " "user_id={u} final={f}",
+                u=user_id,
+                f=final_epoch,
+            )
+            return tuple(
+                NodeRecomputeResult(
+                    node_id=r.node_id,
+                    outcome="discard_stale_epoch" if r.outcome == "recomputed" else r.outcome,
+                    old_mastery=r.old_mastery,
+                    new_mastery=r.new_mastery,
+                    detail="discard_stale_epoch_at_commit",
+                )
+                for r in results
+            )
+        await self.db.commit()
+        # V4-D04 消费面接线：重算发布后即时失效星图图面视图缓存（ttl=600），
+        # 让「新 version」立即可见（节点/列表/insight 同 version 不被读面 TTL
+        # 拖成分钟级分裂）。best-effort：失败由 TTL 自然收敛，不回滚发布。
+        try:
+            from app.services.galaxy.outcome_absorption_service import invalidate_galaxy_graph_view_cache
+
+            await invalidate_galaxy_graph_view_cache(user_id)
+        except Exception as exc:  # noqa: BLE001 — 读投影失效失败不阻断发布
+            logger.warning("galaxy graph view cache invalidation after recompute failed: {}", exc)
         return tuple(results)
+
+    async def _commit_epoch_gate(self, user_id: UUID, base_epoch: int | None) -> tuple[bool, int | None]:
+        """提交前世代重读（R2-C1 辅助防御的单一判定点）。
+
+        返回 ``(allowed, current_epoch)``。与发布栅栏同一 fail-closed 口径：
+        放行需要两侧世代**可证相等**——``base_epoch``/当前世代任一侧不可证
+        （None）或不等 ⇒ 拒绝（调用方整体丢弃并回滚，重算重新入队）。
+        """
+        current_epoch = await MemoryService(self.db).get_memory_epoch(user_id)
+        if base_epoch is None or current_epoch is None or int(base_epoch) != int(current_epoch):
+            return False, current_epoch
+        return True, current_epoch
 
     async def find_affected_capability_nodes(
         self,
@@ -364,7 +422,22 @@ class RetractionRecomputeService:
         return list(affected)
 
     async def capability_node_read_state(self, *, user_id: UUID, node_id: UUID) -> ReadGate:
-        """能力节点读门：登记晚于最近重算 ⇒ pending_recompute ⇒ 过期 + 建议禁用。"""
+        """能力节点读门（V4-D04 按 D03 R2-C1/C-3 移交升级：世代比对为主）。
+
+        主判定 = 世代：本节点最近一次重算 trace 行钉的 ``epoch=N`` 落后当前
+        世代 ⇒ 过期（同秒撤回/交错窗口不再依赖墙钟序）；辅判定 = 墙钟
+        （迁移前 trace 行无钉世代时兜底，行为与 D03 逐字一致）。
+        """
+        pinned_epoch = await self._last_pinned_recompute_epoch(user_id, node_id)
+        if pinned_epoch is not None:
+            current_epoch = await MemoryService(self.db).get_memory_epoch(user_id)
+            pending = self._pending_by_epoch(pinned_epoch, current_epoch)
+            if pending:
+                status = RecomputeStatus.PENDING_RECOMPUTE
+            else:
+                status = RecomputeStatus.RECOMPUTED
+            return evaluate_read_gate(status=status, computed_epoch=pinned_epoch, current_epoch=current_epoch)
+        # 兜底（D03 原样）：迁移前 trace 行未钉世代——墙钟比较。
         last_recompute_at = await self._last_recompute_at(user_id, node_id)
         last_retraction_at = await self._last_retraction_at(user_id)
         pending = last_retraction_at is not None and (
@@ -377,6 +450,42 @@ class RetractionRecomputeService:
         else:
             status = RecomputeStatus.FRESH
         return evaluate_read_gate(status=status, computed_epoch=None, current_epoch=None)
+
+    async def capability_user_read_state(self, *, user_id: UUID) -> ReadGate:
+        """用户级能力读门（V4-D04 图面接线：节点/列表/insight 共用同一门）。
+
+        世代语义（撤回域内，不越权代判记忆域）：最近一次 ``retraction.registered``
+        事件携带的 ``memory_epoch`` 落后于该用户所有重算 trace 钉的最高世代 ⇒
+        已全部重算收敛（新鲜）；否则 ⇒ pending（星图上有未被重算吸收的撤回）。
+        无钉世代 trace（迁移前）退墙钟兜底。无任何撤回事件 ⇒ FRESH（门不适用）。
+        """
+        retraction_epoch = await self._last_retraction_epoch(user_id)
+        pinned_epoch = await self._max_pinned_recompute_epoch(user_id)
+        if pinned_epoch is not None:
+            pending = self._pending_by_epoch(pinned_epoch, retraction_epoch)
+            status = RecomputeStatus.PENDING_RECOMPUTE if pending else RecomputeStatus.RECOMPUTED
+            return evaluate_read_gate(status=status, computed_epoch=pinned_epoch, current_epoch=retraction_epoch)
+
+        last_recompute_at = await self._max_recompute_at(user_id)
+        last_retraction_at = await self._last_retraction_at(user_id)
+        pending = last_retraction_at is not None and (
+            last_recompute_at is None or last_retraction_at > last_recompute_at
+        )
+        if pending:
+            status = RecomputeStatus.PENDING_RECOMPUTE
+        elif last_recompute_at is not None:
+            status = RecomputeStatus.RECOMPUTED
+        else:
+            status = RecomputeStatus.FRESH
+        return evaluate_read_gate(status=status, computed_epoch=None, current_epoch=None)
+
+    @staticmethod
+    def _pending_by_epoch(pinned_epoch: int, retraction_epoch: int | None) -> bool:
+        """世代比对：有撤回世代且钉世代落后 ⇒ 未收敛。``retraction_epoch=None``
+        （用户无撤回事件）⇒ 恒 False——记忆域的 epoch bump 不越权判星图过期。"""
+        if retraction_epoch is None:
+            return False
+        return pinned_epoch < retraction_epoch
 
     # ------------------------------------------------------------------
     # 内部（全部单权威委托）
@@ -534,9 +643,11 @@ class RetractionRecomputeService:
         old_mastery: float,
         new_mastery: float,
         revision: int,
+        base_epoch: int | None = None,
     ) -> None:
         # trace-only 审计行：effect_kind=projection ⇒ 任何后续重放跳过本行
-        # （重算动作本身不是证据，不形成新依赖边）。
+        # （重算动作本身不是证据，不形成新依赖边）。V4-D04（R2-C1 移交落地）：
+        # request_id 空位钉重算所依据的世代（``epoch=N``）——读门主判定切世代。
         await self.db.execute(
             text(
                 "INSERT INTO mastery_audit_log "
@@ -549,11 +660,75 @@ class RetractionRecomputeService:
                 "old_mastery": int(old_mastery),
                 "new_mastery": int(new_mastery),
                 "reason": RECOMPUTE_TRACE_REASON,
-                "request_id": None,
+                "request_id": None if base_epoch is None else f"epoch={int(base_epoch)}",
                 "revision": revision,
                 "effect_kind": MasteryEffectKind.PROJECTION.value,
             },
         )
+
+    async def _last_pinned_recompute_epoch(self, user_id: UUID, node_id: UUID) -> int | None:
+        """本节点最近一次重算 trace 钉的世代（request_id 形如 ``epoch=N``；无则 None）。"""
+        stmt = text(
+            "SELECT request_id FROM mastery_audit_log "
+            "WHERE user_id = :user_id AND node_id = :node_id AND reason = :reason "
+            "ORDER BY created_at DESC, id DESC LIMIT 1"
+        )
+        row = (
+            await self.db.execute(
+                stmt,
+                {"user_id": str(user_id), "node_id": str(node_id), "reason": RECOMPUTE_TRACE_REASON},
+            )
+        ).first()
+        return _parse_pinned_epoch(row[0] if row else None)
+
+    async def _max_pinned_recompute_epoch(self, user_id: UUID) -> int | None:
+        """用户全部重算 trace 钉的最高世代（无钉世代 trace 时 None）。"""
+        stmt = text(
+            "SELECT request_id FROM mastery_audit_log "
+            "WHERE user_id = :user_id AND reason = :reason AND request_id LIKE 'epoch=%' "
+            "ORDER BY created_at DESC, id DESC LIMIT 200"
+        )
+        rows = (await self.db.execute(stmt, {"user_id": str(user_id), "reason": RECOMPUTE_TRACE_REASON})).fetchall()
+        pinned = [value for value in (_parse_pinned_epoch(row[0]) for row in rows) if value is not None]
+        return max(pinned) if pinned else None
+
+    async def _max_recompute_at(self, user_id: UUID) -> datetime | None:
+        stmt = text("SELECT MAX(created_at) FROM mastery_audit_log " "WHERE user_id = :user_id AND reason = :reason")
+        row = (await self.db.execute(stmt, {"user_id": str(user_id), "reason": RECOMPUTE_TRACE_REASON})).first()
+        return row[0] if row else None
+
+    async def _last_retraction_epoch(self, user_id: UUID) -> int | None:
+        """最近一次撤回登记事件携带的世代（payload.memory_epoch；无撤回 ⇒ None）。"""
+        if not await self._outbox_tables_exist():
+            return None
+        stmt = text(
+            "SELECT payload FROM event_outbox "
+            "WHERE aggregate_type = :agg_type AND aggregate_id = :agg_id "
+            "AND event_type = :event_type ORDER BY created_at DESC, id DESC LIMIT 1"
+        )
+        row = (
+            await self.db.execute(
+                stmt,
+                {
+                    "agg_type": RETRACTION_AGGREGATE_TYPE,
+                    "agg_id": str(user_id),
+                    "event_type": RETRACTION_REGISTERED_EVENT,
+                },
+            )
+        ).first()
+        if not row:
+            return None
+        try:
+            payload = json.loads(str(row[0]))
+        except (ValueError, TypeError):
+            return None
+        raw = payload.get("memory_epoch") if isinstance(payload, dict) else None
+        if raw is None:
+            return None
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
 
     async def _write_mastery_update_event(
         self,
@@ -636,3 +811,14 @@ def _inspect_table_names(sync_conn: Any) -> list[str]:
         return list(inspect(sync_conn).get_table_names())
     except Exception:  # noqa: BLE001
         return []
+
+
+def _parse_pinned_epoch(raw: Any) -> int | None:
+    """trace 行 request_id 的钉世代解析（``epoch=N`` → int；其余形状 → None）。"""
+    text_value = str(raw or "").strip()
+    if not text_value.startswith("epoch="):
+        return None
+    try:
+        return int(text_value[len("epoch=") :])
+    except ValueError:
+        return None

@@ -1,0 +1,62 @@
+{
+  "card": "V4-D04",
+  "branch": "agent/v4/d04",
+  "base_sha": "7fd77b6d5310f4d56481bdc844bbaf5fe4436282",
+  "status": "REVIEW_READY",
+  "reviewers_required": 1,
+  "risk": "normal",
+  "generated_at_local": "2026-09-28",
+  "implementation_agent": "wtD04",
+  "implementation_complete": true,
+  "integration_sha_recheck": "PENDING_REVIEWER（base=7fd77b6d；main 执行期间前进至 8458d3c7，与本卡变更文件零交集，合并时复验）",
+  "test_counts": {
+    "new_pure_channel_tests": 22,
+    "new_absorber_channel_tests": 7,
+    "new_spark_label_tests": 7,
+    "new_read_gate_epoch_tests": 7,
+    "new_share_tests": 3,
+    "new_total": 46,
+    "regression_full_affected_batch": "470 passed in 129.04s（D03 撤回 41 + galaxy 目录 178 + outcome/I01/WVPL/shield/community/成就/graph 面全部绿）",
+    "regression_task_service": "16 passed",
+    "existing_assertions_updated_not_deleted": 15,
+    "mutation_tests": {
+      "M1_channel_gate_bypass": "4 failed → sha256 还原恒等",
+      "M2_epoch_branch_bypass": "0 failed（契约层 evaluate_read_gate 纵深防御吸收；记录非测试空洞）"
+    }
+  },
+  "ratchets": {
+    "ruff": "0 新增（All checks passed）",
+    "black": "新增文件 clean；存量漂移 hunk 计数与 main 逐文件持平（15/1/2/3/6/0），零新增",
+    "mypy": "56 ≤ baseline 77（main 同机 58，净 -2；本卡新增 1 处已修）"
+  },
+  "acceptance_map": [
+    {
+      "acceptance": "只学习计时不显示掌握；Agent产物不计人类能力",
+      "verdict": "PASS",
+      "positive": "spark 纯时长零增长+痕迹面增长；quiz VERIFIED 融合点亮 30.0",
+      "negative": "5×60min spark 仍 0；focus 覆盖 ACTUAL 归练习通道不点亮；SUCCEEDED receipt 不解锁不融合"
+    },
+    {
+      "acceptance": "撤回证据后节点、列表、insight同version",
+      "verdict": "PASS",
+      "positive": "trace 钉 epoch→同世代读门新鲜；projection_version 透传节点/列表；重算收敛后 predict-next 恢复",
+      "negative": "同秒撤回墙钟漏检被世代门抓到（节点级+用户级）；commit 门窗口内前进拒绝；pending 时建议禁用"
+    },
+    {
+      "acceptance": "sprint奖励不读AI掌握分，跨用户分享不加个人能力",
+      "verdict": "PASS（分享=修复；sprint=差量举证）",
+      "positive": "分享 mastery 不动+足迹留痕+delta=0+消息不声称掌握；sprint_task_ledger 零 mastery 读点",
+      "negative": "分享零审计行零状态行创建；非节点资源只有 community 事件"
+    }
+  ],
+  "review_focus_suggestions": [
+    "① 通道映射的语义裁决：focus 覆盖支撑的 ACTUAL 完成归 PRACTICED（时长型行为观察≠能力检验）而非 VERIFIED——这是「只学习计时不显示掌握」的最激进读法。若审查认为「覆盖率门槛已证明真实投入」应算检验，映射表是单点改动（NON_TASK/ch细分类），但会重新打开「时长点亮」通道，需给出与卡面验收的兼容论证。",
+    "② 「练习过」状态标签封顶取 SHINING（80+ 封顶，<80 原样）而非 GLIMMER——封顶线选在产品语义「已掌握」门槛（80=NODE_MASTERED 触发线/mastered_count 统计线）。审查该线是否过低/过高：GLIMMER 封顶更保守但会把存量 30-79 的参与星级标签打成与 5 分节点无差别。",
+    "③ R2-C2 移交项的落地完整性：trace 钉 epoch 用 request_id 空位字符串（`epoch=N`）+ 墙钟兜底——审查迁移前旧行（request_id=obs 载荷/None）的兜底分支是否与 D03 行为逐字一致（test_retraction_recompute_service.py 41 测全绿为证）；以及 `_pending_by_epoch` 在 retraction_epoch=None（无撤回）恒 False 的不越权口径。",
+    "④ 吸收器 fail-closed 方向：账本条目不可得（3×100 扫描未命中：任务已删被 ghost guard 先拦/深分页外）→ PRACTICED（解锁+无融合）。审查该方向是否优于 TRACE_ONLY（更保守）——当前选择让「参与可见」优先于「宁可无痕迹」。",
+    "⑤ `_READ_MODEL_VISIBLE_ACTIONS` 收入 practiced：练习解锁触发图面缓存失效——审查是否构成失效流量放大（自报完成风暴场景）；duplicate 重放不失效的既有精确性测试仍绿。",
+    "⑥ V3 断言更新的合法性：15 处断言更新属行为契约变更（卡面明确要求），逐条对照表见 diff_or_evidence_only.md §5——审查是否存在被顺手放松的非目标断言（重点：test_v3_fix_292 融合数值 40/46.67 与 GJ05 的 30.0 数值断言逐字节保留）。",
+    "⑦ integration SHA 复验：base 7fd77b6d，main 已前进（F03/F04/I07/FIX-560），零文件交集——合并后按流程复验全批。"
+  ],
+  "challenges_pre_registered": "见 review_focus_suggestions ①-⑦；无自证完成——全部判据为可失败测试+真实命令 exit code（run_manifest.json）"
+}

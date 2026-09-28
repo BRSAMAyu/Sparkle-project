@@ -69,6 +69,20 @@ async def _ensure_mastery_audit_log(db_session) -> None:
     await db_session.commit()
 
 
+async def _add_quiz_pass(db, user, node, task) -> None:
+    """V4-D04：独立测验物化面（点亮机制类测试的检验证据载体）。"""
+    from app.models.galaxy import ExpansionFeedback
+
+    db.add(
+        ExpansionFeedback(
+            user_id=user.id,
+            trigger_node_id=node.id,
+            meta_data={"source": "quiz_passed", "task_id": str(task.id)},
+        )
+    )
+    await db.commit()
+
+
 def _naive_now():
     return datetime.now(UTC).replace(tzinfo=None)
 
@@ -284,6 +298,7 @@ async def test_provenance_prune_cannot_resurrect_absorbed_light(consistency_env)
     db.add(task)
     await db.commit()
     await db.refresh(task)
+    await _add_quiz_pass(db, user, node, task)  # V4-D04：点亮以独立检验为载体
     payload = build_outcome_recorded_payload(build_task_outcome_capture(task))
 
     absorber = GalaxyOutcomeAbsorber(db)

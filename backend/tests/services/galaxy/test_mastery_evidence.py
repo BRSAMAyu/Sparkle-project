@@ -23,10 +23,10 @@ from app.services.galaxy.mastery_evidence import (
     EVIDENCE_WEIGHTS,
     LEGACY_PRIOR_VARIANCE,
     LEGACY_TIME_MASTERY_CAP,
-    MasteryBelief,
-    MasteryEvidenceType,
     EvidenceHistoryEntry,
     EvidenceObservation,
+    MasteryBelief,
+    MasteryEvidenceType,
     apply_evidence_decay,
     capped_legacy_mastery,
     classify_audit_reason,
@@ -417,8 +417,10 @@ class TestSparkEvidenceIntegration:
                     trigger_expansion=False,
                 )
 
-            # 39 + legacy delta (10) would be 49 under the old formula; capped at 40
-            assert result.updated_status.mastery_score == pytest.approx(LEGACY_TIME_MASTERY_CAP)
+            # V4-D04：纯时长零掌握增长——39 + legacy delta 不再发生（时长只是
+            # 活动痕迹；V3 的封顶公式 ``capped_legacy_mastery`` 保留为兼容面，
+            # 不再进入 spark 写路径，纯函数面断言见 test_capped_legacy_*）。
+            assert result.updated_status.mastery_score == pytest.approx(39)
             assert result.updated_status.mastery_evidence.is_legacy_estimate is True
 
 
