@@ -163,9 +163,14 @@ void main() {
       return SharedPreferences.getInstance();
     }
 
+    // V3-FIX-548：预算 2s→30s（FIX-544 同形）。相对等待成立即返回，健康
+    // 路径（全 mock 内存链，套件实测 ~1s）时长不受影响，只消 CI 负载下
+    // 事件循环饥饿的假阴性；30s ≈ 健康路径 30×，仍在 flutter_test 默认
+    // 10 分钟外层超时内。断言语义不变：预算耗尽仍以 expect(predicate())
+    // 失败，不掩真回归。
     Future<void> waitFor(
       bool Function() predicate, {
-      Duration timeout = const Duration(seconds: 2),
+      Duration timeout = const Duration(seconds: 30),
     }) async {
       final deadline = DateTime.now().add(timeout);
       while (DateTime.now().isBefore(deadline)) {

@@ -161,8 +161,12 @@ void main() {
       service.connect(url);
 
       // Wait for the 4th connection attempt (initial + 3 reconnects).
+      // V3-FIX-550：预算 10s→30s（FIX-544 同形，轮询至条件成立即返回）。
+      // 真环回 socket 三连挂（每持 500ms+退避）健康路径 ~2s，CI 负载下
+      // 进程调度与 socket 遥操作可拖过 10s；放宽只消负载假阴性，预算
+      // 耗尽仍 fail，不掩真回归。
       await _waitFor(
-        const Duration(seconds: 10),
+        const Duration(seconds: 30),
         () => _connectingLogsFor(url).length >= 4,
       );
       service.disconnect();
@@ -196,8 +200,9 @@ void main() {
       addTearDown(subscription.cancel);
 
       service.connect('ws://127.0.0.1:${server.port}');
+      // V3-FIX-550：预算 3s→30s，同上（轮询等待，成立即返回）。
       await _waitFor(
-        const Duration(seconds: 3),
+        const Duration(seconds: 30),
         () => events.any((event) => event is Map),
       );
       await Future<void>.delayed(const Duration(milliseconds: 300));
