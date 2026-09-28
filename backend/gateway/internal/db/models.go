@@ -2781,6 +2781,27 @@ type ContextPackRun struct {
 	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
 }
 
+type ContextSelectionReceipt struct {
+	UserID          pgtype.UUID      `json:"user_id"`
+	ReceiptID       string           `json:"receipt_id"`
+	SchemaVersion   string           `json:"schema_version"`
+	SelectionRole   string           `json:"selection_role"`
+	DecisionID      pgtype.Text      `json:"decision_id"`
+	MemoryEpoch     int32            `json:"memory_epoch"`
+	SelectorVersion string           `json:"selector_version"`
+	InputVersions   []byte           `json:"input_versions"`
+	Candidates      []byte           `json:"candidates"`
+	Budget          []byte           `json:"budget"`
+	WhyNow          []byte           `json:"why_now"`
+	PackRunID       pgtype.UUID      `json:"pack_run_id"`
+	RequestID       pgtype.Text      `json:"request_id"`
+	TraceID         pgtype.Text      `json:"trace_id"`
+	ID              pgtype.UUID      `json:"id"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
+	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
+}
+
 type CounterfactualEvaluationReport struct {
 	ID                 pgtype.UUID      `json:"id"`
 	CreatedAt          pgtype.Timestamp `json:"created_at"`

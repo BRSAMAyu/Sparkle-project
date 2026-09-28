@@ -62986,6 +62986,94 @@
         ]
       }
     },
+    "/api/v1/episode-resume/tasks/{task_id}": {
+      "get": {
+        "description": "目标 Episode 接续视图（读模型；无 receipt ref 不出视图，已删对象不复活）。",
+        "operationId": "get_task_episode_resume_api_v1_episode_resume_tasks__task_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "本轮 ContextSelectionReceipt ref（context_selection://…）",
+            "in": "query",
+            "name": "context_receipt_ref",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "本轮 ContextSelectionReceipt ref（context_selection://…）",
+              "title": "Context Receipt Ref"
+            }
+          },
+          {
+            "description": "显式 goal（缺省经 task→plan→goal 既有链路解析）",
+            "in": "query",
+            "name": "goal_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "显式 goal（缺省经 task→plan→goal 既有链路解析）",
+              "title": "Goal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Task Episode Resume Api V1 Episode Resume Tasks  Task Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Task Episode Resume",
+        "tags": [
+          "episode-resume"
+        ]
+      }
+    },
     "/api/v1/error-book/patterns/{pattern_id}/accept-template": {
       "post": {
         "description": "Accept a remediable pattern template and create a real task.",
@@ -65983,6 +66071,35 @@
           }
         ],
         "summary": "Get Community Accountability",
+        "tags": [
+          "experience"
+        ]
+      }
+    },
+    "/api/v1/experience/context-receipts/latest": {
+      "get": {
+        "description": "V4-I06 · 最近一次 context 组装的 ``context_selection_receipt.v1`` 读面。\n\n供 U03「我的理解」与移动端理解条目消费（合同 §7：呈现的每条理解必须可溯源\n到 selected ref）。三态语义（B05 §8「shadow 写先行、默认读关闭」）：\n- off/shadow → ``{\"mode\": <mode>, \"receipt\": None}``（写面先行，读不暴露）；\n- live → 最近回执 + **来源验证**：每个 selected/basis ref 现场 join 真实存储\n  （E4 双重校验：scheme 封闭集 + 存储行属主），被删/纠正/不可定位 →\n  ``resolution=unresolved``，**明确 unknown，不编时间/quote**。删除后旧\n  receipt 经读时验证如实反映（卡验收「删除后旧receipt更新」的读侧语义）。",
+        "operationId": "get_latest_context_receipt_api_v1_experience_context_receipts_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Latest Context Receipt Api V1 Experience Context Receipts Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Latest Context Receipt",
         "tags": [
           "experience"
         ]

@@ -2074,6 +2074,34 @@ CREATE TABLE context_pack_runs (
 ALTER TABLE context_pack_runs OWNER TO postgres;
 
 --
+-- Name: context_selection_receipts; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE context_selection_receipts (
+    user_id uuid NOT NULL,
+    receipt_id character varying(64) NOT NULL,
+    schema_version character varying(64) NOT NULL,
+    selection_role character varying(40) NOT NULL,
+    decision_id character varying(64),
+    memory_epoch integer DEFAULT 0 NOT NULL,
+    selector_version character varying(120) NOT NULL,
+    input_versions json NOT NULL,
+    candidates json NOT NULL,
+    budget json NOT NULL,
+    why_now json,
+    pack_run_id uuid,
+    request_id character varying(100),
+    trace_id character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE context_selection_receipts OWNER TO postgres;
+
+--
 -- Name: counterfactual_evaluation_reports; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -7804,6 +7832,14 @@ ALTER TABLE ONLY context_pack_runs
 
 
 --
+-- Name: context_selection_receipts context_selection_receipts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY context_selection_receipts
+    ADD CONSTRAINT context_selection_receipts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: counterfactual_evaluation_reports counterfactual_evaluation_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9236,6 +9272,14 @@ ALTER TABLE ONLY community_aggregate_signals
 
 
 --
+-- Name: context_selection_receipts uq_context_selection_receipts_receipt_id; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY context_selection_receipts
+    ADD CONSTRAINT uq_context_selection_receipts_receipt_id UNIQUE (receipt_id);
+
+
+--
 -- Name: durable_session_state_snapshots uq_durable_session_state_snapshots_session_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -10191,6 +10235,27 @@ CREATE INDEX idx_context_pack_runs_intent ON context_pack_runs USING btree (inte
 --
 
 CREATE INDEX idx_context_pack_runs_user_created ON context_pack_runs USING btree (user_id, created_at);
+
+
+--
+-- Name: idx_context_selection_receipts_role; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_context_selection_receipts_role ON context_selection_receipts USING btree (selection_role);
+
+
+--
+-- Name: idx_context_selection_receipts_user_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_context_selection_receipts_user_created ON context_selection_receipts USING btree (user_id, created_at);
+
+
+--
+-- Name: idx_context_selection_receipts_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_context_selection_receipts_user_id ON context_selection_receipts USING btree (user_id);
 
 
 --
@@ -18531,6 +18596,14 @@ ALTER TABLE ONLY conflict_resolution_records
 
 
 --
+-- Name: context_selection_receipts context_selection_receipts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY context_selection_receipts
+    ADD CONSTRAINT context_selection_receipts_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
 -- Name: counterfactual_evaluation_reports counterfactual_evaluation_reports_replaced_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -21259,6 +21332,13 @@ GRANT SELECT ON TABLE context_pack_feedback TO sparkle_readonly;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE context_pack_runs TO sparkle_engine;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE context_pack_runs TO sparkle_celery;
 GRANT SELECT ON TABLE context_pack_runs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE context_selection_receipts; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE context_selection_receipts TO sparkle_readonly;
 
 
 --

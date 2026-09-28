@@ -337,6 +337,9 @@ def collect_gateway_routes() -> tuple[set[tuple[str, str]], set[str], list[str]]
 # --------------------------------------------------------------------------
 
 ENGINE_ONLY: dict[str, str] = {
+    "/docs": "FIX-559 engine docs surface (self-hosted swagger-ui) — operator/debug direct-engine access, not proxied through gateway",
+    "/docs/oauth2-redirect": "FIX-559 engine docs oauth2 redirect — direct-engine docs flow only",
+    "/redoc": "FIX-559 engine docs surface (self-hosted redoc) — operator/debug direct-engine access, not proxied through gateway",
     "/": "engine root index; gateway has no proxy and clients do not call it",
     "/api/internal/ops/capabilities": "operator control plane (O-06) — kill switch must stay reachable when the gateway itself is rolled back; direct-engine internal access",
     "/api/internal/ops/capabilities/{}": "operator control plane (O-06) — kill switch must stay reachable when the gateway itself is rolled back; direct-engine internal access",
