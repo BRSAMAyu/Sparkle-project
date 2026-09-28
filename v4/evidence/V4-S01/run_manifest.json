@@ -1,0 +1,99 @@
+{
+  "task": "V4-S01",
+  "title": "动效节奏与降低动态等价实现",
+  "date": "2026-09-29",
+  "executor": "V4-S01（worktree /Users/brsama/code/GitHub/wtS01，分支 agent/v4/s01，自 main@d57a7aa8 开出）",
+  "source_sha_base": "d57a7aa8fc202b9e613bd71b423bc32954d06211",
+  "source_sha_head": "e8a6d3f1a07181d4eea35f65d8e75d5c7618da4e（实现 commit；证据文件在其后的证据 commit）",
+  "no_push": true,
+  "toolchain": {
+    "flutter": "3.41.3 stable (revision 48c32af034, 2026-02-27)",
+    "host": "darwin 25.6.0 arm64",
+    "gen_note": "mobile/lib/gen 为 gitignored 实体目录：自主检出 cp -R 复制进 worktree（F06 同口径）；flutter pub get 触发 l10n 再生成漂移已 git checkout 还原（F02/F04/F06 同现象同处置）；本卡零 l10n 面"
+  },
+  "locks": {
+    "required": ["motion-policy"],
+    "note": "sparkle-coordination-v2 私有远端未配置于本机（git remote 无此远端），锁租约登记 NOT_RUN；冲突面以 diff 自证：不含 RF-06 三文件（dashboard_screen/compact_status_bar/task_execution_screen）、不含 app/routes.dart、不含 backend/、proto/、tokens_v2、gen 产物。motion-policy 权威落地于本卡新文件 core/design/semantic_motion.dart（预算表唯一权威），与 F06 MediaQuery 双源口径、U02 resolveSparkleMotionTokens 低刺激档正交不重叠，未另立第二权威"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtS01 -b agent/v4/s01 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "依赖解析（新 worktree 无 .dart_tool）+ 生成目录补位",
+      "command": "cp -R Sparkle-project/mobile/lib/gen wtS01/mobile/lib/gen && cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "Got dependencies! 2 packages discontinued（既有口径）；l10n 再生成漂移已还原"
+    },
+    {
+      "id": 3,
+      "purpose": "静态检查",
+      "command": "cd mobile && flutter analyze --no-pub",
+      "exit_code": 0,
+      "note": "No issues found!（全库；收尾复跑 6-7s 口径）"
+    },
+    {
+      "id": 4,
+      "purpose": "本卡新测试套件（23 用例：A 预算可测 2 + B 按压 3 + C 提案 3 + D 回执 4 + E 印章 3 + F 无限动画面 5 + G 滚动不降帧 2 + H 帧对照 2；每验收面一正一反 + 控制组探针活性）",
+      "command": "cd mobile && flutter test test/core/design/semantic_motion_s01_test.dart test/core/design/semantic_motion_s01_evidence_test.dart",
+      "exit_code": 0,
+      "note": "+23 全绿；实录帧数（末次运行）：scroll avg 18711us（阈值 70000）、proposal-enter animated avg 57.4us、reduce-motion 静态基线 avg 28.4us"
+    },
+    {
+      "id": 5,
+      "purpose": "证据落盘（PNG×2 + 语义 txt；RGBA 逐字节等价断言在常规跑恒执行）",
+      "command": "cd mobile && S01_EVIDENCE_DIR=<evidence 绝对路径> flutter test test/core/design/semantic_motion_s01_evidence_test.dart",
+      "exit_code": 0,
+      "note": "semantic_motion_baseline_settled.png 与 semantic_motion_reduce_motion_static.png sha256 相同（a37b9544…，字节级一致）；语义 txt 两变体三 label 逐字相等"
+    },
+    {
+      "id": 6,
+      "purpose": "design 域回归（F01 令牌 + F02 像素族 + F06 a11y + 本卡新套）",
+      "command": "cd mobile && flutter test test/core/design/",
+      "exit_code": 0,
+      "note": "+237 全绿（214 既有 + 23 本卡）；SparklePressable 改动后 classic/像素档既有断言原样全绿"
+    },
+    {
+      "id": 7,
+      "purpose": "按压面消费方回归（SparklePressable 7+ 消费面：semantic_pill/task_pill/ai_status_capsule/聊天/memory/plan/shared）",
+      "command": "cd mobile && flutter test test/widget/mirofish_wiring_finish_test.dart test/widget/text_layout_regression_test.dart test/features/chat/presentation/widgets/growth_card_action_pill_test.dart test/features/memory/presentation/widgets/evidence_cards_test.dart test/shared/widgets/action_proposal/awaiting_step_resume_card_test.dart",
+      "exit_code": 0,
+      "note": "+56 全绿"
+    },
+    {
+      "id": 8,
+      "purpose": "performance 域（帧时/滚帧门邻近面）",
+      "command": "cd mobile && flutter test test/performance/",
+      "exit_code": 0,
+      "note": "+19 全绿；合并批跑首试曾 1 败（chat list build 墙钟 bench 260ms 阈值，纯 CPU 墙钟口径、bench 面不含本卡任何文件），单测复跑与全量复跑均过——环境性墙钟抖动非回归，详见 test_results.json"
+    },
+    {
+      "id": 9,
+      "purpose": "home 域回归（SparklePressable 家族消费屏）",
+      "command": "cd mobile && flutter test test/features/home/presentation test/features/home/progress_consistency_f9_test.dart",
+      "exit_code": 0,
+      "note": "+106 全绿"
+    }
+  ],
+  "llm_usage": {
+    "actual_model_and_usage": "本卡为纯工程实现，无 LLM 调用、无模型产出物；评测/真模型流程不在卡面"
+  },
+  "diff_scope": {
+    "files_changed": 1,
+    "files_added": 4,
+    "product_code": [
+      "mobile/lib/core/design/semantic_motion.dart（新，预算表权威）",
+      "mobile/lib/core/design/widgets/semantic_motion_widgets.dart（新，组件族）",
+      "mobile/lib/core/design/components/atoms/sparkle_pressable.dart（改，+54/−43 结构重组：100ms→乐谱预算 + reduce-motion 静态分支；行为面=按压节奏 100→80ms 与减弱动效零动画壳）"
+    ],
+    "tests": [
+      "mobile/test/core/design/semantic_motion_s01_test.dart（新，22）",
+      "mobile/test/core/design/semantic_motion_s01_evidence_test.dart（新，1）"
+    ],
+    "forbidden_surfaces_touched": "无（RF-06 三文件 / routes / backend / proto / tokens_v2 / gen 产物零命中）"
+  }
+}
