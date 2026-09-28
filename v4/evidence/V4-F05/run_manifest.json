@@ -1,0 +1,143 @@
+{
+  "task": "V4-F05",
+  "title": "可替换设计Preview与主题切换",
+  "date": "2026-09-28",
+  "executor": "wtF05（worktree /Users/brsama/code/GitHub/wtF05，分支 agent/v4/f05，自 main@8458d3c7 开出）",
+  "source_sha_base": "8458d3c7b474d7e2a4099f50bbbe01e8cf0b399d",
+  "source_sha_head": "工作树（commit 前取证；提交 SHA 见 commit 本体与台账）",
+  "no_push": true,
+  "toolchain": {
+    "flutter": "3.41.3 stable (revision 48c32af034, 2026-02-27)",
+    "host": "darwin 25.6.0 arm64",
+    "gen_note": "mobile/lib/gen 为 gitignored 实体目录：自主检出 cp -R 复制进 worktree（非 symlink，未入库）；flutter pub get 曾再生成 l10n 产出（与 F02/F04 同现象），已 git checkout 还原，最终 diff 不含 l10n 文件"
+  },
+  "locks": {
+    "required": [
+      "style-preview"
+    ],
+    "note": "sparkle-coordination-v2 远端未配置于本机（git remote 仅 origin），租约登记 NOT_RUN（与 F04 同口径）；冲突面自证：diff 不含 app/routes.dart、不含 design_system.dart/theme_manager.dart/tokens_v2/（F01 主题通道零触碰）、不含 core/experience/（F03 适配器零触碰，只读 import 冻结文案表）、不含 features/ 除 profile_screen.dart 入口消费 5 行（卡面红线明示「preview 入口可加设置页/开发者入口」）；RF-06 冲突面（dashboard_screen/compact_status_bar/task_execution_screen）零触碰",
+    "heavy_slot": "本机 HEAVY 槽归 V4-F05；全程单会话串行执行（无并行模拟器/构建），无其他 HEAVY 会话在跑"
+  },
+  "build_and_seed": {
+    "build_id": "wtF05@flutter-3.41.3-stable-48c32af034/base-8458d3c7",
+    "data_seed": "seed-2026-09-28-v1 (kStylePreviewSeedVersion, style_preview_seed.dart)",
+    "same_build_same_seed_note": "全部 28 张截图出自同一 worktree、同一 Flutter 版本、同一冻结 seed 与同一组面构建器（style_preview_faces.dart = StylePreviewPage 页内同源面）；页面/单面/树顶层三类采集映射见 screenshots_index"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtF05 -b agent/v4/f05 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "复制 gitignored 生成目录 + 依赖解析",
+      "command": "cp -R mobile/lib/gen ../wtF05/mobile/lib/gen && cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "副产物 l10n 再生成已 git checkout 还原"
+    },
+    {
+      "id": 3,
+      "purpose": "静态检查",
+      "command": "cd mobile && flutter analyze --no-pub",
+      "exit_code": 0,
+      "note": "仅剩 1 条 pre-existing info（test/core/experience/experience_feedback_adapter_test.dart:315 require_trailing_commas，F03 遗留；已用 git stash -u 在干净 main 基线复跑验证为既有）；本卡新增文件零 issue"
+    },
+    {
+      "id": 4,
+      "purpose": "本卡新测试套件（四文件：classic 门/切换状态流/五面/证据采集）",
+      "command": "cd mobile && flutter test test/core/design/style_preview/",
+      "exit_code": 0,
+      "note": "+40 全绿（classic_gate 3 / switching 7 / faces 3 / evidence 27；常规跑 evidence 只断言真实渲染不落盘）"
+    },
+    {
+      "id": 5,
+      "purpose": "design 域回归（F01 令牌 + F02 像素组件族 + 既有设计面）",
+      "command": "cd mobile && flutter test test/core/design/",
+      "exit_code": 0,
+      "note": "+200 全绿"
+    },
+    {
+      "id": 6,
+      "purpose": "导航域回归 + U-07 五Tab铁律钉",
+      "command": "cd mobile && flutter test test/core/navigation/ test/widget/nav_decontextualization_contract_test.dart",
+      "exit_code": 0,
+      "note": "+42 全绿（五 Tab 路由合同计数恒 5，preview 入口不进合同）"
+    },
+    {
+      "id": 7,
+      "purpose": "设计棘轮守卫 + i18n 守卫",
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py && python3 scripts/guards/check_spacing_rhythm_ratchet.py && python3 scripts/guards/check_typography_rhythm_ratchet.py && python3 scripts/guards/check_dl_spec_ratchet.py && python3 scripts/guards/check_i18n_coverage.py && python3 scripts/guards/check_n18_presentation_bilingual.py",
+      "exit_code": 0,
+      "note": "六条全 PASS；过程中 SPACING 曾红（新文件 1 处 DS.spacing2 半步档），已改 DS.spacing4 后全绿——棘轮真实拦截并修正，非豁免"
+    },
+    {
+      "id": 8,
+      "purpose": "证据采集（五面 × 四档 + 整页 × 四档 + sheet 顶层 × 四档）",
+      "command": "cd mobile && STYLE_PREVIEW_EVIDENCE_DIR=<repo>/v4/evidence/V4-F05 flutter test test/core/design/style_preview/style_preview_evidence_test.dart",
+      "exit_code": 0,
+      "note": "28 张 PNG（dpr=2，Root RepaintBoundary 整窗，Ahem 测试字体块）+ 28 份语义 dump（元素树口径，F04 同款）；中途曾发现 DEBUG 角标入镜，关 debugShowCheckedModeBanner 后全量重采（本目录为终版）"
+    }
+  ],
+  "screenshots_index": {
+    "viewport": "物理 720x1600 @ dpr 2.0（逻辑 360x800，wt390 U-09 android 列同款逻辑档）",
+    "font_note": "Ahem 测试字体块——真实文案以同族 *_semantics.txt 为准（label/value/rect 口径）",
+    "face_canonical_flow_step": {
+      "home": "committed（任务已更新 · 成功面孔唯一合法步）",
+      "stuckSheet": "versionConflict（你的设置已更新，需要重新生成）",
+      "memory": "memorySaved（记忆已保存 · 高亮非成功）",
+      "longAnswer": "runActive（同步中 · 部分可见不伪装完成）",
+      "starMap": "committed（掌握度 45→82 真实映射）"
+    },
+    "files": {
+      "preview_page_<profile>.png": "整页顶层（AppBar 提案常显 + 四档切换器 + 状态流行 + 首屏面），4 档",
+      "preview_face_<face>_<profile>.png": "单面 canonical 流步（与页内同源面构建器），5 面 × 4 档",
+      "preview_sheet_<profile>.png": "卡住 sheet 真实 showModalBottomSheet 顶层形态（真实 TaskStuckCard），4 档",
+      "*_semantics.txt": "元素树语义 dump；单面 dump 跨四档 sha256 逐面恒等——切主题不改语义结构的机检自证"
+    }
+  },
+  "artifacts_sha256": {
+    "preview_face_home_classic.png": "961c96da0eaa5af66112c1e29e675d4da61da49151ae7eba24ce3e369b6b2fe0",
+    "preview_face_home_paperDay.png": "c3e26ec9f03f66e4dd9287575132206bff1bf1dbc399fc716967c344b6581115",
+    "preview_face_home_dusk.png": "52e260b264d83e6709834db923a730a2ed1bc5007cb32a0f9f6aa955b0f9c3f6",
+    "preview_face_home_quiet.png": "d622e019624d1ed3cdf1813bd2198b2687a90ce05fbce2e0f2325916ad500133",
+    "preview_face_stuckSheet_classic.png": "d714e5a9adb9c4a40e8bdd7ca6bb430ce14f6474967b8159cf5b8895d6734f18",
+    "preview_face_stuckSheet_paperDay.png": "239c8d4a37f2d7748754071c7ab173dc49c9ca834110d83568a03af283124c2b",
+    "preview_face_stuckSheet_dusk.png": "c3f75c321a0a61686b2926aabcdf1c4b653a8df25c1a8efbba06b9c272c7e8d5",
+    "preview_face_stuckSheet_quiet.png": "d308c111159cf384ec0f059292e2ceafad5bf0c2ee8fac50044ca45c2c7b41a2",
+    "preview_face_memory_classic.png": "f152e1869c8b1d99c0aee5cad8970dc2c239a832ed58384d18ae80c09aef9228",
+    "preview_face_memory_paperDay.png": "dcef72b2e9bb078f87e13b8755236155187409d8cc54eb47518393c40182d23a",
+    "preview_face_memory_dusk.png": "b2981f94c883222d9a7ea268b390e9f64bef386123112173a589a0bd5336b67c",
+    "preview_face_memory_quiet.png": "2430462a6ac8a6deda69ae3ed00e245d23c8d319eec96c5c020c0a9dfda70acd",
+    "preview_face_longAnswer_classic.png": "5abc89de3027e118628532709b2459c4969e83578fcaa77e68097363e6970ddf",
+    "preview_face_longAnswer_paperDay.png": "6e4d53a5a5e50c05683c686d77f43939ae330b3128905253be7f07509c614099",
+    "preview_face_longAnswer_dusk.png": "e52a0d217bed3325b0552b2b6576da38c81a5631ff2025861336bd8f7ddc5f3f",
+    "preview_face_longAnswer_quiet.png": "0475f31bd3b1a6955a4d5c25fd5c8b8af1d6e1e8ef93e41675310381c2e7b550",
+    "preview_face_starMap_classic.png": "bcf6e6efdbef6ac8f30c2dcc5612d49988ae410e7e5bd729d5130dafb5b97abb",
+    "preview_face_starMap_paperDay.png": "9576518c4f389974d2906da78d858a2a8d0fbc00817c06bf2e3e16a37e660a7c",
+    "preview_face_starMap_dusk.png": "81122b785e83dabf7870b2d802f0eb39dfef032bf9537ea58678802fe74cb044",
+    "preview_face_starMap_quiet.png": "b17f1f7ef22bd0b330147497755ed5d0cc804609a8bc3ec0a9d04bdda7235e85",
+    "preview_page_classic.png": "22f30a8f012ee4e10f11eb3c9ca6645ad0a5499043ab063829fc29b66f149a78",
+    "preview_page_paperDay.png": "06fc28d3de1a68587fef51b2125f9ce7536979b3e014603247a138478be770a1",
+    "preview_page_dusk.png": "88fc02cd942490854202efd98e40664cac4ba3ad3c8f6d16a4185745fdb527cf",
+    "preview_page_quiet.png": "ccdf56a26ab1dd6d4e06f9de63e63aa75cfd8d328e8c4d7cd6af84178c9eebf8",
+    "preview_sheet_classic.png": "881492ef4302fdf45eb9e960b30eaaa9216726e607291bc5e82038c43306914a",
+    "preview_sheet_paperDay.png": "424a89bb238874b8c9c47b57bc1f52441f7e4a88abde95d2df3664d6a0e36e28",
+    "preview_sheet_dusk.png": "c72124a166aed23b05b810599e3289122cecd6dff1ea175610adfa41f7a42972",
+    "preview_sheet_quiet.png": "032b9f3c65dd83baf68ba6a4d587cbbd6efa420e148365132c096a6df29716d9",
+    "preview_face_home_*_semantics.txt（四档恒等）": "7878e8d3007215a013a17bb1a0260060f1669249fd9f2a3ac8c3da02ea464d1a",
+    "preview_face_stuckSheet_*_semantics.txt（四档恒等）": "d992ed61b60aea5d1609c25dc0c3cb9d84ac3880bb7d6188071c2c786bfc4e30",
+    "preview_face_memory_*_semantics.txt（四档恒等）": "f2a5dd2cc7ed17cafa1b0cbe48682375f353d2bd97bfeed835440bb152860f48",
+    "preview_face_longAnswer_*_semantics.txt（四档恒等）": "f67f55c768a8cf448659d28cbb2752e8fd41a960ac18bb2120f453435b378a68",
+    "preview_face_starMap_*_semantics.txt（四档恒等）": "79852b260492ab4736591cd23257fbe12d5c1f0d79e1e9180742423f700b110c",
+    "preview_page_classic_semantics.txt": "507fd1b97783d6b88a02295a818f87cebe547685d89a4edcd998bdc89061e533",
+    "preview_page_paperDay_semantics.txt": "85a8cca6d515ac28d1b8c10d650c10a093320d42cb5dc8dab77b3c2ac571949a",
+    "preview_page_dusk_semantics.txt": "13e41a44801aec4ee634978d2c77f41810a982dda7d31ac4fb731183e8a2cd01",
+    "preview_page_quiet_semantics.txt": "8d110c9dfe1a666a56eae663b8406f2aadf9a8efb2a7678cfd261647e175067c",
+    "preview_sheet_*_semantics.txt（四档恒等）": "07cc788b6798edb8d63114549e31f6e3906302f1497a3b88797fefde559dd425"
+  },
+  "llm_usage": "本卡为纯工程实现（无模型调用），actual_model_and_usage = NOT_APPLICABLE",
+  "physical_device_scope": "无真机/模拟器触达（本机无 adb/AVD，B04 同口径）；证据为 flutter test 真渲染泵截图（HEAVY 面按 F01 让渡与本卡 HEAVY=True 落在本机执行）；感官面（触觉/音效）仅保留调用时语义，边界照 V4_DONE 注记",
+  "ch4_event_channel_statement": "F03 二审 CH-4 守门：preview 面消费冻结 seed（kStylePreviewSeedVersion），零事件流订阅、零网络调用、零新增投递路径；状态文案一律取 F03 冻结表 kExperienceCopyTable 既有键，状态视觉一律经 F02 PixelStateBadge 族（success 单载体）——diff 不含 core/experience/ 与任何 WS/通道文件"
+}

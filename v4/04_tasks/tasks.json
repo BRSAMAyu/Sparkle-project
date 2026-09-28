@@ -653,9 +653,9 @@
         "V4-F03",
         "V4-F04"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
-      "evidence_verdict": "NOT_RUN",
+      "status": "IN_PROGRESS",
+      "implementation_state": "REVIEW_READY",
+      "evidence_verdict": "SELF_CHECK_PASS",
       "kind": "implementation",
       "required_locks": [
         "style-preview"
