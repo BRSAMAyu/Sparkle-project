@@ -43,6 +43,21 @@
 8. **审查与集成复验未做**（本卡交付态 REVIEW_READY）：双审（high 卡 2 位独立审查）+
    合并时 action_plan/I01/I03 面集成 SHA 复验由接力机制执行；自称完成不算完成。
 
+9. **（一审 F1 登记）aurora correct-answer 面是结算门外的第二模型可触发掌握写**
+   （`aurora/runtime_v1/service.py` `_apply_correct_answer_mastery_update`）：decision_loop 的
+   LLM 自判「用户答对」（`state_updates.correct_answer_node`，提示词鼓励模型发出）→ 白名单
+   sprint 节点 `update_node_mastery(reason=aurora_completion_check_correct)`。属**既有行为**
+   （非 I07 引入）。整改（见 remediation_r1.md §F1）：每 `(user, node, UTC 日)` 进程级封顶
+   `CORRECT_ANSWER_MASTERY_DAILY_NODE_CAP = 3`（超限跳过增量 + WARN，不静默）；审计留痕既有
+   （mastery_audit_log，effect_kind=projection——只留痕可重放，不进证据账本）。残余边界：
+   封顶计数是**进程级**（服务实例重建即清零；长生命周期路径 = orchestrator 单例面持续有效）；
+   判定者仍是模型自判（非判分权威）。**中期已知债**：该写点纳入 `human_mastery_settlement`
+   判定或改证据门 + durable（audit-log 计数）频次门——未接 `settlement_for_task_row` 的理由
+   （该面无 Task 行，与任务完成语义不同型）见 remediation_r1.md §F1。
+   同面相邻边界数字（一审 N1）：`complete()` 内 `spark_node(study_minutes)` 活动面
+   `LEGACY_TIME_MASTERY_CAP=40.0` 封顶、audit 行 effect_kind=PROJECTION、task_complete ∈
+   NON_EVIDENCE_REASONS 永不进证据账本——呈现面有界冒充，非证据级冒充。
+
 ## 移交（对齐 I03 模式登记）
 
 - 对 I04（干预执行消费卡）：`task_context["scaffold"]` 投影与 `next_scaffold_step` 的

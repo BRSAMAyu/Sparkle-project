@@ -258,6 +258,97 @@ async def test_complete_by_user_still_settles_sprint_mastery(db_session, test_us
 
 
 # ---------------------------------------------------------------------------
+# F3（一审整改）：chat 工具链完成断言 = agent 证据（结算门判别子穿工具层）
+# ---------------------------------------------------------------------------
+
+
+async def _complete_via_chat_tool(db_session, test_user, task: Task) -> Any:
+    """经 agent 注册工具 update_task_status 的 completed 分支完成真实任务。"""
+    from app.tools.schemas import UpdateTaskStatusParams
+    from app.tools.task_tools import UpdateTaskStatusTool
+
+    return await UpdateTaskStatusTool().execute(
+        UpdateTaskStatusParams(task_id=str(task.id), status="completed", actual_minutes=40),
+        str(test_user.id),
+        db_session,
+    )
+
+
+def _completion_evidence_sources(task: Task) -> list[str]:
+    records = (task.guide_json or {}).get("completion_evidence_record") or []
+    if isinstance(records, dict):
+        records = [records]
+    return [record.get("source") for record in records if isinstance(record, dict)]
+
+
+@pytest.mark.asyncio
+async def test_chat_tool_agent_evidence_completing_mastery_task_does_not_settle(
+    db_session, test_user, _muted_bus, monkeypatch
+):
+    """F3 反例（集成）：chat 工具（agent 证据）完成 legacy mastery 任务 → BLOCK 不结算。
+
+    一审 C3 相邻洞：工具 completed 分支缺省 evidence_source="user"，门的
+    BLOCK 分支在生产对话面不可达。穿参后 agent 证据完成 TRAINING（X-02 同集
+    推导 mastery）→ 掌握写面零触发，完成事实照常、证据记录如实标 agent。
+    """
+    calls: list[tuple[Any, ...]] = []
+
+    async def _spy_update(*args, **kwargs):
+        calls.append((args, kwargs))
+
+    monkeypatch.setattr(
+        "app.services.task_service.TaskService._update_sprint_pack_mastery_for_completed_task",
+        _spy_update,
+    )
+    task = _sprint_task(db_session, test_user.id)
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    result = await _complete_via_chat_tool(db_session, test_user, task)
+
+    assert result.success is True, f"工具完成照常成功（行动账本与掌握账本分离）: {result.error_message}"
+    assert calls == [], "agent 证据完成 mastery 任务不得结算人类掌握（F3 前 BLOCK 分支不可达）"
+    await db_session.refresh(task)
+    assert "agent" in _completion_evidence_sources(task), "完成证据记录如实标 agent（非 user 冒名）"
+
+
+@pytest.mark.asyncio
+async def test_chat_tool_deliverable_task_via_agent_evidence_still_settles(
+    db_session, test_user, _muted_bus, monkeypatch
+):
+    """F3 正例（集成）：chat 工具（agent 证据）完成声明 deliverable 任务 → 照常结算。
+
+    穿参不扩大门：合法代办（验收②）在 agent 工具链路下仍结算
+    （OK.deliverable_delegation_settlement），不强迫用户手工重复。
+    """
+    calls: list[tuple[Any, ...]] = []
+
+    async def _spy_update(*args, **kwargs):
+        calls.append((args, kwargs))
+
+    monkeypatch.setattr(
+        "app.services.task_service.TaskService._update_sprint_pack_mastery_for_completed_task",
+        _spy_update,
+    )
+    task = _sprint_task(
+        db_session,
+        test_user.id,
+        guide_json=_policy_block(goal_purpose=GOAL_PURPOSE_DELIVERABLE, human_required=False),
+    )
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    result = await _complete_via_chat_tool(db_session, test_user, task)
+
+    assert result.success is True, f"工具完成照常成功: {result.error_message}"
+    assert len(calls) == 1, "deliverable 目标合法代办照常结算人类掌握（不因穿参误伤）"
+    await db_session.refresh(task)
+    assert "agent" in _completion_evidence_sources(task)
+
+
+# ---------------------------------------------------------------------------
 # 目的维度：解析 / 推导 / 逐步消解
 # ---------------------------------------------------------------------------
 
@@ -278,8 +369,31 @@ def test_policy_block_parse_roundtrip_and_failclosed():
 
 
 def test_derive_goal_purpose_matches_x02_learning_types():
-    """防漂移：legacy 推导集 ≡ X-02 LEARNING_TASK_TYPES（单一事实源约束）。"""
-    assert {TaskType.LEARNING.value, TaskType.TRAINING.value, TaskType.REFLECTION.value} == set(LEARNING_TASK_TYPES)
+    """防漂移：legacy 推导集 ≡ X-02 LEARNING_TASK_TYPES（单一事实源约束）。
+
+    F2（一审整改）双向钉死，删任一边任一成员即红（mutation 自证）：
+    - 字面集 ≡ X-02（X-02 侧改集 → 红；一审已钉方向）；
+    - hybrid 侧内部集（``derive_goal_purpose`` 实际消费）≡ X-02（hybrid 侧
+      静默漂移 → 红；一审 mutation 删 REFLECTION 29 全绿的洞在此封口）；
+    - 消费路径逐成员 + 补集（不经内部集对象的等值断言，钉真实行为）。
+    """
+    from app.core.hybrid_policy import _X02_ALIGNED_LEARNING_TASK_TYPES as hybrid_internal_set
+
+    x02_set = set(LEARNING_TASK_TYPES)
+    literal_set = {TaskType.LEARNING.value, TaskType.TRAINING.value, TaskType.REFLECTION.value}
+    assert literal_set == x02_set, "字面集漂移（X-02 侧）"
+    assert set(hybrid_internal_set) == x02_set, "hybrid 内部集与 X-02 双向相等（删任一边任一成员即红）"
+    # 消费路径逐成员：X-02 每个成员经 derive 必须 mastery（不依赖集合对象等值）
+    for task_type_value in sorted(x02_set):
+        assert (
+            derive_goal_purpose(task_type_value, None) == GOAL_PURPOSE_MASTERY
+        ), f"X-02 成员 {task_type_value} 经 legacy 推导必须仍属 mastery 集"
+    # 补集：X-02 之外的 TaskType 不得经类型路径推导 mastery（ownership 路径不在此列）
+    for task_type in TaskType:
+        if task_type.value not in x02_set:
+            assert (
+                derive_goal_purpose(task_type, None) != GOAL_PURPOSE_MASTERY
+            ), f"非学习型 {task_type.value} 漂移进 mastery 推导集"
     assert derive_goal_purpose(TaskType.LEARNING, None) == GOAL_PURPOSE_MASTERY
     assert derive_goal_purpose("TRAINING", CognitiveOwnership.USER_CORE) == GOAL_PURPOSE_MASTERY
     assert derive_goal_purpose(TaskType.OCR, CognitiveOwnership.DELEGATED) == GOAL_PURPOSE_DELIVERABLE
@@ -335,18 +449,26 @@ def _guide_with_check() -> dict[str, Any]:
 
 
 def test_independent_check_answer_redacted_from_projection():
-    """验收③：投影入口剥除 independent_check 节点内全部答案键，题面保留。"""
+    """验收③：投影入口剥除 independent_check 节点内全部答案键，题面保留。
+
+    F4（一审整改）：``solution_steps`` 是解题实质（工作解）＝答案面——
+    按「判分权威原地保留、注入前剥除」口径必须剥：服务端 guide_json 本体
+    保留（判分/复核权威），模型可见投影不得携带。
+    """
     clean, scaffold, removed = task_guide_context_projection(_guide_with_check())
     assert contains_independent_check_answer(_guide_with_check()) is True, "红前载荷确含答案（反例锚定）"
     assert contains_independent_check_answer(clean) is False, "投影后无任何答案键残留"
     inner = clean[GOAL_PURPOSE_BLOCK_KEY]["independent_check"]
     assert inner["question"] == "求 f(x)=e^x 在 x=0 处的二阶泰勒展开", "题面/作答面保留"
-    assert "solution_steps" in inner, "非答案键字段保留"
+    assert "solution_steps" not in inner, "解题步骤即答案实质，投影前必须剥除（F4）"
     assert "answer" not in inner and "answer" not in inner["grading"]
     assert any(p.endswith("answer") for p in removed) and any("grading" in p for p in removed)
+    assert any(p.endswith("solution_steps") for p in removed), "solution_steps 剥除路径可观测"
     assert scaffold is not None and scaffold["stage"] == "independent_check", "脚手架面（非答案）照常投影"
-    # 服务端本体不被改写（判分权威原地保留）
-    assert _guide_with_check()[GOAL_PURPOSE_BLOCK_KEY]["independent_check"]["answer"] == "1 + x + x^2/2"
+    # 服务端本体不被改写（判分权威原地保留——含 solution_steps 本体）
+    server_inner = _guide_with_check()[GOAL_PURPOSE_BLOCK_KEY]["independent_check"]
+    assert server_inner["answer"] == "1 + x + x^2/2"
+    assert server_inner["solution_steps"] == ["展开到二阶", "e^x 的导数恒为自身"]
 
 
 def test_answer_keys_outside_check_marker_untouched():
@@ -382,6 +504,7 @@ def test_independent_check_answer_keys_frozen():
                 "reference_answer",
                 "model_answer",
                 "solution",
+                "solution_steps",
                 "answer_key",
             }
         )

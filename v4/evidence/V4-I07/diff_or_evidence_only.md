@@ -60,3 +60,16 @@
 - 无 UI 交付（卡面无截图要求；移动端消费面归 UI 卡）
 - 无真实模型调用（纯规则层，零 LLM）
 - 零迁移、零新列、零 proto 改动（`guide_json` 版本化子键路径）
+
+---
+
+## 一审（R1）跟进项整改增量（F1-F4，销账前置）
+
+处置全文与影响面：`remediation_r1.md`（含四项 mutation 自证：删除修法→对应测试红→复原绿）。
+
+- **F3** `backend/app/tools/task_tools.py`：`UpdateTaskStatusTool` completed 分支穿参 `evidence_source="agent"`（原缺省 "user" 把 agent 代完成记成用户证据，I07 结算门 BLOCK 分支生产对话面不可达；X-04 回落 agent→system_event 口径不变）。生产行为变更：agent 工具链完成 mastery 任务不再冒记人类掌握；REST/focus 用户完成面零变化。
+- **F1** `backend/app/aurora/runtime_v1/service.py`：模型自判 correct-answer 的白名单 sprint 节点掌握写（+15/次无上限，既有行为）加 `(user, node, UTC 日)` 进程级封顶 `CORRECT_ANSWER_MASTERY_DAILY_NODE_CAP=3`，超限跳过 + WARN 不静默。未接 `settlement_for_task_row`（该面无 Task 行、非任务完成语义；中期登记 limitations §9）。
+- **F2** `backend/tests/unit/test_hybrid_policy.py`：防漂移测试扩为双向——hybrid 内部集 `_X02_ALIGNED_LEARNING_TASK_TYPES` ≡ X-02 `LEARNING_TASK_TYPES` 相等断言 + 消费路径逐成员/补集；mutation 自证两方向（删内部集成员/X-02 加杂员）均红。
+- **F4** `backend/app/core/hybrid_policy.py`：`INDEPENDENT_CHECK_ANSWER_KEYS` +`solution_steps`（工作解＝答案面；判分权威原地保留、投影前剥除口径两侧守住）；投影测试改向（剥除断言+服务端本体保留断言）。
+
+新增测试 +5（hybrid 29→31：F3 集成一正一反；aurora 91→93：F1 一正一反；工具面 72→73：F3 接线钉）；回归面 X-02 112 / contract 352 / chat 21 / 受影响面 279 全绿复跑；ruff/black/mypy 零新增（既有漂移逐项对 stash 基线核验，详见 remediation_r1.md）。

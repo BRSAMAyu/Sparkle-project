@@ -69,6 +69,13 @@ from app.sprint_packs.last_24h_mode import (
 GALAXY_BASELINE_TTL_SECONDS = 300  # 5-min stale-acceptable cache
 CORRECT_ANSWER_MASTERY_DELTA = 0.15
 CORRECT_ANSWER_MASTERY_REASON = "aurora_completion_check_correct"
+#: V4-I07 一审 F1 守卫：correct_answer 掌握写是**模型自判**面（decision_loop
+#: 提示词鼓励 LLM 发出 state_updates.correct_answer_node），判定者非判分权威
+#: ——白名单 sprint 节点 +15/次不再无上限，每 (user, node, UTC 日) 封顶。
+#: 进程级计数（实例重建即清零）；durable 留痕 = mastery_audit_log（reason=
+#: aurora_completion_check_correct，effect_kind=projection，可查询可重放），
+#: durable 频次门与证据门归中期（known-debt，见 V4-I07 limitations）。
+CORRECT_ANSWER_MASTERY_DAILY_NODE_CAP = 3
 CHINA_TIMEZONE = timezone(timedelta(hours=8))
 LAST_SESSION_MOOD_WINDOW_SECONDS = 24 * 60 * 60
 LAST_SESSION_MOOD_TRIGGER_LABELS = {"stressed", "frustrated", "overwhelmed"}
@@ -213,6 +220,8 @@ class AuroraRuntimeV1Service:
         self.wake_policy_service = wake_policy_service or AuroraWakePolicyService(redis_client)
         self.galaxy_service = galaxy_service
         self.galaxy_service_factory = galaxy_service_factory
+        #: F1 守卫的进程级计数：{(user_ref, node_id, UTC 日期): 已应用次数}。
+        self._correct_answer_mastery_daily_counts: dict[tuple[str, str, date_type], int] = {}
 
     async def get_daily_startup_message(
         self,
@@ -1594,11 +1603,28 @@ class AuroraRuntimeV1Service:
 
         user_ref = user_uuid or str(user_id)
         updated_nodes: set[str] = set()
+        today = _utcnow().date()
         for raw_node_id in node_ids:
             node_id = self._canonical_correct_answer_node_id(raw_node_id, allowed_node_ids)
             if not node_id or node_id in updated_nodes:
                 continue
             updated_nodes.add(node_id)
+
+            # V4-I07 F1 守卫：模型自判答对的掌握增量按 (user, node, 日) 封顶，
+            # 超限**显式告警不静默**——幻觉/自答回路不能无限抬呈现面 mastery。
+            count_key = (str(user_ref), node_id, today)
+            applied_today = self._correct_answer_mastery_daily_counts.get(count_key, 0)
+            if applied_today >= CORRECT_ANSWER_MASTERY_DAILY_NODE_CAP:
+                logger.warning(
+                    "Aurora correct-answer mastery update capped for user {} node {}: "
+                    "{}/{} increments applied today (model self-attested surface, bounded per "
+                    "V4-I07 F1; skipped increment is NOT applied, audit log keeps prior writes)",
+                    user_id,
+                    node_id,
+                    applied_today,
+                    CORRECT_ANSWER_MASTERY_DAILY_NODE_CAP,
+                )
+                continue
 
             current_mastery = self._mastery_from_context(readout, node_id)
             current_mastery = await self._current_sprint_node_mastery(
@@ -1624,6 +1650,8 @@ class AuroraRuntimeV1Service:
                     node_id,
                     exc,
                 )
+            else:
+                self._correct_answer_mastery_daily_counts[count_key] = applied_today + 1
 
     def _extract_correct_answer_node_ids(self, updates: Mapping[str, Any]) -> list[str]:
         raw_values: list[Any] = []

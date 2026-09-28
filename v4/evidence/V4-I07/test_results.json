@@ -114,5 +114,55 @@
     "flutter_mobile": "本卡零 mobile 改动（移动端消费面归 UI 卡；卡面无 UI 交付要求）",
     "real_model_calls": "本卡零 LLM 调用（纯规则策略层；无模型费用面）",
     "integration_reverify_at_merge": "待独立审查通过后合并时按接力机制执行（action_plan/I01/I03 面必跑已在本卡预演全绿）"
+  },
+  "remediation_r1": {
+    "scope": "一审（review_r1.md PASS_WITH_CHALLENGES）跟进项 F1-F4 销账前整改；四项处置与影响面见 remediation_r1.md",
+    "changed_paths": [
+      "backend/app/tools/task_tools.py（F3：completed 分支穿参 evidence_source=\"agent\"）",
+      "backend/app/aurora/runtime_v1/service.py（F1：correct-answer 掌握写 (user,node,日) 进程级封顶 CAP=3 + 超限 WARN）",
+      "backend/app/core/hybrid_policy.py（F4：INDEPENDENT_CHECK_ANSWER_KEYS +solution_steps）",
+      "backend/tests/unit/test_hybrid_policy.py（F2 双向防漂移扩写；F4 测试改向；F3 工具集成一正一反 ×2）",
+      "backend/tests/unit/test_aurora_runtime_decision_loop.py（F1 一正一反 ×2）",
+      "backend/tests/test_plan_task_tools_production.py（F3 接线钉 ×1）",
+      "v4/evidence/V4-I07/{remediation_r1.md,limitations.md,test_results.json,diff_or_evidence_only.md}"
+    ],
+    "mutation_self_proof": [
+      "F3：穿参还原为缺省 → test_chat_tool_agent_evidence_completing_mastery_task_does_not_settle + test_chat_tool_deliverable_task_via_agent_evidence_still_settles 2 failed（BLOCK 分支重新不可达/证据冒名）→ 复原 2 passed",
+      "F2：删内部集 REFLECTION（一审原始探针当时 29/29 全绿）→ test_derive_goal_purpose_matches_x02_learning_types 1 failed → 复原绿；X-02 侧加 SOCIAL 杂员 → 同测 1 failed → 复原绿（双向）",
+      "F4：键集删 solution_steps → 投影测试 + 冻结集测试 2 failed → 复原绿",
+      "F1：守卫阈值改 10**9 → test_plan_turn_caps_correct_answer_mastery_writes_per_day 1 failed → 复原绿"
+    ],
+    "suites": [
+      {
+        "cmd": "cd backend && SECRET_KEY=ci-test-key DATABASE_URL=sqlite:// .venv/bin/python -m pytest tests/unit/test_hybrid_policy.py -q",
+        "result": "31 passed in 20.24s（29+2：F3 工具集成一正一反）"
+      },
+      {
+        "cmd": "… -m pytest tests/unit/test_hybrid_policy.py tests/unit/test_action_allocation_policy.py tests/unit/test_action_allocation_guard.py tests/unit/test_action_allocation_eval.py -q",
+        "result": "143 passed（X-02 112 保持 + 新面 31）"
+      },
+      {
+        "cmd": "… -m pytest tests/contract -q",
+        "result": "352 passed in 11.39s"
+      },
+      {
+        "cmd": "… -m pytest tests/api/test_chat_legacy_user_context.py tests/unit/test_v3_fix53_chat_stream_route_sse.py tests/unit/test_v3_fix57_tool_continuation_empty_retry.py tests/unit/test_v3_fix166_length_truncation_family.py -q",
+        "result": "21 passed in 23.34s"
+      },
+      {
+        "cmd": "… -m pytest tests/unit/test_aurora_runtime_decision_loop.py tests/test_plan_task_tools_production.py -q",
+        "result": "166 passed in 18.74s（aurora 91+2；工具 72+1）"
+      },
+      {
+        "cmd": "… -m pytest tests/unit/test_hybrid_policy.py tests/unit/test_action_allocation_policy.py tests/unit/test_action_allocation_guard.py tests/unit/test_action_allocation_eval.py tests/unit/test_action_plan_contract.py tests/unit/test_episode_resume_view_contract.py tests/unit/test_semantic_selector.py -q",
+        "result": "279 passed in 23.23s（受影响面集合 277+2）"
+      }
+    ],
+    "quality_gates": {
+      "ruff": "改动 app 文件 + hybrid/aurora 测试文件 All checks passed；test_plan_task_tools_production.py 14 项既有（HEAD stash 基线同 14）——零新增",
+      "black": "hybrid_policy.py/test_hybrid_policy.py/test_aurora_runtime_decision_loop.py clean（后两文件基线 clean，black 重排仅落本卡增量行）；task_tools.py/aurora service.py/tools 测试文件为 HEAD 既有漂移（stash 基线同态，本卡增量行 black --diff 零命中——与一审 limitations §7 同口径）",
+      "mypy": "mypy app/core/hybrid_policy.py app/tools/task_tools.py app/aurora/runtime_v1/service.py = 30 errors in 30 files，stash 基线同 30，改动三文件 0 命中；一审口径命令 = 30/30 一致——零新增",
+      "rule_guards": "scripts/run_all_rule_guards.sh：BA-ROUTES gateway↔engine parity drift 在 stash 后 HEAD 基线同样 FAILED（既有漂移，与本卡零路由改动无关）；其余守卫无新增失败"
+    }
   }
 }

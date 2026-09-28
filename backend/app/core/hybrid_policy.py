@@ -119,6 +119,8 @@ SCAFFOLD_TRANSITION_REASONS: frozenset[str] = frozenset(
 #: 独立检验答案键（封闭集；出现在 independent_check 标记节点内即属答案面，
 #: 上下文投影前必须剥除）。注意：``error_records.correct_answer`` 等用户自有
 #: 材料不在此列——本键集只约束**系统生成的独立检验**节点。
+#: ``solution_steps``（I07 一审 F4）：解题步骤即答案实质（工作解），与
+#: ``solution`` 同面——判分权威（服务端 guide_json）原地保留，投影前剥除。
 INDEPENDENT_CHECK_ANSWER_KEYS: frozenset[str] = frozenset(
     {
         "answer",
@@ -127,6 +129,7 @@ INDEPENDENT_CHECK_ANSWER_KEYS: frozenset[str] = frozenset(
         "reference_answer",
         "model_answer",
         "solution",
+        "solution_steps",
         "answer_key",
     }
 )

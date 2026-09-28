@@ -52,6 +52,7 @@
     "run_manifest": "v4/evidence/V4-I07/run_manifest.json",
     "test_results": "v4/evidence/V4-I07/test_results.json",
     "limitations": "v4/evidence/V4-I07/limitations.md",
-    "red_evidence": "stash 回退 service 接线 → test_complete_by_agent_does_not_settle_sprint_mastery 红；复绿确认"
+    "red_evidence": "stash 回退 service 接线 → test_complete_by_agent_does_not_settle_sprint_mastery 红；复绿确认",
+    "r1_followup_remediation": "v4/evidence/V4-I07/remediation_r1.md（一审 F1-F4 处置+影响面+mutation 自证；test_results.json remediation_r1 节）"
   }
 }
