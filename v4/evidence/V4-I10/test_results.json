@@ -1,0 +1,66 @@
+{
+  "task": "V4-I10 根请求全调用计量与label真实性",
+  "captured_at_utc": "2026-09-28T18:20:00Z",
+  "summary": {
+    "total_new_tests": 19,
+    "total_affected_surface_passed": 1333,
+    "failed": 0,
+    "regressions_introduced": 0
+  },
+  "new_tests": {
+    "file": "backend/tests/unit/test_v4_i10_metering_truth.py",
+    "command": "python -m pytest tests/unit/test_v4_i10_metering_truth.py -q",
+    "exit_code": 0,
+    "passed": 19,
+    "cases": [
+      {"name": "test_estimate_cost_unknown_key_returns_none_not_gpt4_price", "target": "靶2", "asserts": "未知模型键返回 None，绝不等于 gpt-4 legacy 错价（B06-A4 反例锚定 10+32tok≠$0.00246）"},
+      {"name": "test_estimate_cost_metering_labels_unpriced", "target": "靶2", "asserts": "no_generation_model/unattributed_model/空键 永无价目 → None"},
+      {"name": "test_estimate_cost_legacy_keys_still_priced", "target": "靶2", "asserts": "显式 legacy OpenAI 键保留 legacy 价（行为不变守卫）"},
+      {"name": "test_estimate_cost_router_registered_key_uses_router_price", "target": "靶2", "asserts": "router 注册键走注册价（行为不变守卫）"},
+      {"name": "test_tracker_estimate_cost_returns_none_for_unknown", "target": "靶2", "asserts": "TokenTracker.estimate_cost async 面同样返回 None"},
+      {"name": "test_bisect_zero_token_stays_no_generation", "target": "靶3", "asserts": "0-token 真无模型保持 no_generation_model"},
+      {"name": "test_bisect_with_tokens_relabeled_degraded_estimate", "target": "靶3", "asserts": "带 token 错挂形状（S06 七条）二分为 no_generation_model_estimated"},
+      {"name": "test_bisect_real_keys_pass_through", "target": "靶3", "asserts": "真实模型键/unattributed_model 原样放行"},
+      {"name": "test_cleanup_synthetic_estimate_detected_and_relabeled", "target": "靶3", "asserts": "FIX545 产生面端到端：改标+检出计数器递增+cost=None+usage_source=estimated"},
+      {"name": "test_cleanup_true_no_generation_zero_token_unchanged", "target": "靶3", "asserts": "0-token 真无模型不误报检出（计数器不变）"},
+      {"name": "test_cleanup_measured_row_real_key_passes_bisect", "target": "靶3", "asserts": "实测行+真实键 bisect 放行、usage_source=measured、可核价 cost 非 None"},
+      {"name": "test_cleanup_folds_rescue_subcall_and_attributes_truthfully", "target": "靶4", "asserts": "主生成失败+rescue 顶替：整行归因 rescue 模型/层，sub_calls 切片，无合成估算双计"},
+      {"name": "test_cleanup_rescue_plus_measured_frames_adds_up", "target": "靶4", "asserts": "实测帧+泄漏替换型 rescue：两段消耗都入账，主模型归因不变，rescue 开销可切片"},
+      {"name": "test_rescue_metering_accumulates_across_multiple_rescues", "target": "靶4", "asserts": "多次 rescue 累计同槽位（calls/model_keys/tokens）"},
+      {"name": "test_usage_receipt_priced_key_carries_real_cost", "target": "靶1", "asserts": "可核价键回执 micro = 单一权威核价（1369+72 tok 实测数字对齐 B06-T1 样本量级）"},
+      {"name": "test_usage_receipt_unpriced_key_marks_unknown", "target": "靶1", "asserts": "不可核价键回执 cost=0 但显式 usage_cost_unpriced=true 标记"},
+      {"name": "test_billing_replay_same_request_id_settles_once", "target": "验收2", "asserts": "同 request_id 重放两份只落一行（sqlite 实库断言 count==1）"},
+      {"name": "test_billing_unpriced_cost_persists_as_null_not_zero", "target": "验收2", "asserts": "cost=None 落库 NULL 而非 0（免费/未核价可区分）"},
+      {"name": "test_resolve_metering_semantics_unchanged", "target": "回归", "asserts": "V3-FIX-80 resolve 三分语义不变"}
+    ]
+  },
+  "affected_surface_regression": [
+    {"scope": "tests/unit/test_metering_model_attribution.py + tests/unit/test_billing_worker.py（既有）", "result": "14 passed", "exit_code": 0},
+    {"scope": "tests/orchestration（208: response_builder/orchestrator/execution_engine/run_ledger/round1_p2/r2/semantic_meta 等）", "result": "208 passed, 7 warnings", "exit_code": 0},
+    {"scope": "相邻计量面 10 文件（ai_ops_dashboard/llm_quota/llm_security_wrapper×2/prompt_token_estimation/request_validator_quota_flag/q06_resilience_fastfail/first_text_chunk_delivery/signal_spine/spine_orchestrator）", "result": "1086 passed, 39 warnings", "exit_code": 0},
+    {"scope": "tests/agents", "result": "5 passed", "exit_code": 0},
+    {"scope": "tests/integration/test_phase5_orchestrator_north_star_acceptance.py", "result": "1 passed, 1 skipped（既有条件跳过）", "exit_code": 0}
+  ],
+  "static_checks": [
+    {"tool": "ruff 0.15.8", "cmd": "ruff check app/ tests/unit/test_v4_i10_metering_truth.py", "result": "All checks passed!", "exit_code": 0},
+    {"tool": "mypy 1.20.2 零漂移（4 文件 scope）", "method": "git stash 前后对照 + 干净 .mypy_cache", "result": "31 条既有错误集合前后一致，0 新增", "exit_code": 0},
+    {"tool": "mypy 1.20.2 零漂移（standard_workflow scope）", "method": "git stash 前后对照", "result": "30 条既有错误集合前后一致，0 新增", "exit_code": 0}
+  ],
+  "acceptance_mapping": [
+    {
+      "acceptance": "7条已知错挂案例被检出且不再靠改label消失",
+      "verdict": "PASS（机制面）",
+      "evidence": "S06 七条错挂的产生机制（合成估算时序）已在 _cleanup 判定面 3/3 二分检出：test_cleanup_synthetic_estimate_detected_and_relabeled 断言改标 no_generation_model_estimated + sparkle_metering_no_generation_with_tokens_total{surface=cleanup} 计数递增；检出面 1/3（final_response_metadata）、2/3（run_ledger）统一挂面防回归。S06 原始 7 条样本属 V3 数据，本卡不重跑真链（零真模型约束），以可失败单测锁定检出机制。"
+    },
+    {
+      "acceptance": "未核价unknown不填0，重复重放不重复结算",
+      "verdict": "PASS",
+      "evidence": "estimate_model_cost_usd 未知键 → None（不填 0 不按 gpt-4 错价），落库 NULL（test_billing_unpriced_cost_persists_as_null_not_zero）；重放幂等由 token_usage.request_id 唯一约束 + _retry_individually 跳过重复实证（test_billing_replay_same_request_id_settles_once，sqlite 实库）。"
+    },
+    {
+      "acceptance": "并发预算原子reserve/settle，独立开销可切片",
+      "verdict": "PASS（差量举证 + 增量切片）",
+      "evidence": "原子 reserve/settle 既有面举证：LLMCostGuard._reserve_usage_atomic 为 Redis Lua 原子脚本（app/core/llm_quota.py L367），record_usage 为 settle 面，本卡未重建；独立开销可切片为本卡增量：rescue 子调用以 sub_calls=[{lane,model_key,model_tier,calls,tokens,usage_source}] 独立切片入根请求行（test_cleanup_folds_rescue_subcall_and_attributes_truthfully / test_cleanup_rescue_plus_measured_frames_adds_up）。"
+    }
+  ]
+}

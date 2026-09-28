@@ -23,6 +23,8 @@ from app.config import settings
 from app.core.business_metrics import COLLABORATION_LATENCY
 from app.core.metrics import (
     AI_RESPONSE_TOTAL_DURATION,
+    METERING_NO_GENERATION_WITH_TOKENS,
+    METERING_UNPRICED_USAGE,
     REQUEST_LATENCY,
     RESPONSE_FALLBACK_GENERATED_TOTAL,
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,
@@ -43,6 +45,10 @@ from app.orchestration.ux_envelope import ux_envelope_builder
 # （Q-06 复测 39/400 条 default：32 条 0-token + 7 条带 token 错挂）。
 METERING_MODEL_NO_GENERATION = "no_generation_model"  # 生成模型从未运行
 METERING_MODEL_UNATTRIBUTED = "unattributed_model"  # 有真实用量但无模型归因
+# V4-I10（FIX545 终结面）：带 token 的 no_generation_model 二分出「降级计量」
+# 形态——label 曾声称生成模型从未运行，行内却带合成估算 token。独立显式标签 +
+# 检出计数，绝不与 0-token 真无模型混桶，也绝不静默改标签让缺陷面消失。
+METERING_MODEL_DEGRADED_ESTIMATE = "no_generation_model_estimated"  # 无归因模型键 + 估算 token>0（降级计量）
 
 
 def resolve_metering_model_key(
@@ -66,6 +72,30 @@ def resolve_metering_model_key(
     if has_real_usage:
         return METERING_MODEL_UNATTRIBUTED
     return METERING_MODEL_NO_GENERATION
+
+
+def bisect_no_generation_with_tokens(
+    model_key: str,
+    *,
+    prompt_tokens: int,
+    completion_tokens: int,
+) -> str:
+    """V4-I10 FIX545 终结面检出器：带 token 的 `no_generation_model` 标签二分。
+
+    - 带 token（prompt/completion 之一 > 0）→ `no_generation_model_estimated`
+      （降级计量：无归因模型键但合成估算产出了 token，错挂形状显式化）；
+    - 0-token → 保持 `no_generation_model`（真无模型：澄清门/模板直出）；
+    - 其余模型键原样放行。
+
+    调用面负责同步递增 METERING_NO_GENERATION_WITH_TOKENS 检出计数——检出
+    不靠改标签消失，标签二分让两形态分别可查可收敛（S06 的 7 条带 token
+    错挂案例由此可被持续检出）。
+    """
+    if model_key != METERING_MODEL_NO_GENERATION:
+        return model_key
+    if prompt_tokens > 0 or completion_tokens > 0:
+        return METERING_MODEL_DEGRADED_ESTIMATE
+    return model_key
 
 
 class ResponseBuilderMixin:
@@ -977,6 +1007,17 @@ class ResponseBuilderMixin:
             final_state.context_data,
             has_real_usage=total_prompt_tokens > 0 or total_completion_tokens > 0,
         )
+        # V4-I10 FIX545 检出器（判定面 1/3）：此处 token 为实测帧口径，
+        # 带 token 的 no_generation_model 理论上不可达（resolve 已二分
+        # unattributed_model）；检出器统一挂面，若触发即计数可查。
+        _bisected_key = bisect_no_generation_with_tokens(
+            generation_model_key,
+            prompt_tokens=total_prompt_tokens,
+            completion_tokens=total_completion_tokens,
+        )
+        if _bisected_key != generation_model_key:
+            METERING_NO_GENERATION_WITH_TOKENS.labels(surface="final_response_metadata").inc()
+        generation_model_key = _bisected_key
         generation_model_tier = str(
             final_state.context_data.get("generation_model_tier")
             or final_state.context_data.get("final_synthesis_model_tier")
@@ -1426,11 +1467,24 @@ class ResponseBuilderMixin:
         }
 
         if run_ledger is not None:
-            estimated_cost = 0.0
+            # V4-I10：核价经单一权威 estimate_model_cost_usd——不可核价键
+            # （未知键/计量标签）得 None = 未核价 unknown，不填 0 冒充免费，
+            # 也绝不静默按 gpt-4 错价（B06-A4）。
+            estimated_cost: float | None = None
             model_key = resolve_metering_model_key(
                 final_state.context_data,
                 has_real_usage=total_prompt_tokens > 0 or total_completion_tokens > 0,
             )
+            # V4-I10 FIX545 检出器（判定面 2/3）：实测口径下带 token 的
+            # no_generation_model 理论不可达，统一挂面防回归。
+            _bisected_key = bisect_no_generation_with_tokens(
+                model_key,
+                prompt_tokens=total_prompt_tokens,
+                completion_tokens=total_completion_tokens,
+            )
+            if _bisected_key != model_key:
+                METERING_NO_GENERATION_WITH_TOKENS.labels(surface="run_ledger").inc()
+            model_key = _bisected_key
             if self.token_tracker and total_prompt_tokens > 0:
                 try:
                     estimated_cost = await self.token_tracker.estimate_cost(
@@ -1439,7 +1493,9 @@ class ResponseBuilderMixin:
                         model=model_key,
                     )
                 except Exception:
-                    estimated_cost = 0.0
+                    estimated_cost = None
+            if estimated_cost is None and total_prompt_tokens > 0:
+                METERING_UNPRICED_USAGE.labels(surface="run_ledger").inc()
             await run_ledger.record_event(
                 event_type="response_streamed",
                 label="回答已完成",
@@ -1654,6 +1710,49 @@ class ResponseBuilderMixin:
                 ).observe(latency)
                 prompt_tokens = total_prompt_tokens
                 completion_tokens = total_completion_tokens
+                usage_source = "measured"
+                sub_calls: list[dict[str, Any]] = []
+                # V4-I10 根请求全调用计量：generation rescue 二次真实上游调用
+                # 折算进根请求行（B06-T3：rescue 烧了真实上游却无回执无实账，
+                # 根行只留合成估算）。token 为 tiktoken 估算（非流式 chat 无
+                # usage 帧），usage_source=estimated 显式降级计量，sub_calls
+                # 切片让独立开销可审计。
+                rescue_metering = context_data.get("rescue_metering")
+                if isinstance(rescue_metering, dict) and (
+                    int(rescue_metering.get("prompt_tokens") or 0) > 0
+                    or int(rescue_metering.get("completion_tokens") or 0) > 0
+                ):
+                    rescue_prompt_tokens = max(0, int(rescue_metering.get("prompt_tokens") or 0))
+                    rescue_completion_tokens = max(0, int(rescue_metering.get("completion_tokens") or 0))
+                    rescue_calls = max(1, int(rescue_metering.get("calls") or 1))
+                    rescue_model_key = str(rescue_metering.get("model_key") or "")
+                    rescue_model_tier = str(rescue_metering.get("model_tier") or "")
+                    prompt_tokens += rescue_prompt_tokens
+                    completion_tokens += rescue_completion_tokens
+                    sub_calls.append(
+                        {
+                            "lane": "generation_rescue",
+                            "model_key": rescue_model_key or METERING_MODEL_UNATTRIBUTED,
+                            "model_tier": rescue_model_tier,
+                            "calls": rescue_calls,
+                            "prompt_tokens": rescue_prompt_tokens,
+                            "completion_tokens": rescue_completion_tokens,
+                            "usage_source": "estimated",
+                        }
+                    )
+                    # 计数在 rescue 发生面（standard_workflow）按真实子调用次数
+                    # 递增；此处只折账，不重复计数。
+                    if total_prompt_tokens <= 0 and total_completion_tokens <= 0:
+                        # 主生成无实测帧（流式失败 → rescue 顶替）：整行归因到
+                        # 真实成功面（rescue 模型/层），lane/model/tier 与实际一致，
+                        # 不再把 rescue 消耗错挂到失败的主生成选择上。
+                        if rescue_model_key:
+                            model_key = rescue_model_key
+                        if rescue_model_tier:
+                            model_tier = rescue_model_tier
+                        usage_source = "estimated"
+
+
                 # V4-I09 快慢分层：确定性快路（零模型模板直出）生成模型从未
                 # 运行，真实 token 恒 0——跳过合成估算（B06 t3 实证模板/备援
                 # 路径曾被估入 44 tok 的 no_generation_model 隐含账）。真模型
@@ -1674,11 +1773,40 @@ class ResponseBuilderMixin:
                             assistant_text = str(msg.get("content") or "")
                             break
                     completion_tokens = self._estimate_text_tokens(assistant_text)
+                    if prompt_tokens > 0 or completion_tokens > 0:
+                        usage_source = "estimated"
+
+                # V4-I10 FIX545 检出器（判定面 3/3 · 产生面）：合成估算发生在归因
+                # 判定之后，曾产出「no_generation_model 标签 + 估算 token>0」行
+                # （S06 7 条错挂的产生机制）。二分检出、显式改标并计数——缺陷面
+                # 可持续检出，绝不静默混桶或靠改标签消失。
+                bisected_model_key = bisect_no_generation_with_tokens(
+                    model_key,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                )
+                if bisected_model_key != model_key:
+                    METERING_NO_GENERATION_WITH_TOKENS.labels(surface="cleanup").inc()
+                    logger.warning(
+                        "FIX545 with-tokens no_generation_model detected (request_id={}): "
+                        "estimated {}+{} tokens without model attribution; "
+                        "label {!r} -> {!r} (degraded metering)",
+                        request_id,
+                        prompt_tokens,
+                        completion_tokens,
+                        model_key,
+                        bisected_model_key,
+                    )
+                model_key = bisected_model_key
+
                 estimated_cost = await self.token_tracker.estimate_cost(
                     prompt_tokens=prompt_tokens,
                     completion_tokens=completion_tokens,
                     model=model_key,
                 )
+                if estimated_cost is None and (prompt_tokens > 0 or completion_tokens > 0):
+                    # V4-I10：未核价不填 0——显式 unknown 语义落账并计数可见。
+                    METERING_UNPRICED_USAGE.labels(surface="cleanup").inc()
                 await task_manager.spawn(
                     self.token_tracker.record_usage(
                         user_id=user_id,
@@ -1702,15 +1830,18 @@ class ResponseBuilderMixin:
                             if isinstance(context_data.get("utilization_metrics"), dict)
                             else None
                         ),
+                        usage_source=usage_source,
+                        sub_calls=sub_calls or None,
                     ),
                     task_name="token_usage_record",
                     user_id=str(user_id),
                 )
+                _cost_repr = "unknown(unpriced)" if estimated_cost is None else f"${estimated_cost:.6f}"
                 logger.info(
                     f"Token usage recorded for user {user_id}: "
                     f"{prompt_tokens} + {completion_tokens} = "
                     f"{prompt_tokens + completion_tokens} tokens, "
-                    f"est. cost: ${estimated_cost:.6f}"
+                    f"est. cost: {_cost_repr}"
                 )
             except Exception as e:
                 logger.error(f"Failed to record token usage: {e}")

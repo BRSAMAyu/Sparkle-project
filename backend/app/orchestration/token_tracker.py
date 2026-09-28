@@ -20,6 +20,58 @@ from loguru import logger
 
 from app.core.llm_router import llm_router
 
+# V4-I10：计量面特殊标签（非真实模型键，永远无价目）——与
+# response_builder.resolve_metering_model_key 的产出对齐，计价面显式识别，
+# 绝不被兜底定价覆盖（B06-A4：42tok 被按 gpt-4 记 $0.00126 错价）。
+METERING_MODEL_NO_GENERATION = "no_generation_model"
+METERING_MODEL_UNATTRIBUTED = "unattributed_model"
+
+# Legacy OpenAI 价目（仅对显式传入这些键生效；未知键不走此表）
+_LEGACY_MODEL_PRICING = {
+    "gpt-4": {"input": 0.03, "output": 0.06},  # per 1k tokens
+    "gpt-4-turbo": {"input": 0.01, "output": 0.03},
+    "gpt-3.5-turbo": {"input": 0.001, "output": 0.002},
+}
+
+# 核价告警去重（同一未知键进程内只告警一次，避免日志风暴）
+_UNPRICED_MODEL_WARNED: set[str] = set()
+
+
+def estimate_model_cost_usd(prompt_tokens: int, completion_tokens: int, model_key: str) -> float | None:
+    """V4-I10 计量面单一核价权威。
+
+    口径（两账统一的基础，回执 cost_micro_usd 与内部账共用本函数）：
+    - llm_router 注册模型 → 注册价 `cost_per_1k_tokens`；
+    - 显式 legacy OpenAI 键（gpt-4/gpt-4-turbo/gpt-3.5-turbo）→ legacy 价目；
+    - 其余（未知键 / `no_generation_model` / `unattributed_model` 等计量标签）
+      → **None = 未核价 unknown 语义**。
+
+    未核价绝不静默回落 gpt-4 错价（B06-A4 实锤缺陷），也绝不填 0 冒充免费
+    （调用面以 cost=None 落账，账本区分「免费」与「未核价」）。
+    """
+    key = str(model_key or "")
+    router_models = getattr(llm_router, "_available_models", {})
+    config = router_models.get(key) if isinstance(router_models, dict) else None
+    if config is not None:
+        cost = (prompt_tokens + completion_tokens) * float(getattr(config, "cost_per_1k_tokens", 0.0)) / 1000.0
+        return round(cost, 6)
+
+    legacy = _LEGACY_MODEL_PRICING.get(key)
+    if legacy is not None:
+        cost = (prompt_tokens * legacy["input"] + completion_tokens * legacy["output"]) / 1000
+        return round(cost, 6)
+
+    if key not in _UNPRICED_MODEL_WARNED:
+        _UNPRICED_MODEL_WARNED.add(key)
+        logger.warning(
+            "estimate_model_cost_usd: unpriced model key {!r} (tokens={}+{}) — "
+            "recorded as unknown cost, NOT zero-filled, NOT priced as gpt-4",
+            key,
+            prompt_tokens,
+            completion_tokens,
+        )
+    return None
+
 
 class TokenTracker:
     """
@@ -59,6 +111,8 @@ class TokenTracker:
         fallback_used: bool = False,
         outcome_stats: dict[str, Any] | None = None,
         utilization_metrics: dict[str, Any] | None = None,
+        usage_source: str = "measured",
+        sub_calls: list[dict[str, Any]] | None = None,
     ) -> int:
         """
         记录 Token 使用量
@@ -70,7 +124,11 @@ class TokenTracker:
             prompt_tokens: 输入 Token 数
             completion_tokens: 输出 Token 数
             model: 模型名称
-            cost: 估算成本（可选）
+            cost: 估算成本（可选；None = 未核价 unknown，不落成本桶）
+            usage_source: 用量来源标签——"measured"（usage 实测帧）或
+                "estimated"（文本估算降级计量，V4-I10 显式化，不冒充实测）
+            sub_calls: 根请求调用树子调用切片（V4-I10，如 rescue 二次调用），
+                独立开销可切片审计；随队列/明细行透传
 
         Returns:
             总 Token 数
@@ -88,6 +146,8 @@ class TokenTracker:
             "total_tokens": total_tokens,
             "model": model,
             "cost": cost,
+            "usage_source": usage_source or "measured",
+            "sub_calls": list(sub_calls or []),
             "reasoning_mode": reasoning_mode or "balanced",
             "model_tier": model_tier or "",
             "chat_mode": chat_mode or "standard",
@@ -209,6 +269,8 @@ class TokenTracker:
             "model_tier": model_tier,
             "reasoning_mode": mode,
             "chat_mode": chat_mode or "standard",
+            "usage_source": usage_source or "measured",
+            "sub_calls": list(sub_calls or []),
             "timing_stats": timing_stats or {},
             "success": bool(success),
             "fallback_used": bool(fallback_used),
@@ -490,38 +552,20 @@ class TokenTracker:
             "active_users": active_users,
         }
 
-    async def estimate_cost(self, prompt_tokens: int, completion_tokens: int, model: str = "gpt-4") -> float:
+    async def estimate_cost(self, prompt_tokens: int, completion_tokens: int, model: str = "gpt-4") -> float | None:
         """
-        估算成本（基于 OpenAI 定价）
+        估算成本（V4-I10：未知键显式未核价，绝不静默按 gpt-4 错价）
 
         Args:
             prompt_tokens: 输入 Token
             completion_tokens: 输出 Token
-            model: 模型
+            model: 模型键
 
         Returns:
-            估算成本（美元）
+            估算成本（美元）；模型键不可核价（未知键/计量标签）时返回 **None**
+            （未核价 unknown 语义——调用面不落 cost，不填 0 冒充免费）。
         """
-        router_models = getattr(llm_router, "_available_models", {})
-        if model in router_models:
-            config = router_models[model]
-            cost = (prompt_tokens + completion_tokens) * float(getattr(config, "cost_per_1k_tokens", 0.0)) / 1000.0
-            return round(cost, 6)
-
-        # Legacy OpenAI 定价兜底
-        pricing = {
-            "gpt-4": {"input": 0.03, "output": 0.06},  # per 1k tokens
-            "gpt-4-turbo": {"input": 0.01, "output": 0.03},
-            "gpt-3.5-turbo": {"input": 0.001, "output": 0.002},
-        }
-
-        if model not in pricing:
-            model = "gpt-4"
-
-        p = pricing[model]
-        cost = (prompt_tokens * p["input"] + completion_tokens * p["output"]) / 1000
-
-        return round(cost, 6)
+        return estimate_model_cost_usd(prompt_tokens, completion_tokens, model)
 
     async def get_mode_usage_summary(
         self,

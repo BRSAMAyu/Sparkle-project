@@ -1298,7 +1298,7 @@
         "V4-B06"
       ],
       "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
       "kind": "implementation",
       "required_locks": [
@@ -1350,7 +1350,10 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "review_status": "PENDING_INDEPENDENT_REVIEW",
+      "evidence_dir": "v4/evidence/V4-I10",
+      "implementation_notes": "wtI10 实现（基线 c67e45a3，产品代码 4 文件 +334/−31，19 新测全绿，受影响面 1333 passed，mypy 零漂移，ruff 全绿，零真模型）：靶2 estimate_cost 未知键静默 gpt-4 错价 → 单一核价权威 estimate_model_cost_usd（router 价→legacy 价→None=未核价 unknown，不填 0 不错价）；靶3 FIX545 终结面 → bisect_no_generation_with_tokens 检出器 + no_generation_model_estimated 显式标签 + sparkle_metering_no_generation_with_tokens_total{surface} 三判定面挂counter；靶1 回执 cost 恒 0 → usage 帧与内部账共用核价权威（两账统一），不可核价回执 usage_cost_unpriced=true 显式标记，proto 零变更；靶4 rescue 二次真实调用入根请求账（_meter_generation_rescue_subcall→context_data.rescue_metering→_cleanup 折算，主生成无实测帧时归因 rescue 模型/层，sub_calls 独立开销可切片）；验收2 重放幂等以 token_usage.request_id 唯一约束 + sqlite 实库测试锁定；原子 reserve/settle 既有 Lua 面差量举证未重建。未覆盖（limitations.md）：M6 第二账本收敛、rescue 实测 usage（上游不回帧）、S06 七条真链重放（零真模型红线）。"
     },
     {
       "id": "V4-D01",

@@ -45,6 +45,33 @@ LLM_CALL_DURATION = get_or_create_metric(
     Histogram, "sparkle_llm_call_duration_seconds", "LLM call duration in seconds", ["model", "provider"]
 )
 
+# V4-I10 FIX545 终结面检出器：label 声称「生成模型从未运行」却带着 token>0
+# 的计量行（合成估算降级计量的错挂形状）。检出即计数，绝不靠改标签让缺陷面
+# 消失；surface 标记判定点位（cleanup / final_response_metadata / run_ledger）。
+METERING_NO_GENERATION_WITH_TOKENS = get_or_create_metric(
+    Counter,
+    "sparkle_metering_no_generation_with_tokens_total",
+    "FIX545 detector: metering rows labeled no_generation_model but carrying tokens>0 (degraded estimation)",
+    ["surface"],
+)
+
+# V4-I10 根请求全调用计量：generation rescue 二次真实上游调用入根请求账的
+# 计数（B06-T3：rescue 真实烧上游却无回执无实账）。
+METERING_GENERATION_RESCUE_CALLS = get_or_create_metric(
+    Counter,
+    "sparkle_metering_generation_rescue_calls_total",
+    "Generation rescue sub-calls metered under the root request (V4-I10 full-call-tree accounting)",
+)
+
+# V4-I10 未核价可见性：模型键不可核价（未知键/计量标签）的落账行计数。
+# 未核价不填 0 也不按 gpt-4 错价——以 unknown 语义落账并被此处显式计数。
+METERING_UNPRICED_USAGE = get_or_create_metric(
+    Counter,
+    "sparkle_metering_unpriced_usage_total",
+    "Metering rows with unpriceable model key (cost recorded as unknown, not zero-filled)",
+    ["surface"],
+)
+
 # M-2 stream variance: provider-level time-to-first-chunk. Observed in
 # OpenAICompatibleProvider.stream_chat from call start to the first content
 # chunk, isolating provider TTFT (connect + model latency) from engine

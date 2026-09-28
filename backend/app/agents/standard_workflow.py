@@ -54,7 +54,11 @@ from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 from app.core.citation_markers import build_citation_outcome
 from app.core.context_pack import ContextBudgetManager, estimate_tokens, format_document_chunks_for_prompt
 from app.core.exceptions import LLMOverloadedError, LLMProvidersExhaustedError
-from app.core.metrics import DOCUMENT_CONTEXT_CHUNKS_INJECTED_TOTAL, DOCUMENT_CONTEXT_TOKENS_USED
+from app.core.metrics import (
+    DOCUMENT_CONTEXT_CHUNKS_INJECTED_TOTAL,
+    DOCUMENT_CONTEXT_TOKENS_USED,
+    METERING_GENERATION_RESCUE_CALLS,
+)
 from app.core.pending_actions import pending_actions_store
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.capability_lane import (
@@ -83,6 +87,7 @@ from app.orchestration.graph_rag import (
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.stage_events import build_stage_frame, record_stage_event
 from app.orchestration.statechart_engine import StateGraph, WorkflowState
+from app.orchestration.token_tracker import estimate_model_cost_usd
 from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
 from app.services.document_service import document_service
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
@@ -848,6 +853,77 @@ def _should_fast_fail_generation(exc: Exception) -> bool:
     return isinstance(exc, (LLMProvidersExhaustedError, LLMOverloadedError))
 
 
+def _meter_generation_rescue_subcall(
+    state: WorkflowState | None,
+    rescue_llm: Any,
+    *,
+    rescue_prompt: str,
+    rescue_response: str,
+    rescue_tier: ModelTier,
+) -> None:
+    """V4-I10 根请求全调用计量：generation rescue 二次真实上游调用入根请求账。
+
+    B06-T3 实证：主生成流失败 → rescue 非流式真实烧一次上游，但该调用既无
+    usage 回执帧也不入内部账本——根行只剩合成估算，真实消耗面失明。非流式
+    `chat()` 不回 usage 帧（上游仅在流式回帧），token 按 tiktoken 估算并以
+    usage_source=estimated 显式降级计量，不冒充实测。用量累计写入
+    `context_data["rescue_metering"]`，由 ResponseBuilderMixin._cleanup 折算
+    进根请求行（sub_calls 切片，独立开销可审计）。记账失败绝不阻断 rescue。
+    """
+    if state is None:
+        return
+    try:
+        selection = rescue_llm.get_current_selection() if hasattr(rescue_llm, "get_current_selection") else None
+        model_key = str(getattr(selection, "model_key", "") or "")
+        tier_value = getattr(getattr(selection, "config", None), "tier", None) or rescue_tier
+        tier_str = str(getattr(tier_value, "value", None) or tier_value or "")
+        prompt_tokens = estimate_tokens(rescue_prompt or "")
+        completion_tokens = estimate_tokens(rescue_response or "")
+        info = state.context_data.get("rescue_metering")
+        if not isinstance(info, dict):
+            info = {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0, "model_keys": []}
+            state.context_data["rescue_metering"] = info
+        info["prompt_tokens"] = int(info.get("prompt_tokens") or 0) + int(prompt_tokens)
+        info["completion_tokens"] = int(info.get("completion_tokens") or 0) + int(completion_tokens)
+        info["calls"] = int(info.get("calls") or 0) + 1
+        info["model_key"] = model_key  # 末次 rescue 生效模型（归因面）
+        info["model_tier"] = tier_str
+        keys = info.setdefault("model_keys", [])
+        if isinstance(keys, list):
+            keys.append(model_key)
+        METERING_GENERATION_RESCUE_CALLS.inc()
+        logger.info(
+            "V4-I10 rescue sub-call metered under root request: model={} tier={} "
+            "est_tokens={}+{} (usage_source=estimated)",
+            model_key or "unattributed_model",
+            tier_str,
+            prompt_tokens,
+            completion_tokens,
+        )
+    except Exception as exc:  # noqa: BLE001 — 计量失败不阻断 rescue 主链
+        logger.debug("rescue sub-call metering skipped: {!r}", exc)
+
+
+def _build_usage_receipt(
+    *,
+    prompt_tokens: int,
+    completion_tokens: int,
+    model_key: str,
+) -> tuple[int, dict[str, str]]:
+    """V4-I10 两账统一：usage 回执帧的 cost_micro_usd 与内部账同一核价权威。
+
+    - 可核价 → 回执 micro = estimate_model_cost_usd 结果（内部账 cleanup 面
+      同键同价同 token，口径一致）；
+    - 不可核价（未知键/计量标签）→ cost_micro_usd=0 且附
+      `usage_cost_unpriced=true` 元数据——wire 格式无法表达 unknown，用显式
+      标记替代「0=免费」的假语义（B06-T1：回执恒 0 vs 内部账 $0.000144）。
+    """
+    cost = estimate_model_cost_usd(prompt_tokens, completion_tokens, model_key) if model_key else None
+    if cost is None:
+        return 0, {"usage_cost_unpriced": "true"}
+    return int(round(cost * 1_000_000)), {}
+
+
 async def _build_mode_rescue_response(
     *,
     agent_role: str,
@@ -857,6 +933,7 @@ async def _build_mode_rescue_response(
     reasoning_mode: str,
     knowledge_context: str = "",
     document_context: str = "",
+    state: WorkflowState | None = None,
 ) -> tuple[str, ModelTier]:
     rescue_tier = _rescue_tier_for_task(task_type)
     rescue_task_type = TaskType.QUICK_QUERY if task_type is TaskType.STANDARD_RESPONSE else task_type
@@ -878,7 +955,16 @@ async def _build_mode_rescue_response(
         ],
         temperature=0.35,
     )
-    return str(response or "").strip(), rescue_tier
+    rescued = str(response or "").strip()
+    # V4-I10：rescue 是根请求调用树里的真实二次上游调用，入根请求账。
+    _meter_generation_rescue_subcall(
+        state,
+        rescue_llm,
+        rescue_prompt=rescue_prompt,
+        rescue_response=rescued,
+        rescue_tier=rescue_tier,
+    )
+    return rescued, rescue_tier
 
 
 def _extract_community_prompt_context(user_message: str) -> dict[str, str]:
@@ -2153,13 +2239,25 @@ Ask about their available time and current tasks if needed.
                             first_chunk_sent=first_chunk_sent,
                         )
                         last_flush_at = time.monotonic()
+                        # V4-I10 两账统一：回执 cost_micro_usd 与内部账共用
+                        # estimate_model_cost_usd（同键同价同 token）；不可核价
+                        # 显式 usage_cost_unpriced 标记，不再恒 0 假装免费
+                        # （B06-T1：回执 cost=0 vs 内部账 $0.000144）。
+                        receipt_model_key = str(state.context_data.get("generation_model_key") or "")
+                        receipt_cost_micro, receipt_meta = _build_usage_receipt(
+                            prompt_tokens=usage_prompt_tokens,
+                            completion_tokens=usage_completion_tokens,
+                            model_key=receipt_model_key,
+                        )
                         await stream_callback(
                             agent_service_pb2.ChatResponse(
                                 usage=agent_service_pb2.Usage(
                                     prompt_tokens=chunk.prompt_tokens or 0,
                                     completion_tokens=chunk.completion_tokens or 0,
                                     total_tokens=(chunk.prompt_tokens or 0) + (chunk.completion_tokens or 0),
-                                )
+                                    cost_micro_usd=receipt_cost_micro,
+                                ),
+                                metadata=receipt_meta,
                             )
                         )
         finally:
@@ -2185,6 +2283,7 @@ Ask about their available time and current tasks if needed.
                 reasoning_mode=reasoning_mode,
                 knowledge_context=raw_knowledge_context,
                 document_context=raw_document_context,
+                state=state,
             )
             if rescued_response:
                 full_response = rescued_response
@@ -2232,6 +2331,7 @@ Ask about their available time and current tasks if needed.
                     user_message=user_message,
                     task_type=TaskType.QUICK_QUERY,
                     reasoning_mode="fast",
+                    state=state,
                 )
                 if rescued_response:
                     full_response = rescued_response
@@ -2249,6 +2349,7 @@ Ask about their available time and current tasks if needed.
                     user_message=user_message,
                     task_type=TaskType.QUICK_QUERY,
                     reasoning_mode="fast",
+                    state=state,
                 )
             except Exception as rescue_error:
                 logger.warning(f"Standard leak rescue failed, using retrieval-grounded answer: {rescue_error}")
@@ -2277,6 +2378,7 @@ Ask about their available time and current tasks if needed.
                     reasoning_mode=reasoning_mode,
                     knowledge_context=raw_knowledge_context,
                     document_context=raw_document_context,
+                    state=state,
                 )
             except Exception as rescue_error:
                 logger.warning(f"Low-information rescue failed, using retrieval-grounded answer: {rescue_error}")
