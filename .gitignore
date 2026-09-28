@@ -304,6 +304,8 @@ outputs/
 # ========================================
 artifacts/sgw*/
 artifacts/e2e/
+# P03-R2：监督器告警 JSONL 防呆
+artifacts/ops/
 
 # Keep dictionaries directory (MDX files for vocabulary lookup)
 # data/dictionaries/

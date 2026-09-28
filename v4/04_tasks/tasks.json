@@ -3150,9 +3150,9 @@
         "V4-I08",
         "V4-I10"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
-      "evidence_verdict": "NOT_RUN",
+      "status": "in_progress",
+      "implementation_state": "REVIEW_READY",
+      "evidence_verdict": "PENDING",
       "kind": "implementation",
       "required_locks": [
         "ops-bridge"

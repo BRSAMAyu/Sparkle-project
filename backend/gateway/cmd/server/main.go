@@ -38,9 +38,18 @@ func main() {
 	handler.InitHandlerConfig(cfg)
 	middleware.InitMiddlewareConfig(cfg)
 
-	// Initialize i18n
-	if err := i18n.Init("locales"); err != nil {
-		logger.Log.Warn("Failed to initialize i18n, falling back to defaults", zap.Error(err))
+	// Initialize i18n — FIX-542: resolve locales dir without trusting CWD,
+	// so the gateway starts identically from any working directory.
+	localesDir, localesDiag, err := i18n.DefaultLocalesDir()
+	if err != nil {
+		logger.Log.Warn("Failed to resolve locales dir, falling back to defaults",
+			zap.Error(err), zap.String("diagnostics", localesDiag))
+	} else if err := i18n.Init(localesDir); err != nil {
+		logger.Log.Warn("Failed to initialize i18n, falling back to defaults",
+			zap.Error(err), zap.String("locales_dir", localesDir))
+	} else {
+		logger.Log.Info("i18n locales initialized", zap.String("locales_dir", localesDir),
+			zap.String("resolution", localesDiag))
 	}
 
 	// Initialize OpenTelemetry

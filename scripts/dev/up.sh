@@ -21,18 +21,43 @@ if ! command -v make >/dev/null 2>&1; then
   die "make not found."
 fi
 
-# ── 2. Start Docker infrastructure ──
-log "Starting Docker services (PostgreSQL, Redis, MinIO)..."
-if ! (cd "$ROOT_DIR" && docker compose up -d sparkle_db redis minio) >"$LOG_DIR/docker_up.log" 2>&1; then
-  cat "$LOG_DIR/docker_up.log"
-  die "Docker compose up failed. Check $LOG_DIR/docker_up.log"
+# ── 2. Start Docker infrastructure (FIX-557 owner precheck first) ──
+# sparkle_db container name is global and first-come-first-served; the TRUE
+# data volume lives under the sparkle-cosmos compose project. Rebuilding from
+# this repo inside a dead-container window would silently mount an empty
+# sparkle-project_* volume. See scripts/RESTACK_RUNBOOK.md.
+DB_MOUNTS="$(docker inspect sparkle_db --format '{{range .Mounts}}{{.Name}} {{end}}' 2>/dev/null || true)"
+case "$DB_MOUNTS" in
+  *sparkle-cosmos_*)
+    log "sparkle_db exists and is owned by the sparkle-cosmos data volume — NOT recreating data plane (FIX-557 safe)."
+    SKIP_DB_UP=1
+    ;;
+  *sparkle-project_*)
+    die "sparkle_db is mounted on a sparkle-project_* volume (silent empty-volume misownership, FIX-557). Do NOT rebuild from this repo — follow scripts/RESTACK_RUNBOOK.md corrective steps."
+    ;;
+  *)
+    if docker volume ls --format '{{.Name}}' 2>/dev/null | grep -q '^sparkle-cosmos_.*postgres'; then
+      if [ "${SPARKLE_ALLOW_RESTACK:-0}" != "1" ]; then
+        die "sparkle_db container absent but true data volume (sparkle-cosmos_*) exists. Recreating from this repo would detach the real data (FIX-557). Re-run from the sparkle-cosmos repo, or set SPARKLE_ALLOW_RESTACK=1 to override deliberately."
+      fi
+      log "WARNING: SPARKLE_ALLOW_RESTACK=1 — rebuilding data plane from this repo deliberately (FIX-557 override)."
+    fi
+    ;;
+esac
+
+if [ "${SKIP_DB_UP:-0}" != "1" ]; then
+  log "Starting Docker services (PostgreSQL, Redis, MinIO)..."
+  if ! (cd "$ROOT_DIR" && docker compose up -d sparkle_db redis minio) >"$LOG_DIR/docker_up.log" 2>&1; then
+    cat "$LOG_DIR/docker_up.log"
+    die "Docker compose up failed. Check $LOG_DIR/docker_up.log"
+  fi
+  log "Docker services started."
 fi
-log "Docker services started."
 
 # ── 3. Wait for PostgreSQL ──
 log "Waiting for PostgreSQL..."
 for i in $(seq 1 30); do
-  if docker exec sparkle-db pg_isready -U "${POSTGRES_USER:-brsama}" >/dev/null 2>&1; then
+  if docker exec sparkle_db pg_isready -U "${POSTGRES_USER:-brsama}" >/dev/null 2>&1; then
     log "PostgreSQL ready."
     break
   fi
@@ -45,7 +70,8 @@ done
 # ── 4. Wait for Redis ──
 log "Waiting for Redis..."
 for i in $(seq 1 15); do
-  if docker exec sparkle-redis redis-cli ping >/dev/null 2>&1; then
+  # P03-R1：容器名修正（原 sparkle-redis 致步骤4恒死）
+  if docker exec sparkle_redis redis-cli ping >/dev/null 2>&1; then
     log "Redis ready."
     break
   fi

@@ -15,5 +15,6 @@
 - 部署：`deploy/bootstrap.sh`（云端一键部署总入口）、`deploy-prod.sh`（蓝绿发版/回滚）、`backup_prod_data.sh` / `restore_prod_data.sh` / `install_backup_cron.sh`、`ssl/`
 - 治理守卫：`check_rule_*.py`（清单见 `rule_guard_manifest.tsv`，入口 `run_all_rule_guards.sh`）
 - 契约/密钥检查：`check_proto_contract.py`、`check_production_secrets.py`、`check_openapi_contract.py` 等 `check_*.py`
+- 服务监督（V4-P03，FIX-530/542 正式化）：`ops/service_supervisor.py`（正式守护——自锚定 REPO、health/ready 分离探测、有限重试+冷却+每小时上限转告警、FIX-557 数据面属主预检、`--once`/`--observe` 模式）、`ops/supervisor_probe.py`（探测与决策核心，纯函数可测）；测试 `tests/test_supervisor_probe.py`、`tests/test_service_supervisor.py`（真实进程可失败反例：伪失联→红、误属主→红）
 
 > 新增文档必须登记进本 README（REPOSITORY_STANDARDS 规则）。
