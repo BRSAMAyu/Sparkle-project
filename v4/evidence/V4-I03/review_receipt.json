@@ -4,7 +4,7 @@
   "required_reviewers": 2,
   "risk": "high",
   "note": "按舰队验收模型，由未参与实现会话在集成 SHA 独立审查；本文件由实现会话如实标 PENDING，不自签通过。",
-  "implementation_commit": "TO_BE_FILLED_AT_COMMIT",
+  "implementation_commit": "ac6f9ae5 (branch agent/v4/i03，审查请在该 SHA 或其后的集成 SHA 复验)",
   "review_challenges_preregistered": [
     "R1: 探针结构模式的覆盖/误判边界——冻结语料仅 23 条自造样本；审查可追加真实分布样本验证「单关键词不翻转」机制是否在未预见形态下成立（尤其材料不足缓解词表的「但我+替代方案」缺口，见 limitations §7）",
     "R2: 拒绝话术冻结表的完备性——SUCCESS_TALK_MARKERS 扫描只覆盖已列标记；审查可检验是否存在未列成功话术变体（中英混合/隐式成功暗示）能穿过 render_refusal",
