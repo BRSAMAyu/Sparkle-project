@@ -25,3 +25,6 @@
 
 ## L8 · 截图/视频证据未采
 `evidence_required.screenshots_video_and_semantics_if_ui` 以 widget 测试断言（键定位 + 中文文案逐字断言）承担语义证明；未采模拟器截图。原因：本会话无接入模拟器预算（六会话并发约束），且新增面均为列表行级 UI（开关行/提示行/居中失效页），测试断言已锁定结构语义。后续审查如需视觉证据，可用 F06 的 evidence 采集测试模式补采。
+
+## L9 · 集成期冲突预告（分支基点 9b5e614d，main 在分支后前进 30 提交）
+实现期间 main 前进至 034cffc7（D05 收口、S01 派审等）。`git merge-tree` 试合：冲突仅限机械文件——`app_zh.arb`/`app_en.arb`（双方各自尾部增键，解法=并集后 `flutter gen-l10n` 再生 ×3 生成文件）与 `v4/04_tasks/tasks.json`（不同卡的状态字段，解法=双保留）。代码面（settings 服务/设置屏/任务路由/新组件）与 main 新提交零交集。本卡证据锚定 base 9b5e614d / head 198d8a09（实现）/ 2e3aaea8（证据），不做中途 rebase 以免审查锚漂移；集成者按并集口径机械解决即可。
