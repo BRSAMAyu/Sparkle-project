@@ -22,6 +22,8 @@ __all__ = [
     "PROACTIVE_DAILY_CAP",
     "PROACTIVE_COOLDOWN_MINUTES",
     "PROACTIVE_REJECTION_THRESHOLD",
+    "PROACTIVE_UNIFIED_BUDGET_ENABLED",
+    "PROACTIVE_PROMPT_EFFECT_WINDOW_HOURS",
 ]
 
 
@@ -52,3 +54,12 @@ PROACTIVE_QUIET_TIMEZONE = os.getenv("PROACTIVE_QUIET_TIMEZONE", "Asia/Shanghai"
 PROACTIVE_DAILY_CAP = _int("PROACTIVE_DAILY_CAP", 3)
 PROACTIVE_COOLDOWN_MINUTES = _int("PROACTIVE_COOLDOWN_MINUTES", 240)
 PROACTIVE_REJECTION_THRESHOLD = _int("PROACTIVE_REJECTION_THRESHOLD", 2)
+
+#: V4-P01 统一主动预算闸门（nudges/spine 渠道同一预算 + 跨渠道抑制）。
+#: 默认开——闸门是**纯抑制面**（只减少发送、永不增加），回滚开关置 false
+#: 即恢复各渠道既有行为（passthrough 语义，审计面保留）。
+PROACTIVE_UNIFIED_BUDGET_ENABLED = _flag("PROACTIVE_UNIFIED_BUDGET_ENABLED", True)
+
+#: 同一 prompt_key 的「一次 effect」去重窗（小时）。仅对带 subject 的提示
+#: 生效（无 subject 的提示没有跨渠道同一性，节奏仍归各渠道既有冷却）。
+PROACTIVE_PROMPT_EFFECT_WINDOW_HOURS = _int("PROACTIVE_PROMPT_EFFECT_WINDOW_HOURS", 24)
