@@ -14800,7 +14800,7 @@
   "runStepArtifactsTitle": "Sparkle 准备好了这些",
   "understandingViewTitle": "Sparkle 对我的理解",
   "@understandingViewTitle": {},
-  "understandingViewIntro": "这里是 Sparkle 目前记住的内容和判断。每一项都能查看来源，也可以修改或删除。",
+  "understandingViewIntro": "这里是 Sparkle 目前记住的内容和判断。每一项都能查看来源，也可以修改或忘记。",
   "@understandingViewIntro": {},
   "understandingEmptyTitle": "Sparkle 还不了解你",
   "@understandingEmptyTitle": {},

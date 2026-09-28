@@ -31761,7 +31761,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get understandingViewIntro =>
-      '这里是 Sparkle 目前记住的内容和判断。每一项都能查看来源，也可以修改或删除。';
+      '这里是 Sparkle 目前记住的内容和判断。每一项都能查看来源，也可以修改或忘记。';
 
   @override
   String get understandingEmptyTitle => 'Sparkle 还不了解你';

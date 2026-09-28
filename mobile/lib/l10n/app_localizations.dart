@@ -57772,7 +57772,7 @@ abstract class AppLocalizations {
   /// No description provided for @understandingViewIntro.
   ///
   /// In zh, this message translates to:
-  /// **'这里是 Sparkle 目前记住的内容和判断。每一项都能查看来源，也可以修改或删除。'**
+  /// **'这里是 Sparkle 目前记住的内容和判断。每一项都能查看来源，也可以修改或忘记。'**
   String get understandingViewIntro;
 
   /// No description provided for @understandingEmptyTitle.
