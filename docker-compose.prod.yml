@@ -145,6 +145,11 @@ services:
       - BACKEND_URL=${BACKEND_URL}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      # FIX-556：RS256 密钥对注入（网关 auth handler 签发 / middleware 验签消费，
+      # backend/gateway/internal/config/config.go JWTPrivateKeyPEM/JWTPublicKeyPEM）。
+      # :? 硬门=缺失或为空即 compose 拒起快报，与 GRAFANA_ADMIN_PASSWORD 门同风格。
+      - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:?JWT_PRIVATE_KEY must be set (JWT RS256 私钥缺失)}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:?JWT_PUBLIC_KEY must be set (JWT RS256 公钥缺失)}
       - ADMIN_SECRET=${ADMIN_SECRET}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
@@ -202,6 +207,9 @@ services:
       - BACKEND_URL=${BACKEND_URL}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      # FIX-556：RS256 密钥对注入（同 gateway_blue）
+      - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:?JWT_PRIVATE_KEY must be set (JWT RS256 私钥缺失)}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:?JWT_PUBLIC_KEY must be set (JWT RS256 公钥缺失)}
       - ADMIN_SECRET=${ADMIN_SECRET}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
@@ -254,6 +262,10 @@ services:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - SECRET_KEY=${SECRET_KEY}
+      # FIX-556：RS256 密钥对注入（backend settings.JWT_PRIVATE_KEY/JWT_PUBLIC_KEY，
+      # core/security.py RS256 签发与双轨验签消费）；:? 硬门同网关侧。
+      - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:?JWT_PRIVATE_KEY must be set (JWT RS256 私钥缺失)}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:?JWT_PUBLIC_KEY must be set (JWT RS256 公钥缺失)}
       - PRODUCTION_URL=${PRODUCTION_URL}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
       - LLM_API_KEY=${LLM_API_KEY}
