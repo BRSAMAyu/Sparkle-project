@@ -620,6 +620,7 @@ class GalaxyStatsService:
         history: list[EvidenceHistoryEntry] = []
         presence_only: list[MasteryEvidenceType] = []
         frozen_anchor: float | None = None
+        saw_retracted = False
         for row in rows:
             reason, request_id, created_at, old_mastery = row[0], row[1], row[2], row[3]
             new_mastery = row[4] if len(row) > 4 else None
@@ -661,6 +662,19 @@ class GalaxyStatsService:
                 continue
             # Post-migration shape: branch on the server-written effect_kind.
             kind = parse_effect_kind(effect_kind)
+            if kind is MasteryEffectKind.RETRACTED:
+                # V4-D03 retraction tombstone: the row's observation never
+                # fuses again (no resurrection path for retracted evidence),
+                # and it contributes no presence. Its old_mastery remains the
+                # honest "stored value before this row" fact, so it still
+                # freezes the replay anchor when no earlier effective row
+                # exists — removing the earliest evidence must fall back to
+                # its pre-effect baseline, never to the post-fusion stored
+                # value (which would bake the retracted effect in).
+                if frozen_anchor is None:
+                    frozen_anchor = None if old_mastery is None else float(old_mastery)
+                saw_retracted = True
+                continue
             if kind is MasteryEffectKind.PROJECTION:
                 # Shadow/trace rows (spark time path, sprint completions,
                 # client self-report syncs, forged reason free-strings):
@@ -708,6 +722,12 @@ class GalaxyStatsService:
                 )
             )
         if not history and not presence_only:
+            if saw_retracted and frozen_anchor is not None:
+                # V4-D03: every evidence row was retracted — the belief falls
+                # back to the frozen pre-evidence baseline (max uncertainty),
+                # NEVER to the stored mastery (that value still contains the
+                # retracted effects; returning it would resurrect them).
+                return recompute_evidence_state(frozen_anchor, [])
             return MasteryBelief(mean=current_mastery)
         # Anchor fallback (no effect row / anchor column unreadable) keeps the
         # stored value, i.e. the pre-fix behavior for those shapes only.

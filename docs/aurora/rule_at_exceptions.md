@@ -42,3 +42,5 @@
 
 
 - `backend/app/services/analytics/ope_gatekeeper.py` — 正/负信号分类门（orphan-by-design）：零运行时消费者、测试独占（test_ope_gatekeeper.py）——wt777 批十一触碰进 diff 范围后 AT 守卫暴露的预存孤儿（V3-FIX-537 登记 2026-09-28）；预留消费方=O-PE 分析/成本门面（O-07 族扩展）。接线时移除本条；裁决不建则整体退役
+
+- `backend/app/services/retraction_recompute_service.py` — V4-D03 撤回派生影响与投影重算服务面（orphan-by-design）：结果撤回的生产触发方按卡序接线（结果撤回 UI/FSM 入口、重算 job 调度归消费卡）；本卡交付登记/栅栏重算/读门唯一 IO 入口 + 契约测试钉死（tests/services/test_retraction_recompute_service.py），同 community_context_boundary 先例。接线时移除本条
