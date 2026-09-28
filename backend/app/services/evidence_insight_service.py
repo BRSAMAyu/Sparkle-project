@@ -1,6 +1,6 @@
 """Evidence-driven insight cards（D-07）——洞察呈现层的派生真源投影。
 
-设计纪律（卡 D-07 / Forbidden）：
+设计纪律（卡 D-07 / Forbidden；V4-D05 呈现契约增量）：
 - **不重建真源**：三类洞察全部派生自已交付面——摩擦模式读 D-05
   intervention lifecycle 事件表（friction_tag 记录时点固化）；"有帮助的应对"
   读 D-05 ``association_summary``（保守关联摘要，非因果）；目标进展读
@@ -16,6 +16,20 @@
 - **纠正即更新**：卡片是每次请求从真源现算的派生视图，不落陈旧快照；
   纠正/新事实（完成任务、反馈干预、关联 outcome）落库后的下一次读取
   如实反映。
+
+V4-D05 呈现契约（``insight.presentation.v1``，全部出口过门）：
+- **夸大表述门**（``exaggeration_gate``）：每张卡出面前过 M-06 因果断言扫描
+  + 数值面（因果/成效措辞×百分比、部分关联子集上的百分比）——违例卡整体
+  扣下并进 ``meta.presentation_gate_dropped``（响亮失败，不静默改写）；
+- **样本量先去重**（D02-R1 C-3 消费方义务）：呈现侧样本量按
+  ``attr_<sha256[:32]>`` 样本身份先行去重——重放投递如实计 raw、永不放大
+  样本量（``uncertainty.duplicate_outcome_samples_dropped`` 审计可见）；
+- **单主建议信封**（``next_step``）：一条观察 ≤ 一个主建议；``user_can_reject``
+  恒 True、``reject_penalty`` 恒 "none"（拒绝路径真实存在且零惩罚）；
+- **理解宣称门**（``understanding``）：无数据/有 missing+censored 不出
+  「充分理解」（``claim_allowed=False`` + 封闭理由，档位定性）；
+- **回访记录**（``data.revisit``）：上次建议是否相关由真实事件证明
+  （响应类型 + 去重后链接 outcome 样本身份），无事件不出回访、不套模板。
 """
 
 from __future__ import annotations
@@ -27,19 +41,38 @@ from uuid import UUID
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.insight_presentation import (
+    REASON_NO_DATA_NO_CLAIM,
+    SampleDedup,
+    build_revisit_record,
+    build_suggestion_envelope,
+    exaggeration_gate,
+    presentation_sample_id,
+    understanding_claim_gate,
+)
 from app.core.intervention_lifecycle import (
     EVIDENCE_TIER_INSUFFICIENT,
     LifecycleEventType,
     SliceSummary,
+    resolve_observation_status,
 )
 from app.models.goal import Goal
 from app.models.intervention_lifecycle import InterventionLifecycleEvent
 from app.models.task import Task, TaskStatus
+from app.models.user import User
 from app.services.intervention_lifecycle_service import InterventionLifecycleService
 
+#: 五要素卡契约版本不变（v1：fact/interpretation/uncertainty/evidence/implication
+#: 结构与既有消费面向后兼容）；V4-D05 呈现契约增量以 payload 根级
+#: ``presentation_schema: insight.presentation.v1`` 独立版本化（附加字段：
+#: next_step/understanding/revisit）。
 _SCHEMA_VERSION = "insights.evidence_cards.v1"
 _DEFAULT_WINDOW_DAYS = 30
 _EVIDENCE_REF_CAP = 5
+
+#: 呈现侧样本量只认方向观察（与 D-05 ``SliceSummary.n_observed`` 同口径：
+#: positive/negative；neutral/censored/unknown 永不进样本量）。
+_DIRECTIONAL_POLARITIES = ("positive", "negative")
 
 #: 呈现层深链（应用内路由；与 mobile/lib/features/insights/insights_routes.dart
 #: 和 goal 路由对齐）。
@@ -49,6 +82,7 @@ _RESPONSE_EVENT_TYPES = (
     LifecycleEventType.ACCEPTED.value,
     LifecycleEventType.EDITED.value,
     LifecycleEventType.REJECTED.value,
+    LifecycleEventType.STARTED.value,
 )
 
 #: 无任何证据时的诚实空态（含不生成人格结论的口径声明）。
@@ -57,6 +91,12 @@ _EMPTY_NOTE = (
     "outcomes, no active goal with a task ledger; no interpretation or persona "
     "conclusions generated without data"
 )
+
+#: 洞察卡的定性理解档（V4-D05：无数据/有 missing+censored 不出「充分理解」；
+#: 档位由 understanding_claim_gate 判定，文案组合在移动端 l10n 完成）。
+_UNDERSTANDING_BAND_ALLOWED = "qualitative_only"
+_UNDERSTANDING_BAND_INCOMPLETE = "incomplete_evidence"
+_UNDERSTANDING_BAND_NO_DATA = "no_data"
 
 
 class EvidenceInsightService:
@@ -76,32 +116,200 @@ class EvidenceInsightService:
         since = now_naive - timedelta(days=window_days)
 
         cards: list[dict[str, Any]] = []
+        cards.extend(await self._friction_pattern_cards(user_id=UUID(str(user_id)), since=since))
         cards.extend(
-            await self._friction_pattern_cards(user_id=UUID(str(user_id)), since=since)
-        )
-        cards.extend(
-            await self._interventions_that_helped_cards(
-                user_id=UUID(str(user_id)), since=since, now_naive=now_naive
-            )
+            await self._interventions_that_helped_cards(user_id=UUID(str(user_id)), since=since, now_naive=now_naive)
         )
         cards.extend(await self._goal_progress_cards(user_id=UUID(str(user_id))))
 
+        # V4-D05 夸大表述门：每张卡出面前过门（M-06 因果断言扫描 + 数值面）。
+        # 违例卡整体扣下并显式登记（响亮失败，不静默改写、不静默丢弃）。
+        final_cards: list[dict[str, Any]] = []
+        gate_dropped: list[dict[str, Any]] = []
+        for card in cards:
+            verdict = exaggeration_gate(
+                card,
+                n_linked=self._card_linked_count(card),
+                n_denominator=self._card_denominator_count(card),
+            )
+            if not verdict.allowed:
+                gate_dropped.append({"id": card.get("id"), "reasons": list(verdict.reasons)})
+                continue
+            # 单主建议信封：一条观察 ≤ 一个主建议；拒绝路径恒存在且零惩罚。
+            card["next_step"] = build_suggestion_envelope(
+                observation_id=str(card.get("id", "")),
+                candidates=[card["implication"]],
+            ).to_dict()
+            # 理解宣称门：无数据/有 missing+censored 不出「充分理解」。
+            card["understanding"] = self._understanding_block(card)
+            final_cards.append(card)
+
+        revisit = await self._build_revisit(user_id=UUID(str(user_id)), since=since, now_naive=now_naive)
+
         payload: dict[str, Any] = {
-            "cards": cards,
+            "cards": final_cards,
             "window_days": window_days,
             "generated_at": now_naive.isoformat(),
+            "revisit": revisit.to_dict(),
+            "presentation_schema": "insight.presentation.v1",
         }
         meta: dict[str, Any] = {"schema_version": _SCHEMA_VERSION}
-        if not cards:
+        if not final_cards:
             meta["note"] = _EMPTY_NOTE
+        if gate_dropped:
+            meta["presentation_gate_dropped"] = gate_dropped
         return {"data": payload, "meta": meta}
+
+    # ------------------------------------------------------------------
+    # V4-D05 呈现契约辅助（门参数、理解档、回访）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _card_linked_count(card: dict[str, Any]) -> int:
+        """卡的「已关联」分子（夸大表述门的部分关联检查用）。"""
+        kind = card.get("kind")
+        fact = card.get("fact") or {}
+        if kind == "friction_pattern":
+            return int(fact.get("accepted", 0)) + int(fact.get("edited", 0)) + int(fact.get("rejected", 0))
+        if kind == "interventions_that_helped":
+            return int(fact.get("n_observed", 0))
+        if kind == "goal_progress":
+            return int((fact.get("ledger") or {}).get("completed", 0))
+        return 0
+
+    @staticmethod
+    def _card_denominator_count(card: dict[str, Any]) -> int:
+        """卡的公开分母（三例只有两例关联 → 分母 3 必须随行）。"""
+        kind = card.get("kind")
+        fact = card.get("fact") or {}
+        uncertainty = card.get("uncertainty") or {}
+        if kind == "friction_pattern":
+            return int(fact.get("exposures", 0))
+        if kind == "interventions_that_helped":
+            return int(fact.get("n_exposed", 0))
+        if kind == "goal_progress":
+            return int(uncertainty.get("samples", 0))
+        return 0
+
+    @staticmethod
+    def _understanding_block(card: dict[str, Any]) -> dict[str, Any]:
+        """理解宣称门出口（结构化档位 + 封闭理由；本服务任何档位都不产理解宣称文案）。"""
+        uncertainty = card.get("uncertainty") or {}
+        samples = int(uncertainty.get("samples", 0) or 0)
+        missing = int(uncertainty.get("not_determinable", 0) or 0) + int(uncertainty.get("n_unknown", 0) or 0)
+        censored = int(uncertainty.get("not_yet_observed", 0) or 0) + int(uncertainty.get("censored_total", 0) or 0)
+        verdict = understanding_claim_gate(samples=samples, missing=missing, censored=censored)
+        if not verdict.allowed:
+            band = (
+                _UNDERSTANDING_BAND_NO_DATA
+                if REASON_NO_DATA_NO_CLAIM in verdict.reasons
+                else _UNDERSTANDING_BAND_INCOMPLETE
+            )
+        else:
+            band = _UNDERSTANDING_BAND_ALLOWED
+        return {
+            "claim_allowed": verdict.allowed,
+            "band": band,
+            "reasons": list(verdict.reasons),
+            "samples": samples,
+            "missing": missing,
+            "censored": censored,
+        }
+
+    async def _build_revisit(self, *, user_id: UUID, since: datetime, now_naive: datetime) -> Any:
+        """回访记录：上次建议（窗口内最近一次 exposure）是否相关的真实事件证明。
+
+        无 exposure → ``no_prior_suggestion``（不编造回访）；判定消费 D-05
+        ``resolve_observation_status``（窗口/删失唯一权威）+ 呈现侧样本身份去重。
+        """
+        exposure = (
+            (
+                await self.db.execute(
+                    select(InterventionLifecycleEvent)
+                    .where(
+                        and_(
+                            InterventionLifecycleEvent.not_deleted_filter(),
+                            InterventionLifecycleEvent.user_id == user_id,
+                            InterventionLifecycleEvent.event_type == LifecycleEventType.EXPOSED.value,
+                            InterventionLifecycleEvent.occurred_at >= since,
+                        )
+                    )
+                    .order_by(InterventionLifecycleEvent.occurred_at.desc())
+                    .limit(1)
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if exposure is None:
+            return build_revisit_record(
+                decision_id="",
+                intervention_type="",
+                friction_tag="",
+                shown_at=None,
+                response=None,
+                outcome_ids=(),
+                observation_status=None,
+            )
+
+        rows = list(
+            (
+                await self.db.execute(
+                    select(InterventionLifecycleEvent).where(
+                        and_(
+                            InterventionLifecycleEvent.not_deleted_filter(),
+                            InterventionLifecycleEvent.user_id == user_id,
+                            InterventionLifecycleEvent.decision_id == exposure.decision_id,
+                            InterventionLifecycleEvent.event_type != LifecycleEventType.EXPOSED.value,
+                        )
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        response_rows = [r for r in rows if r.event_type in _RESPONSE_EVENT_TYPES]
+        # 拒绝是用户的一等决定（最高优先）；否则取最近一次响应。
+        rejected = [r for r in response_rows if r.event_type == LifecycleEventType.REJECTED.value]
+        response: str | None
+        if rejected:
+            response = LifecycleEventType.REJECTED.value
+        else:
+            response = max(response_rows, key=lambda r: r.occurred_at).event_type if response_rows else None
+        outcome_ids = [
+            r.outcome_ref for r in rows if r.event_type == LifecycleEventType.OUTCOME_OBSERVED.value and r.outcome_ref
+        ]
+
+        user_last_active = await self._resolve_last_active(user_id)
+        observation = resolve_observation_status(
+            exposed_at=exposure.occurred_at,
+            window_hours=InterventionLifecycleService._window_hours_of(exposure),
+            outcome_times=[r.occurred_at for r in rows if r.event_type == LifecycleEventType.OUTCOME_OBSERVED.value],
+            now=now_naive,
+            user_last_active_at=user_last_active,
+        )
+        return build_revisit_record(
+            decision_id=exposure.decision_id,
+            intervention_type=exposure.intervention_type,
+            friction_tag=exposure.friction_tag or "unattributed",
+            shown_at=exposure.occurred_at,
+            response=response,
+            outcome_ids=outcome_ids,
+            observation_status=observation,
+        )
+
+    async def _resolve_last_active(self, user_id: UUID) -> datetime | None:
+        """活跃面解析（D-05 ``_resolve_last_active`` 同源：users.last_login_at）。"""
+        row = (await self.db.execute(select(User.last_login_at).where(User.id == user_id))).first()
+        value: datetime | None = row[0] if row else None
+        if value is None:
+            return None
+        return value.replace(tzinfo=None) if value.tzinfo is None else value
 
     # ------------------------------------------------------------------
     # ① friction pattern——D-05 lifecycle 事件表按 friction_tag 聚合
     # ------------------------------------------------------------------
-    async def _friction_pattern_cards(
-        self, *, user_id: UUID, since: datetime
-    ) -> list[dict[str, Any]]:
+    async def _friction_pattern_cards(self, *, user_id: UUID, since: datetime) -> list[dict[str, Any]]:
         rows = list(
             (
                 await self.db.execute(
@@ -131,9 +339,7 @@ class EvidenceInsightService:
         if not exposures_by_tag:
             return []
 
-        ranked = sorted(
-            exposures_by_tag.items(), key=lambda item: (-len(item[1]), item[0])
-        )
+        ranked = sorted(exposures_by_tag.items(), key=lambda item: (-len(item[1]), item[0]))
         most_frequent_tag = ranked[0][0] if len(ranked) > 1 and len(ranked[0][1]) >= 2 else None
 
         cards: list[dict[str, Any]] = []
@@ -142,13 +348,9 @@ class EvidenceInsightService:
             qualifiers = ["counts_only_from_lifecycle_events"]
             if len(exposures) < 3:
                 qualifiers.append("small_sample")
-            decision_refs = [
-                exposure.decision_id for exposure in exposures[:_EVIDENCE_REF_CAP]
-            ]
+            decision_refs = [exposure.decision_id for exposure in exposures[:_EVIDENCE_REF_CAP]]
             interpretation: dict[str, Any] = {"friction_tag": tag}
-            interpretation["role"] = (
-                "most_frequent" if most_frequent_tag == tag else "observed"
-            )
+            interpretation["role"] = "most_frequent" if most_frequent_tag == tag else "observed"
             cards.append(
                 {
                     "id": f"friction_pattern:{tag}",
@@ -187,24 +389,25 @@ class EvidenceInsightService:
         self, *, user_id: UUID, since: datetime, now_naive: datetime
     ) -> list[dict[str, Any]]:
         lifecycle = InterventionLifecycleService(self.db)
-        summary = await lifecycle.association_summary(
-            user_id=user_id, since=since, now=now_naive
-        )
+        summary = await lifecycle.association_summary(user_id=user_id, since=since, now=now_naive)
+        # D02-R1 C-3 呈现侧义务：样本量按样本身份先行去重（重放投递只如实计
+        # raw，永不放大去重后样本量）。
+        directional_by_signature = await self._directional_outcome_rows(user_id=user_id, since=since)
         cards: list[dict[str, Any]] = []
         for slice_summary in summary.slices:
             # 证据不足的切片不发"有帮助"结论（无证据不做断言）。
-            if (
-                slice_summary.evidence_strength == EVIDENCE_TIER_INSUFFICIENT
-                or slice_summary.n_positive <= 0
-            ):
+            if slice_summary.evidence_strength == EVIDENCE_TIER_INSUFFICIENT or slice_summary.n_positive <= 0:
                 continue
             signature = slice_summary.signature
-            refs = await self._decision_refs_for_signature(
-                user_id=user_id, since=since, slice_summary=slice_summary
-            )
+            refs = await self._decision_refs_for_signature(user_id=user_id, since=since, slice_summary=slice_summary)
             qualifiers = ["correlation_not_causation", "counts_only_from_lifecycle_events"]
             if slice_summary.n_observed < 3:
                 qualifiers.append("small_sample")
+            # 呈现侧样本量 = 去重后的方向观察（D02-R1 C-3）。
+            outcome_rows = directional_by_signature.get((signature.intervention_type, signature.friction_tag), [])
+            dedup = self._dedupe_slice_samples(outcome_rows)
+            if dedup.duplicates_dropped > 0:
+                qualifiers.append("replayed_deliveries_excluded_from_sample")
             censored_not_due = slice_summary.n_censored_not_yet_due
             # V3-FIX-357-A：删失语义拆分（D-05「censored/unknown 语义明确区分」
             # 验收①的呈现面落地）——只有 not_yet_due 才是「结果未到期」；
@@ -216,10 +419,7 @@ class EvidenceInsightService:
             )
             cards.append(
                 {
-                    "id": (
-                        f"interventions_that_helped:{signature.intervention_type}"
-                        f":{signature.friction_tag}"
-                    ),
+                    "id": (f"interventions_that_helped:{signature.intervention_type}" f":{signature.friction_tag}"),
                     "kind": "interventions_that_helped",
                     "fact": {
                         "intervention_type": signature.intervention_type,
@@ -238,7 +438,11 @@ class EvidenceInsightService:
                     },
                     "uncertainty": {
                         "qualifiers": qualifiers,
-                        "samples": slice_summary.n_observed,
+                        # 呈现侧样本量 = 按样本身份去重后的方向观察数
+                        # （重放投递如实计 raw，不进样本量）。
+                        "samples": dedup.n_unique,
+                        "outcome_samples_raw": dedup.n_raw,
+                        "duplicate_outcome_samples_dropped": dedup.duplicates_dropped,
                         "not_yet_observed": censored_not_due,
                         "not_determinable": not_determinable,
                     },
@@ -261,6 +465,53 @@ class EvidenceInsightService:
             )
         return cards
 
+    async def _directional_outcome_rows(
+        self, *, user_id: UUID, since: datetime
+    ) -> dict[tuple[str, str], list[InterventionLifecycleEvent]]:
+        """窗口内方向观察行按 (intervention_type, friction_tag) 分组（呈现侧去重源）。"""
+        rows = list(
+            (
+                await self.db.execute(
+                    select(InterventionLifecycleEvent).where(
+                        and_(
+                            InterventionLifecycleEvent.not_deleted_filter(),
+                            InterventionLifecycleEvent.user_id == user_id,
+                            InterventionLifecycleEvent.occurred_at >= since,
+                            InterventionLifecycleEvent.event_type == LifecycleEventType.OUTCOME_OBSERVED.value,
+                            InterventionLifecycleEvent.outcome_polarity.in_(_DIRECTIONAL_POLARITIES),
+                        )
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        grouped: dict[tuple[str, str], list[InterventionLifecycleEvent]] = {}
+        for row in rows:
+            grouped.setdefault((row.intervention_type, row.friction_tag or "unattributed"), []).append(row)
+        return grouped
+
+    @staticmethod
+    def _dedupe_slice_samples(rows: list[InterventionLifecycleEvent]) -> SampleDedup:
+        """方向观察行 → 按 (decision_id, outcome_ref) 样本身份去重（``attr_<sha256[:32]>``）。
+
+        同一 decision 的重放投递恒产同样本身份（去重）；不同 decision 链接同一
+        outcome 是两条真实链接（不去重）。
+        """
+        seen: set[str] = set()
+        raw = 0
+        for row in rows:
+            if not row.outcome_ref:
+                continue
+            raw += 1
+            seen.add(presentation_sample_id(decision_id=row.decision_id, outcome_id=row.outcome_ref))
+        return SampleDedup(
+            n_raw=raw,
+            n_unique=len(seen),
+            unique_sample_ids=tuple(sorted(seen)),
+            duplicates_dropped=max(0, raw - len(seen)),
+        )
+
     async def _decision_refs_for_signature(
         self, *, user_id: UUID, since: datetime, slice_summary: SliceSummary
     ) -> list[str]:
@@ -273,10 +524,8 @@ class EvidenceInsightService:
                         InterventionLifecycleEvent.not_deleted_filter(),
                         InterventionLifecycleEvent.user_id == user_id,
                         InterventionLifecycleEvent.occurred_at >= since,
-                        InterventionLifecycleEvent.event_type
-                        == LifecycleEventType.EXPOSED.value,
-                        InterventionLifecycleEvent.intervention_type
-                        == signature.intervention_type,
+                        InterventionLifecycleEvent.event_type == LifecycleEventType.EXPOSED.value,
+                        InterventionLifecycleEvent.intervention_type == signature.intervention_type,
                         InterventionLifecycleEvent.goal_type == signature.goal_type,
                         InterventionLifecycleEvent.friction_tag == signature.friction_tag,
                     )
@@ -295,13 +544,12 @@ class EvidenceInsightService:
             return []
 
         total_result = await self.db.execute(
-            select(func.count())
-            .select_from(Task)
-            .where(and_(Task.plan_id == goal.plan_id, Task.deleted_at.is_(None)))
+            select(func.count()).select_from(Task).where(and_(Task.plan_id == goal.plan_id, Task.deleted_at.is_(None)))
         )
         done_result = await self.db.execute(
             select(func.count())
-            .select_from(Task).where(
+            .select_from(Task)
+            .where(
                 and_(
                     Task.plan_id == goal.plan_id,
                     Task.deleted_at.is_(None),
@@ -313,9 +561,7 @@ class EvidenceInsightService:
         completed = int(done_result.scalar() or 0)
 
         progress_column = getattr(goal, "progress", None)
-        progress_value = (
-            float(progress_column) if isinstance(progress_column, (int, float)) else None
-        )
+        progress_value = float(progress_column) if isinstance(progress_column, (int, float)) else None
 
         fact: dict[str, Any] = {
             "goal_id": str(goal.id),
