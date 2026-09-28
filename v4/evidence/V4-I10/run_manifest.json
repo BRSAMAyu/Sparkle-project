@@ -1,0 +1,95 @@
+{
+  "task": "V4-I10 根请求全调用计量与label真实性",
+  "agent": "wtI10 (agent/v4/i10)",
+  "captured_at_utc": "2026-09-28T17:45:00Z/18:25:00Z",
+  "source": {
+    "worktree": "/Users/brsama/code/GitHub/wtI10",
+    "branch": "agent/v4/i10",
+    "base_sha": "c67e45a32c87aa318ca585eb005852ac520d1eca",
+    "never_pushed": true,
+    "code_changes_by_this_task": [
+      "backend/app/orchestration/token_tracker.py (靶2: estimate_model_cost_usd 单一核价权威 + record_usage additive 参数)",
+      "backend/app/orchestration/response_builder.py (靶3: bisect_no_generation_with_tokens 检出器/标签二分 + _cleanup rescue 折算/未核价落账)",
+      "backend/app/agents/standard_workflow.py (靶4: rescue 子调用计量 + 靶1: usage 回执真实成本)",
+      "backend/app/core/metrics.py (3 个计量可见性计数器)",
+      "backend/tests/unit/test_v4_i10_metering_truth.py (新增 19 测)",
+      "v4/04_tasks/tasks.json (I10 状态更新)",
+      "v4/evidence/V4-I10/* (本目录)"
+    ]
+  },
+  "environment": {
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.11.15 (/Users/brsama/code/GitHub/Sparkle-project/backend/.venv，worktree 共享 venv)",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2",
+    "ruff": "0.15.8",
+    "buf": "host toolchain (make proto-gen 用于 worktree 生成 app/gen，产物不入库)",
+    "env_source": "无 live 栈依赖；pytest 仅需 SECRET_KEY 环境变量（test-secret-key-for-ci-only）"
+  },
+  "model_usage_disclosure": {
+    "real_model_calls_by_this_task": 0,
+    "tests_all_mock": true,
+    "pricing_source": "llm_router 注册表 cost_per_1k_tokens + legacy OpenAI 价目（代码内常量，仅对显式 legacy 键生效）；未发起任何真实上游调用，无价格来源需要外部核对"
+  },
+  "commands": [
+    {
+      "purpose": "新测试 + 既有计量/计费回归",
+      "cmd": "cd backend && SECRET_KEY=... PYTHONPATH=. python -m pytest tests/unit/test_v4_i10_metering_truth.py tests/unit/test_metering_model_attribution.py tests/unit/test_billing_worker.py -q",
+      "exit_code": 0,
+      "result": "33 passed"
+    },
+    {
+      "purpose": "orchestration 全量（response_builder/orchestrator/execution_engine/run_ledger 面）",
+      "cmd": "cd backend && ... python -m pytest tests/orchestration -q",
+      "exit_code": 0,
+      "result": "208 passed, 7 warnings"
+    },
+    {
+      "purpose": "相邻计量面（ai_ops dashboard/llm_quota/llm_security_wrapper/prompt_token/request_validator/q06 fastfail/first_chunk/spine）",
+      "cmd": "cd backend && ... python -m pytest tests/unit/test_ai_ops_dashboard.py tests/unit/test_llm_quota.py tests/unit/test_llm_security_wrapper.py tests/unit/test_llm_security_wrapper_forwarding.py tests/unit/test_prompt_token_estimation.py tests/unit/test_request_validator_quota_flag.py tests/unit/test_q06_resilience_fastfail.py tests/unit/test_first_text_chunk_delivery.py tests/unit/test_signal_spine.py tests/unit/test_spine_orchestrator.py -q",
+      "exit_code": 0,
+      "result": "1086 passed, 39 warnings"
+    },
+    {
+      "purpose": "agents 面（standard_workflow 所在包）",
+      "cmd": "cd backend && ... python -m pytest tests/agents -q",
+      "exit_code": 0,
+      "result": "5 passed"
+    },
+    {
+      "purpose": "phase5 北极星验收（B06 引用的集成面）",
+      "cmd": "cd backend && ... python -m pytest tests/integration/test_phase5_orchestrator_north_star_acceptance.py -q",
+      "exit_code": 0,
+      "result": "1 passed, 1 skipped（skip 为既有条件跳过，非本卡引入）"
+    },
+    {
+      "purpose": "ruff 全 app + 新测试",
+      "cmd": "cd backend && python -m ruff check app/ tests/unit/test_v4_i10_metering_truth.py",
+      "exit_code": 0,
+      "result": "All checks passed!"
+    },
+    {
+      "purpose": "mypy 零漂移（stash 基线对照，干净 .mypy_cache）",
+      "cmd": "python -m mypy app/orchestration/token_tracker.py app/orchestration/response_builder.py app/core/metrics.py app/services/billing_worker.py （变更前后各跑一次，error 集合 diff）",
+      "exit_code": 0,
+      "result": "前后各 31 条既有错误，diff 为空 = 零新增"
+    },
+    {
+      "purpose": "mypy 零漂移（standard_workflow scope）",
+      "cmd": "python -m mypy app/agents/standard_workflow.py （变更前后对照）",
+      "exit_code": 0,
+      "result": "前后各 30 条既有错误，diff 为空 = 零新增"
+    },
+    {
+      "purpose": "执行包自检",
+      "cmd": "python v4/tools/validate_pack.py",
+      "exit_code": 0,
+      "result": "pass: true, errors: []"
+    }
+  ],
+  "budget": {
+    "HEAVY_tokens_used": 0,
+    "real_upstream_llm_calls": 0,
+    "scope": "纯 backend；零真模型；全部测试 mock/stub/sqlite"
+  }
+}

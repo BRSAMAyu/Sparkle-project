@@ -1,0 +1,29 @@
+{
+  "task": "V4-I10 根请求全调用计量与label真实性",
+  "agent": "wtI10 (agent/v4/i10)",
+  "implementation_sha": "见 commit feat(v4): I10（agent/v4/i10 分支，未 push）",
+  "base_sha": "c67e45a32c87aa318ca585eb005852ac520d1eca",
+  "self_test": {
+    "status": "PASS",
+    "new_tests": 19,
+    "affected_surface": 1333,
+    "failed": 0,
+    "details": "test_results.json"
+  },
+  "independent_review": {
+    "required_reviewers": 2,
+    "completed_reviews": 0,
+    "status": "PENDING_INDEPENDENT_REVIEW",
+    "note": "高风险卡（independent_reviewers=2）。自称完成不算完成：本卡实现+自测完毕，等待 2 位独立未参与会话审查 + 集成 SHA 复验后由协调面置 DONE_REVIEWED。"
+  },
+  "challenges_open": [],
+  "redline_check": {
+    "pure_backend": true,
+    "zero_heavy": true,
+    "tests_all_mock_no_real_model": true,
+    "no_proto_change": true,
+    "no_db_migration": true,
+    "no_generated_code_committed": true,
+    "never_pushed": true
+  }
+}
