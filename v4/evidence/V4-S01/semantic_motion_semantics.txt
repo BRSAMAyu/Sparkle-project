@@ -1,0 +1,9 @@
+# V4-S01 语义乐谱组件语义证据（两变体同 fixture）
+## baseline_settled（动画落定终态）
+- label="提案内容：先看一个相近示例" rect=Rect.fromLTRB(0.0, 0.0, 185.3, 20.0) textDirection=TextDirection.ltr
+- label="任务已更新" rect=Rect.fromLTRB(0.0, 0.0, 71.3, 20.0) textDirection=TextDirection.ltr
+- label="证据已登记" rect=Rect.fromLTRB(0.0, 0.0, 71.3, 20.0) textDirection=TextDirection.ltr
+## reduce_motion_static（静态分支）
+- label="提案内容：先看一个相近示例" rect=Rect.fromLTRB(0.0, 0.0, 185.3, 20.0) textDirection=TextDirection.ltr
+- label="任务已更新" rect=Rect.fromLTRB(0.0, 0.0, 71.3, 20.0) textDirection=TextDirection.ltr
+- label="证据已登记" rect=Rect.fromLTRB(0.0, 0.0, 71.3, 20.0) textDirection=TextDirection.ltr

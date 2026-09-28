@@ -1,0 +1,83 @@
+{
+  "task": "V4-S01",
+  "date": "2026-09-29",
+  "toolchain": "flutter 3.41.3 stable / darwin 25.6.0 arm64",
+  "suites": [
+    {
+      "id": "C2",
+      "command": "flutter test test/core/design/semantic_motion_s01_test.dart test/core/design/semantic_motion_s01_evidence_test.dart",
+      "exit_code": 0,
+      "result": "23 passed, 0 failed, 0 skipped",
+      "denominator": "本卡全部新用例（22 主套 + 1 证据采集）；每验收面一正一反 + 控制组探针活性",
+      "groups": {
+        "A_预算可测": ["A+ 默认预算逐槽落在乐谱窗口且校验零违例", "A- 变异预算（press 200ms/enter 300ms/milestone 900ms）被 validateAgainstScore 具名判负 ×3"],
+        "B_按压面": ["B+ 80ms 在航可测：40ms 处 scale ∈ (0.97,1.0)、落定 0.97", "B+ 静态分支：disableAnimations 无 AnimatedScale、点按仍触发", "B- 控制组：常规路径 AnimatedScale 在场"],
+        "C_提案enter": ["C+ 首帧透明度 0 → 100ms 在航 → 落定 1", "C+ 静态分支首帧完整呈现零动画壳零 ticker", "C- 控制组：常规路径首帧透明度 <1"],
+        "D_回执state": ["D+ 首挂载不播替换；key 变化播一次 160ms", "D+ 同 key 重投（恢复重放）下一帧即终态（不重播）", "D+ 取消内容替换后无 PixelSuccessBadge、零残留 ticker", "D+ 静态分支即时替换"],
+        "E_证据印章": ["E+ 160ms 压印在航→落定全尺寸 scale==1.0；GlobalParticleCounter 零占用", "E+ 静态分支全尺寸即时零 ticker", "E- 控制组：首帧 <1 且粒子仍为 0"],
+        "F_无后台无限动画": ["F+ 语义族+按压面 settle 后 transientCallbackCount==0 且追加三帧仍 0、粒子 0", "F- 控制组：repeat 探针同法判 ≥1", "F+ 源码棘轮：两个新表面剥注释后禁 .repeat( 与 AnimationController"],
+        "G_滚动正文不降帧": ["G+ 60 行语义族列表滚帧 avg 18711us < 70000us 阈值；settle 后零 ticker（正文不被持续锁帧）", "G- 控制组：列表混入 repeat 行 settle 后 ticker ≥1"],
+        "H_帧时间对照": ["H+ 动画路 avg 57.4us 与静态基线 avg 28.4us 同批落证，双双 < 33334us 门（env S01_FRAME_US 可放宽）", "H- 控制组：静态基线在航期零 ticker（基线确为静止路径）"]
+      }
+    },
+    {
+      "id": "C3",
+      "command": "flutter test test/core/design/",
+      "exit_code": 0,
+      "result": "237 passed, 0 failed, 0 skipped",
+      "denominator": "design 域全量（214 既有 + 23 本卡）——SparklePressable 节奏改动与静态分支未破坏任何既有断言（classic 降级、U02 两档、F06 a11y 原样全绿）"
+    },
+    {
+      "id": "C4",
+      "command": "flutter test test/widget/mirofish_wiring_finish_test.dart test/widget/text_layout_regression_test.dart test/features/chat/presentation/widgets/growth_card_action_pill_test.dart test/features/memory/presentation/widgets/evidence_cards_test.dart test/shared/widgets/action_proposal/awaiting_step_resume_card_test.dart",
+      "exit_code": 0,
+      "result": "56 passed, 0 failed, 0 skipped",
+      "denominator": "SparklePressable 消费面直接相关套件（语义 pill/任务 pill/AI 状态胶囊/聊天/memory/plan/shared）"
+    },
+    {
+      "id": "C5",
+      "command": "flutter test test/performance/",
+      "exit_code": 0,
+      "result": "19 passed, 0 failed（复跑）",
+      "denominator": "帧时/滚帧/构建门邻近面",
+      "failures_fixed": [
+        {
+          "observed": "合并批跑首试 chat list build 墙钟 bench 1 败（260ms 阈值，bench 构建纯 ListView+ListTile，不含本卡任何改动面）",
+          "verification": "单测复跑过、全量复跑 +19 全绿；bench 为 CPU 墙钟口径（wt296 判例：阈值 env 可调、门不删），抖动与后台批处理负载相关，非本卡回归",
+          "classification": "环境性墙钟抖动（如实登记，不作为通过证据的一部分引用首试）"
+        }
+      ]
+    },
+    {
+      "id": "C6",
+      "command": "flutter test test/features/home/presentation test/features/home/progress_consistency_f9_test.dart",
+      "exit_code": 0,
+      "result": "106 passed, 0 failed, 0 skipped",
+      "denominator": "home 域（dashboard 卡族 = SparklePressable 家族消费屏）"
+    }
+  ],
+  "acceptance_mapping": [
+    {
+      "acceptance": "无后台无限动画和全屏粒子",
+      "positive": "F+：S01 全部新面 settle 后零持续 ticker、追加空转帧仍 0；GlobalParticleCounter 零占用；源码棘轮禁 repeat/AnimationController",
+      "negative": "F-/G-/B-/C-/E- 控制组证明各零值断言非恒真（repeat 探针、在航探针、AnimatedScale 在场探针）",
+      "boundary": "存量 48 文件 repeat 清单为 U15 长尾面，本卡不冒充全 app 达成（limitations #1）"
+    },
+    {
+      "acceptance": "cancel/replay不重播成功；enter/state/milestone预算可测",
+      "positive": "D+ 同 key 重投下一帧即终态（不重播）；D+ 取消内容替换后树中无成功徽章、零 ticker；A+ 预算逐槽过乐谱窗口校验（enter 200∈[160,220]、state/stamp 160、press 80、milestone 650≤650，里程碑与 PixelSuccessBadge 既有 650ms 同源）",
+      "negative": "A- 变异预算具名判负 ×3；D 组首挂载/重投探针可区分",
+      "boundary": "成功声/触去重归 F03 ExperienceFeedbackAdapter（E1 门+event_id 抑制已存在），本卡为运动面补充且不另立"
+    },
+    {
+      "acceptance": "profile下帧时间与baseline对照",
+      "positive": "H+：同一 harness 内动画路 57.4us/帧 vs reduce-motion 静态基线 28.4us/帧，双 < 33334us 门；G+ 滚动 60 行语义族 18711us < 70000us",
+      "negative": "H- 基线在航期零 ticker（确为静止路径）",
+      "boundary": "测试环境 CPU 代理口径（flutter test 无真帧调度）；真机 profile 归设备面 → NOT_RUN 如实登记（limitations #2）"
+    }
+  ],
+  "not_run": [
+    "真机/模拟器 profile 模式帧统计（无设备触达；H 组为测试环境 CPU 代理对照）",
+    "sparkle-coordination-v2 motion-policy 锁租约（本机未配置该私有远端；diff 自证无冲突面）"
+  ]
+}
