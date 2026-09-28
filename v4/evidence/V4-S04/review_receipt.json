@@ -2,13 +2,13 @@
   "task": "V4-S04",
   "risk": "normal",
   "required_independent_reviewers": 1,
-  "status": "PENDING_INDEPENDENT_REVIEW",
+  "status": "REVIEWED_R1_PASS_WITH_CHALLENGES",
   "self_review_done_by_executor": true,
   "self_review_summary": "执行者自检：三验收各带至少一个可失败反例（真实 exit code 红绿对照，见 counterexamples.txt）；49 条账本逐条六要素齐备且哈希为磁盘重算；Dart 侧 5 测试 + 守卫 python 14 用例 + 受影响 BGM 面 26 用例全绿；守卫静态解析器（pubspec 目录/字体/Dart 字面量）经夹具反例逐条钉死（含一个解析器真 bug 的修复回归）；无外部素材下载、无生成文件手改、无 .env/proto/迁移触碰",
   "reviewer_hint": "独立审查者请复核：(1) 抽验账本 3+ 条目 sha256（shasum -a 256 对 mobile/assets 下任意文件 vs asset_ledger.json）；(2) 反例可失败性——按 counterexamples.txt 复现至少反例1（塞文件→exit=1→删→exit=0）；(3) bgm_catalog.json 10 条 releaseApproved 翻转的 diff 是否纯布尔翻转无字段增删；(4) asset_catalog.dart 的 PROPOSED→占位回落是否可能被业务绕过（L008 白名单口径：账本 consumers + asset_catalog.dart 豁免是否过宽）；(5) internal_original 判定的诚实性边界（limitations.md 第1条）",
   "note": "按 AGENTS.md 验收模型：普通任务 DONE = 独立未参与会话审查 + 当前集成 SHA 可失败测试；本凭据为占位，审查完成后由审查会话覆写 reviewer/verdict 字段",
-  "reviewer": null,
-  "reviewed_at": null,
-  "verdict": null,
-  "verdict_note": null
+  "reviewer": "wtS04R1 (independent, 未参与实现)",
+  "reviewed_at": "2026-09-28",
+  "verdict": "PASS_WITH_CHALLENGES",
+  "verdict_note": "一审 receipt 见 review_r1.md（锚 7e6302d6）。三验收反例亲做复现红→还原绿；复跑守卫14/14 + Dart31/31 + analyze 0 + runner通道双规则PASS + ledger verify 49 + 占位重生成逐字节一致。C1（集成必落）：pubspec 解析器同缩进 '- ' 分支修复真实但无测试钉（变异删除该子句 14 测试仍全绿），'逐条钉死'声明过满——补一个同缩进夹具断言即闭环。合并落差：main+15 提交仅 tasks.json 重叠，merge-tree 实测零冲突。"
 }
