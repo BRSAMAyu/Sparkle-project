@@ -2941,7 +2941,7 @@
       "resource_class": "HEAVY",
       "reviewers_required": 1,
       "gate": "V3-1",
-      "status": "TODO",
+      "status": "done",
       "forbidden_practices": [
         "不得重建已存在的权威真源",
         "不得用 mock/seed 冒充真实行为",
@@ -2953,7 +2953,10 @@
         "targeted tests",
         "integration/simulator evidence",
         "review receipt"
-      ]
+      ],
+      "completion": {
+        "evidence": "wt764 工程+wt282 增量（wt772 receipt 判 PARTIAL）+wt784 runbook+wt789 驱动+wt792 E3 实测（v3-output/WT792-J02-SIM/REPORT.md：A1b/A2/F2/F5/F3/W1 全绿核验，A1a 降级口径 2/6 跑实测 ≤3min 达标 121.7s/114.6s、5 跑 UI 注册 tap 走 O3 fallback 不计入主张；残留=FIX-540 修复后补测）；2026-09-28"
+      }
     },
     {
       "id": "J-03",
