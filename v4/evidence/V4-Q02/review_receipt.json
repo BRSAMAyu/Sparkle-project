@@ -3,6 +3,33 @@
   "status": "PENDING",
   "risk": "high",
   "required_independent_reviewers": 2,
-  "note": "review_receipt 由独立未参与实现会话落盘（作者不自审）。当前为 PENDING 占位：不存在有效审查 receipt = 未审查，不是通过。审查基线=卡面三条验收 + EVALUATION_PROTOCOL §四臂 + frozen_utility.json；审查面=复现脚本判定口径（三类声明分歧归一化）、臂绑定与恒等披露、Surface-2 oracle 覆盖范围、BLOCKED_EXPLICIT 判定、价值裁决（implementation COMPLETE / value NOT_PASS）是否越权宣称。",
-  "reviews": []
+  "note": "review_receipt 由独立未参与实现会话落盘（作者不自审）。审查基线=卡面三条验收 + EVALUATION_PROTOCOL §四臂 + frozen_utility.json；审查面=复现脚本判定口径（三类声明分歧归一化）、臂绑定与恒等披露、Surface-2 oracle 覆盖范围、BLOCKED_EXPLICIT 判定、价值裁决（implementation COMPLETE / value NOT_PASS）是否越权宣称。R1 条目由 wtQ02R2 依 review_r1.md + commit 7f3d7de6 回填（一审会话未回填 JSON）。",
+  "reviews": [
+    {
+      "reviewer": "wtQ02R1",
+      "verdict": "PASS_WITH_CHALLENGES",
+      "receipt_id": "v4/evidence/V4-Q02/review_r1.md",
+      "reviewed_head": "35c2e034e195d39b4391c1901ff07b565d50e78d",
+      "backfilled_by": "wtQ02R2",
+      "challenged": [
+        "C1（必改）披露措辞三处失实：「逐记录恒等」实为结局级（C≡D 记录级成立、holdout A vs C patch 归因/重排面逐记录不同）；「I05 无可触发条件」实为 decision 门出无可触发、admission 收益门+72h 窗真实触发（s1 拦截 1 次激活 4→3、两 seed 窗过期收窄）差分被 confirm-backstop 吸收",
+        "C2（建议，非阻断）bootstrap 种子 hash(name) 进程内不可复现（wobble ±0.03），建议 zlib.crc32 固定映射",
+        "C3（记录，不阻断）holdout 生成者与实现者未会话隔离（limitations §3 已申报；生成器声明式 vocabulary 抽样、审查者已从 raw 独立复算全部数字）"
+      ]
+    },
+    {
+      "reviewer": "wtQ02R2",
+      "verdict": "PASS_WITH_CHALLENGES_CLOSED",
+      "receipt_id": "v4/evidence/V4-Q02/review_r2.md",
+      "reviewed_head": "6ff6cc8e403d1bc93a571800c89db3a2a6962349",
+      "challenged": [
+        "靶1 C1 整改复核通过：三处措辞随 R1 §靶2(b) 逐字整改、无残留旧表述、无新失实；结局级边界底层事实亲验（两 seed 120/120 结局 diff=0；C≡D 记录级 120/120 excl arm；A vs C patch 面 s1 9→4/s2 18→13）；tasks.json progress_note 压缩表述可接受（完整边界由 limitations §2 承载）",
+        "靶2 M11 定性独立复判维持一审：I02 四行号锚+I05 六行号锚亲验、harness 两服务 grep 零命中；触发实证独立复跑（s1 admission active 4→3/confirm 35→36、s1 patch_moves 9→4 ids 6→2、s2 applied ids 11→7）——非产品接线缺口，不登记 FIX",
+        "靶3 复现链亲跑 REPRODUCED@6ff6cc8e（sha256 六工件 MATCH + 全链 exit 0 + 归因只收窄零 fresh-only）；靶4 CI 独立重算带内、M11 30/30 逐 profile 差值恒 0；靶5 oracle+ctx08 bypass 亲验、fold 107 批精确复现",
+        "R2-D1（记录）runs/artifacts_sha256.json 4 mismatch 归因闭合（self-hash 1 + repro/ 一审 --write 重跑产物 3）；27 件被审数据文件逐 pin MATCH",
+        "R2-D2（记录）review_receipt.json R1 条目缺失，本审按 I05 惯例回填两条并注明 provenance",
+        "R2-C2 跟进（非阻断，触达 runner 时同 commit）：crc32 固定映射 + limitations §8 补 wobble 披露 + pinning 排除自引用"
+      ]
+    }
+  ]
 }
