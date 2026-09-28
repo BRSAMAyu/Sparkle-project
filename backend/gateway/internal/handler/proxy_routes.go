@@ -1212,6 +1212,16 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered journey first-action proxy routes")
 
+	// ==================== Episode Resume Routes (V4-I01 episode_resume_view.v1 read model) ====================
+	// route-tier: authed
+	episodeResume := api.Group("/episode-resume")
+	episodeResume.Use(authMiddleware)
+	{
+		// route-tier: authed
+		h.registerREST(episodeResume)
+	}
+	h.logger.Info("Registered episode-resume proxy routes")
+
 	// ==================== Learning Reports Routes ====================
 	learningReports := api.Group("/learning-reports")
 	learningReports.Use(authMiddleware)

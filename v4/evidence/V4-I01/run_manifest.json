@@ -1,0 +1,106 @@
+{
+  "card": "V4-I01",
+  "title": "目标Episode接续读模型（episode_resume_view.v1）",
+  "worktree": "/Users/brsama/code/GitHub/wtI01",
+  "branch": "agent/v4/i01",
+  "base_sha": "1a53b8c3065aff821db210294501e425294c4166",
+  "date": "2026-09-28",
+  "executor": "wtI01 implementation agent",
+  "scope": "pure backend read model; zero HEAVY; zero model calls; no UI",
+  "environment": {
+    "platform": "darwin 25.6.0 arm64",
+    "python": "3.11.15 (/Users/brsama/code/GitHub/Sparkle-project/backend/.venv)",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2",
+    "ruff": "0.15.8",
+    "black": "26.3.1",
+    "go": "go1.25.7 darwin/arm64",
+    "note": "无 Intel AI PC；本卡为纯确定性读模型，不涉任何硬件能力声明"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "cmd": "pytest tests/unit/test_episode_resume_view_contract.py tests/services/test_episode_resume_service.py tests/integration/test_episode_resume_cross_process.py tests/api/test_episode_resume_api.py -q --no-header -p no:cacheprovider",
+      "cwd": "backend",
+      "env": "SECRET_KEY/JWT_SECRET=ci-workflow-default-* TESTING=true（无 .env——tests/_dbguard 隔离 worktree 口径，sqlite）",
+      "exit_code": 0,
+      "result": "56 passed"
+    },
+    {
+      "id": 2,
+      "cmd": "mypy app --ignore-missing-imports --no-error-summary | grep -c 'error:'",
+      "cwd": "backend",
+      "exit_code": 0,
+      "result": "55（改动前同口径基线=55 → 零漂移；grep episode_resume=0 条）",
+      "baseline_ref": "quality/mypy_baseline.txt=77（CI linux 权威较高值；本地 macOS 55）"
+    },
+    {
+      "id": 3,
+      "cmd": "ruff check app/ --output-format=concise",
+      "cwd": "backend",
+      "exit_code": 0,
+      "result": "All checks passed"
+    },
+    {
+      "id": 4,
+      "cmd": "black --line-length 120 --check <改动文件>",
+      "cwd": "backend",
+      "exit_code": 0,
+      "result": "unchanged（router.py 3 行既有超长注释行不重排，保持 diff 最小）"
+    },
+    {
+      "id": 5,
+      "cmd": "go build ./... && go test ./internal/handler/",
+      "cwd": "backend/gateway",
+      "exit_code": 0,
+      "result": "build ok; handler tests ok"
+    },
+    {
+      "id": 6,
+      "cmd": "bash scripts/run_all_rule_guards.sh",
+      "cwd": "repo root",
+      "exit_code": 0,
+      "result": "all rule guards passed (86 rules)",
+      "history": "初跑 AT（新服务无运行时 import）→ 落 REST 入口后 PASS；BA-ROUTES（gateway↔engine parity）→ 落 /episode-resume 代理组 + GATEWAY_ONLY 挂账 1 行后 PASS；AQ/BG 为 worktree 缺 proto 生成产物的环境缺项 → make proto-gen 后 PASS"
+    },
+    {
+      "id": 7,
+      "cmd": "pytest tests/unit/test_action_plan_contract.py tests/unit/test_outcome_ledger_contract.py tests/unit/test_hybrid_run_steps.py tests/services/test_outcome_ledger_service.py tests/unit/test_x07_run_steps_migration_sqlite.py -q",
+      "cwd": "backend",
+      "exit_code": 0,
+      "result": "141 passed（邻接权威模块回归）"
+    },
+    {
+      "id": 8,
+      "cmd": "make proto-gen",
+      "cwd": "repo root",
+      "exit_code": 0,
+      "result": "生成产物全部 gitignored，未入库；仅为守卫环境补齐（本卡零 proto 契约变更）"
+    }
+  ],
+  "artifacts_sha256": {
+    "backend/app/core/episode_resume_view.py": "bf9fbdf4839fa2c8c21a0bbb4ff73f10926e942cd11e90935f83f057622a46a9",
+    "backend/app/services/episode_resume_service.py": "a442ab17487603eb879120494f8edd3db68c8fb37cebf13baf260dfa69535853",
+    "backend/app/api/v1/episode_resume.py": "856a1610cd526e861ac41911daec06d9f1449796f181be00f877bbe0ceea5ec8",
+    "backend/tests/unit/test_episode_resume_view_contract.py": "db66e324defae95cafeda21d9ee4070edfa57899c06f97a48d888082f15c76e2",
+    "backend/tests/services/test_episode_resume_service.py": "8402f08fd4e4b8b04904f3e1cfa951df167527a923aba515e58c3eacf41b8efb",
+    "backend/tests/integration/test_episode_resume_cross_process.py": "8cfc6968bfaf1f01cf6d7731b225a9b45f0729a42f05fd0edf648b5c1e7082bb",
+    "backend/tests/api/test_episode_resume_api.py": "7f74a034a76788ef5c8246f02b39e2774582338bf990d3d48f4dfb55cb2cedf4"
+  },
+  "llm_usage": {
+    "actual_model": "none",
+    "calls": 0,
+    "note": "读模型纯确定性聚合；本卡零模型调用，无价格来源需要登记"
+  },
+  "ui_evidence": "none（纯 backend，无 UI 面）",
+  "sensory_device_scope": "none",
+  "dependencies_consumed": {
+    "V4-B01": "v4/evidence/V4-B01/（继承基线核验；本卡无 V3 重开）",
+    "V4-B05": "v4/evidence/V4-B05/contract_receipt_min.md §5 episode_resume_view.v1 + §4/§4.1 why_now 字段位 + §8 用例清单 + §9 反例集"
+  },
+  "honest_failures": [
+    "首轮服务测试 9 failed：fixture source_refs 硬编码 goal id 与随机 goal 不一致触发 goal_changed 门（测试缺陷，修复 fixture 绑定真实 goal id）；soft_delete 误用 await（同步方法，修复）；focus session occurred_at 断言错误（focus 流含 task 关联行，修正测试预期）——全部为测试侧问题，产品码未因此放宽任何校验",
+    "首轮单测 2 failed：step_ref 空 id 未拒（补 <scheme>://<non-empty id> 校验，更严非更松）；参数化用例校验顺序预期错误（修测试）",
+    "rule guards 初跑 AT/BA-ROUTES 失败如实记录并修复（见 cmd#6 history），未降阈值、未删断言"
+  ]
+}

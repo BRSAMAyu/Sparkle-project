@@ -456,6 +456,7 @@ ENGINE_ONLY: dict[str, str] = {
 }
 
 GATEWAY_ONLY: dict[str, str] = {
+    "/api/v1/episode-resume": "registerREST bare group artifact — engine serves GET /tasks/{task_id} sub-path only (V4-I01 episode_resume_view.v1 read model; ledger 2026-09-28)",
     "/api/v1/executions": "bare group artifact — engine serves sub-paths only",
     "/api/v1/experiments": "bare group artifact — engine serves sub-paths only",
     "/api/v1/notification-center": "bare group artifact — engine serves sub-paths only",

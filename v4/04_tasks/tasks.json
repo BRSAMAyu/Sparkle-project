@@ -745,8 +745,8 @@
         "V4-B01",
         "V4-B05"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
+      "status": "READY",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
       "kind": "implementation",
       "required_locks": [
@@ -765,7 +765,11 @@
         "journey",
         "aurora"
       ],
-      "source_anchors": [],
+      "source_anchors": [
+        "backend/app/core/episode_resume_view.py",
+        "backend/app/services/episode_resume_service.py",
+        "backend/app/api/v1/episode_resume.py"
+      ],
       "objective": "将现有goal/task/run/outcome聚合成版本化接续视图；区分上次已确认位置、等待人类步骤、过期约束。",
       "work": "将现有goal/task/run/outcome聚合成版本化接续视图；区分上次已确认位置、等待人类步骤、过期约束。不能创造另一个主任务表。",
       "acceptance": [
