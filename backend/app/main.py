@@ -10,12 +10,13 @@ import asyncio
 import os
 import sys
 from contextlib import asynccontextmanager, suppress
+from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -25,6 +26,11 @@ from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.api.docs_pages import (
+    redoc_page,
+    swagger_ui_oauth2_redirect_page,
+    swagger_ui_page,
+)
 from app.api.middleware import IdempotencyMiddleware, RequestContextMiddleware
 from app.api.v1.health_production import set_start_time
 from app.api.v1.router import api_router
@@ -886,14 +892,40 @@ async def lifespan(fastapp: FastAPI):
 
 
 # Create FastAPI application
+# FIX-559: docs/redoc 内置路由引用 jsdelivr CDN 资产并内联初始化脚本，被本应用
+# SecurityHeadersMiddleware 的 CSP（script-src/style-src 'self'）拦截，页面对任何
+# 访客均不可渲染（2026-09-28 V4-B04 旁路采集发现）。改为关闭内置路由，用自托管
+# 资产 + 外置初始化脚本重建 /docs、/redoc（见 app/api/docs_pages.py）——CSP 保持
+# 严格，不引入第三方放行面，离线环境可用。
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Sparkle AI Learning Assistant API",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None,
+    redoc_url=None,
     lifespan=lifespan,
 )
+
+# FIX-559: 自托管 swagger-ui / redoc 资产（backend/app/static/docs/，许可与 sha256 见同目录 LICENSES.md）
+_DOCS_STATIC_DIR = Path(__file__).resolve().parent / "static" / "docs"
+
+
+@app.get("/docs", include_in_schema=False)
+async def swagger_ui_docs(req: Request) -> HTMLResponse:
+    """Swagger UI 文档页（自托管资产，FIX-559）"""
+    return swagger_ui_page(req)
+
+
+@app.get("/docs/oauth2-redirect", include_in_schema=False)
+async def swagger_ui_oauth2_redirect() -> HTMLResponse:
+    """Swagger UI OAuth2 redirect 页（与上游一致，FIX-559）"""
+    return swagger_ui_oauth2_redirect_page()
+
+
+@app.get("/redoc", include_in_schema=False)
+async def redoc_docs(req: Request) -> HTMLResponse:
+    """ReDoc 文档页（自托管资产，FIX-559）"""
+    return redoc_page(req)
 
 # Auto-instrument FastAPI
 FastAPIInstrumentor.instrument_app(app)
@@ -1033,6 +1065,8 @@ else:
 # Make sure the directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# FIX-559: 自托管的 swagger-ui / redoc 资产（backend/app/static/docs/）
+app.mount("/static", StaticFiles(directory=str(_DOCS_STATIC_DIR.parent)), name="static")
 
 
 @app.exception_handler(RequestValidationError)
