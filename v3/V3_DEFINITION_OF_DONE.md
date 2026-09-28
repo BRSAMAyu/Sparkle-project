@@ -3,7 +3,7 @@
 > V3 DONE 不是“任务卡都关闭”，而是下面用户级、系统级与运行级证据同时成立。
 
 ## Gate V3-0 — Truth
-- 42 个 feature 有唯一 portfolio 状态：CORE / CONTEXTUAL / LABS / HIDDEN / RETIRE；不存在用户可达的半成品入口。（**V3 决议注 2026-09-28**：42 系 B-01 初始册载口径；B-01Δ 定域审计后全集实况=43——F24 onboarding 并入 user 承载除名、F43 journey/F44 recovery 入册、F20 leaderboard/F26 photon 重定 CONTEXTUAL；唯一真源=v3-output/B-01/MODULE_MATRIX.csv，裁决依据 WT786-P513MEMO+WT790-B01DELTA）
+- 42 个 feature 有唯一 portfolio 状态：CORE / CONTEXTUAL / LABS / HIDDEN / RETIRE；不存在用户可达的半成品入口。（**V3 决议注 2026-09-28**：42 系 B-01 初始册载口径；B-01Δ 定域审计后全集实况=43——F24 onboarding 并入 user 承载除名、F43 journey/F44 recovery 入册、F20 leaderboard/F26 photon 重定 CONTEXTUAL；唯一真源=v3-output/B-01/MODULE_MATRIX.csv，裁决依据 WT786-P513MEMO+WT790-B01DELTA）**（勘误注记 2026-09-28，FIX-555/wt814）**：本决议注原指向的入册提交 cf8d6c16 存在 W12-01 缺口——MODULE_MATRIX.csv 的 F20/F26 两行实际未改写（仍 HIDDEN@a2d8a10c＋「死屏建议 RETIRE」残留）、portfolio.json 仅加元数据正文未同步；已按 WT790-B01DELTA 机械合并补正（F20/F26=CONTEXTUAL@27bd05e5、F24 除名在案、F43/F44 在册、CSV=43 行、portfolio 正文与 CSV 零冲突），修正提交见台账 v3/06_agent_fleet/DYNAMIC_ISSUES.md FIX-555 行 FIXED@ 项（分支 agent/wt814/fix555）
 - 所有核心统计数字都有数据 lineage；mock/seed/demo 明确隔离且不会进入真实缓存或真实用户分析。
 - 当前模型、embedding、ASR/TTS、OCR 等能力由 runtime probe 得到，不凭配置文件宣称可用。
 

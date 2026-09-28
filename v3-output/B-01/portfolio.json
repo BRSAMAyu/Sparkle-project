@@ -14,12 +14,12 @@
     "GJ8": "knowledge-material: documents→galaxy node→error book→review"
   },
   "counts": {
-    "CONTEXTUAL": 18,
-    "CORE": 15,
-    "HIDDEN": 4,
+    "CONTEXTUAL": 22,
+    "CORE": 14,
+    "HIDDEN": 2,
     "LABS": 5
   },
-  "total": 42,
+  "total": 43,
   "modules": [
     {
       "feature_id": "F01",
@@ -298,13 +298,13 @@
       "feature_id": "F20",
       "name": "leaderboard",
       "module_path": "mobile/lib/features/leaderboard",
-      "status": "HIDDEN",
-      "jtbd": "（无 V3 核心 JTBD）",
+      "status": "CONTEXTUAL",
+      "jtbd": "自我对照进步感知（只跟自己的历史比; 非竞争比较）",
       "journey_map": [],
-      "data_truth": "空: leaderboard_snapshots 0 行; 后端 /leaderboards 401 但无 cohort 过滤(B-02 INV-09 guest/seed 污染)",
-      "reachability_evidence": "不可达: GoRouter 未注册; leaderboard_screen.dart 全仓 0 引用(死代码); 仅 api_endpoints/l10n 残留",
-      "v3_surface": "D17: 默认隐藏; 修 cohort 污染前禁上线; 死屏建议 RETIRE",
-      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
+      "data_truth": "未复测(B-01Δ 不碰运行栈): 基线 leaderboard_snapshots 0 行继承; self-anchor 读 sprint 账本+study_records(D-COMM-1); /leaderboards 后端活 router.py:276+网关代理 proxy_routes.go:1078",
+      "reachability_evidence": "已可达: /leaderboards/self-anchor 注册(leaderboard_routes.dart selfAnchor)+挂载(routes.dart:411); 实入口2: plan/sprint_screen.dart:64、community/squad_detail_screen.dart:295; 全站综合榜仍不路由(COMM-LB 守卫固化); 死链三件套已删(D-COMM-4 销账 1143 行); 深链无映射",
+      "v3_surface": "D17 全站榜禁令不变(D-COMM-1: 大池/异质/静态综合分反模式); 唯一路由面=自我7日锚; cohort 污染修复未复测(B-02 INV-09 继承); 原 RETIRE 倾向撤销(死屏前提已灭)",
+      "source_sha": "27bd05e5ac4f9acd2d23c9988f42f50c5bcf2cc6"
     },
     {
       "feature_id": "F21",
@@ -349,20 +349,6 @@
       "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
     },
     {
-      "feature_id": "F24",
-      "name": "onboarding",
-      "module_path": "mobile/lib/features/onboarding",
-      "status": "CORE",
-      "jtbd": "3 分钟内到达首个有效价值",
-      "journey_map": [
-        "GJ1"
-      ],
-      "data_truth": "真实: users 248(user_preferences_center 248); modeling-chat 会话写入 chat_sessions",
-      "reachability_evidence": "/onboarding/persona /onboarding/modeling-chat 注册于 UserRoutes; routes.dart 强制重定向(非游客未完成必达)",
-      "v3_surface": "CORE: progressive profiling; 不伪造历史(D05)",
-      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
-    },
-    {
       "feature_id": "F25",
       "name": "openclaw",
       "module_path": "mobile/lib/features/openclaw",
@@ -380,13 +366,13 @@
       "feature_id": "F26",
       "name": "photon",
       "module_path": "mobile/lib/features/photon",
-      "status": "HIDDEN",
+      "status": "CONTEXTUAL",
       "jtbd": "（可选轻量奖励; V3 无核心 JTBD）",
       "journey_map": [],
-      "data_truth": "半真: photon_transaction_history 25 行(后端活, /photons 401); 但无新增消费入口",
-      "reachability_evidence": "不可达: PhotonBalanceCard 0 外部消费者(孤儿组件); /photon/history 仅被该孤儿组件引用; /photon/transfer 0 入口",
-      "v3_surface": "D17: 从核心旅程降级→HIDDEN; 25 条历史交易数据保留后端",
-      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
+      "data_truth": "未复测(不碰运行栈): 基线 photon_transaction_history 25 行继承; /photons 后端活 router.py:292",
+      "reachability_evidence": "已可达: /photon/redeem-pro 注册(photon_routes.dart)+挂载(routes.dart:429); 实入口: user/profile_screen.dart:697(user=CORE Tab 面); 二级入口 redeem→/photon/history(photon_redeem_pro_screen.dart:272); /photon/transfer 路由已撤(PHOTON #10 反刷; 屏文件保留已登记债务); PhotonBalanceCard 已删(c69c6879); shop 屏内入口(shop_screen.dart:64)随 shop HIDDEN 不计(shop 外部 0 push+RELEASE_ENABLE_SHOP=False→403); 深链无映射",
+      "v3_surface": "D17 降权语义保留注记; D-COMM-2 兑换出口(学出会员奖励); SECONDARY→CONTEXTUAL 按可达性折叠(FIX-513 §3)",
+      "source_sha": "27bd05e5ac4f9acd2d23c9988f42f50c5bcf2cc6"
     },
     {
       "feature_id": "F27",
@@ -606,20 +592,46 @@
       "reachability_evidence": "无独立屏(不可达为页面); 以 vocabulary_lookup 工具注册于 tool_registry, 经 /tools/:toolId 出现",
       "v3_surface": "CONTEXTUAL(D19): 学习行动内的工具能力, 非独立主页面",
       "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
+    },
+    {
+      "feature_id": "F43",
+      "name": "journey",
+      "module_path": "mobile/lib/features/journey",
+      "status": "CONTEXTUAL",
+      "jtbd": "首个有效行动的最小步生成与确认（Smallest Useful Step; AI 降摩擦不偷走目标）",
+      "journey_map": [],
+      "data_truth": "未复测(不碰运行栈): 迁移 j05_20260925/j06_20260925(hybrid_journey_artifacts 表见 7bd6ade3 提交文); /journey 后端组活 router.py:71,212",
+      "reachability_evidence": "嵌入面(无路由无深链): FirstActionCard 挂 home dashboard(dashboard_screen.dart:1168; hasNoGoals 分支可见; 卡内自守门无 goal→shrink); 后端 /journey/first-action POST/GET/edit 活; HybridJourneySheet(J-06)全仓外部 0 调用=孤儿面(缺陷 V3-FIX-535 登记)",
+      "v3_surface": "J-04 面可达判 CONTEXTUAL; J-06 hybrid 移动面无生产入口(V3-FIX-535 待派卡; 后端四面活); D16 openclaw 唯一 Runtime 不变(journey 走 X-05/X-07 装配非第二 AI 中心); J-04/J-06 为卡级 journey 编号与 GJ 框架不同源(RECEIPT E1 合并时加注)",
+      "source_sha": "27bd05e5ac4f9acd2d23c9988f42f50c5bcf2cc6"
+    },
+    {
+      "feature_id": "F44",
+      "name": "recovery",
+      "module_path": "mobile/lib/features/recovery",
+      "status": "CONTEXTUAL",
+      "jtbd": "「我卡住了」统一恢复旅程（单问干预; 不代决）",
+      "journey_map": [
+        "GJ3"
+      ],
+      "data_truth": "未复测(不碰运行栈): /experience/stuck-journey start|answer|correct 后端活(c4c36ead 提交文); 行数未测",
+      "reachability_evidence": "嵌入 sheet(无路由无深链): 实入口3 showStuckJourneySheet — home/today_cockpit_card.dart:305(surface=home+taskId)、goal/goal_detail_screen.dart:509(surface=goal+goalId)、task/task_execution_screen.dart:544(surface=task); 三宿主均 CORE 面; 深链无映射",
+      "v3_surface": "全产品统一恢复入口(J-05); 与 aurora GJ3 分工: aurora=判断/数据层; recovery=用户干预面",
+      "source_sha": "27bd05e5ac4f9acd2d23c9988f42f50c5bcf2cc6"
     }
   ],
   "v3_decisions": {
     "leaderboard": {
-      "decision": "HIDDEN",
-      "basis": "D17 默认隐藏 + D20(cohort 污染 INV-09); 路由未注册+死屏 0 引用+快照表 0 行"
+      "decision": "CONTEXTUAL",
+      "basis": "B-01Δ 重定(WT790-B01DELTA@27bd05e5; FIX-555 补正入册): 自我 7 日锚路由注册+实入口 2(plan sprint/community squad)+后端活→CONTEXTUAL; D17 全站榜禁令不变(D-COMM-1); 原 RETIRE 倾向撤销(死屏前提已灭); cohort 污染未复测(B-02 INV-09 继承)"
     },
     "shop": {
       "decision": "HIDDEN",
       "basis": "D17 降级 + D20(空目录: shop_items/purchases 0); 现存 streak_details 1 入口随降权移除"
     },
     "photon": {
-      "decision": "HIDDEN",
-      "basis": "D17 降级; 余额卡 0 外部消费者为孤儿组件, transfer 0 入口; 25 条真实交易数据保留后端"
+      "decision": "CONTEXTUAL",
+      "basis": "B-01Δ 重定(WT790-B01DELTA@27bd05e5; FIX-555 补正入册): /photon/redeem-pro 注册+profile(CORE Tab-5)实入口+redeem 屏二级入口+后端活→CONTEXTUAL; D17 降权语义保留注记; D-COMM-2 兑换出口; 余额卡已删(c69c6879)/transfer 路由已撤(PHOTON #10 反刷)"
     },
     "long_tail": {
       "decision": "CONTEXTUAL/LABS per D19",
@@ -630,11 +642,11 @@
     "goal: DB goals 表 0 行但写入路径存在 — 需运行时验证 goal 创建落表",
     "plan_execution_records 0 行: task/agent 执行链是否真实落库",
     "reflection /reflection/summary 无入口 — 模拟器确认无可达路径(含推送/深链旁路)",
-    "photon 余额卡孤儿: 模拟器确认 profile 无 photon 入口",
+    "photon: /photon/redeem-pro 经 profile 入口为 Δ 后新可达链 — 模拟器确认可达与 D-COMM-2 兑换出口行为(B-01Δ 未复测, 继承开放)",
     "theater/simulation/seed_library LABS 群: 运行时确认 demo 数据不混入(D20)"
   ],
   "unknown_items": [],
-  "partial_note": "全部 42 项均有静态证据定级, 无 UNKNOWN 残留; goals/plan_execution_records 空表列入 retest_needed, 不影响状态判定(其 JTBD/可达性证据独立成立)",
+  "partial_note": "全部 43 项均有静态证据定级, 无 UNKNOWN 残留; goals/plan_execution_records 空表列入 retest_needed, 不影响状态判定(其 JTBD/可达性证据独立成立); B-01Δ 四行(F20/F26 重定+F43/F44 新增)按 WT790-B01DELTA 口径入册, 未复测边界随行内 data_truth 标注",
   "feature_count": 43,
   "b01_delta_merge": {
     "date": "2026-09-28",
