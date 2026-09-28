@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
+import 'package:sparkle/core/navigation/shell/shell.dart';
 
-/// Responsive scaffold that adapts navigation patterns across device categories.
+/// Responsive scaffold that adapts navigation patterns across width tiers.
 ///
-/// - Mobile: bottom navigation bar
-/// - Tablet: NavigationRail
-/// - Desktop/TV: NavigationDrawer
+/// V4-F04 升级：槽位解析改为宽度档（`resolveShellNavSlot`，断点唯一
+/// 权威 `LayoutBreakpoints`）——
+/// - 手机/窄窗（<768 或窄短边横屏）：底部导航栏；
+/// - 平板（768–1199）：NavigationRail（图标+全部标签）；
+/// - 桌面/宽窗（≥1200，含 1280×720 桌面窗口）：常驻侧栏
+///   （extended rail + 品牌头，替换旧 NavigationDrawer 内嵌误用）。
+/// 五 Tab 路由合同（StatefulShellRoute 五分支）零触碰。
 class ResponsiveScaffold extends StatelessWidget {
   const ResponsiveScaffold({
     required this.body,
@@ -18,7 +23,9 @@ class ResponsiveScaffold extends StatelessWidget {
     this.title,
   });
   final Widget body;
-  final List<NavigationDestination> destinations;
+
+  /// Shell 目的地（图标语义独立模型，三档呈现面共用）。
+  final List<ShellDestination> destinations;
   final int currentIndex;
   final ValueChanged<int> onDestinationSelected;
   final Widget? floatingActionButton;
@@ -27,55 +34,67 @@ class ResponsiveScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final category = ResponsiveSystem.getCategory(context);
+    final slot = resolveShellNavSlot(MediaQuery.of(context).size);
 
-    switch (category) {
-      case DeviceCategory.desktop:
-      case DeviceCategory.tv:
-        return _buildDesktopLayout(context);
-      case DeviceCategory.tablet:
-        return _buildTabletLayout(context);
-      case DeviceCategory.watch:
-      case DeviceCategory.phone:
-      case DeviceCategory.phablet:
-        return _buildMobileLayout(context);
+    switch (slot) {
+      case ShellNavSlot.sideNav:
+        return _buildSideNavLayout(context);
+      case ShellNavSlot.sideRail:
+        return _buildSideRailLayout(context);
+      case ShellNavSlot.bottomBar:
+        return _buildBottomBarLayout(context);
     }
   }
 
-  /// Mobile layout: bottom navigation bar
-  Widget _buildMobileLayout(BuildContext context) => Scaffold(
+  /// 手机/窄窗：底部导航栏（+ 像素档装饰沿，classic 零差量）。
+  Widget _buildBottomBarLayout(BuildContext context) => Scaffold(
         appBar: appBar,
+        // 键盘合同（验收「键盘打开不越界」）：键盘弹出时 Scaffold 消费
+        // viewInsets——body 收缩、底栏抬升至键盘上方保持可见。显式钉住
+        // 默认值作为 Shell 键盘契约的可 grep 锚点。
+        resizeToAvoidBottomInset: true,
         body: body,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: currentIndex,
-          onDestinationSelected: onDestinationSelected,
+        bottomNavigationBar: ShellBottomBar(
           destinations: destinations,
+          currentIndex: currentIndex,
+          onDestinationSelected: onDestinationSelected,
         ),
         floatingActionButton: floatingActionButton,
       );
 
-  /// Tablet layout: NavigationRail
-  Widget _buildTabletLayout(BuildContext context) => Scaffold(
+  /// NavigationRail 目的地映射（底栏/rail/侧栏三档共用同一语义模型）。
+  List<NavigationRailDestination> _railDestinations() => destinations
+      .map(
+        (d) => NavigationRailDestination(
+          icon: shellNavIconFor(d, selected: false),
+          selectedIcon: shellNavIconFor(d, selected: true),
+          // 语义独立：rail 目的地无 tooltip 参数，可访问名称由
+          // label 文本与图标位 Semantics（角标）承载。
+          label: Text(d.label),
+        ),
+      )
+      .toList();
+
+  /// 平板：左侧 NavigationRail（图标+全部标签）。
+  Widget _buildSideRailLayout(BuildContext context) => Scaffold(
+        resizeToAvoidBottomInset: true,
         body: Row(
           children: [
-            NavigationRail(
-              selectedIndex: currentIndex,
-              onDestinationSelected: onDestinationSelected,
-              labelType: NavigationRailLabelType.all,
-              destinations: destinations
-                  .map(
-                    (d) => NavigationRailDestination(
-                      icon: d.icon,
-                      selectedIcon: d.selectedIcon ?? d.icon,
-                      label: Text(d.label),
-                    ),
-                  )
-                  .toList(),
+            // SafeArea：刘海/打孔与手势条下导航面不越界（无 inset 时
+            // 零填充，视觉与升级前逐位一致）。
+            SafeArea(
+              child: NavigationRail(
+                selectedIndex: currentIndex,
+                onDestinationSelected: onDestinationSelected,
+                labelType: NavigationRailLabelType.all,
+                destinations: _railDestinations(),
+              ),
             ),
             const VerticalDivider(thickness: 1, width: 1),
             Expanded(
               child: Scaffold(
                 appBar: appBar,
+                resizeToAvoidBottomInset: true,
                 body: body,
                 floatingActionButton: floatingActionButton,
               ),
@@ -84,15 +103,21 @@ class ResponsiveScaffold extends StatelessWidget {
         ),
       );
 
-  /// Desktop layout: NavigationDrawer
-  Widget _buildDesktopLayout(BuildContext context) => Scaffold(
-        body: Row(
-          children: [
-            SizedBox(
-              width: ResponsiveSpacing.sidebarWidth(context),
-              child: NavigationDrawer(
-                selectedIndex: currentIndex,
-                onDestinationSelected: onDestinationSelected,
+  /// 桌面/宽窗（≥1200）：常驻侧栏。
+  ///
+  /// 替换旧「NavigationDrawer 内嵌进定宽 SizedBox」的误用（drawer 组件
+  /// 语义是模态抽屉，常驻侧栏用 extended rail 承载），保留品牌头与既有
+  /// 侧栏宽度权威（ResponsiveSpacing.sidebarWidth）。
+  Widget _buildSideNavLayout(BuildContext context) {
+    final sidebarWidth = ResponsiveSpacing.sidebarWidth(context);
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      body: Row(
+        children: [
+          SafeArea(
+            child: SizedBox(
+              width: sidebarWidth,
+              child: Column(
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(32),
@@ -104,35 +129,44 @@ class ResponsiveScaffold extends StatelessWidget {
                           size: 32,
                         ),
                         const SizedBox(width: 16),
-                        Text(
-                          title ?? 'Sparkle',
-                          style: Theme.of(context).textTheme.headlineSmall,
+                        Expanded(
+                          child: Text(
+                            title ?? 'Sparkle',
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   const Divider(),
-                  ...destinations.map(
-                    (d) => NavigationDrawerDestination(
-                      icon: d.icon,
-                      selectedIcon: d.selectedIcon ?? d.icon,
-                      label: Text(d.label),
+                  Expanded(
+                    child: NavigationRail(
+                      selectedIndex: currentIndex,
+                      onDestinationSelected: onDestinationSelected,
+                      // extended = 常驻侧栏语义（图标+行内标签）。
+                      extended: true,
+                      labelType: NavigationRailLabelType.none,
+                      minExtendedWidth: sidebarWidth,
+                      destinations: _railDestinations(),
                     ),
                   ),
                 ],
               ),
             ),
-            const VerticalDivider(thickness: 1, width: 1),
-            Expanded(
-              child: Scaffold(
-                appBar: appBar,
-                body: body,
-                floatingActionButton: floatingActionButton,
-              ),
+          ),
+          const VerticalDivider(thickness: 1, width: 1),
+          Expanded(
+            child: Scaffold(
+              appBar: appBar,
+              resizeToAvoidBottomInset: true,
+              body: body,
+              floatingActionButton: floatingActionButton,
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Content width constraint wrapper for large screens.

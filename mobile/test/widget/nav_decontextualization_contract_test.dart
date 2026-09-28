@@ -32,7 +32,10 @@ void main() {
       final source = File(
         'lib/core/navigation/shell_navigation.dart',
       ).readAsStringSync();
-      final count = 'NavigationDestination('.allMatches(source).length;
+      // V4-F04 组件化：目的地构造从 NavigationDestination（呈现组件）改为
+      // ShellDestination（语义数据模型，三档呈现面共用）。铁律本体不变：
+      // shell 源头恰好五条目的地，不得增减。
+      final count = 'ShellDestination('.allMatches(source).length;
       expect(count, 5, reason: '五 Tab 铁律：底部目的地数量不得增减');
     });
 
