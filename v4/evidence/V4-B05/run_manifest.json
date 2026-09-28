@@ -74,5 +74,10 @@
     }
   },
   "llm_usage": "无模型调用（纯 design 卡，只读代码勘察 + 文档产出）",
-  "ui_evidence": "无 UI 变更，无截图义务"
+  "ui_evidence": "无 UI 变更，无截图义务",
+  "r1_erratum": {
+    "date": "2026-09-28",
+    "condition": "R1-C3",
+    "note": "本清单 commands[3]（'验证 5 错误码词表'）的 evidence 摘录计数有误：action_command.py:164 的 ACTION_ERROR_CODES 实为 6 值（含 INVALID_COMMAND/ACTION_INVALID_COMMAND）；原 grep -A 8 实际输出即含 6 值，属转写错误。本字段为追加更正记录，原 evidence 文本保留不回改；合同侧更正见 contract_receipt_min.md §1/§3/§6（R1-C3 修订 2026-09-28）。scope_and_denominator.acceptance_mapping 中 '5种错误状态' 键名沿用卡面验收原文，映射目标 §6 已含 6 值更正与投影子集论证。"
+  }
 }

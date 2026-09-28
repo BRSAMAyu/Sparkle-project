@@ -2,6 +2,7 @@
 
 - 卡：V4-B05（design · risk high · 独立审查 2 位）
 - 状态：DESIGN_PROPOSAL（本文件是契约设计，不是实现声明；未改任何产品码）
+- 修订记录：2026-09-28 按一审 `review_r1.md`（wtB05R，APPROVE-with-conditions @ `83b363e`）落 C1–C5 条件修订，修订处标注「R1-Cn 修订 2026-09-28」；待二审对修订 diff 点验
 - 契约版本：`context_selection_receipt.v1` / `experience_event.v1` / `episode_resume_view.v1` / `action_plan.v1.1`（增量字段位）
 - 基线 SHA：见 `run_manifest.json`（worktree wtB05 @ agent/v4/b05）
 - 纪律：与 C-01 `decision_context.v1`、X-01 `action_plan.v1`、X-03 `action_command.v1` 同款——封闭词表 + 冻结结构 + 测试钉死；词表扩展 = 契约变更，需 bump 版本过 reviewer。
@@ -22,8 +23,8 @@
 
 | 现有权威 | 位置 | 本合同复用 | 状态 |
 |---|---|---|---|
-| ActionPlan 契约 `action_plan.v1`：`ACTION_PLAN_SCHEMA_VERSION`/`EVIDENCE_KINDS`(7)/`USEFUL_STEP_REASONS`(6)/`ACTION_SOURCE_REF_SCHEMES`(11 scheme) | `backend/app/core/action_plan.py:68/76/90/103` | ref scheme 封闭集、evidence_kind、读侧整块降级门（脏值→None+WARN） | **复用** |
-| 命令链 `action_command.v1`：proposal→approve→validate(version+permission)→commit(effects)→authoritative receipt；`CommandEffects`；5 错误码 `ACTION_ERROR_CODES`；终态词表 `TerminalReason` | `backend/app/core/action_command.py:164/117/288` | committed 判定唯一来源；5 错误状态词表；TTL 契约 | **复用** |
+| ActionPlan 契约 `action_plan.v1`：`ACTION_PLAN_SCHEMA_VERSION`/`EVIDENCE_KINDS`(7)/`USEFUL_STEP_REASONS`(6)/`ACTION_SOURCE_REF_SCHEMES`(11 scheme) | `backend/app/core/action_plan.py:68/76/90/103` | ref scheme 封闭集、evidence_kind、读侧整块降级门（脏值→None+WARN；v1.1 增量在此基础上引入版本集合成员判定与字段级降级，见 §4.1 R1-C1 修订） | **复用** |
+| 命令链 `action_command.v1`：proposal→approve→validate(version+permission)→commit(effects)→authoritative receipt；`CommandEffects`；6 错误码 `ACTION_ERROR_CODES`（R1-C3 修订 2026-09-28：实为 6 值，含 `INVALID_COMMAND`）；终态词表 `TerminalReason`（R1-C4 修订 2026-09-28：实为 4 终态 committed/user_cancelled/user_rejected/expired） | `backend/app/core/action_command.py:164/117/288` | committed 判定唯一来源；`error_state` 五值=6 值词表的投影子集（`ACTION_INVALID_COMMAND` 排除论证见 §6）；4 终态投影规则见 §6；TTL 契约 | **复用** |
 | Aurora 决策回执：`AuroraDecisionContract.memory_use_receipts ⊆ evidence_refs` 不变量、`DecisionUncertainty`、`AURORA_UNCERTAINTY_KINDS` | `backend/app/core/aurora_decision.py:270/292/191` | 「回执的 memory 必须真进证据面」不变量原样继承；confidence 语义（审慎标签，非精度百分比） | **复用** |
 | 校准回执 `aurora_calibration_receipt.v1`（A-06 "Why this?"）：rationale 摘要+refs+uncertainties；四动作 `not_relevant/wrong/change_scope/delete` 全部委托既有权威；surfacing 确定性门 | `backend/app/aurora/calibration_receipt.py` | 呈现侧"来源可点、可纠正"面；四动作是 ExperienceEvent `correction_applied` 的上游 | **复用** |
 | 纠正载荷 `AuroraCorrectionPayload`（surface/source/semantic_value/is_disconfirming/…） | `backend/app/aurora/correction_types.py` | 纠正动作回执的载荷标准化 | **复用** |
@@ -86,9 +87,9 @@
 | `kind` | 封闭枚举 `state_confirmed \| state_syncing \| correction_applied \| calibration_notice \| resume_available \| progress_delta \| terminal_failed` | 是 | — | 新（最小集；扩展=bump） |
 | `receipt_ref` | string，closed-scheme URI：`action_command://<proposal_id>` \| `run://<run_id>` \| `outcome://<outcome_id>` \| `intervention_lifecycle://<decision_id>` \| `calibration_receipt://<ref>` \| `context_selection://<receipt_id>` | kind∈{state_confirmed, progress_delta, correction_applied, calibration_notice} 时**必选** | null 仅允许 kind∈{state_syncing, resume_available, terminal_failed 中非命令类} | 复用 `ACTION_SOURCE_REF_SCHEMES` + D-02/lifecycle 关联键 |
 | `commit_state` | 封闭枚举 `committed \| error` | 是 | — | **唯一真源 = X-03 权威回执的 TerminalReason/ACTION_ERROR_CODES，投影器转写，任何上层不得改写** |
-| `error_state` | 封闭枚举 `version_conflict \| unauthorized \| not_pending \| expired \| not_found` | commit_state=error 时必选，committed 时必须 null | 与 committed 互斥（§6 表） | 复用 `ACTION_ERROR_CODES` 五值，1:1 映射 |
+| `error_state` | 封闭枚举 `version_conflict \| unauthorized \| not_pending \| expired \| not_found` | commit_state=error 时必选，committed 时必须 null | 与 committed 互斥（§6 表） | 复用 `ACTION_ERROR_CODES` 的五值投影子集，1:1 映射（源词表实为 6 值；`ACTION_INVALID_COMMAND` 的排除论证与投影器断言见 §6，R1-C3 修订 2026-09-28） |
 | `subject` | object `{type: task\|goal\|run\|intervention\|memory\|plan, id, version_token}` | 是 | version_token 为投影时点版本 | 复用 X-03 subject 绑定纪律 |
-| `presentation` | object `{modalities: [visual\|audio\|haptic], copy_key: string, asset_ref?: string}` | 是 | modalities 空数组合法（音/触/动效全关价值仍须成立，V4_DONE Q7） | `copy_key` 取冻结文案表键，**不是**模型自由文本；`asset_ref` 仅指向已过审 token 集，模型无权选 |
+| `presentation` | object `{modalities: [visual\|audio\|haptic], copy_key: string, asset_ref?: string}` | 是 | modalities 空数组合法（音/触/动效全关价值仍须成立，V4_DONE Q7） | `copy_key` 取冻结文案表键，**不是**模型自由文本；冻结文案表（键→文案）owner 指定为 **V4-F03 实现卡（contract-owner）**，本合同只冻结键位与纪律、不定义文案内容，冻结表落点登记进 F03 卡交付物（R1-C5 修订 2026-09-28）；`asset_ref` 仅指向已过审 token 集，模型无权选 |
 | `dedupe_key` | string = sha256(receipt_ref + kind + subject.version_token) | 是 | 内容寻址，重播抑制 | 对齐 FIX-507 内容寻址 decision_id 先例 |
 | `issued_at` / `expires_at` | timestamp / timestamp\|null | 是 / 否 | expires_at null=不过期 | TTL 对齐 `DEFAULT_PROPOSAL_TTL_SECONDS` 风格 |
 
@@ -107,11 +108,22 @@ WT806 S4 裁定口径 A 成立的前提是"task 级缺位登记后续卡"。本�
   - `statement`: string ≤200，用户可读的"为什么现在做"
   - `basis_refs`: array&lt;closed-scheme ref&gt;，≥1 当 statement 非空（无依据的 why-now = 伪依据，契约层拒，同 `USEFUL_STEP_REASONS` 空集=伪步骤纪律）
   - `expires_at`: timestamp | null——why-now 有时效；过期后呈现层显示"当时的原因"，不得当作当前原因复用
-  - `confidence_band`: `high | medium | low | unknown`——审慎标签，不向用户显示虚构精度百分比（对齐 `AURORA_SEMANTIC_POLICY` 受限输出）
+  - `confidence_band`: `high | medium | low | unknown`——审慎标签，不向用户显示虚构精度百分比。合同对齐权威（R1-C2 修订 2026-09-28）：`DecisionUncertainty`/`AURORA_UNCERTAINTY_KINDS` 封闭词表纪律（`backend/app/core/aurora_decision.py:108/191`）与 M-08 `_confidence_tier` 档位口径（`backend/app/aurora/calibration_receipt.py:109`，同一口径不另造档）。原引 `AURORA_SEMANTIC_POLICY` 在代码仓（backend/proto/mobile）无对应符号、一审判为幻引；该名实为 V4 包设计文档 `v4/03_intelligence/AURORA_SEMANTIC_POLICY.md`「受限输出」段（v0.1 提案），仅作语义词源 lineage 参考，**不作合同权威**
 - 数据流：proposal 生成时，Aurora 侧既有 `why_now`（`aurora_core_session.py:59`、`plan_quality_contract.py:211`）经受限于白名单的 selector 落入本字段位；**移动端 `WhyThisTodayPanel`/`PriorityReasoning.primary_reason`（`mobile/lib/features/task/presentation/widgets/why_this_today_panel.dart`）为既有渲染面，v1.1 落地时由 contract-owner 接线，本设计不越权改 UI**。
-- 读侧门：整块降级纪律与 X-01 相同——v1.1 新子结构任一校验失败 → `why_now` 置 null + WARN（带 task_id 与原因），不影响块内其余 v1 字段投影。
+- 读侧门（R1-C1 修订 2026-09-28）：why_now 子结构任一校验失败 → **字段级降级**——仅 `why_now` 置 null + WARN（带 task_id 与原因），不影响块内其余字段投影。这是相对 X-01「版本不符/脏值即整块 None」降级纪律的**有意新 delta**（字段级降级，非整块降级），原稿"与 X-01 相同"表述作废；整块降级仍保留给版本门外/结构级损坏情形（见 §4.1）。
 
-这样 S4 五要素（outcome/step/**why-now**/evidence/mode）在 task 级输出契约内齐备，且对 v1 行为零影响（全 nullable、无 server default，迁移对旧行零写入）。
+#### 4.1 版本集合成员判定（R1-C1 修订 2026-09-28，新增机制节）
+
+一审指认成立：现行版本门是**严格相等匹配**——写侧 `backend/app/core/action_plan.py:259-260`（validate：`schema_version != ACTION_PLAN_SCHEMA_VERSION` 即 violation）、读侧 `backend/app/core/action_plan.py:340-341`（`action_plan_projection`：`!=` 即整块 None + WARN，docstring 自证"版本 bump 未迁移存量行时该 WARN 会随读放大"）。若只把常量 bump 成 v1.1 而不改门，存量 `action_plan.v1` 行将全部过不了版本门、整块投影降级 None——恰是本合同原稿声称不会发生的破坏；反向（旧读者读 v1.1 新行）同理。因此 v1.1 落地**必须**把版本门改为版本集合成员判定，实现要求如下（进 V4-B06+ 实现卡验收清单）：
+
+- **读侧（:340-341 处）**：门条件改为 `schema_version ∈ {action_plan.v1, action_plan.v1.1}`，**按版本分派解码**：
+  - v1 行 → 走既有 v1 投影路径原样输出（全部 v1 字段不变），`why_now` 以 null 补位（或输出不含 `why_now` 键——二选一由实现卡钉死并以测试冻结），**不得**因缺 why_now 或版本不等于最新而触发整块降级；
+  - v1.1 行 → 在 v1 投影之上追加 why_now 子结构解码；子结构校验失败走本节读侧门的字段级降级；
+  - 集合外版本/脏值 → 维持现状：整块 None + WARN（fail-closed 纪律不变）。集合常量命名由实现卡定义，不绑死。
+- **写侧（:259-260 处）**：validate 改为接受 `{action_plan.v1, action_plan.v1.1}` 双版本的集合成员判定（共存窗口）；新写行落 `action_plan.v1.1`；v1.1 行存在 why_now 子结构时追加其校验，v1 行跳过该子校验、不报 violation。
+- **回归断言**（并入 §8 双读用例）：常量 bump 后对存量 v1 行跑 `action_plan_projection`，输出与 bump 前逐字节等价（至多差 why_now 补位）；v1 消费方行为不变，WARN 不得因存量行放大。
+
+这样 S4 五要素（outcome/step/**why-now**/evidence/mode）在 task 级输出契约内齐备；「对 v1 行零影响」的成立前提是 §4.1 版本集合成员判定落地（全 nullable、无 server default，迁移对旧行零写入）——缺该机制而仅 bump 常量，则存量 v1 行会因严格相等版本门整块降级（R1-C1 修订 2026-09-28，如实表述）。
 
 ## 5. `episode_resume_view.v1`（接续读模型）
 
@@ -124,7 +136,7 @@ WT806 S4 裁定口径 A 成立的前提是"task 级缺位登记后续卡"。本�
 | `schema_version` | const `"episode_resume_view.v1"` | 是 | — |
 | `goal_ref` / `task_ref` | closed-scheme URI（`goal://`、`task://`） | 是 | 所指对象必须存在且属当前用户 |
 | `run_ref` | `run://<run_id>` \| null | 否 | null=无在途 run |
-| `last_valid_outcome` | `{outcome_ref: outcome://, truth_class: actual\|self_reported\|estimated\|unknown, recorded_at}` \| null | 否 | truth_class 复用 D-02 `TruthClass`；null=无可引用成果——**不得**以"练了 N 分钟"类替代呈现（MASTER_DESIGN §6：不显示"练了15分钟所以精通"） |
+| `last_valid_outcome` | `{outcome_ref: outcome://, truth_class: actual\|self_reported\|estimated\|demo\|unknown, recorded_at}` \| null | 否 | truth_class 复用 D-02 `TruthClass` **全 5 值 1:1**（R1-C4 修订 2026-09-28：原稿漏第 5 值 `demo`=demo/seed cohort、消费方标注、确定性分级不产此值；resume 聚合器读存量账本行，遇 demo 行**透传不排除**，避免对合法账本数据 fail-closed；呈现端对 `truth_class=demo` 必须以"演示/种子数据"样式显式标注，永不进成功/精通面）；null=无可引用成果——**不得**以"练了 N 分钟"类替代呈现（MASTER_DESIGN §6：不显示"练了15分钟所以精通"） |
 | `last_confirmed_step` | `{step_ref: task\|subtask scheme, description, confirmed_at, version_token}` \| null | 否 | null=无已确认步 |
 | `pending_human_step` | `{description, cognitive_ownership: user_core\|shared\|delegated, execution_mode: human\|agent\|hybrid}` \| null | 否 | 词表复用 X-01 `cognitive_ownership` 与 `ExecutionMode`，import 不复制 |
 | `expires_at` | timestamp | 是 | 过期 → 呈现不确定性说明，**不强行接续、后台任务不复活**（MASTER_DESIGN 接续时刻） |
@@ -132,7 +144,17 @@ WT806 S4 裁定口径 A 成立的前提是"task 级缺位登记后续卡"。本�
 
 ## 6. 五错误状态与 committed 的不混用（卡验收 3）
 
-`commit_state=committed` 与 `error_state` 互斥且覆盖完备（终端只有这两类）。`error_state` 五值 **1:1 复用** `ACTION_ERROR_CODES`（`backend/app/core/action_command.py:164`），不造第二词表：
+`commit_state=committed` 与 `error_state` 互斥（卡验收 3）。
+
+**R1-C4 修订 2026-09-28**：原稿"覆盖完备（终端只有这两类）"对所引权威不实——源词表 `TerminalReason`（`backend/app/core/action_command.py:117`）为 **4 终态** `committed / user_cancelled / user_rejected / expired`。本节投影规则改为对全词表构成**全函数**（每值恰有一种投影结局）：
+
+| TerminalReason | 投影结局 |
+|---|---|
+| `committed` | `commit_state=committed`（本表下行） |
+| `expired` | `error_state=expired`（本表下行） |
+| `user_cancelled` / `user_rejected` | **不产生 ExperienceEvent**：投影器跳过 + debug 日志 + 跳过计数。用户在确认卡上亲自做出取消/拒绝，结果已即时可知，补发"你已取消/已拒绝"事件属呈现噪音且无消费方；若未来需要该呈现，走 `kind` 词表 v1.x bump，不在本版夹带 |
+
+**R1-C3 修订 2026-09-28**：`error_state` 五值 **1:1 复用** `ACTION_ERROR_CODES`（`backend/app/core/action_command.py:164`）——源词表实为 **6 值**（原稿"五值"计数有误）。第 6 值 `ACTION_INVALID_COMMAND` **显式排除**出映射，论证：它是命令构造/前置校验期错误（`ActionCommandError` 基类默认码与 `CommandValidationError`，HTTP 422），在命令进入 proposal 生命周期、产生权威终态落账**之前**即同步返回给请求方（`ActionCommandError.to_payload`），不产生本合同意义上的权威回执——无 proposal 身份可投影。配套登记为**投影器断言**：权威回执若携带 `ACTION_INVALID_COMMAND`，投影器必须 fail-loud（拒绝投影并告警），不得静默映射入 `error_state`。不造第二词表：
 
 | error_state | 源错误码 | 触发 | 呈现 copy_key（冻结表） | 可重试 |
 |---|---|---|---|---|
@@ -156,7 +178,7 @@ WT806 S4 裁定口径 A 成立的前提是"task 级缺位登记后续卡"。本�
 ## 8. 版本化、双读与生成入口
 
 - **版本策略**：三契约首版 `.v1`；只加必填=false 的字段 → `.v1.x` 递增；改必填性/改词表成员/改字段语义 → `.v2` 新读门（不 in-place 改语义）。`ACTION_ERROR_CODES`/`cognitive_ownership`/`ExecutionMode` 等既有词表**只复用不复制**，其扩展归各自 owner。
-- **旧客户端双读**：REST/JSON 面（ContextSelectionReceipt、EpisodeResumeView、ActionPlan v1.1）——旧客户端忽略未知可选字段（Dart `fromJson` 容错 + 服务端不删字段）；`why_now=null`/字段缺失对 v1 行为完全等价。WS 面（ExperienceEvent）——旧客户端对未注册 `kind` 一律降级为"忽略 + 静默计数"，**不得**当成功处理。双读用例：同一权威回执分别喂 v1 消费方与 v1.1 消费方，断言 v1 路径行为逐字节不变（进 V4-B06+ 实现卡测试清单）。
+- **旧客户端双读**：REST/JSON 面（ContextSelectionReceipt、EpisodeResumeView、ActionPlan v1.1）——旧客户端忽略未知可选字段（Dart `fromJson` 容错 + 服务端不删字段）；`why_now=null`/字段缺失对 v1 行为完全等价（R1-C1 修订 2026-09-28：该等价性以 §4.1 版本集合成员判定落地为前提——存量 v1 行经读侧按版本分派原样投影，不经整块降级）。WS 面（ExperienceEvent）——旧客户端对未注册 `kind` 一律降级为"忽略 + 静默计数"，**不得**当成功处理。双读用例：同一权威回执分别喂 v1 消费方与 v1.1 消费方，断言 v1 路径行为逐字节不变（进 V4-B06+ 实现卡测试清单）。
 - **proto 入口**：本合同初版 REST/JSON 为主（X-01 先证：任务域契约载体 REST/JSON 非 gRPC）。ExperienceEvent 需 WS 下发时，由 contract-owner 在 `proto/websocket.proto` 增 `ExperienceEventFrame`（`oneof` 挂 `WebSocketMessage`），随后 `make proto-gen` 生成 Go/Dart/Python——**禁手改 `*/gen/` 与 SQLC 产物**（硬规则 1）。schema 列（如 tasks.why_now JSONB）唯一入口 Alembic 迁移单头（硬规则 2）。
 - **开关**：三个契约均 shadow 写先行、默认读关闭；off/shadow/live 登记进既有 kill-switch manifest，不造第二组常量（ARCHITECTURE_DELTA 变更策略）。
 - **跨对象拒绝**：`(subject_type, subject_id)` 与 ref scheme 二重校验（I3）；`run://` 解析 `agent_runs` 且校验属主（X-05 lineage 同款）；失败拒绝不 500 泄漏。
@@ -174,6 +196,8 @@ WT806 S4 裁定口径 A 成立的前提是"task 级缺位登记后续卡"。本�
 | 证据登记（evidence 登账）当"精通"呈现 | D-02 分级：self_report 永不升 actual；呈现必须带 truth_class |
 | harness/mock 生成的 receipt（Q-01 mock-provider 类） | 非生产写路径产物，不得进用户可见成功面 |
 | 过期 EpisodeResumeView 自动接续 | `expires_at` 过期只允许"说明不确定性"，不允许静默续跑旧授权 |
+
+> **对齐声明（R1-C5 修订 2026-09-28）**：反例的**机器可读权威冻结集 = `examples/counterexamples.json`（12 条，每条附 `violates` 指向）**；本表 9 条为叙述面冻结子集声明。两集当前为部分重叠：7 条重叠；`tracking_events`（遥测行）与 `harness_mock`（mock receipt）两条为本表独有、尚未入机器可读集；JSON 另有 5 条纯机器断言场景独有（`error_state_mixed_with_committed`/`cross_object_subject`/`empty_candidates_rendered_as_has_evidence`/`fabricated_ref_scheme`/`why_now_without_basis`）。V4-B06+ 实现卡开工前由 contract-owner 将本表两条独有反例补入 JSON（含 `violates` 指向），此后以 JSON 为唯一权威冻结集，实现卡负例测试以该集为准、不得漂移。
 
 ## 10. 最小示例
 
