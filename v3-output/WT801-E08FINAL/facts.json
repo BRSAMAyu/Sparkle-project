@@ -1,0 +1,196 @@
+{
+  "generated_at": "2026-09-28T11:05:43+08:00",
+  "run_tag": "e08final",
+  "n_total": 104,
+  "n_ok": 104,
+  "n_error": 0,
+  "n_fallback": 0,
+  "n_quality_pass": 68,
+  "tokens_total": 347796,
+  "cost_total_usd": 0.126854,
+  "cost_mean_usd": 0.00122,
+  "by_layer": {
+    "L0": {
+      "n": 26,
+      "ok": 26,
+      "err": 0,
+      "fallback": 0,
+      "quality_pass": 20,
+      "ttft_p50": 1.0767,
+      "ttft_p95": 1.7812,
+      "content_p50": 1.0767,
+      "content_p95": 1.7812,
+      "total_p50": 2.1147,
+      "total_p95": 21.1619,
+      "fb_p50": 0.029,
+      "fb_p95": 0.0451,
+      "ptok_sum": 34325,
+      "ctok_sum": 1495,
+      "cost_sum": 0.0013,
+      "cost_mean": 0.0
+    },
+    "L1": {
+      "n": 26,
+      "ok": 26,
+      "err": 0,
+      "fallback": 0,
+      "quality_pass": 19,
+      "ttft_p50": 1.6565,
+      "ttft_p95": 2.5962,
+      "content_p50": 1.7193,
+      "content_p95": 2.8272,
+      "total_p50": 26.6298,
+      "total_p95": 30.9264,
+      "fb_p50": 0.0309,
+      "fb_p95": 0.0436,
+      "ptok_sum": 81275,
+      "ctok_sum": 9142,
+      "cost_sum": 0.0038,
+      "cost_mean": 0.0001
+    },
+    "L2": {
+      "n": 26,
+      "ok": 26,
+      "err": 0,
+      "fallback": 0,
+      "quality_pass": 18,
+      "ttft_p50": 1.9026,
+      "ttft_p95": 8.3271,
+      "content_p50": 2.4961,
+      "content_p95": 5.9687,
+      "total_p50": 29.5649,
+      "total_p95": 65.3564,
+      "fb_p50": 0.0219,
+      "fb_p95": 0.0424,
+      "ptok_sum": 71505,
+      "ctok_sum": 10422,
+      "cost_sum": 0.0218,
+      "cost_mean": 0.0008
+    },
+    "L3": {
+      "n": 26,
+      "ok": 26,
+      "err": 0,
+      "fallback": 0,
+      "quality_pass": 11,
+      "ttft_p50": 10.9362,
+      "ttft_p95": 113.1504,
+      "content_p50": 9.185,
+      "content_p95": 112.9496,
+      "total_p50": 68.4858,
+      "total_p95": 126.7048,
+      "fb_p50": 0.0304,
+      "fb_p95": 0.0541,
+      "ptok_sum": 113943,
+      "ctok_sum": 25689,
+      "cost_sum": 0.1,
+      "cost_mean": 0.0038
+    }
+  },
+  "by_lane": {
+    "free": {
+      "n": 78,
+      "ok": 78,
+      "err": 0,
+      "fallback": 0,
+      "quality_pass": 54,
+      "ttft_p50": 1.4792,
+      "ttft_p95": 8.7169,
+      "content_p50": 1.6207,
+      "content_p95": 7.9499,
+      "total_p50": 20.956,
+      "total_p95": 60.4985,
+      "fb_p50": 0.0289,
+      "fb_p95": 0.0461,
+      "ptok_sum": 225290,
+      "ctok_sum": 25931,
+      "cost_sum": 0.0106,
+      "cost_mean": 0.0001
+    },
+    "pro": {
+      "n": 26,
+      "ok": 26,
+      "err": 0,
+      "fallback": 0,
+      "quality_pass": 14,
+      "ttft_p50": 7.9023,
+      "ttft_p95": 113.2508,
+      "content_p50": 6.2486,
+      "content_p95": 112.9496,
+      "total_p50": 66.0239,
+      "total_p95": 126.7048,
+      "fb_p50": 0.0275,
+      "fb_p95": 0.0473,
+      "ptok_sum": 75758,
+      "ctok_sum": 20817,
+      "cost_sum": 0.1163,
+      "cost_mean": 0.0045
+    }
+  },
+  "slo_results": {
+    "L0 no-model p95≤500ms": "FAIL",
+    "L1 首个有意义反馈 p50≤2.5s": "PASS",
+    "L1 p95≤5s": "PASS",
+    "L2 500ms 内阶段反馈（首事件 p95）": "PASS",
+    "L2 最终 p95≤15s": "FAIL",
+    "L3 创建/ACK p95≤1s": "PASS"
+  },
+  "issues": [
+    {
+      "id": "E08-ISS-L0-TTFT",
+      "severity": "high",
+      "description": "L0 快答路径 TTFT p95=1781ms > 目标 500ms（Gate V3-8）。问候/确认/快问仍走完整生成链（对应 E-01 W-2：TRIVIAL 不跳过生成），L0 no-model 直答未生效。",
+      "evidence": {
+        "layer": "L0",
+        "n": 26,
+        "ttft_p95_s": 1.78125
+      }
+    },
+    {
+      "id": "E08-ISS-L2-TOTAL",
+      "severity": "medium",
+      "description": "L2 最终回复 p95=65.4s > 目标 15s（思考档总时长超预算）。",
+      "evidence": {
+        "layer": "L2",
+        "n": 26,
+        "total_p95_s": 65.356375
+      }
+    },
+    {
+      "id": "E08-ISS-QUALITY",
+      "severity": "medium",
+      "description": "36 条未过启发式 quality 粗筛（空答/弃答/语言不符/低相关；粗筛口径声明于报告）：",
+      "evidence": {
+        "request_ids": [
+          "wt801-e08-e08final-l0-02-1c8aa8",
+          "wt801-e08-e08final-l0-07-fa3e98",
+          "wt801-e08-e08final-l0-10-adf1e5",
+          "wt801-e08-e08final-l0-12-fb553d",
+          "wt801-e08-e08final-l0-13-1f7797",
+          "wt801-e08-e08final-l0-14-bebf11",
+          "wt801-e08-e08final-l1-02-7522b5",
+          "wt801-e08-e08final-l1-03-ad6143",
+          "wt801-e08-e08final-l1-04-f9fbbe",
+          "wt801-e08-e08final-l1-07-8bfa66",
+          "wt801-e08-e08final-l1-16-cb6bfe",
+          "wt801-e08-e08final-l1-19-0795d0",
+          "wt801-e08-e08final-l1-26-31a36f",
+          "wt801-e08-e08final-l2-02-26719a",
+          "wt801-e08-e08final-l2-10-dbb2e4",
+          "wt801-e08-e08final-l2-11-6a9b16",
+          "wt801-e08-e08final-l2-12-65e7bf",
+          "wt801-e08-e08final-l2-16-5ffb5a",
+          "wt801-e08-e08final-l2-20-cfad2b",
+          "wt801-e08-e08final-l2-23-760c30"
+        ]
+      }
+    }
+  ],
+  "models": {
+    "dashscope_fast": 68,
+    "no_generation_model": 18,
+    "dashscope_chat": 12,
+    "qwen3_8_max": 5,
+    "dashscope_standard_thinking": 1
+  }
+}

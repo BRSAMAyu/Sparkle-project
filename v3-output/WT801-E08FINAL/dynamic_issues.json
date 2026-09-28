@@ -1,0 +1,54 @@
+{
+  "generated_at": "2026-09-28T11:05:43.773884+08:00",
+  "issues": [
+    {
+      "id": "E08-ISS-L0-TTFT",
+      "severity": "high",
+      "description": "L0 快答路径 TTFT p95=1781ms > 目标 500ms（Gate V3-8）。问候/确认/快问仍走完整生成链（对应 E-01 W-2：TRIVIAL 不跳过生成），L0 no-model 直答未生效。",
+      "evidence": {
+        "layer": "L0",
+        "n": 26,
+        "ttft_p95_s": 1.78125
+      }
+    },
+    {
+      "id": "E08-ISS-L2-TOTAL",
+      "severity": "medium",
+      "description": "L2 最终回复 p95=65.4s > 目标 15s（思考档总时长超预算）。",
+      "evidence": {
+        "layer": "L2",
+        "n": 26,
+        "total_p95_s": 65.356375
+      }
+    },
+    {
+      "id": "E08-ISS-QUALITY",
+      "severity": "medium",
+      "description": "36 条未过启发式 quality 粗筛（空答/弃答/语言不符/低相关；粗筛口径声明于报告）：",
+      "evidence": {
+        "request_ids": [
+          "wt801-e08-e08final-l0-02-1c8aa8",
+          "wt801-e08-e08final-l0-07-fa3e98",
+          "wt801-e08-e08final-l0-10-adf1e5",
+          "wt801-e08-e08final-l0-12-fb553d",
+          "wt801-e08-e08final-l0-13-1f7797",
+          "wt801-e08-e08final-l0-14-bebf11",
+          "wt801-e08-e08final-l1-02-7522b5",
+          "wt801-e08-e08final-l1-03-ad6143",
+          "wt801-e08-e08final-l1-04-f9fbbe",
+          "wt801-e08-e08final-l1-07-8bfa66",
+          "wt801-e08-e08final-l1-16-cb6bfe",
+          "wt801-e08-e08final-l1-19-0795d0",
+          "wt801-e08-e08final-l1-26-31a36f",
+          "wt801-e08-e08final-l2-02-26719a",
+          "wt801-e08-e08final-l2-10-dbb2e4",
+          "wt801-e08-e08final-l2-11-6a9b16",
+          "wt801-e08-e08final-l2-12-65e7bf",
+          "wt801-e08-e08final-l2-16-5ffb5a",
+          "wt801-e08-e08final-l2-20-cfad2b",
+          "wt801-e08-e08final-l2-23-760c30"
+        ]
+      }
+    }
+  ]
+}

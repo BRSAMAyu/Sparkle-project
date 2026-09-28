@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import subprocess
 import sys
 import time
@@ -32,11 +33,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_DIR = REPO_ROOT / "v3-output" / "WT406-Q06-PERF"
 
-WORKTREE_BACKEND = Path("/Users/brsama/code/GitHub/Sparkle-sysrev/wt406-q06-perf/backend")
-GRPC_TARGET = "127.0.0.1:50061"
-HTTP_BASE = "http://127.0.0.1:8000/api/v1"
-GUEST_FREE = "wt406_q06_bench_free"
-GUEST_PRO = "wt406_q06_bench_pro"
+# wt801：backend/stub 根、gRPC 目标、guest 与 request_id 前缀支持环境变量覆盖
+# （默认保持 wt406 口径不变）。复测消费常驻引擎 :50051，stub 取该引擎 backend 树。
+WORKTREE_BACKEND = Path(os.environ.get(
+    "Q06_BACKEND_ROOT", "/Users/brsama/code/GitHub/Sparkle-sysrev/wt406-q06-perf/backend"))
+GRPC_TARGET = os.environ.get("Q06_GRPC_TARGET", "127.0.0.1:50061")
+HTTP_BASE = os.environ.get("Q06_HTTP_BASE", "http://127.0.0.1:8000/api/v1")
+GUEST_FREE = os.environ.get("Q06_GUEST_FREE", "wt406_q06_bench_free")
+GUEST_PRO = os.environ.get("Q06_GUEST_PRO", "wt406_q06_bench_pro")
+REQ_PREFIX = os.environ.get("Q06_REQ_PREFIX", "wt406q06")
 PSQL = ["docker", "exec", "sparkle_db", "psql", "-U", "postgres", "-d", "sparkle", "-Atc"]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -256,7 +261,7 @@ def run_queries(layers: list[str], reps: int, out_dir: Path, tag: str, run_limit
                     is_pro = q["lane"] == "pro"
                     token, uid = (tok_pro, uid_pro) if is_pro else (tok_free, uid_free)
                     request_id = (
-                        f"wt406q06-{q['qid'].lower()}-r{rep}-{uuid.uuid4().hex[:6]}"
+                        f"{REQ_PREFIX}-{q['qid'].lower()}-r{rep}-{uuid.uuid4().hex[:6]}"
                     )
                     req = pb2.ChatRequest(
                         user_id=uid, message=q["text"], session_id=session_id,

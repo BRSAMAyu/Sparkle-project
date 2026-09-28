@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import re
 import subprocess
 import sys
@@ -41,7 +42,10 @@ DEFAULT_OUT_DIR = REPO_ROOT / "v3-output" / "WT372-E08-BENCH"
 ENGINE_BACKEND = Path("/Users/brsama/code/GitHub/Sparkle-project/backend")
 GRPC_TARGET = "127.0.0.1:50051"
 HTTP_BASE = "http://127.0.0.1:8000/api/v1"
-GUEST_ID = "wt372_e08_bench"
+# wt801：guest 与 request_id 前缀支持环境变量覆盖（默认保持 wt372 基线口径不变），
+# 复测须用新建 bench guest，避免既有用户记忆/状态污染前后对照。
+GUEST_ID = os.environ.get("E08_BENCH_GUEST", "wt372_e08_bench")
+REQ_PREFIX = os.environ.get("E08_REQ_PREFIX", "wt372-e08")
 PSQL_CONTAINER = "sparkle_db"
 PSQL_USER = "postgres"
 PSQL_DB = "sparkle"
@@ -407,7 +411,7 @@ def run_queries(layers: list[str], limit: int, out_dir: Path, tag: str) -> None:
                 session_id = ""
                 session_turn = 0
             session_turn += 1
-            request_id = f"wt372-e08-{tag or 'run'}-{q['qid'].lower().replace('+', '')}-{uuid.uuid4().hex[:6]}"
+            request_id = f"{REQ_PREFIX}-{tag or 'run'}-{q['qid'].lower().replace('+', '')}-{uuid.uuid4().hex[:6]}"
             extra = {"reasoning_mode": q["reasoning_mode"]}
             if q["lane"] == "pro":
                 extra["user_tier"] = "pro"
