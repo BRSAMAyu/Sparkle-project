@@ -1,0 +1,24 @@
+{
+  "g05_family_four_style_test": {
+    "total": 21,
+    "passed": 21,
+    "failed": 0
+  },
+  "regression_report_reviews_cognitive": {
+    "total": 20,
+    "passed": 20,
+    "failed": 0
+  },
+  "regression_insights_and_widget": {
+    "total": 47,
+    "passed": 47,
+    "failed": 0
+  },
+  "regression_q03_longtail_probes": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0
+  },
+  "analyze_issues": 0,
+  "note": "全部 flutter test 跑法 --concurrency=1（资源铁令）；错峰分批执行"
+}

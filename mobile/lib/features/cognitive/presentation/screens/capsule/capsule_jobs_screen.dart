@@ -146,7 +146,10 @@ class _JobCard extends ConsumerWidget {
                   vertical: DS.spacing4,
                 ),
                 decoration: BoxDecoration(
-                  color: _getStatusColor().withValues(alpha: 0.15),
+                  // V4-G05 状态 pill 底 0.15→0.05：状态色文本于自身 0.15
+                  // tint 在 classic 4.02–4.16:1（<4.5:1，dusk error 4.46）；
+                  // 0.05 起四风格 4.85–7.05:1（同家族 pill 0.05 约定）。
+                  color: _getStatusColor().withValues(alpha: 0.05),
                   borderRadius: DS.borderRadius8,
                 ),
                 child: Row(
@@ -254,7 +257,9 @@ class _JobCard extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(DS.spacing12),
               decoration: BoxDecoration(
-                color: DS.error.withValues(alpha: 0.1),
+                // V4-G05 失败框底 0.1→0.05：error 文本于自身 0.1 tint 在
+                // classic 4.45:1（<4.5:1）；0.05 起四风格 ≥4.85:1。
+                color: DS.error.withValues(alpha: 0.05),
                 borderRadius: DS.borderRadius8,
                 border: Border.all(color: DS.error.withValues(alpha: 0.3)),
               ),

@@ -381,7 +381,10 @@ class _ElementBlock extends StatelessWidget {
               vertical: DS.spacing4,
             ),
             decoration: BoxDecoration(
-              color: DS.brandPrimary.withValues(alpha: 0.08),
+              // V4-G05 要素标签 chip 底 0.08→0.05：classic 下 brand 文本
+              // 于自身 0.08 tint 上 4.45:1（<4.5:1），0.05 起四风格
+              // 4.61–8.31:1（paperDay/dusk/quiet 5.94/6.24/8.31）。
+              color: DS.brandPrimary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(DS.radius12),
             ),
             child: Text(

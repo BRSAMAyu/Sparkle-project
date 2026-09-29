@@ -51,9 +51,11 @@ class RiskObservationCard extends StatelessWidget {
                       ),
                       Text(
                         context.l10n.insRiskSubtitle,
+                        // V4-G05 副标题走 textSecondary（neutral500 在
+                        // classic/dusk 3.08/4.13:1 <4.5:1）。
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
-                          color: DS.neutral500,
+                          color: DS.textSecondary,
                         ),
                       ),
                     ],
@@ -119,15 +121,18 @@ class RiskObservationCard extends StatelessWidget {
   }
 
   Color _getRiskColor(String level) {
+    // V4-G05 风险语义色全强度：shade600（0.7 alpha 透明度压色）作徽章
+    // 文本四风格 2.71–4.18:1（<4.5:1）、图标 classic 2.74:1（<3:1）；
+    // 全强度在 0.1 tint 底上文本 4.66–7.05:1、图标 4.66–7.05:1。
     switch (level) {
       case 'low':
-        return DS.success.shade600;
+        return DS.success;
       case 'medium':
-        return DS.brandPrimary.shade600;
+        return DS.brandPrimary;
       case 'high':
-        return DS.error.shade600;
+        return DS.error;
       default:
-        return DS.brandPrimary.shade600;
+        return DS.brandPrimary;
     }
   }
 

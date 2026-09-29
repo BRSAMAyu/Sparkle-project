@@ -432,9 +432,11 @@ class _LearningForecastScreenState
             children: [
               Row(
                 children: [
+                  // V4-G05 图标全强度（shade600=0.7 alpha 在 classic 卡面
+                  // ≈2.9:1 <3:1 图形阈值；全强度 3.19–7.38:1）。
                   Icon(
                     Icons.tips_and_updates,
-                    color: DS.prismPurple.shade600,
+                    color: DS.prismPurple,
                     size: 24,
                   ),
                   const SizedBox(width: DS.md),
@@ -459,7 +461,7 @@ class _LearningForecastScreenState
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.arrow_right, color: DS.prismPurple.shade600, size: 20),
+            Icon(Icons.arrow_right, color: DS.prismPurple, size: 20),
             const SizedBox(width: DS.sm),
             Expanded(
               child: Text(text, style: const TextStyle(fontSize: 14)),

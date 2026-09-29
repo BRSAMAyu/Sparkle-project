@@ -72,8 +72,15 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
                         indicatorSize: TabBarIndicatorSize.tab,
                         dividerColor: Colors.transparent,
                         indicator: BoxDecoration(
+                          // V4-G05 选中指示：capsuleAccent@0.14 tint 对 s2 底
+                          // 四风格仅 1.16–1.32:1（<3:1 图形阈值），而全强度
+                          // 填充会压过主题标签墨（textPrimary 于 capsuleAccent
+                          // 四风格 1.55–4.34:1 <4.5:1）——定式为「tint 填充 +
+                          // 全强度描边」：边界由描边承载（capsuleAccent vs
+                          // s2 ≥3:1），标签墨落在近 s2 底不受损。
                           color: DS.capsuleAccent.withValues(alpha: 0.14),
                           borderRadius: DS.borderRadius16,
+                          border: Border.all(color: DS.capsuleAccent),
                         ),
                         tabs: [
                           Tab(

@@ -241,7 +241,10 @@ class _ChronicleTimelineItemState extends State<_ChronicleTimelineItem> {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.14),
+                  // V4-G05 圆底 tint 0.14→0.05：cs.secondary（brandSecondary）
+                  // 图标于自身 0.14 tint 在 classic 卡面 2.73:1（<3:1 图形
+                  // 阈值）；0.05 起四风格图标 ≥3:1。
+                  color: accent.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                   border: Border.all(color: accent.withValues(alpha: 0.42)),
                 ),
@@ -384,8 +387,12 @@ class _StatusPill extends StatelessWidget {
       ),
       child: Text(
         label,
+        // V4-G05 状态 pill 文本走 textPrimary：cs.primary/secondary 作正文
+        // 于自身 0.12 tint 在 classic 卡面 4.50/2.78:1（<4.5:1），
+        // textSecondary 亦不足（4.39–4.46:1）；色彩辨识由 pill tint 承载，
+        // 正文墨保持语义可读。
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
+              color: DS.textPrimary,
               fontWeight: FontWeight.w700,
             ),
       ),
@@ -420,7 +427,11 @@ Color _entryColor(BuildContext context, String entryType) {
   final colors = Theme.of(context).colorScheme;
   return switch (entryType) {
     'turning_point' => colors.tertiary,
-    'pattern_discovered' => colors.secondary,
+    'pattern_discovered' =>
+      // V4-G05：cs.secondary（brandSecondary）在 classic 卡面自身对比仅
+      // 2.99:1（<3:1 图形阈值，@0.05 tint 底同样不足）——图标/描边改用
+      // 同源变暗档 secondaryDark（DS 既有派生，非第二真源），四风格 ≥3:1。
+      DS.secondaryDark,
     'user_reflection' => colors.primary,
     _ => colors.error,
   };

@@ -88,10 +88,12 @@ class MasteryRadarChart extends StatelessWidget {
                                 values: comparisonValues,
                                 centerOffset: centerOffset,
                                 radius: chartSize / 2,
-                                strokeColor: Theme.of(context)
-                                    .colorScheme
-                                    .outline
-                                    .withValues(alpha: 0.7),
+                                // V4-G05 对比系列（上次报告）从 outline@0.7
+                                // 升到 textSecondary 实色：outline 系在图底
+                                // 上四风格 1.74–1.85:1（<3:1 图形阈值），
+                                // textSecondary 4.81–6.90:1；虚线纹样保持
+                                // （与主系列的形状双编码不变）。
+                                strokeColor: DS.textSecondary,
                               ),
                             ),
                     ),

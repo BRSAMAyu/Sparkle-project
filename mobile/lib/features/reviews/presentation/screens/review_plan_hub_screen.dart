@@ -188,9 +188,12 @@ class _HeroCard extends StatelessWidget {
         padding: const EdgeInsets.all(DS.spacing20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
+            // V4-G05 hero 渐变止点 0.16/0.1→0.08/0.05：textSecondary 副标题
+            // 于 brand@0.16 止点在 classic 4.37:1（<4.5:1）；0.08 起四风格
+            // ≥4.6:1（同家族 capsule 0.06/0.04 渐变约定）。
             colors: [
-              DS.brandPrimary.withValues(alpha: 0.16),
-              DS.info.withValues(alpha: 0.1),
+              DS.brandPrimary.withValues(alpha: 0.08),
+              DS.info.withValues(alpha: 0.05),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,

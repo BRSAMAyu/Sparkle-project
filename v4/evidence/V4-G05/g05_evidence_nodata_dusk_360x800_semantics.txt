@@ -1,0 +1,3 @@
+seed=g05-seed-2026-09-29-v1 basename=g05_evidence_nodata_dusk_360x800
+证据洞察
+这个窗口还没有可分析的行为记录，尚未形成任何结论。

@@ -255,9 +255,11 @@ class _InsightTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // V4-G05 图标全强度：brand@0.7 在 classic 卡面 2.94:1 <3:1
+            // 图形阈值；全强度 5.31–8.46:1。
             Icon(
               Icons.check_circle_outline,
-              color: DS.brandPrimary.withValues(alpha: 0.7),
+              color: DS.brandPrimary,
               size: 14,
             ),
             const SizedBox(width: 6),

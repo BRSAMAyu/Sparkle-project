@@ -265,7 +265,10 @@ class DirectiveAuditCard extends StatelessWidget {
                   vertical: DS.spacing4,
                 ),
                 decoration: BoxDecoration(
-                  color: resultColor.withValues(alpha: 0.1),
+                  // V4-G05 结果 pill 底 0.1→0.05：resultColor 文本于自身
+                  // 0.1 tint 在 classic ≈4.3:1（<4.5:1），0.05 起四风格
+                  // 4.63–7.09:1（同家族 pill 0.05 约定）。
+                  color: resultColor.withValues(alpha: 0.05),
                   borderRadius: DS.borderRadiusFull,
                 ),
                 child: Text(

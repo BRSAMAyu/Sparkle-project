@@ -359,13 +359,16 @@ class _DepthBadge extends StatelessWidget {
     final Color fg;
     switch (capsule.depthLevelEnum) {
       case CapsuleDepthLevel.deep:
-        bg = DS.info.withValues(alpha: 0.12);
+        // V4-G05 深度 pill 底 0.12→0.05：语义色文本于自身 0.12 tint 在
+        // classic 4.49–4.50:1（<4.5:1）；0.05 起四风格 4.85–7.05:1
+        //（同家族 pill 0.05 约定）。
+        bg = DS.info.withValues(alpha: 0.05);
         fg = DS.info;
       case CapsuleDepthLevel.medium:
-        bg = DS.warning.withValues(alpha: 0.12);
+        bg = DS.warning.withValues(alpha: 0.05);
         fg = DS.warning;
       case CapsuleDepthLevel.shallow:
-        bg = DS.success.withValues(alpha: 0.12);
+        bg = DS.success.withValues(alpha: 0.05);
         fg = DS.success;
     }
     return Container(
@@ -716,7 +719,9 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
                 selected: selected,
                 onSelected: (_) =>
                     setState(() => _category = selected ? null : value),
-                selectedColor: DS.brandPrimary.withValues(alpha: 0.12),
+                // V4-G05 选中 chip 底 0.12→0.05：brand 文本于自身 0.12 tint
+                // 在 classic 4.22:1（<4.5:1）；0.05 起四风格 4.85–8.31:1。
+                selectedColor: DS.brandPrimary.withValues(alpha: 0.05),
                 checkmarkColor: DS.brandPrimary,
                 labelStyle: TextStyle(
                   fontSize: 12,

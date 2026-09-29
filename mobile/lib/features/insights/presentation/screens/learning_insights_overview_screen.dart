@@ -372,8 +372,13 @@ class _InsightModuleCard extends StatelessWidget {
                     ),
                     child: Text(
                       context.l10n.insRecommended,
+                      // V4-G05 推荐 pill 文本走 textPrimary：accent 作正文
+                      // 于自身 0.12 tint（叠 highlight 底 0.05）四风格
+                      // 3.95–4.44:1（<4.5:1），textSecondary 亦不足
+                      //（3.88–4.48:1）；色彩辨识由 tint 块承载，正文墨保
+                      // 语义可读。
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: accent,
+                            color: DS.textPrimary,
                             fontWeight: DS.fontWeightBold,
                           ),
                     ),

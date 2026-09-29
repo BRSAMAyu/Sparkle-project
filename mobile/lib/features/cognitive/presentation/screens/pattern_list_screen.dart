@@ -212,12 +212,11 @@ class _PatternCard extends StatelessWidget {
                 // Header
                 Row(
                   children: [
+                    // V4-G05 类型章：类型色只上图标（非文字件 ≥3:1 四风格
+                    // 逐对复算通过），底 tint 撤除——classic brandSecondary
+                    // 系在自身 tint 上 2.88:1（<3:1 图形阈值）。
                     Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: _getTypeColor(pattern.patternType).withAlpha(40),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                       child: Icon(
                         _getTypeIcon(pattern.patternType),
                         color: _getTypeColor(pattern.patternType),
@@ -238,11 +237,14 @@ class _PatternCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 2),
+                          // V4-G05 类型标签文本走 textSecondary（类型色在
+                          // classic 上 3.19:1 <4.5:1；类型辨识由图标形状+
+                          // 颜色承载，文本不做颜色唯一载体）。
                           Text(
                             _getTypeLabel(pattern.patternType),
                             style: TextStyle(
                               fontSize: 12,
-                              color: _getTypeColor(pattern.patternType),
+                              color: DS.textSecondary,
                             ),
                           ),
                         ],
@@ -289,11 +291,14 @@ class _PatternCard extends StatelessWidget {
                 // Description
                 if (pattern.description != null) ...[
                   const SizedBox(height: DS.lg),
+                  // V4-G05 描述正文禁「透明度压文字」（SPEC §1.3.1）：
+                  // brand@200 在 classic/paperDay 3.44/3.69:1 <4.5:1，
+                  // 走 textSecondary 语义槽（四风格 ≥5.29:1）。
                   Text(
                     pattern.description!,
                     style: TextStyle(
                       fontSize: 14,
-                      color: DS.brandPrimary.withAlpha(200),
+                      color: DS.textSecondary,
                       height: 1.5,
                     ),
                   ),
@@ -320,16 +325,19 @@ class _PatternCard extends StatelessWidget {
                           size: 18,
                         ),
                         const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            pattern.solutionText!,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: DS.successLight,
-                              height: 1.4,
+                          Expanded(
+                            child: Text(
+                              pattern.solutionText!,
+                              // V4-G05 方案文本 successLight 在浅色档是
+                              // 「变亮方向」（classic 2.56:1）——全强度
+                              // success 四风格 4.86–8.18:1 ≥4.5:1。
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: DS.success,
+                                height: 1.4,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -351,11 +359,14 @@ class _PatternCard extends StatelessWidget {
 
                 // Date
                 const SizedBox(height: DS.md),
+                // V4-G05 页脚时间戳走 textTertiary 定标槽（brand@100 透明度
+                // 压文字四风格 1.73–2.71:1 全失败；textTertiary 定标
+                // ≥4.5:1 on S0/S1，四风格实测 4.63–9.33:1）。
                 Text(
                   _buildFooterText(context),
                   style: TextStyle(
                     fontSize: 11,
-                    color: DS.brandPrimary.withAlpha(100),
+                    color: DS.textTertiary,
                   ),
                 ),
               ],

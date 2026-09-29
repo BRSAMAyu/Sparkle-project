@@ -1,0 +1,81 @@
+{
+  "card": "V4-G05",
+  "title": "洞察/复盘/报告——四风格商业化完备",
+  "branch": "agent/v4/g05",
+  "resumed_from_predecessor": true,
+  "predecessor_state": "host forced restart; dirty worktree (9 files + 1 test) inherited and continued, nothing discarded",
+  "seed_version": "g05-seed-2026-09-29-v1",
+  "commands": [
+    {
+      "cmd": "flutter analyze",
+      "exit": 0,
+      "note": "No issues found"
+    },
+    {
+      "cmd": "flutter test test/core/design/g05_family_four_style_test.dart --concurrency=1",
+      "exit": 0,
+      "note": "21/21 passed (A2 B4 C2 D3 E10)"
+    },
+    {
+      "cmd": "flutter test test/features/report test/features/reviews test/features/cognitive --concurrency=1",
+      "exit": 0,
+      "note": "20/20 passed"
+    },
+    {
+      "cmd": "flutter test test/features/insights test/widget/insights_frontend_smoke_test.dart test/widget/learning_insights_navigation_test.dart test/widget/p2_06_lifecycle_directive_audit_test.dart --concurrency=1",
+      "exit": 0,
+      "note": "47/47 passed"
+    },
+    {
+      "cmd": "flutter test test/goldens/q03_visual_qa/q03_visual_qa_longtail_test.dart --concurrency=1",
+      "exit": 0,
+      "note": "9/9 passed (layout probes over changed screens)"
+    },
+    {
+      "cmd": "G05_EVIDENCE_DIR=v4/evidence/V4-G05 flutter test test/core/design/g05_family_four_style_test.dart --concurrency=1",
+      "exit": 0,
+      "note": "21/21 passed + evidence written"
+    }
+  ],
+  "resource_discipline": {
+    "flutter_test_concurrency": 1,
+    "df_check_before_large_commands": "32Gi free (>=15G ok)",
+    "swap": "0 bytes used"
+  },
+  "scope_and_denominator": {
+    "modules": [
+      "insights",
+      "report",
+      "cognitive",
+      "reviews"
+    ],
+    "screens_in_scope": 13,
+    "screens_swept": "all 13 (4 touched by predecessor + 9 by this session incl. widget-level sites)",
+    "contrast_pairs_permanently_guarded": "A组：四风格×全部家族消费面对（含续扫 41 对新增钉），任一风格跌破阈值即红",
+    "contract_redline": "U13 契约层零 diff：三读面消费 D05 insight.presentation.v1，仅呈现层风格面改动；行为/路由/语义结构未动"
+  },
+  "artifacts_sha256": {
+    "g05_evidence_card_classic_360x800.png": "bf44bb3698ef03cad90eeaadaf66fa49f46a68b7faf1107001d81a1e8e29aeea",
+    "g05_evidence_card_classic_360x800_semantics.txt": "242db7a08dd712a6248a100787b1533f1eeb1be7d37c0aa0f58a7affed7f39ed",
+    "g05_evidence_card_dusk_360x800.png": "c82b7c68c5b6f2624dcd1ebb22debc1538489c12a1ea4a7840805b35f3b91652",
+    "g05_evidence_card_dusk_360x800_semantics.txt": "f029f93af4d201a15f0813ecfc10356ec63300e6894f9411835a69afbe9b5f47",
+    "g05_evidence_card_paperDay_360x800.png": "8ff7314a4ed05a6ca3bb169e4a1b6891d075f9b69cf7e5eae1fe3ac97e72e857",
+    "g05_evidence_card_paperDay_360x800_semantics.txt": "39c792e737b4362e75cdb59ee0104fe992fc9491baf930fcffdb4724b697a711",
+    "g05_evidence_card_quiet_360x800.png": "d0b8b43b15dfd74b9724d9aff7c908bd7c04096b0c72979979ee3a32a78a5192",
+    "g05_evidence_card_quiet_360x800_semantics.txt": "24847e7864804f37dff3e678e9e72dc14b96a563afb7911bbd738ea3dec9e5ba",
+    "g05_evidence_nodata_dusk_360x800.png": "69ed3147f1929d7c41bde8bab5ea88dd0de2a0fd73d5f2e171239d731e0b39f0",
+    "g05_evidence_nodata_dusk_360x800_semantics.txt": "115898458ae4b7d0b43ddbbe32c468967f88d5ce2150511668440e0c5b169105",
+    "g05_pattern_card_classic_360x800.png": "6ba8ab76364498f92143b6468bd0b35a8f90662e912ddca405b5ed77eb1cf70d",
+    "g05_pattern_card_classic_360x800_semantics.txt": "ea1569ee312477b8b0ed9a82af3700fa32447d424bcdd74fb9b7404d21cce0d0",
+    "g05_report_classic_360x800.png": "4f5d0d9cd047e12ffad21ab7e2aa596f05b29c1461c258e7ee636007e65ffc63",
+    "g05_report_classic_360x800_semantics.txt": "833dea48ea7067d7e4b9e82e0b4494b29871085cab29d295270307c6a6d2ffec",
+    "g05_report_dusk_360x800.png": "31a6d11d7115d688182e25d9e91cfb1d257e37d9b7d6b7bf52cc132fc62be8e3",
+    "g05_report_dusk_360x800_semantics.txt": "a772af6e6d64783cc0172ea68221b855b4274a58bd2c8d5f234f1bb5851accfa",
+    "g05_report_paperDay_360x800.png": "f3870e65bf0cb275b51c2ecd1e321414d6d0304e194fda0a073e3a2cf997100e",
+    "g05_report_paperDay_360x800_semantics.txt": "7770a97bb0d33ac7c05b05c536b12045e3fd4a27a4bdae926fe146a9bcbf06d3",
+    "g05_report_quiet_360x800.png": "b9c6509a400f83623554b64c29ab7cdaf1db9323895c3aebb1e3feaebb9fb1f3",
+    "g05_report_quiet_360x800_semantics.txt": "e6cd4aa59027a6d1b4308f2108cdb24648700f45b0eaae89a94a01886b855ec4",
+    "g05_review_hub_quiet_360x800.png": "18c382176ad88844b66f81263cc295079b60f8a58a8126d57aa4cb41f20825d0",
+    "g05_review_hub_quiet_360x800_semantics.txt": "23ec672bab46879ca16b9975c0f48bf80779181a8e315ae8dd8ade6a13caffec"
+  }
+}

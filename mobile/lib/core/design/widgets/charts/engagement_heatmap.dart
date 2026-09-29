@@ -33,9 +33,11 @@ class EngagementHeatmap extends StatelessWidget {
               // Header
               Row(
                 children: [
+                  // V4-G05 标题图标全强度（shade600=0.7 alpha 在 classic
+                  // 卡面 2.94:1 <3:1 图形阈值；全强度 5.31–8.46:1）。
                   Icon(
                     Icons.calendar_month,
-                    color: DS.brandPrimary.shade600,
+                    color: DS.brandPrimary,
                     size: 24,
                   ),
                   const SizedBox(width: DS.md),
@@ -169,7 +171,8 @@ class EngagementHeatmap extends StatelessWidget {
 
   Widget _buildStatItem(String label, String value, IconData icon) => Column(
         children: [
-          Icon(icon, size: 20, color: DS.brandPrimary.shade600),
+          // V4-G05 统计图标全强度（同上：shade600 classic 2.94:1 <3:1）。
+          Icon(icon, size: 20, color: DS.brandPrimary),
           const SizedBox(height: DS.xs),
           Text(
             value,

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -469,9 +470,13 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                        ),
                        const SizedBox(height: 12),
                      ],
+                    // V4-G05 reduce-motion 等价（S01 判例）：低动态偏好下
+                    // 雷达展开直落终态，不跑展开动画。
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0, end: 1),
-                      duration: DS.durationSlow,
+                      duration: context.reduceMotion
+                          ? Duration.zero
+                          : DS.durationSlow,
                       curve: Curves.easeOutCubic,
                       builder: (context, progress, child) => MasteryRadarChart(
                         labels: chartData.map((item) => item.nodeName).toList(),
@@ -1039,7 +1044,10 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: masteryColor.withValues(alpha: 0.12),
+                    // V4-G05 掌握度 pill 底 0.12→0.05：masteryColor 文本
+                    // 于自身 0.12 tint 在 classic 4.22–4.42:1（<4.5:1），
+                    // 0.05 起四风格 4.63–7.09:1。
+                    color: masteryColor.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -1491,7 +1499,11 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
                           _updateSelection(details.localPosition, chartWidth),
                       child: TweenAnimationBuilder<double>(
                         tween: Tween<double>(begin: 0, end: 1),
-                        duration: const Duration(milliseconds: 700),
+                        // V4-G05 reduce-motion 等价（S01 判例）：低动态
+                        // 偏好下趋势描线直落终态。
+                        duration: context.reduceMotion
+                            ? Duration.zero
+                            : const Duration(milliseconds: 700),
                         curve: Curves.easeOutCubic,
                         builder: (context, progress, _) => CustomPaint(
                           painter: _TrendChartPainter(
@@ -1570,6 +1582,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
               _TrendLegendChip(
                 color: DS.warning,
                 label: context.l10n.reportLegendStudyDuration,
+                dashed: true,
               ),
             ],
           ),
@@ -1853,8 +1866,12 @@ class _DiagnosisCard extends StatelessWidget {
                   ),
                   child: Text(
                     tag!,
+                    // V4-G05 标签 pill 文本走 textPrimary：accent 作正文
+                    // 于 0.12 tint（叠渐变止点 accent@0.14）四风格
+                    // 3.95–4.44:1（<4.5:1），textSecondary 亦不足；色彩
+                    // 辨识由 pill tint 承载，正文墨保持语义可读。
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: accent,
+                          color: DS.textPrimary,
                           fontWeight: DS.fontWeightBold,
                         ),
                   ),
@@ -2017,7 +2034,9 @@ class _InlineStatusPill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: DS.warning.withValues(alpha: 0.12),
+          // V4-G05 部分数据 pill 底 0.12→0.05：classic warning 文本于自身
+          // 0.12 tint 上 4.42:1（<4.5:1），0.05 起四风格 4.85–6.45:1。
+          color: DS.warning.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
@@ -2169,8 +2188,12 @@ class _ActionSuggestionTile extends StatelessWidget {
                   ),
                   child: Text(
                     actionCard.badge!,
+                    // V4-G05 徽章文本走 textPrimary：accent 作正文于
+                    // 0.12 pill tint（叠 0.08 卡底）四风格 4.01–4.42:1
+                    //（<4.5:1），textSecondary 亦不足（3.92–4.45）；色彩
+                    // 辨识由 tint 块承载，正文墨保持语义可读。
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: accent,
+                          color: DS.textPrimary,
                           fontWeight: DS.fontWeightBold,
                         ),
                   ),
@@ -2233,8 +2256,11 @@ class _TrendComparisonChip extends StatelessWidget {
         children: [
           Text(
             comparison.label,
+            // V4-G05 对比卡标签走 textPrimary：accent 作正文于自身 0.08
+            // 卡底四风格 4.31–4.42:1（<4.5:1），textSecondary 亦不足；
+            // 色彩辨识由卡 tint 承载，正文墨保持语义可读。
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: accent,
+                  color: DS.textPrimary,
                   fontWeight: DS.fontWeightBold,
                 ),
           ),
@@ -2439,8 +2465,12 @@ class _TrendChartPainter extends CustomPainter {
         secondaryPoints.add(Offset(x, y));
       }
       if (secondaryPoints.isNotEmpty) {
+        // V4-G05 次系列（学习时长）加虚线纹样：与主系列的颜色区分之外
+        // 增加形状双编码——classic/dusk/quiet 下两系列色相接近（系列-系列
+        // 1.05–1.36:1），颜色不作为唯一区辨载体（WCAG 1.4.1 同律；
+        // 与雷达图对比系列虚线约定一致）。
         canvas.drawPath(
-          _buildSmoothPath(secondaryPoints),
+          _buildDashedSmoothPath(_buildSmoothPath(secondaryPoints)),
           Paint()
             ..color = secondaryLineColor
             ..style = PaintingStyle.stroke
@@ -2500,6 +2530,23 @@ class _TrendChartPainter extends CustomPainter {
     return path;
   }
 
+  /// V4-G05 次系列虚线化：沿路径按 6/4 步长切成 dash 段（与雷达图对比
+  /// 系列同一 6/4 约定）。用 PathMetrics 量取，任意平滑曲线通用。
+  Path _buildDashedSmoothPath(Path source) {
+    final dashed = Path();
+    for (final metric in source.computeMetrics()) {
+      const dash = 6.0;
+      const gap = 4.0;
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = math.min(distance + dash, metric.length);
+        dashed.addPath(metric.extractPath(distance, next), Offset.zero);
+        distance = next + gap;
+      }
+    }
+    return dashed;
+  }
+
   @override
   bool shouldRepaint(covariant _TrendChartPainter oldDelegate) =>
       oldDelegate.values != values ||
@@ -2517,10 +2564,15 @@ class _TrendLegendChip extends StatelessWidget {
   const _TrendLegendChip({
     required this.color,
     required this.label,
+    this.dashed = false,
   });
 
   final Color color;
   final String label;
+
+  /// V4-G05 虚线样例：次系列（学习时长）在图内为虚线，图例样例同步
+  /// 形状双编码，系列↔图例映射不单靠颜色。
+  final bool dashed;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -2532,25 +2584,60 @@ class _TrendLegendChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(99),
+            if (dashed)
+              SizedBox(
+                width: 8,
+                height: 8,
+                child: CustomPaint(
+                  painter: _LegendDashPainter(color: color),
+                ),
+              )
+            else
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(99),
+                ),
               ),
-            ),
             const SizedBox(width: 6),
+            // V4-G05 图例文本走 textSecondary：series 色作正文在 classic
+            // 于自身 0.1 tint 上 <4.5:1（marginal）；色样本由色点承载，
+            // 文本保持可读语义。
             Text(
               label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: color,
+                    color: DS.textSecondary,
                     fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
         ),
       );
+}
+
+/// 图例虚线样例（8×8 内三段 2px 短划，与图内 6/4 虚线同族）。
+class _LegendDashPainter extends CustomPainter {
+  const _LegendDashPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    const y = 4.0;
+    for (final x in const [0.0, 4.0]) {
+      canvas.drawLine(Offset(x, y), Offset(x + 2.5, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LegendDashPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _ExecutionStatsSection extends StatelessWidget {
@@ -2702,8 +2789,11 @@ class _ReportStatCard extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 3),
                     child: Text(
                       unit,
+                      // V4-G05 单位文本走 textPrimary：color@0.72 属透明度
+                      // 压文字（SPEC §1.3.1 禁式），不满足正文 4.5:1 定标；
+                      // 数值大字（≥3:1 大字阈值）保持全强度色彩。
                       style: DS.bodySmall.copyWith(
-                        color: color.withValues(alpha: 0.72),
+                        color: DS.textPrimary,
                       ),
                     ),
                   ),
@@ -2790,9 +2880,13 @@ class _MetricCard extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 8),
+            // V4-G05 reduce-motion 等价（S01 判例）：计数动画低动态偏好下
+            // 直落终值，不做数字滚动。
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
-              duration: DS.durationSlow,
+              duration: context.reduceMotion
+                  ? Duration.zero
+                  : DS.durationSlow,
               curve: Curves.easeOutCubic,
               builder: (context, progress, child) {
                 final displayValue = value.contains('%')
