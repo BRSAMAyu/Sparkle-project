@@ -690,6 +690,41 @@ class TestPartialCompletionSemantics:
         assert run.result_ref["interrupted_steps"] == 1
         assert run.result_ref["interrupted"][0]["outcome"] == "unknown"
 
+    async def test_inflight_row_buckets_interrupted_not_failed(self, monkeypatch, ledger_db):
+        """[FIX-561] 取消/终态化撞在飞写（竞窗 ≤ tool timeout）：in_progress
+        账本行按 X-09 崩溃语义物化 interrupted/outcome-unknown——不虚报 failed
+        （修前 build_evidence 的 else 兜底把 in_progress 落 failed 桶且
+        first-wins 使误标终身驻留）；真 failed 行仍落 failed 桶（修复不钝化
+        succeeded/failed/interrupted 三桶语义）."""
+        from app.services.tool_call_ledger_service import ToolCallLedgerService
+
+        _stub_registry_with(monkeypatch, "generate_tasks_for_plan")
+        user = await _make_user(ledger_db.session)
+        run = await _make_run(ledger_db.session, user)
+        await _make_ledger_row(ledger_db.session, user, run, status="succeeded", tool="generate_tasks_for_plan")
+        inflight = await _make_ledger_row(
+            ledger_db.session, user, run, status="in_progress", tool="generate_tasks_for_plan"
+        )
+        failed_row = await _make_ledger_row(
+            ledger_db.session, user, run, status="failed", tool="generate_tasks_for_plan"
+        )
+
+        evidence = await ToolCallLedgerService(ledger_db.session).partial_completion_evidence(run.id)
+
+        assert len(evidence.succeeded) == 1
+        assert len(evidence.interrupted) == 1
+        assert evidence.interrupted[0]["idempotency_key"] == inflight.idempotency_key
+        assert evidence.interrupted[0]["outcome"] == "unknown"  # 效果不可核实
+        assert len(evidence.failed) == 1  # 真 failed 照实落 failed 桶
+        assert evidence.failed[0]["idempotency_key"] == failed_row.idempotency_key
+        ref = evidence.to_result_ref()
+        assert ref["succeeded_steps"] == 1
+        assert ref["interrupted_steps"] == 1
+        assert ref["failed_steps"] == 1
+        # 在飞行不构成已确认写效果：补偿提示只来自 succeeded 行。
+        assert evidence.durable_progress is True  # 来自 succeeded 写行
+        assert len(evidence.compensation_hints) == 1
+
     async def test_terminalize_is_idempotent_on_terminal_run(self, ledger_db):
         """[chaos] 终态封闭：已终态 run 的失败终态化 → no-op 不双终态."""
         from app.services.agent_run_service import AgentRunService

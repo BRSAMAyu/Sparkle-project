@@ -448,6 +448,57 @@ async def test_inflight_recovery_twice_no_double_write(db_session, outbox_tables
 # ---------------------------------------------------------------------------
 
 
+async def test_cancel_colliding_with_inflight_write_buckets_unknown_not_failed(db_session, outbox_tables, monkeypatch):
+    """[FIX-561] 取消撞在飞写工具（竞窗 ≤ tool timeout）：result_ref 物化
+    interrupted/outcome-unknown 而非虚报 failed；恢复 pass 修正账本真值后，
+    first-wins 冻结的投影保持诚实（failed 恒 0——修前误标终身驻留）。"""
+    _stub_registry(monkeypatch, write_tools=("deep_task_write",))
+    user = await _make_user(db_session)
+    service, run = await _running_run_with_human_step_pending(db_session, user)
+    await _ledger_row(db_session, user, run, status="succeeded")  # 已完成写步
+    inflight = await _ledger_row(db_session, user, run, status="in_progress")  # 在飞写步
+
+    result = await service.cancel(run.id, user_id=user.id)
+    assert result.applied
+    ref = result.run.result_ref
+    assert ref is not None
+    assert ref["succeeded_steps"] == 1
+    assert ref["interrupted_steps"] == 1
+    assert ref["failed_steps"] == 0  # 不虚报失败（修前 =1）
+    assert ref["interrupted"][0]["idempotency_key"] == inflight.idempotency_key
+    assert ref["interrupted"][0]["outcome"] == "unknown"
+
+    # 恢复 pass / executor resolve 修正账本真值（终点同为 interrupted）后：
+    # run 面投影冻结但标签本就诚实——与账本权威面一致，无误标驻留。
+    row = await db_session.get(AgentToolCall, inflight.id)
+    assert row is not None and row.status == "in_progress"  # 物化不改账本真值
+    row.status = "interrupted"
+    row.error_type = "InterruptedAtRecovery"
+    await db_session.commit()
+
+    fresh = await service.get_run(run.id, user_id=user.id)
+    ref2 = fresh.to_dict()["result_ref"]
+    assert ref2["failed_steps"] == 0  # 修前此处恒 failed=1（误标驻留）
+    assert ref2["interrupted_steps"] == 1
+    assert fresh.to_dict()["status"] == RunStatus.CANCELLED.value
+
+
+async def test_cancel_with_failed_row_keeps_failed_bucket(db_session, outbox_tables, monkeypatch):
+    """[反例锚] 真 failed 行照实落 failed 桶——修复只纠 in_progress 的误标，
+    不搬真失败（succeeded/failed/interrupted 三桶语义不钝化）。"""
+    _stub_registry(monkeypatch, write_tools=("deep_task_write",))
+    user = await _make_user(db_session)
+    service, run = await _running_run_with_human_step_pending(db_session, user)
+    await _ledger_row(db_session, user, run, status="failed")
+
+    result = await service.cancel(run.id, user_id=user.id)
+    assert result.applied
+    ref = result.run.result_ref
+    assert ref["failed_steps"] == 1
+    assert ref["interrupted_steps"] == 0
+    assert ref["succeeded_steps"] == 0
+
+
 @pytest.mark.parametrize("target", [RunStatus.SUCCEEDED, RunStatus.PARTIAL])
 @pytest.mark.parametrize("actor", ["worker", "system", "recovery", "projection", "user"])
 async def test_no_path_succeeds_run_over_unanswered_human_step(db_session, outbox_tables, target, actor):

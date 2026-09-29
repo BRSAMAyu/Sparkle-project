@@ -254,7 +254,13 @@ class ToolCallLedgerService:
                             ),
                         }
                     )
-            elif row.status == "interrupted":
+            elif row.status in ("interrupted", "in_progress"):
+                # FIX-561：in_progress 行（取消/预算/unknown 终态化撞在飞工具的
+                # 竞窗残留，或崩溃残留未及收敛）在此刻**效果不可核实**——按 X-09
+                # 自己的崩溃语义物化 interrupted/outcome-unknown，不虚报 failed
+                # （修前 else 兜底把 in_progress 吞进 failed 桶，first-wins 使
+                # 误标投影终身驻留）。账本行本身不动：账本权威恒可审计，若
+                # executor 事后 finalize 为 succeeded/failed，真值以账本面为准。
                 interrupted.append({**entry, "outcome": "unknown"})
             else:
                 failed.append(entry)
