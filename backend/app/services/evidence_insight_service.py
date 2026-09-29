@@ -30,6 +30,13 @@ V4-D05 呈现契约（``insight.presentation.v1``，全部出口过门）：
   「充分理解」（``claim_allowed=False`` + 封闭理由，档位定性）；
 - **回访记录**（``data.revisit``）：上次建议是否相关由真实事件证明
   （响应类型 + 去重后链接 outcome 样本身份），无事件不出回访、不套模板。
+
+V4-U13 撤回排除显式在册（消费 D05 契约 ``exclude_withdrawn_refs`` 唯一权威）：
+- 已删除/撤回的来源记录（软删 lifecycle 事件、软删任务）按精确身份从呈现
+  引用中排除（查询本就过滤），排除**计数**以
+  ``uncertainty.withdrawn_refs_excluded`` 如实随行——撤回不是静默消失，
+  读面可分呈现「无数据/证据不足/已撤回排除」三态；计数不改任何 fact 分子
+  分母（真源口径零改动）。
 """
 
 from __future__ import annotations
@@ -47,6 +54,7 @@ from app.core.insight_presentation import (
     build_revisit_record,
     build_suggestion_envelope,
     exaggeration_gate,
+    exclude_withdrawn_refs,
     presentation_sample_id,
     understanding_claim_gate,
 )
@@ -309,6 +317,33 @@ class EvidenceInsightService:
     # ------------------------------------------------------------------
     # ① friction pattern——D-05 lifecycle 事件表按 friction_tag 聚合
     # ------------------------------------------------------------------
+    async def _withdrawn_exposure_ids_by_tag(self, *, user_id: UUID, since: datetime) -> dict[str, list[str]]:
+        """窗口内已删除/撤回 exposure 的 decision_id 按 friction_tag 分组。
+
+        软删行不进任何 fact 计数（``not_deleted_filter`` 既有权威），这里只取
+        其身份供 D05 契约 ``exclude_withdrawn_refs`` 做精确身份过滤与排除计数
+        （撤回排除显式在册）；不复活、不连坐。
+        """
+        rows = (
+            await self.db.execute(
+                select(
+                    InterventionLifecycleEvent.friction_tag,
+                    InterventionLifecycleEvent.decision_id,
+                ).where(
+                    and_(
+                        InterventionLifecycleEvent.user_id == user_id,
+                        InterventionLifecycleEvent.occurred_at >= since,
+                        InterventionLifecycleEvent.event_type == LifecycleEventType.EXPOSED.value,
+                        InterventionLifecycleEvent.deleted_at.is_not(None),
+                    )
+                )
+            )
+        ).all()
+        grouped: dict[str, list[str]] = {}
+        for tag, decision_id in rows:
+            grouped.setdefault(str(tag or "unattributed"), []).append(str(decision_id))
+        return grouped
+
     async def _friction_pattern_cards(self, *, user_id: UUID, since: datetime) -> list[dict[str, Any]]:
         rows = list(
             (
@@ -343,12 +378,18 @@ class EvidenceInsightService:
         most_frequent_tag = ranked[0][0] if len(ranked) > 1 and len(ranked[0][1]) >= 2 else None
 
         cards: list[dict[str, Any]] = []
+        withdrawn_by_tag = await self._withdrawn_exposure_ids_by_tag(user_id=user_id, since=since)
         for tag, exposures in ranked:
             responses = responses_by_tag.get(tag, {})
             qualifiers = ["counts_only_from_lifecycle_events"]
             if len(exposures) < 3:
                 qualifiers.append("small_sample")
             decision_refs = [exposure.decision_id for exposure in exposures[:_EVIDENCE_REF_CAP]]
+            # V4-U13 撤回排除显式在册：候选引用过 D05 契约精确身份过滤
+            # （查询窗口与软删读之间若发生删除竞态，被撤回身份在此确定性
+            # 落入 excluded，绝不进呈现引用）。
+            filtered_refs = exclude_withdrawn_refs(decision_refs, withdrawn_by_tag.get(tag, []))
+            withdrawn_excluded = len(withdrawn_by_tag.get(tag, []))
             interpretation: dict[str, Any] = {"friction_tag": tag}
             interpretation["role"] = "most_frequent" if most_frequent_tag == tag else "observed"
             cards.append(
@@ -366,12 +407,14 @@ class EvidenceInsightService:
                     "uncertainty": {
                         "qualifiers": qualifiers,
                         "samples": len(exposures),
+                        # V4-U13 撤回排除显式在册（真实计数；不改 fact 分子分母）。
+                        "withdrawn_refs_excluded": withdrawn_excluded,
                     },
                     "evidence": [
                         {
                             "label_key": "evidence_directive_log",
                             "deep_link": _DIRECTIVE_AUDIT_LINK,
-                            "refs": decision_refs,
+                            "refs": filtered_refs.kept,
                         }
                     ],
                     "implication": {
@@ -393,6 +436,7 @@ class EvidenceInsightService:
         # D02-R1 C-3 呈现侧义务：样本量按样本身份先行去重（重放投递只如实计
         # raw，永不放大去重后样本量）。
         directional_by_signature = await self._directional_outcome_rows(user_id=user_id, since=since)
+        withdrawn_by_signature = await self._withdrawn_exposure_ids_by_signature(user_id=user_id, since=since)
         cards: list[dict[str, Any]] = []
         for slice_summary in summary.slices:
             # 证据不足的切片不发"有帮助"结论（无证据不做断言）。
@@ -400,6 +444,16 @@ class EvidenceInsightService:
                 continue
             signature = slice_summary.signature
             refs = await self._decision_refs_for_signature(user_id=user_id, since=since, slice_summary=slice_summary)
+            # V4-U13 撤回排除显式在册：候选引用过 D05 契约精确身份过滤
+            # （查询窗口与软删读之间若发生删除竞态，被撤回身份在此确定性
+            # 落入 excluded，绝不进呈现引用）。
+            filtered_refs = exclude_withdrawn_refs(
+                refs,
+                withdrawn_by_signature.get(
+                    (signature.intervention_type, signature.friction_tag),
+                    [],
+                ),
+            )
             qualifiers = ["correlation_not_causation", "counts_only_from_lifecycle_events"]
             if slice_summary.n_observed < 3:
                 qualifiers.append("small_sample")
@@ -445,12 +499,19 @@ class EvidenceInsightService:
                         "duplicate_outcome_samples_dropped": dedup.duplicates_dropped,
                         "not_yet_observed": censored_not_due,
                         "not_determinable": not_determinable,
+                        # V4-U13 撤回排除显式在册（真实计数；不改 fact 分子分母）。
+                        "withdrawn_refs_excluded": len(
+                            withdrawn_by_signature.get(
+                                (signature.intervention_type, signature.friction_tag),
+                                [],
+                            )
+                        ),
                     },
                     "evidence": [
                         {
                             "label_key": "evidence_directive_log",
                             "deep_link": _DIRECTIVE_AUDIT_LINK,
-                            "refs": refs,
+                            "refs": filtered_refs.kept,
                         }
                     ],
                     "implication": {
@@ -464,6 +525,32 @@ class EvidenceInsightService:
                 }
             )
         return cards
+
+    async def _withdrawn_exposure_ids_by_signature(
+        self, *, user_id: UUID, since: datetime
+    ) -> dict[tuple[str, str], list[str]]:
+        """窗口内已删除/撤回 exposure 的 decision_id 按 (type, tag) 分组（撤回排除源）。"""
+        rows = (
+            await self.db.execute(
+                select(
+                    InterventionLifecycleEvent.intervention_type,
+                    InterventionLifecycleEvent.friction_tag,
+                    InterventionLifecycleEvent.decision_id,
+                ).where(
+                    and_(
+                        InterventionLifecycleEvent.user_id == user_id,
+                        InterventionLifecycleEvent.occurred_at >= since,
+                        InterventionLifecycleEvent.event_type == LifecycleEventType.EXPOSED.value,
+                        InterventionLifecycleEvent.deleted_at.is_not(None),
+                    )
+                )
+            )
+        ).all()
+        grouped: dict[tuple[str, str], list[str]] = {}
+        for intervention_type, friction_tag, decision_id in rows:
+            key = (str(intervention_type), str(friction_tag or "unattributed"))
+            grouped.setdefault(key, []).append(str(decision_id))
+        return grouped
 
     async def _directional_outcome_rows(
         self, *, user_id: UUID, since: datetime
@@ -557,6 +644,14 @@ class EvidenceInsightService:
                 )
             )
         )
+        # V4-U13 撤回排除显式在册：已删除/撤回的任务记录不进账本（既有权威），
+        # 其计数如实随行——读面可声明「已排除 N 条」，而非静默消失。
+        withdrawn_result = await self.db.execute(
+            select(func.count())
+            .select_from(Task)
+            .where(and_(Task.plan_id == goal.plan_id, Task.deleted_at.is_not(None)))
+        )
+        withdrawn_tasks = int(withdrawn_result.scalar() or 0)
         total = int(total_result.scalar() or 0)
         completed = int(done_result.scalar() or 0)
 
@@ -600,6 +695,8 @@ class EvidenceInsightService:
                 "uncertainty": {
                     "qualifiers": qualifiers,
                     "samples": total,
+                    # V4-U13 撤回排除显式在册（真实计数；不改账本口径）。
+                    "withdrawn_refs_excluded": withdrawn_tasks,
                 },
                 "evidence": [
                     {
