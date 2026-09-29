@@ -1314,6 +1314,21 @@ Future<void> main() async {
             () => textAny(['待处理', '全部']) != null,
             timeout: const Duration(seconds: 15),
           );
+          // 列表加载错误态（r6 实证：新注册用户首开偶发「哎呀，出错了」）
+          // → 真实用户点「重试」；至多 3 轮。
+          for (var r = 0; r < 3; r++) {
+            final retryBtn = textAny(['重试']);
+            if (retryBtn == null) break;
+            clicks[0]++;
+            await tester.tap(retryBtn, warnIfMissed: false);
+            await waitUntil(
+              tester,
+              () => textAny(['重试']) == null,
+              timeout: const Duration(seconds: 15),
+            );
+            await tester.pump(const Duration(milliseconds: 400));
+          }
+          await dumpTexts(tester, 'tasks-list-before-create');
           Finder? createCta;
           for (var r = 0; r < 3 && createCta == null; r++) {
             createCta = textAny(['创建第一项任务', '创建任务', '新建任务']);
