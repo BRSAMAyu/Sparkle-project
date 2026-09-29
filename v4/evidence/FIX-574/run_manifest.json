@@ -1,0 +1,30 @@
+{
+ "task": "FIX-574",
+ "kind": "fix",
+ "executed_by": "leader(主会话) 快修——一行断言级，按 F575 发现1 合并内补救同判例",
+ "branch": "main 直接提交（无 worktree——单行测试断言+验证，无产品码）",
+ "defect": "U02R2 O-2：服务端 test_vocabularies_frozen 冻结测未覆盖 ProposalSource 词表——客户端镜像活钉已防客户端 drift，但服务端自身词表 bump 无冻结测拦截",
+ "fix": "backend/tests/unit/test_action_command_service.py::test_vocabularies_frozen 增一行：assert {s.value for s in ProposalSource} == {\"chat\",\"task\",\"aurora\",\"system\",\"api\"}（X-03 封闭词表，与客户端镜像同源）",
+ "verification": [
+  {
+   "cmd": "pytest tests/unit/test_action_command_service.py::test_vocabularies_frozen",
+   "exit": 0,
+   "result": "1 passed"
+  },
+  {
+   "cmd": "mutation：app/core/action_command.py 临时增 RECOVERY_SHEET='recovery_sheet' 后同测",
+   "exit": 1,
+   "result": "AssertionError 词表集合不等——服务端 bump 即被拦截（旧行为下该测恒绿=真空）"
+  },
+  {
+   "cmd": "还原后全文件 pytest tests/unit/test_action_command_service.py",
+   "exit": 0,
+   "result": "29 passed"
+  }
+ ],
+ "model_usage": {
+  "llm_calls": 0,
+  "note": "纯确定性测试断言"
+ },
+ "captured_at": "2026-09-30 08:15 +0800"
+}

@@ -626,6 +626,8 @@ async def test_update_fields_whitelist_enforced(db_session, outbox_tables):
 
 def test_vocabularies_frozen():
     assert {s.value for s in ProposalStatus} == {"PENDING", "COMMITTED", "CANCELLED", "EXPIRED", "REJECTED"}
+    # FIX-574：ProposalSource 词表同律冻结——客户端镜像活钉防客户端 drift，服务端自身 bump 由本行拦截
+    assert {s.value for s in ProposalSource} == {"chat", "task", "aurora", "system", "api"}
     assert {t.value for t in ActionCommandType} == {
         "task.update_status",
         "task.update_fields",
