@@ -68,9 +68,19 @@ const Size q03LogicalSize = Size(390, 844);
 /// matchesGoldenFile 用）。
 const String _evidenceRel = '../../../../v3-output/WT401-Q03-VISUAL';
 
-/// 证据输出目录（相对 flutter test 的 CWD=mobile/，供 dart:io 落 JSON 用）。
-final Directory _evidenceDir =
-    Directory('../v3-output/WT401-Q03-VISUAL');
+/// 探针运行期落盘目录（FIX-580）：默认写系统临时目录，tracked 的
+/// v3-output 证据快照不再被每次全量跑弄脏（MD5 漂移）；需要刷新证据
+/// 快照时显式设 `Q03_PROBE_OUT=<repo>/v3-output/WT401-Q03-VISUAL` 覆盖。
+/// PNG 证据走 matchesGoldenFile（Q03_VISUAL_CAPTURE 门控），不经此路径。
+final Directory _probeOutDir = _resolveProbeOutDir();
+
+Directory _resolveProbeOutDir() {
+  final override = Platform.environment['Q03_PROBE_OUT'];
+  if (override != null && override.isNotEmpty) {
+    return Directory(override)..createSync(recursive: true);
+  }
+  return Directory.systemTemp.createTempSync('q03_probe_');
+}
 
 bool get q03CaptureEnabled =>
     Platform.environment['Q03_VISUAL_CAPTURE'] == 'true';
@@ -82,10 +92,7 @@ final List<Map<String, Object?>> q03ProbeResults = <Map<String, Object?>>[];
 final List<Map<String, Object?>> q03ContrastResults = <Map<String, Object?>>[];
 
 Future<void> q03FlushProbeReports(String suiteName) async {
-    final dir = _evidenceDir;
-    if (!dir.existsSync()) {
-      dir.createSync(recursive: true);
-    }
+    final dir = _probeOutDir;
     File('${dir.path}/layout_probe_$suiteName.json').writeAsStringSync(
       const JsonEncoder.withIndent('  ').convert(q03ProbeResults),
     );
