@@ -1,0 +1,42 @@
+{
+  "card_id": "V4-P02",
+  "executed_at": "2026-09-29",
+  "probe_suite": {
+    "file": "backend/tests/test_v4_p02_redteam_probes.py（用后即删；载荷与断言重建见 redteam_playbook.md）",
+    "result": "12 passed, 0 failed, exit 0",
+    "cases": [
+      { "id": "P1.1", "name": "pasted_external_material_becomes_explicit_preference", "outcome": "VULN_CONFIRMED_F1", "observed": "updates={'ai_verbosity':'detailed','feedback_style':'step_by_step','focus_duration_preference':15} conf={0.9,0.86,0.88}; UserPreferencesCenter.explicit 三键全中 version=2; 链头 provenance=EXPLICIT" },
+      { "id": "P1.2", "name": "declared_fact_channel_eats_pasted_material", "outcome": "VULN_CONFIRMED_F2_LOW__CLASS_BOUNDARY_HELD", "observed": "两条候选 0.92 declared=True 落库; epistemic_class=HYPOTHESIS 非 FACT; evidence_refs=chat_turn" },
+      { "id": "P1.3", "name": "inferred_or_reflection_cannot_supersede_explicit_head", "outcome": "DEFENSE_PASS", "observed": "reflection/ai_inferred upsert 全拒 None; 链头唯一性保持" },
+      { "id": "P1.4", "name": "seed_and_prompt_discipline_pins", "outcome": "DEFENSE_PASS", "observed": "user_registered 唯一写点=注册事件 consumer; 提示词规则11 Data boundary 在位" },
+      { "id": "P2.1", "name": "group_file_cross_account_negatives", "outcome": "DEFENSE_PASS", "observed": "群路径/直取文件id/伪造群列表 三攻全排除; 正对照通过" },
+      { "id": "P2.2", "name": "member_sees_group_shared_but_leaves_on_exit", "outcome": "DEFENSE_PASS", "observed": "在册可见; 软删离群后立即失访" },
+      { "id": "P2.3", "name": "shared_error_nonowner_retract_is_404", "outcome": "DEFENSE_PASS", "observed": "非本人分享 404; 他人撤回 404; 非成员列表不可达; 重复撤回 404; 成员流不含已撤" },
+      { "id": "P2.4", "name": "background_decay_job_is_user_scoped", "outcome": "DEFENSE_PASS", "observed": "run_decay_job(user_id=A) 后 B 行 deleted_at/revoked_at 不动" },
+      { "id": "P2.5", "name": "context_cache_key_isolation", "outcome": "DEFENSE_PASS", "observed": "异用户异键; epoch/preference_version bump 孤儿化旧键; 键含 user 维度+schema version" },
+      { "id": "P3.1a", "name": "delete_retrieval_db_layer_no_residue", "outcome": "DEFENSE_PASS", "observed": "REVOKED+erasure_receipt; chunks 全软删; should_include_in_retrieval=False" },
+      { "id": "P3.1b", "name": "redis_chunk_keys_window_then_drained", "outcome": "DEFENSE_PASS", "observed": "窗口实测 0/6 键可读（spawn 下一拍即失效）; drain 后恒空; galaxy/graphrag/KNOWLEDGE_VERSION_CACHE_KEY 失效 breadth 钉死" },
+      { "id": "P3.2", "name": "read_gate_fault_injection_no_stale_suggestions", "outcome": "DEFENSE_PASS", "observed": "重算崩溃→ReadGate(stale=True,suggestions_allowed=False,ui_marker=stale_recomputing); 旧 base_epoch job evaluate_publish_gate→False; 重算成功→fresh" }
+    ]
+  },
+  "regression_pins": {
+    "suites": [
+      "tests/services/test_retraction_recompute_service.py",
+      "tests/services/test_retraction_read_gate_epoch.py",
+      "tests/services/test_experience_strategy_service.py",
+      "tests/unit/test_experience_strategy.py",
+      "tests/unit/test_community_context_privacy_boundary.py",
+      "tests/unit/test_context_cache_versioning.py",
+      "tests/unit/test_community_shared_errors.py",
+      "tests/api/test_community_group_file_sharing_api.py"
+    ],
+    "result": "148 passed, 0 failed, exit 0",
+    "covers": "D03 撤回重算/读门+I05 策略撤回不复活+S-02 群上下文边界 18 用例+C-07 版本键+错题卡撤回+群文件共享 API"
+  },
+  "findings": [
+    { "id": "F1", "severity": "medium", "status": "OPEN", "title": "外部资料经聊天粘贴洗成显式用户偏好（chat_preference 直写档无来源门）", "anchor": "backend/app/services/chat_signal_collector.py:522 _extract_explicit_preferences; ProfileWriteService.set_explicit_preferences(source_type='chat_preference')" },
+    { "id": "F2", "severity": "low", "status": "OPEN", "title": "明示事实通道吞粘贴资料断言（HYPOTHESIS 类边界守住，语义残留进上下文预算）", "anchor": "backend/app/services/memory_inferred_write_lane.py extract_declared_fact_candidates" },
+    { "id": "F3", "severity": "low", "status": "OPEN", "title": "文档缩略图 {file_id}/thumbnail.jpg 删除残留（存储层；后端无 GET 服务路径）", "anchor": "backend/app/api/v1/documents.py:344; backend/app/services/group_file_service.py:156; backend/app/services/file_processing_orchestrator.py:102; 缺口=SourceLifecycleService.delete 只擦主对象" }
+  ],
+  "verdict": "FINDINGS_OPEN_1MED_2LOW_PENDING_REVIEW"
+}

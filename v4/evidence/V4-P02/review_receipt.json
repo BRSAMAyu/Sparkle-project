@@ -1,0 +1,16 @@
+{
+  "card_id": "V4-P02",
+  "risk": "high",
+  "independent_reviewers_required": 2,
+  "status": "PENDING",
+  "note": "作者不自审：本占位由两位独立审查会话落盘（review_r1.md / review_r2.md）后替换为最终签收。",
+  "author_session": "wtP02",
+  "author_branch": "agent/v4/p02",
+  "evidence_dir": "v4/evidence/V4-P02/",
+  "review_focus_suggestions": [
+    "F1 复现：按 redteam_playbook.md §1 S1-P1.1 重建探针（载荷逐字），验证 UserPreferencesCenter.explicit 三键落地与 EXPLICIT 链头",
+    "P3.1b 窗口口径：0/6 实测依赖单进程事件循环调度语义；审查可评估多 worker/多进程部署下窗口是否仍收敛（本卡 limitations#3 已声明）",
+    "F3 严重度裁决：存储残留 vs 无 GET 路径的缓释是否成立；mobile 侧是否经其它通道消费缩略图",
+    "探针用后即删核验：git log 该分支不应存在探针文件提交"
+  ]
+}

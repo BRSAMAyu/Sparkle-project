@@ -1,0 +1,88 @@
+{
+  "card_id": "V4-P02",
+  "title": "记忆污染、授权与媒体边界红队",
+  "kind": "verification",
+  "risk": "high",
+  "executed_at": "2026-09-29",
+  "worktree": "../wtP02",
+  "branch": "agent/v4/p02",
+  "source_sha_base": "364b033b77da4849fe8382625ea98223b0b48fed",
+  "source_sha_base_short": "364b033b",
+  "build_id": "wtP02-redteam-364b033b-20260929",
+  "product_code_changed": false,
+  "scope_and_denominator": {
+    "attack_surfaces_declared": 3,
+    "attack_surfaces_probed": 3,
+    "probes_total": 12,
+    "probes_passed": 12,
+    "probes_failed": 0,
+    "findings_open": 3,
+    "findings_by_severity": { "medium": 1, "low": 2 },
+    "defense_pins_passed": 11,
+    "scope_pins": [
+      "S-02 group AI prompt assembly point: no production consumer (orphan-by-design, in rule_at_exceptions.md) -> no executable attack path today",
+      "backend screenshot persistence: none found (single enum-string mention in execution_quality_service.py:206)",
+      "I05 strategy withdrawal/no-revive covered by existing suites (regression run), not re-probed with heavy evidence chain"
+    ],
+    "denominator_note": "探针只覆盖可离线确定性执行的服务层路径；需真实模型/真实设备/真实 MinIO 的面（OCR/STT 边界、presign PUT 实际写桶）以路径测绘+静态钉举证，未做端到端注入。"
+  },
+  "commands_and_exit_codes": [
+    {
+      "command": "python -m pytest tests/test_v4_p02_redteam_probes.py -q -s (SECRET_KEY/JWT_SECRET=一次性测试值)",
+      "exit_code": 0,
+      "summary": "12 passed in 7.75s",
+      "output_artifact": "probe_run_full_output.txt"
+    },
+    {
+      "command": "python -m pytest tests/services/test_retraction_recompute_service.py tests/services/test_retraction_read_gate_epoch.py tests/services/test_experience_strategy_service.py tests/unit/test_experience_strategy.py tests/unit/test_community_context_privacy_boundary.py tests/unit/test_context_cache_versioning.py tests/unit/test_community_shared_errors.py tests/api/test_community_group_file_sharing_api.py -q",
+      "exit_code": 0,
+      "summary": "148 passed in 31.29s（既有防御套件回归钉）",
+      "output_artifact": "regression_run_output.txt"
+    },
+    {
+      "command": "rm backend/tests/test_v4_p02_redteam_probes.py",
+      "exit_code": 0,
+      "summary": "探针用后即删；git status 仅剩 v4/evidence/V4-P02/ 新增",
+      "output_artifact": null
+    }
+  ],
+  "isolation": {
+    "database": "sqlite+aiosqlite:///:memory: (conftest TEST_DATABASE_URL)",
+    "real_credentials": false,
+    "real_model_calls": 0,
+    "container_touch": "同环回失败尝试各≤2次（event_bus DLQ 写 PG 鉴权失败；cache init Redis 鉴权失败）——零数据落盘，符合 FIX-557 只读纪律",
+    "probe_file_deleted_after_use": true
+  },
+  "actual_model_and_usage_if_llm": {
+    "llm_called": false,
+    "note": "全部探针为确定性规则路径（正则标记匹配/服务层调用），零 provider 调用、零费用、零 token。"
+  },
+  "physical_device_scope_if_sensory": "not_applicable（纯 backend 服务层，无音触/传感器面）",
+  "screenshots_video_and_semantics_if_ui": "not_applicable（无 UI 变更）",
+  "attack_surface_matrix": [
+    { "surface": "S1 记忆污染", "probe": "P1.1 外部资料粘贴→显式偏好", "verdict": "FINDING_F1_MEDIUM_OPEN" },
+    { "surface": "S1 记忆污染", "probe": "P1.2 明示事实通道吞粘贴资料", "verdict": "FINDING_F2_LOW_OPEN_HYPOTHESIS_CLASS_HELD" },
+    { "surface": "S1 记忆污染", "probe": "P1.3 反思/推断不能顶掉显式链头", "verdict": "DEFENSE_PASS" },
+    { "surface": "S1 记忆污染", "probe": "P1.4 FACT 来源唯一入口+提示词纪律钉", "verdict": "DEFENSE_PASS" },
+    { "surface": "S2 授权边界", "probe": "P2.1 群文件跨账号负例全集", "verdict": "DEFENSE_PASS" },
+    { "surface": "S2 授权边界", "probe": "P2.2 离群即失", "verdict": "DEFENSE_PASS" },
+    { "surface": "S2 授权边界", "probe": "P2.3 错题卡分享/撤回 404 语义", "verdict": "DEFENSE_PASS" },
+    { "surface": "S2 授权边界", "probe": "P2.4 后台 decay job 用户隔离", "verdict": "DEFENSE_PASS" },
+    { "surface": "S2 授权边界", "probe": "P2.5 C-07 cache 键隔离", "verdict": "DEFENSE_PASS" },
+    { "surface": "S3 撤回残留", "probe": "P3.1a 删除后 DB 检索层", "verdict": "DEFENSE_PASS" },
+    { "surface": "S3 撤回残留", "probe": "P3.1b commit→失效窗口×并发读取", "verdict": "DEFENSE_PASS_WINDOW_MEASURED_0_OF_6" },
+    { "surface": "S3 撤回残留", "probe": "P3.2 故障注入读门/发布栅栏", "verdict": "DEFENSE_PASS" },
+    { "surface": "S3 媒体边界", "probe": "P3.3 缩略图删除残留（路径测绘+静态钉）", "verdict": "FINDING_F3_LOW_OPEN_STORAGE_RESIDUE_NO_GET_PATH" }
+  ],
+  "acceptance_mapping": {
+    "AC1_禁止来源不能经反思洗成explicit-user": "守卫侧 PASS（P1.3/P1.4）；聊天粘贴路径报红 F1/F2——如实报红不降阈值",
+    "AC2_跨账号cache_群AI_后台job隔离负例全保留": "PASS（P2.1–P2.5 全保留）",
+    "AC3_故障注入撤回与并发读取无旧依据副作用": "PASS（P3.1a/P3.1b/P3.2；F3 为存储残留非旧依据副作用，记录在案）"
+  },
+  "evidence_verdict": "FINDINGS_OPEN_1MED_2LOW_PENDING_REVIEW",
+  "artifacts_sha256": {
+    "probe_run_full_output.txt": "36aaba08e63ac8484417e2884f3d922dbdd142f34cc9cd1e27b152caadd652d4",
+    "regression_run_output.txt": "0f10167caf2daa2c8008529e4381dca902a4fcc81ac1cfd9a888ae9f593cd2d8"
+  },
+  "related_specs": ["MASTER_DESIGN.md §5 记忆效用门", "03_intelligence/MEMORY_UTILITY_AND_CONFLICT.md（R13 数据分层/撤回联动）", "V4_DONE.md 终门纪律"]
+}
