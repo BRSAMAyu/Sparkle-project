@@ -1,0 +1,90 @@
+{
+  "card": "V3-FIX-549",
+  "task": "community_provider fire-and-forget 缓存写导致 testWidgets FakeAsync 拆除后 Hive.close() 确定性悬挂（3s 护栏常态掩蔽）——产品侧根因修复（P3）",
+  "agent": "wtF549",
+  "branch": "fix/v4/f549-hive-close-hang",
+  "fix_commit": "94fe68a2e4e0011401624ffe223e141e962120a2",
+  "base_sha": "834651a7（main，本仓领先 origin/main 15 commit 的本地最新）",
+  "generated_at_local": "2026-09-28",
+  "kind": "fix",
+  "product_code_changed": true,
+  "no_push": true,
+  "environment": {
+    "worktree": "wtF549（git worktree add ../wtF549 -b fix/v4/f549-hive-close-hang main，exit 0）",
+    "flutter": "3.41.3 stable（homebrew，与 wt809 同版）",
+    "hive": "2.2.3（pubspec.lock 锁定）",
+    "fake_async": "1.3.3",
+    "note": "worktree 缺 gitignored mobile/lib/gen/，按 wt805/wt807/wt809 先例自主拷贝主仓 gen/（27 文件，不入库）；flutter pub get --offline exit 0"
+  },
+  "defect_mechanism": {
+    "chain": "GroupChatNotifier 构造 unawaited(_initialize()) → getCachedGroupMessages/saveGroupMessages（community_provider.dart:939/1350/1397 修前行号）开写 group_messages_* 箱 → testWidgets FakeAsync 域内在途",
+    "zone_death": "fake_async 1.3.3 亲读：fake zone 的 scheduleMicrotask 入实例私有 _microtasks 队列，仅 flushMicrotasks()/elapse() 排空；test 结束 FakeAsync 实例被弃，在途 Hive 写的续延闭包（RandomAccessFile truncate/writeFrom 的 then 链）永不执行",
+    "close_hang": "hive 2.2.3 亲读：Hive.close()=Future.wait(各箱 close)；BoxBaseImpl.close()→StorageBackendVm.close()=_sync.syncReadWrite(_closeInternal) 链在 _readTask/_writeTask（未完结 write completer.future）→ 确定性悬挂，real zone（tearDownAll）无任何 API 可解",
+    "probe": "本目录 root_cause_probe.txt：saveGroupMessages enter 永无 exit（两轮皆然）、group_messages_g1 收尾仍 open、[CLOSE] TIMEOUT/guard fired 3s"
+  },
+  "adjudication": {
+    "verdict": "三选一自主裁决 = 选项③ provider 缝隙（缓存依赖可注入 + 测试覆写内存实现）",
+    "why_option_1_rejected_flush_hook": "选项①（ChatCacheService 增测试可见收尾 flush 钩子）物理不可行：悬挂续延闭包登记在已废弃 fake zone 的微任务队列，tearDownAll 已在 real zone，flush 钩子 await 的正是同一批永不完结的 future——与 Hive.close() 同样悬挂；除非另设硬超时，但那样在途写仍未消、后续 Hive.close() 照挂",
+    "why_option_2_rejected": "选项②（缓存写挂接可等待生命周期）唯一可等待挂接点在 test 域内（addTearDown），要求真实 I/O 事件在 runAsync 真实窗内送达且 fake 微任务排空，依赖 fake/real zone 交互的脆弱耦合，且必须改动 search_locate 同构套件文件（红线：该套件护栏与文件不动）；不稳定确定性",
+    "why_option_3_chosen": "选项③直击台账登记的『单例工厂非 provider 无从 override』这一测试侧无解点：chatCacheServiceProvider 默认返回同一 ChatCacheService() 单例（工厂单例身份不变，生产路径逐字节同行为、缓存写全保留），测试 override 内存实现后 FakeAsync 域内不再产生在途真实 Hive I/O——悬挂前提被构造性消除，确定性收尾；不依赖任何 zone 交互",
+    "iron_rules_kept": [
+      "两套件 tearDownAll 的 Hive.close().timeout(3s) 护栏 byte 级不动（search_locate 整文件零改动；index_shift 仅在 _pumpHarness 增 override+注释，护栏未触）",
+      "正常生产行为语义零变化：chatCacheServiceProvider 默认即 ChatCacheService() 同一单例，缓存读写路径不变",
+      "断言零删除（index_shift 仅改一条过时注释文案+新增 override；全部 expect 原样）"
+    ]
+  },
+  "changed_files": [
+    {
+      "path": "mobile/lib/features/chat/presentation/providers/chat_provider_wiring.dart",
+      "change": "新增 chatCacheServiceProvider（默认 ChatCacheService() 单例）+ 缺陷/修法 doc 注释"
+    },
+    {
+      "path": "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
+      "change": "+1 import（chat_cache_service.dart，part 文件可见性）"
+    },
+    {
+      "path": "mobile/lib/features/community/presentation/providers/community_provider.dart",
+      "change": "GroupChatNotifier/PrivateChatNotifier 的 _cacheService 改 late final = _ref.read(chatCacheServiceProvider)（两处，默认同一单例）"
+    },
+    {
+      "path": "mobile/test/widget/group_chat_index_shift_reparent_test.dart",
+      "change": "_pumpHarness overrides 增 chatCacheServiceProvider.overrideWithValue(_InMemoryChatCacheService())；新增内存替身（语义对齐：100 条截断/nonce 空忽略/pending JSON 读写）；过时注释更正；tearDownAll 护栏 byte 级未动"
+    }
+  ],
+  "commands": [
+    "git worktree add ../wtF549 -b fix/v4/f549-hive-close-hang main → exit 0",
+    "flutter pub get --offline → exit 0",
+    "基线（未修）flutter test test/widget/group_chat_index_shift_reparent_test.dart ×3 → exit 0 ×3；tearDownAll 计时 00:01→00:04 / 00:01→00:04 / 00:02→00:05（3s 护栏 3/3 打满触发，与 wt809 5/5 结论一致）",
+    "根因探针（临时插桩后还原）flutter test 同文件 → exit 0，输出见 root_cause_probe.txt",
+    "修后 flutter test test/widget/group_chat_index_shift_reparent_test.dart ×3 → exit 0 ×3；tearDownAll 计时 00:01→00:01 ×3（护栏 0/3 触发）；原始日志 run_postfix/postfix_run{1,2,3}.txt",
+    "修后收尾真完结探针（一次性插桩即还原）：[CLOSE] DONE true completion——Hive.close() 落在护栏 3s 预算内真完结，timeout 兜底路径未走",
+    "同构套件 flutter test test/features/chat/presentation/screens/group_chat_search_locate_test.dart → exit 0，+3 绿 00:01→00:05（文件零改动、护栏照旧触发=红线维持现状）",
+    "回归批1 flutter test token_refresh_coordinator_test + unread_message_count_notifier_test + community_provider_test + community_agent_provider_test → exit 0，+44",
+    "回归批2 flutter test community_provider_test + community_remaining_closure_test + h9_ui_sync_test + j3_frontend_closure_test → exit 0，+25",
+    "flutter analyze --no-pub（mobile 全量）→ exit 0，No issues found",
+    "mutation：git stash（修复整体还原）→ flutter test index_shift ×3 → exit 0 ×3，tearDownAll 计时 00:01→00:05 / 00:01→00:04 / 00:01→00:04（护栏 3/3 打满=悬挂复现）→ git stash pop 还原修复（diff 完整性核对通过）",
+    "python3 scripts/devtools/ledger_union_merge.py --verify v3/06_agent_fleet/DYNAMIC_ISSUES.md → exit 0，输出 FAIL 1 项（V3-FIX-547 行首锚定重号 419/433）经基线 main@834651a7 对照复跑确认为既有失败（修前同 FAIL），非本批引入；本批 V3-FIX-549 行零新增 WARN/FAIL"
+  ],
+  "verification_matrix": {
+    "tearDownAll_duration_comparison": {
+      "pre_fix_baseline_3runs": ["00:01→00:04", "00:01→00:04", "00:02→00:05"],
+      "post_fix_3runs": ["00:01→00:01", "00:01→00:01", "00:01→00:01"],
+      "mutation_revert_3runs": ["00:01→00:05", "00:01→00:04", "00:01→00:04"],
+      "conclusion": "护栏触发 3/3 → 0/3 → 3/3（mutation），每跑省 ~3s CI 墙钟且消除在途 close 悬挂面"
+    },
+    "both_isomorphic_suites": {
+      "group_chat_index_shift_reparent_test": "3/3 绿，护栏不触发，收尾真完结（探针 DONE）",
+      "group_chat_search_locate_test": "绿（+3），文件零改动，其 3s 护栏照旧触发（红线：维持现状不加预算）"
+    },
+    "regression": "69 测试绿（批1 44 + 批2 25，含直接构造 GroupChatNotifier 的 token_refresh_coordinator_test——late 缝隙读取路径实证可用）",
+    "analyze": "flutter analyze --no-pub 零 issue",
+    "mutation": "修复还原 → 悬挂 3/3 确定性复现（护栏打满）；修复恢复 → 0/3"
+  },
+  "evidence_pieces": [
+    "run_manifest.json（本件）",
+    "root_cause_probe.txt（根因探针：卡点=saveGroupMessages 在途写、死 zone 微任务队列机制）",
+    "run_postfix/（修后 3 连跑原始日志）",
+    "run_mutation/（mutation 还原 3 连跑原始日志=悬挂复现）",
+    "regression_and_analyze/（同构套件+回归两批+analyze 原始日志）"
+  ]
+}

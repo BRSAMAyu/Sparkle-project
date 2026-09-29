@@ -1,0 +1,234 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 61.0.0 (108.0.0 available)
+  _flutterfire_internals 1.3.59 (1.3.77 available)
+  analyzer 5.13.0 (14.4.0 available)
+  analyzer_plugin 0.11.2 (0.14.17 available)
+  animations 2.1.1 (3.0.0 available)
+  app_links 6.4.1 (7.2.1 available)
+  app_links_platform_interface 2.0.2 (2.0.4 available)
+  async 2.13.0 (2.13.1 available)
+  audioplayers 6.6.0 (6.8.1 available)
+  audioplayers_android 5.2.1 (5.3.0 available)
+  audioplayers_darwin 6.4.0 (6.5.0 available)
+  audioplayers_linux 4.2.1 (4.3.0 available)
+  audioplayers_platform_interface 7.1.1 (7.2.0 available)
+  audioplayers_web 5.2.0 (5.3.0 available)
+  audioplayers_windows 4.3.0 (4.4.1 available)
+  build 2.4.1 (4.0.11 available)
+  build_config 1.1.2 (1.3.3 available)
+  build_daemon 4.1.1 (4.1.6 available)
+  build_resolvers 2.4.2 (3.0.4 available)
+  build_runner 2.4.13 (2.16.1 available)
+  build_runner_core 7.3.2 (9.3.2 available)
+  built_value 8.12.1 (8.13.0 available)
+  cached_network_image 3.4.0 (4.0.2 available)
+  cached_network_image_platform_interface 4.1.1 (5.0.2 available)
+  cached_network_image_web 1.3.0 (2.0.2 available)
+  clock 1.1.2 (1.1.3 available)
+  code_builder 4.11.0 (4.12.0 available)
+  confetti 0.7.0 (0.8.0 available)
+  connectivity_plus 7.0.0 (7.3.1 available)
+  connectivity_plus_platform_interface 2.0.1 (2.1.0 available)
+  cross_file 0.3.5+1 (0.4.0 available)
+  cupertino_icons 1.0.8 (1.0.9 available)
+  custom_lint_core 0.6.3 (0.8.2 available)
+  dart_style 2.3.2 (3.1.13 available)
+  dbus 0.7.11 (0.8.0 available)
+  device_info_plus 10.1.2 (13.2.0 available)
+  device_info_plus_platform_interface 7.0.3 (8.1.0 available)
+  dio 5.9.0 (5.11.1 available)
+  dio_web_adapter 2.1.1 (2.2.2 available)
+  equatable 2.0.7 (3.0.0 available)
+  ffi 2.1.4 (2.2.0 available)
+! file_picker 8.3.7 from path third_party_plugins/file_picker (overridden)
+  file_selector_linux 0.9.4 (0.9.4+1 available)
+  file_selector_macos 0.9.5 (0.9.5+1 available)
+  file_selector_windows 0.9.3+5 (0.9.3+6 available)
+  firebase_core 3.15.2 (4.15.0 available)
+  firebase_core_platform_interface 6.0.2 (8.1.1 available)
+  firebase_core_web 2.24.1 (3.12.0 available)
+  firebase_messaging 15.2.10 (16.7.0 available)
+  firebase_messaging_platform_interface 4.6.10 (4.10.0 available)
+  firebase_messaging_web 3.10.10 (4.2.5 available)
+  fl_chart 0.66.2 (1.2.0 available)
+  flutter_cache_manager 3.4.1 (3.4.5 available)
+! flutter_local_notifications 17.2.4 from path third_party_plugins/flutter_local_notifications (overridden)
+  flutter_local_notifications_linux 4.0.1 (8.0.1 available)
+  flutter_local_notifications_platform_interface 7.2.0 (12.2.0 available)
+  flutter_markdown 0.6.23 (discontinued replaced by flutter_markdown_plus)
+  flutter_plugin_android_lifecycle 2.0.33 (2.0.35 available)
+  flutter_riverpod 2.6.1 (3.4.3 available)
+! flutter_secure_storage 9.2.4 from path third_party_plugins/flutter_secure_storage (overridden)
+  flutter_secure_storage_linux 1.2.3 (3.0.3 available)
+  flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+  flutter_secure_storage_platform_interface 1.1.2 (2.1.1 available)
+  flutter_secure_storage_web 1.2.1 (2.1.1 available)
+  flutter_secure_storage_windows 3.1.2 (4.2.2 available)
+  flutter_svg 2.2.3 (2.3.0 available)
+  flutter_timezone 5.0.1 (5.1.0 available)
+! fluwx 4.6.3 from path third_party_plugins/fluwx (overridden)
+  freezed 2.5.2 (4.0.2 available)
+  freezed_annotation 2.4.4 (3.1.0 available)
+  gal 2.3.2 (2.3.3 available)
+  glob 2.1.3 (2.2.0 available)
+  go_router 13.2.5 (18.0.1 available)
+  golden_toolkit 0.15.0 (discontinued)
+  google_sign_in 6.3.0 (7.2.0 available)
+  google_sign_in_android 6.2.1 (7.2.17 available)
+  google_sign_in_ios 5.9.0 (6.3.5 available)
+  google_sign_in_platform_interface 2.5.0 (3.1.0 available)
+  google_sign_in_web 0.12.4+4 (1.1.3 available)
+  googleapis_auth 2.0.0 (2.3.4 available)
+  gtk 2.1.0 (2.2.0 available)
+  http2 2.3.1 (3.1.0 available)
+  image_picker 1.2.1 (1.2.3 available)
+  image_picker_android 0.8.13+10 (0.8.13+23 available)
+  image_picker_ios 0.8.13+3 (0.8.13+8 available)
+  injector 3.0.0 (4.0.0 available)
+  intl 0.20.2 (0.20.3 available)
+  io 1.0.5 (1.1.0 available)
+! isar_flutter_libs 3.1.0+1 from path third_party_plugins/isar_flutter_libs (overridden)
+! isar_generator 3.1.0+1 from path third_party_plugins/isar_generator (overridden)
+! jpush_flutter 2.6.0 from path third_party_plugins/jpush_flutter (overridden)
+  js 0.6.7 (0.7.2 available)
+  json_annotation 4.9.0 (4.12.0 available)
+  json_serializable 6.8.0 (6.14.1 available)
+  logger 2.6.2 (2.8.0 available)
+  markdown 7.3.0 (7.3.1 available)
+  matcher 0.12.18 (0.12.20 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  math_expressions 3.1.0 (3.2.0 available)
+  meta 1.17.0 (1.19.0 available)
+  mime 1.0.6 (2.1.0 available)
+  mobile_scanner 7.2.0 (7.4.2 available)
+  mockito 5.4.4 (5.8.1 available)
+  nm 0.5.0 (0.6.0 available)
+  octo_image 2.1.0 (2.1.1 available)
+  package_config 2.2.0 (3.0.0 available)
+  package_info_plus 8.3.1 (10.2.1 available)
+  package_info_plus_platform_interface 3.2.1 (4.1.0 available)
+  path_provider 2.1.5 (2.1.6 available)
+  path_provider_android 2.2.22 (2.3.1 available)
+  path_provider_foundation 2.5.1 (2.6.0 available)
+  path_provider_linux 2.2.1 (2.2.2 available)
+  path_provider_platform_interface 2.1.2 (2.1.3 available)
+  permission_handler 12.0.1 (13.0.2 available)
+  permission_handler_android 13.0.1 (14.1.0 available)
+  permission_handler_apple 9.4.7 (9.6.1 available)
+  permission_handler_html 0.1.3+5 (0.1.4+1 available)
+  permission_handler_platform_interface 4.3.0 (4.4.1 available)
+  permission_handler_windows 0.2.1 (0.2.2 available)
+  petitparser 7.0.1 (7.0.2 available)
+  platform 3.1.6 (3.2.0 available)
+  pool 1.5.2 (1.5.3 available)
+  process 5.0.5 (5.0.6 available)
+! protobuf 6.1.0 (overridden)
+  pub_semver 2.2.0 (2.2.1 available)
+  pubspec_parse 1.5.0 (1.6.0 available)
+  record 6.0.0 (7.1.1 available)
+  record_android 1.4.5 (2.2.0 available)
+  record_ios 1.1.5 (2.1.1 available)
+  record_linux 1.2.1 (2.1.2 available)
+  record_macos 1.1.2 (2.1.1 available)
+  record_platform_interface 1.4.0 (2.1.0 available)
+  record_web 1.1.9 (2.1.3 available)
+  record_windows 1.0.7 (2.3.0 available)
+  retrofit 4.9.1 (4.10.0 available)
+  riverpod 2.6.1 (3.4.3 available)
+  riverpod_analyzer_utils 0.5.1 (0.5.10 available)
+  riverpod_annotation 2.6.1 (4.0.7 available)
+  riverpod_generator 2.4.0 (4.0.9 available)
+  sentry 8.14.2 (9.30.1 available)
+  sentry_dart_plugin 2.4.1 (3.4.0 available)
+! sentry_flutter 8.14.2 from path third_party_plugins/sentry_flutter (overridden)
+  share_plus 12.0.1 (13.3.0 available)
+  share_plus_platform_interface 6.1.0 (7.2.0 available)
+  shared_preferences 2.5.4 (2.5.5 available)
+  shared_preferences_android 2.4.18 (2.4.28 available)
+  shared_preferences_foundation 2.5.6 (2.5.7 available)
+  shared_preferences_platform_interface 2.4.1 (2.4.2 available)
+  shelf_web_socket 2.0.1 (3.0.0 available)
+  shimmer 3.0.0 (4.0.0 available)
+  sign_in_with_apple 6.1.4 (8.2.0 available)
+  sign_in_with_apple_platform_interface 1.1.0 (2.0.0 available)
+  sign_in_with_apple_web 2.1.1 (3.0.0 available)
+  source_gen 1.5.0 (4.3.0 available)
+  source_helper 1.3.5 (1.3.13 available)
+  source_span 1.10.1 (1.10.2 available)
+  sqflite 2.4.2 (2.4.4 available)
+  sqflite_android 2.4.2+2 (2.4.4 available)
+  sqflite_common 2.5.6 (2.5.13 available)
+  sqflite_darwin 2.4.2 (2.4.4 available)
+  sqflite_platform_interface 2.4.0 (2.4.2 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  stream_transform 2.1.1 (2.1.2 available)
+  synchronized 3.4.0 (3.4.2 available)
+  table_calendar 3.2.0 (3.2.1 available)
+  test_api 0.7.9 (0.7.14 available)
+  timezone 0.9.4 (0.11.1 available)
+  url_launcher_android 6.3.28 (6.3.33 available)
+  url_launcher_ios 6.3.6 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_web 2.4.1 (2.4.3 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  uuid 4.5.2 (4.6.0 available)
+  vector_graphics 1.1.19 (1.2.3 available)
+  vector_graphics_compiler 1.1.19 (1.3.0 available)
+  vector_math 2.2.0 (2.4.3 available)
+  vm_service 15.0.2 (15.3.0 available)
+  watcher 1.2.0 (1.2.1 available)
+  webdriver 3.1.0 (3.2.0 available)
+  win32 5.15.0 (6.4.0 available)
+  win32_registry 1.1.5 (3.0.3 available)
+  xml 6.6.1 (7.0.1 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+2 packages are discontinued.
+174 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /Users/brsama/code/GitHub/wtF549/mobile/test/widget/group_chat_index_shift_reparent_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: F-4 同族：agent 前缀行进出+流式翻转+收尾 全程无 GlobalKey 框架异常
+🔧 API Base URL (Android): http://10.0.2.2:8080
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+00:00 +1: 搜索命中定位（瞬态键 ensureVisible 全链路）连续两次无框架异常
+🔧 API Base URL (Android): http://10.0.2.2:8080
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+00:01 +2: (tearDownAll)
+00:01 +2: All tests passed!

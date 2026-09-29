@@ -1,0 +1,38 @@
+FIX-549 根因探针（2026-09-28，wtF549，基线 main@834651a7 未修码）
+
+手段：临时插桩（探针后已还原，不入 commit）
+- ChatCacheService 三个缓存方法入口/出口打 [CCS] enter/exit 打点
+- group_chat_index_shift_reparent_test tearDownAll 打 [CLOSE] 盒状态/收尾打点
+命令：cd mobile && flutter test test/widget/group_chat_index_shift_reparent_test.dart
+exit=0（套件绿，护栏照旧触发）
+
+捕获输出（grep 关键行原文）：
+[CCS] enter getCachedGroupMessages(g1)
+[CCS] exit  getCachedGroupMessages(g1)
+[CCS] enter saveGroupMessages(g1)
+[CCS] enter getCachedGroupMessages(g1)
+[CCS] exit  getCachedGroupMessages(g1)
+[CCS] enter saveGroupMessages(g1)
+00:02 +2: (tearDownAll)
+[CLOSE] group_messages_g1 open=true
+[CLOSE] pending_group_g1 open=false
+[CLOSE] private_messages_g1 open=false
+[CLOSE] pending_private_g1 open=false
+[CLOSE] start
+[CLOSE] TIMEOUT/guard fired: TimeoutException after 0:00:03.000000: Future not completed
+00:05 +2: All tests passed!
+
+判读（两 test 各 pump 一次 harness，两轮模式一致）：
+1. getCachedGroupMessages 进/出配平——箱 open+读完成（runAsync 真实窗内落地）。
+2. saveGroupMessages enter 后永无 exit（两轮皆然）——box.clear()+addAll 的
+   真实文件 I/O 续延（RandomAccessFile truncate/writeFrom 的 then 链）登记在
+   testWidgets FakeAsync zone 的微任务队列；fake_async 1.3.3 亲读确认其
+   scheduleMicrotask 入实例私有 _microtasks 队列，仅 flushMicrotasks/elapse
+   排空，FakeAsync 实例随 test 结束被弃 → 续延永不执行（跨 test 亦不复活）。
+3. provider 初始化链在 saveGroupMessages 处永久卡死 → pending_group 箱
+   从未被开（open=false 佐证链路死于此步）。
+4. group_messages_g1 收尾时仍 open → Hive.close() → BoxBase.close() →
+   StorageBackendVm.close()=syncReadWrite 链在 _writeTask（未完结 write
+   completer）→ 确定性悬挂，与写操作何时发起无关。
+5. 修后同款 [CLOSE] 探针（一次性验证，已还原）：[CLOSE] DONE true
+   completion——Hive.close() 真完结，护栏 timeout 路径未走。
