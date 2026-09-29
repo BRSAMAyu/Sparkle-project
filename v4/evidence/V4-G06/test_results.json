@@ -1,0 +1,44 @@
+{
+  "card": "V4-G06",
+  "analyzer": { "cmd": "flutter analyze --no-pub", "issues": 0 },
+  "suites": [
+    { "path": "test/features/achievement test/features/community test/features/photon", "passed": 159, "failed": 0, "skipped": 0, "wall_clock": "02:08" },
+    { "path": "test/widget", "passed": 502, "failed": 0, "skipped": 4, "wall_clock": "07:18" },
+    { "path": "test/goldens", "passed": 86, "failed": 0, "skipped": 15, "wall_clock": "01:10" },
+    { "path": "test/core/design test/core/utils", "passed": 314, "failed": 0, "skipped": 0, "wall_clock": "01:36" }
+  ],
+  "new_pins": {
+    "contrast_guard": {
+      "file": "mobile/test/widget/v4_g06_family_contrast_guard_test.dart",
+      "tests": 11,
+      "e_minus_controls": 3,
+      "covers": [
+        "streak 格数字墨按实际格底实算（含 weak 中间色）四档 ≥4.5:1",
+        "弹窗固定美术渐变双端墨（身份色系收敛后）≥4.5:1",
+        "E-: classic-light 旧随档语义渐变端配对（2.95/4.499/4.02:1）判负",
+        "弹窗内圆图标墨（onColor(neutral0)）≥3:1 + E- 旧 rare identity 金 2.89:1 判负",
+        "庆祝可关文案 surfacePrimary 卡面承诺 ≥4.5:1",
+        "光子访客横幅 warning 墨压 warningLight ≥4.5:1",
+        "火堆等级徽标墨 ≥4.5:1 + E- 修复前配对（1.0–1.7:1）判负",
+        "小队 hub 渐变图标墨 ≥3:1",
+        "地图详情面板状态 chip 墨（textSecondary 对 deepSpace 面板）≥4.5:1",
+        "E-: 禁用灰压画布判负（探针判别力）"
+      ]
+    },
+    "four_style_golden_semantic": {
+      "file": "mobile/test/goldens/g06_four_style/g06_four_style_golden_test.dart",
+      "faces": ["family_faces（RarityBadge×4 + BonfireWidget + StreakIndicator）", "unlock_dialog_legendary"],
+      "profiles": ["classic", "paperDay", "dusk", "quiet"],
+      "goldens": 8,
+      "comparator": "B04 容差比较器（0.5% 带界，常态比对无 skip 门，CI 可失败）",
+      "semantic_pins": [
+        "四档下 RarityBadge 语义容器标签非空（PixelFrame 语义由 child 承载口径）",
+        "四档下 bonfire-level-badge 火堆等级徽标在位",
+        "四档下自我锚连续账本数字直出（非排行）",
+        "四档下庆祝弹窗成就名直出 + 按钮语义可达（庆祝可关）"
+      ],
+      "reduce_motion_note": "MediaQuery.disableAnimations=true 泵制：火堆静帧/彩带不发射/徽章停表——golden 同时钉住 reduce-motion 等价形态"
+    }
+  },
+  "baseline_issuance": "flutter test --update-goldens test/goldens/g06_four_style/（本机=基线机，单次签发；变更需独立签理由）"
+}

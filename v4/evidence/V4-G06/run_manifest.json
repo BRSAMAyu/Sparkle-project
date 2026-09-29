@@ -1,0 +1,65 @@
+{
+  "card": "V4-G06",
+  "title": "小队/自我锚/光子/成就——四风格商业化完备",
+  "branch": "agent/v4/g06",
+  "worktree": "/Users/brsama/code/GitHub/wtG06",
+  "resumed_from_dirty": {
+    "predecessor": "阵亡于宿主机强制重启，worktree 未提交改动 14 项（13 lib + 1 未跟踪目录）",
+    "disposition": "git status 盘点后续跑，零丢弃；前任遗留 8 处编译错误与 11 处 lint 就地修复后纳入本卡"
+  },
+  "source_sha_base": "9369f0e5",
+  "specs": [
+    "v4/02_design/SCREEN_FAMILIES.md#L19（先行动再装饰/self-anchor 非排行/兑换不暗示付费/真实账本可关庆祝/像素网格同一/Shop HIDDEN 不开）",
+    "v4/02_design/ACCESSIBILITY_ASSETS.md（正文 ≥4.5:1，非文字关键部件 ≥3:1）",
+    "v4/02_design/DESIGN_SYSTEM.md（1.3.1 禁透明度压文字/像素 2dp 概念网格/200% 布局条款）",
+    "v4/02_design/TOKENS.proposal.json（pixel_step 2 / motion_ms / type_roles）"
+  ],
+  "commands": [
+    {
+      "cmd": "flutter analyze --no-pub",
+      "exit": 0,
+      "result": "No issues found!"
+    },
+    {
+      "cmd": "flutter test test/features/achievement test/features/community test/features/photon --concurrency=1",
+      "exit": 0,
+      "result": "+159 All tests passed"
+    },
+    {
+      "cmd": "flutter test test/widget --concurrency=1",
+      "exit": 0,
+      "result": "+502 ~4 All tests passed"
+    },
+    {
+      "cmd": "flutter test test/goldens --concurrency=1",
+      "exit": 0,
+      "result": "+86 ~15 All tests passed（skip 均为既有 dart-define 采集门控套件）"
+    },
+    {
+      "cmd": "flutter test test/core/design test/core/utils --concurrency=1",
+      "exit": 0,
+      "result": "+314 All tests passed"
+    },
+    {
+      "cmd": "flutter test test/goldens/g06_four_style/ --concurrency=1 --update-goldens（仅基线签发一次）",
+      "exit": 0,
+      "result": "+2 All tests passed（8 张 golden 落盘）"
+    }
+  ],
+  "resource_discipline": {
+    "flutter_test_concurrency": 1,
+    "full_suite_staggered": "family → widget → goldens → core 分批错峰执行",
+    "build_cleaned_after_use": "mobile/build (128M) 已删",
+    "disk_before_big_commands": "df -h / = 44G→33G available（>15G 红线满足）",
+    "swap": "0 字节（无 >10G 串行化触发）"
+  },
+  "scope_and_denominator": {
+    "modules": ["community", "photon", "achievement"],
+    "files_changed_lib": 14,
+    "files_added_test": 2,
+    "goldens_added": 8,
+    "rf06_high_risk_faces_touched": 0,
+    "shop_files_touched": 0,
+    "asset_ledger_changes": 0
+  }
+}
