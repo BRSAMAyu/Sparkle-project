@@ -21,3 +21,8 @@
 ## Errata (leader, 2026-09-30, R1 info 收口 + 跨卡冲突注记)
 - 跨卡冲突：aurora_core_session_sheet 与 G03 已合并重构（单路径 _dots+相位透明度）重叠——冲突区取 G03 版（其 R1 已验），G02 非冲突增量（令牌/着色扫描）自动保留；合并态补修 G02 分支带回的 pattern_list 旧闭合与 aurora 静态 0.2 覆盖（恢复相位 opacity）。
 - R1-1：守卫浅档流式码面模型（ink@6
+## Errata (leader, 2026-09-30, R1 info 收口 + 跨卡冲突注记)
+- 跨卡冲突：aurora_core_session_sheet 与 G03 已合并重构（单路径 _dots+相位透明度）重叠——冲突区取 G03 版（其 R1 已验），G02 非冲突增量（令牌/着色扫描）自动保留；合并态补修 G02 分支带回的 pattern_list 旧闭合与 aurora 静态 0.2 覆盖（恢复相位 opacity）。
+- R1-1：守卫浅档流式码面模型（ink@6%）系旧公式，实际码面已无条件 surfaceTertiary——无未覆盖面（落定对承载），模型收敛归后续顺手。
+- R1-3（重要勘误）：collaboration_timeline isLast 的实际极性是连接线恒渲染含末节点悬挂（非登记所写"不渲染"）——行为卡引用时以本条为准。
+- R1-4：D3 弱两档复算 1.16/1.22 vs 表载 1.22/1.29（≤0.07 合成舍入），结论不变。
