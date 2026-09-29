@@ -1,0 +1,111 @@
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6581525Z ^[[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6582984Z ^[[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6583823Z ^[[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/user/settings^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6584714Z ^[[38;5;196m└───────────────────────────────────────────────────────────────────────────────^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6585449Z 🔧 API Base URL (Android): http://10.0.2.2:8080
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6586069Z 🔧 API Base URL (Android): http://10.0.2.2:8080
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6586794Z ^[[38;5;12m┌───────────────────────────────────────────────────────────────────────────────^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6588135Z ^[[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/user/settings^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6589199Z ^[[38;5;12m└───────────────────────────────────────────────────────────────────────────────^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6590219Z ^[[38;5;196m┌───────────────────────────────────────────────────────────────────────────────^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6592185Z ^[[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6594212Z ^[[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6610425Z ^[[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6611735Z ^[[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6612944Z ^[[38;5;196m│ ^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6613544Z ^[[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6614518Z ^[[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6615797Z ^[[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6616900Z ^[[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6617869Z ^[[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6619090Z ^[[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6620803Z ^[[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6621625Z ^[[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/user/settings^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6622589Z ^[[38;5;196m└───────────────────────────────────────────────────────────────────────────────^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6623443Z 🔧 API Base URL (Android): http://10.0.2.2:8080
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6624036Z 🔧 API Base URL (Android): http://10.0.2.2:8080
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6624770Z ^[[38;5;12m┌───────────────────────────────────────────────────────────────────────────────^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6625558Z ^[[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/user/settings^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6626604Z ^[[38;5;12m└───────────────────────────────────────────────────────────────────────────────^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6627466Z ^[[38;5;196m┌───────────────────────────────────────────────────────────────────────────────^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6628919Z ^[[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6630727Z ^[[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6634826Z ^[[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6636409Z ^[[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6663406Z ^[[38;5;196m│ ^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6673488Z ^[[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6674434Z ^[[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6675631Z ^[[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6676577Z ^[[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6677535Z ^[[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6678766Z ^[[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6679849Z ^[[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6680583Z ^[[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/user/settings^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6681311Z ^[[38;5;196m└───────────────────────────────────────────────────────────────────────────────^[[0m
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6682167Z ══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6682935Z The following TestFailure was thrown running a test:
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6683343Z Expected: null
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6683856Z   Actual: FlutterError:<Golden "goldens/g01_task_list_paperDay.png": Pixel test failed, 0.62%,
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6684442Z 8227px diff detected.
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6684744Z           Failure feedback can be found at
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6685358Z /home/runner/work/Sparkle-project/Sparkle-project/mobile/test/goldens/g01_four_style/failures>
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6686060Z PixelPreviewProfile.dusk 任务列表异常
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6686286Z 
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6686456Z When the exception was thrown, this was the stack:
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6687650Z #4      main.<anonymous closure> (file:///home/runner/work/Sparkle-project/Sparkle-project/mobile/test/goldens/g01_four_style/g01_four_style_golden_test.dart:140:7)
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6688551Z <asynchronous suspension>
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6689149Z #5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6689803Z <asynchronous suspension>
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6690346Z #6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6690938Z <asynchronous suspension>
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6691239Z <asynchronous suspension>
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6691539Z (elided one frame from package:stack_trace)
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6691795Z 
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6691997Z This was caught by the test expectation on the following line:
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6692968Z   file:///home/runner/work/Sparkle-project/Sparkle-project/mobile/test/goldens/g01_four_style/g01_four_style_golden_test.dart line 140
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6693739Z The test description was:
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6694112Z   任务列表内容态 × 四风格 golden
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6694701Z ════════════════════════════════════════════════════════════════════════════════════════════════════
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6695214Z Test failed. See exception logs above.
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6695664Z The test description was: 任务列表内容态 × 四风格 golden
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6696032Z 
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.6696469Z ##[endgroup]
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9754290Z ##[group]✅ loading /home/runner/work/Sparkle-project/Sparkle-project/mobile/test/interactive_intent_test.dart
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9755142Z ✓ [0] 翻译这个单词                    → translation (conf: 1.00) | 精确匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9755772Z ✓ [1] in English怎么说             → translation (conf: 0.85) | 短语匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9756683Z ✓ [2] 这是什么意思                    → translation (conf: 0.90) | 短语匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9757235Z ✓ [3] 我的学习习惯                    → prism (conf: 0.95) | 短语匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9757895Z ✓ [4] 查看行为分析                    → prism (conf: 1.00) | 精确关键词
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9758633Z ✓ [5] 生成周报                      → prism (conf: 0.85) | 短语匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9759069Z ✓ [6] 进入冲刺模式                    → sprint (conf: 1.00) | 精确匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9759612Z ✓ [7] 开始专注                      → sprint (conf: 0.88) | 关键词匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9759995Z ✓ [8] 专注模式学习                    → sprint (conf: 0.95) | 组合模式
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9760380Z ✓ [9] 学习英语                      → learn (conf: 0.90) | 精确匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9760761Z ✓ [10] study math                → learn (conf: 0.90) | 精确匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9761138Z ✓ [11] 复习数学                      → review (conf: 1.00) | 精确匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9761516Z ✓ [12] review一下                  → review (conf: 1.00) | 短语匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9761914Z ✓ [13] 过一遍昨天的题                   → review (conf: 0.85) | 短语匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9762276Z ✓ [14] 创建任务                      → task (conf: 1.00) | 精确关键词
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9762947Z ✓ [15] 提醒我明天3点                   → task (conf: 1.00) | 组合模式
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9763374Z ✓ [16] 创建一个提醒                    → task (conf: 1.00) | 精确短语
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9763887Z ✓ [17] 我很烦                       → capsule (conf: 0.90) | 关键词匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9764458Z ✓ [18] 好奇想知道                     → capsule (conf: 0.95) | 组合模式
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9764965Z ✓ [19] 疑惑不解                      → capsule (conf: 0.85) | 短语匹配
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9765478Z ✓ [20]                           → null (conf: 0.00) | 空字符串
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9765988Z ✓ [21]                           → null (conf: 0.00) | 纯空格
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9768504Z ✓ [22] a                         → null (conf: 0.00) | 单字符
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9769160Z ✓ [23] 你好呀                       → null (conf: 0.00) | 简短问候
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9769520Z 
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9769895Z ────────────────────────────────────────────────────────────
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9770416Z 测试结果汇总:
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9770778Z   通过: 24
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9771115Z   失败: 0
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9771446Z   总数: 24
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9772044Z   通过率: 100.0%
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9772685Z ────────────────────────────────────────────────────────────
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9773131Z 
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9773435Z 🎉 所有测试通过！增强意图分类器工作正常。
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9773638Z 
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9773817Z 💡 提示: 你可以修改此文件添加更多测试用例
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:28.9774349Z ##[endgroup]
+Flutter Tests	Run Tests with Coverage	2026-09-29T09:10:31.8135311Z ✅ /home/runner/work/Sparkle-project/Sparkle-project/mobile/test/features/splash/splash_screen_two_segment_test.dart: SplashScreen 两段化（N20 / D-3） 两段结构：标题/副标题/指示器同属一个渐显段，logo 独立成段
