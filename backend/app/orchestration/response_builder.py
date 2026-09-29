@@ -23,6 +23,7 @@ from app.config import settings
 from app.core.business_metrics import COLLABORATION_LATENCY
 from app.core.metrics import (
     AI_RESPONSE_TOTAL_DURATION,
+    METERING_NO_GENERATION_REATTRIBUTED,
     METERING_NO_GENERATION_WITH_TOKENS,
     METERING_UNPRICED_USAGE,
     REQUEST_LATENCY,
@@ -1663,6 +1664,7 @@ class ResponseBuilderMixin:
         final_state: WorkflowState | None = None,
         chat_mode_hint: str | None = None,
         reasoning_mode_hint: str | None = None,
+        context_data_fallback: dict[str, Any] | None = None,
     ) -> None:
         latency = time.time() - start_time
         REQUEST_LATENCY.labels(module="orchestration", method="process_stream").observe(latency)
@@ -1680,6 +1682,12 @@ class ResponseBuilderMixin:
         if self.token_tracker:
             try:
                 context_data = final_state.context_data if final_state is not None else {}
+                # V4-FIX-573 缺陷②：取消/超时路径 final_state=None，但图在取消前
+                # 已在共享 WorkflowState.context_data 写入模型归因（generation 节点
+                # 于 LLM 调用前回填）——以此兜底，取消轮次的模型归因不再凭空丢成
+                # 无上下文（token 恢复面在 orchestrator finally 收口）。
+                if not context_data and context_data_fallback:
+                    context_data = context_data_fallback
                 # V3-FIX-80：以真实用量帧区分「生成模型从未运行」与「有消耗
                 # 未归因」，均显式标注（合成 token 估算发生在其后，不计入判定）
                 model_key = resolve_metering_model_key(
@@ -1775,6 +1783,28 @@ class ResponseBuilderMixin:
                     completion_tokens = self._estimate_text_tokens(assistant_text)
                     if prompt_tokens > 0 or completion_tokens > 0:
                         usage_source = "estimated"
+
+                # V4-FIX-573 缺陷①（Q04 红项①终结面）：no_generation 家族行
+                # 禁止携带 token。真实生成发生过（有 assistant 文本可估算）而
+                # 模型键未回填 → 该形态本质是「有真实用量但无模型归因」，改记
+                # unattributed_model 正确桶——Q04 L2-r1/r3/r4-08 三行
+                # 216/216/277 tok 错挂 no_generation_model_estimated 的产生路径
+                # 就此收口，成本可见性保留（usage_source=estimated 如实降级，
+                # 计量标签无价目 → cost=None 未核价）。FIX545 检出器保留为回归
+                # 防线：正常路径改挂后不再触发，若再触发即出现新产生面。
+                if model_key == METERING_MODEL_NO_GENERATION and (prompt_tokens > 0 or completion_tokens > 0):
+                    METERING_NO_GENERATION_REATTRIBUTED.labels(surface="cleanup").inc()
+                    logger.warning(
+                        "FIX573 no_generation row with tokens re-attributed (request_id={}): "
+                        "{}+{} estimated tokens without model attribution; label {!r} -> {!r} "
+                        "(real usage, unknown model)",
+                        request_id,
+                        prompt_tokens,
+                        completion_tokens,
+                        model_key,
+                        METERING_MODEL_UNATTRIBUTED,
+                    )
+                    model_key = METERING_MODEL_UNATTRIBUTED
 
                 # V4-I10 FIX545 检出器（判定面 3/3 · 产生面）：合成估算发生在归因
                 # 判定之后，曾产出「no_generation_model 标签 + 估算 token>0」行

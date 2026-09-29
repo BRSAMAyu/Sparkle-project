@@ -55,6 +55,25 @@ METERING_NO_GENERATION_WITH_TOKENS = get_or_create_metric(
     ["surface"],
 )
 
+# V4-FIX-573 缺陷①（Q04 红项①）终结面：曾落 no_generation 家族标签却带
+# 估算 token 的行，改记 unattributed_model 正确桶（有真实用量、模型键未知）
+# 的改挂计数。FIX545 检出器（METERING_NO_GENERATION_WITH_TOKENS）保留为
+# 回归防线——正常路径改挂后不再触发，若再触发即说明出现了新的产生面。
+METERING_NO_GENERATION_REATTRIBUTED = get_or_create_metric(
+    Counter,
+    "sparkle_metering_no_generation_reattributed_total",
+    "FIX573: no_generation rows carrying estimated tokens re-attributed to unattributed_model (real usage, unknown model)",
+    ["surface"],
+)
+
+# V4-FIX-573 缺陷②（Q04 红项②）：取消/超时路径按帧级收据补账的行计数——
+# 取消前已产生的 token 必须入账，绝不因局部累积丢失而记 0。
+METERING_CANCEL_RECEIPT_RECOVERED = get_or_create_metric(
+    Counter,
+    "sparkle_metering_cancel_receipt_recovered_total",
+    "FIX573: cancelled/timed-out turns accounted from frame-level usage receipts instead of zero",
+)
+
 # V4-I10 根请求全调用计量：generation rescue 二次真实上游调用入根请求账的
 # 计数（B06-T3：rescue 真实烧上游却无回执无实账）。
 METERING_GENERATION_RESCUE_CALLS = get_or_create_metric(
