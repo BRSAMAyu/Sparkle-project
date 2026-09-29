@@ -33,8 +33,7 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
     final achievementState = ref.watch(achievementProvider);
     final progressById = <String, double>{
       for (final entry in achievementState.achievements)
-        entry.achievement.id:
-            (entry.progressPercentage / 100).clamp(0.0, 1.0),
+        entry.achievement.id: (entry.progressPercentage / 100).clamp(0.0, 1.0),
     };
 
     return SparklePageScaffold(
@@ -199,7 +198,10 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
                   _MetaChip(label: node.laneLabel, color: color),
                   _MetaChip(
                     label: _displayStateLabel(context, node.displayState),
-                    color: Colors.white70,
+                    // V4-G06 风格面：固定白 70 在浅档（classic-light/
+                    // paperDay/quiet）近白详情面板上不可读——状态 chip
+                    // 走令牌校准色（textSecondary ≥4.5:1 on S0/S1）。
+                    color: DS.textSecondary,
                   ),
                   _MetaChip(
                     label: '${node.progressPercentage}%',
@@ -696,6 +698,7 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
                             progressById: widget.progressById,
                             pulseValue: 0.0,
                             showPulseDots: false,
+                            lockedLineColor: DS.border,
                           ),
                         )
                       : AnimatedBuilder(
@@ -708,6 +711,7 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
                               progressById: widget.progressById,
                               pulseValue: _pulseController.value,
                               showPulseDots: true,
+                              lockedLineColor: DS.border,
                             ),
                           ),
                         ),
@@ -783,11 +787,12 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
                 color: DS.deepSpaceStart.withValues(alpha: 0.82),
                 borderRadius: DS.borderRadius16,
                 border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                boxShadow: const [
+                boxShadow: [
+                  // V4-G06：阴影色去裸 ARGB 字面量（等值 black 13%）。
                   BoxShadow(
-                    color: Color(0x22000000),
+                    color: Colors.black.withValues(alpha: 0.13),
                     blurRadius: 24,
-                    offset: Offset(0, 10),
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
@@ -1002,6 +1007,7 @@ class _ConstellationLinesPainter extends CustomPainter {
     required this.progressById,
     required this.pulseValue,
     required this.showPulseDots,
+    required this.lockedLineColor,
   });
 
   final List<Map<String, dynamic>> connections;
@@ -1010,6 +1016,10 @@ class _ConstellationLinesPainter extends CustomPainter {
   final Map<String, double> progressById;
   final double pulseValue;
   final bool showPulseDots;
+
+  /// 锁定连接虚线色（V4-G06：随档令牌 hairline，见
+  /// [_drawLockedDashedLine]）。
+  final Color lockedLineColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1109,8 +1119,11 @@ class _ConstellationLinesPainter extends CustomPainter {
   }
 
   void _drawLockedDashedLine(Canvas canvas, Offset from, Offset to) {
+    // V4-G06 风格面：白 12% 虚线在浅档画布上不可见（锁定连接不可交互、
+    // 弱示能可接受，但完全不可见会让可解锁路径丢失上下文）——画布明暗
+    // 随档翻转，锁定线色随档由调用方传令牌校准 hairline。
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.12)
+      ..color = lockedLineColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -1395,7 +1408,9 @@ class _CosmicNodeWidget extends StatelessWidget {
                         border: Border.all(
                           color: node.isUnlocked
                               ? color.withValues(alpha: 0.7)
-                              : Colors.white.withValues(alpha: 0.1),
+                              // V4-G06 风格面：白 10% 在浅档画布上不可见，
+                              // 锁定描边走令牌 hairline（随档校准）。
+                              : DS.borderSubtle,
                           width: 1.5,
                         ),
                       ),
@@ -1413,9 +1428,12 @@ class _CosmicNodeWidget extends StatelessWidget {
                                   color: DS.textTertiary.withValues(alpha: 0.4),
                                   size: DS.iconSizeSm,
                                 ),
+                                // V4-G06 风格面：锁定是关键状态指示（非文字
+                                // 部件 ≥3:1）——白 35% 在浅档不可见，改令牌
+                                // 校准色实心（textTertiary 独立定标 ≥4.5:1）。
                                 Icon(
                                   Icons.lock_outline,
-                                  color: Colors.white.withValues(alpha: 0.35),
+                                  color: DS.textTertiary,
                                   size: 16,
                                 ),
                               ],

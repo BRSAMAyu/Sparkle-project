@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -85,7 +86,8 @@ class _StreakIndicatorCompact extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: context.l10n.achieveStreakCompactLabel(streakStats.currentStreak),
+        label:
+            context.l10n.achieveStreakCompactLabel(streakStats.currentStreak),
         child: GestureDetector(
           onTap: onTap,
           child: Container(
@@ -146,74 +148,74 @@ class _StreakIndicatorStandard extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 320;
-          return Container(
-            padding: const EdgeInsets.all(DS.spacing12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  _flameColor.withValues(alpha: 0.15),
-                  _flameColor.withValues(alpha: 0.05),
-                ],
-              ),
-              borderRadius: DS.borderRadius16,
-              border: Border.all(
-                color: _flameColor.withValues(alpha: 0.3),
-                width: 1.5,
-              ),
-            ),
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: DS.spacing12,
-              runSpacing: DS.spacing8,
-              children: [
-                _buildFlameIcon(),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.streakTitle,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXs,
-                        color: DS.textSecondary,
-                      ),
-                    ),
-                    Text(
-                      l10n.streakDays(streakStats.currentStreak),
-                      style: TextStyle(
-                        fontSize: compact ? DS.fontSizeBase : DS.fontSizeLg,
-                        fontWeight: DS.fontWeightBold,
-                        color: _flameColor,
-                      ),
-                    ),
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 320;
+            return Container(
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    _flameColor.withValues(alpha: 0.15),
+                    _flameColor.withValues(alpha: 0.05),
                   ],
                 ),
-                if (streakStats.maxStreak > streakStats.currentStreak)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing8,
-                      vertical: DS.spacing4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: DS.neutral200,
-                      borderRadius: DS.borderRadius8,
-                    ),
-                    child: Text(
-                      l10n.streakMax(streakStats.maxStreak),
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXs,
-                        color: DS.textSecondary,
+                borderRadius: DS.borderRadius16,
+                border: Border.all(
+                  color: _flameColor.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: DS.spacing12,
+                runSpacing: DS.spacing8,
+                children: [
+                  _buildFlameIcon(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n.streakTitle,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        l10n.streakDays(streakStats.currentStreak),
+                        style: TextStyle(
+                          fontSize: compact ? DS.fontSizeBase : DS.fontSizeLg,
+                          fontWeight: DS.fontWeightBold,
+                          color: _flameColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (streakStats.maxStreak > streakStats.currentStreak)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing8,
+                        vertical: DS.spacing4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.neutral200,
+                        borderRadius: DS.borderRadius8,
+                      ),
+                      child: Text(
+                        l10n.streakMax(streakStats.maxStreak),
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textSecondary,
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
-    ),
     );
   }
 
@@ -280,7 +282,22 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
         curve: Curves.easeInOut,
       ),
     );
-    unawaited(_flameController.repeat(reverse: true));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // V4-G06 reduce-motion 等价：火苗缩放停表中点（≈原尺寸），连续天数
+    // 由静态数字/颜色承载（bonfire 同语义装饰，非权益信号）。
+    if (context.reduceMotion) {
+      if (_flameController.isAnimating) {
+        _flameController
+          ..stop()
+          ..value = 0.5;
+      }
+    } else if (!_flameController.isAnimating && _flameController.value != 0.5) {
+      unawaited(_flameController.repeat(reverse: true));
+    }
   }
 
   @override
@@ -535,8 +552,27 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
         curve: Curves.easeInOut,
       ),
     );
-    unawaited(_pulseController.repeat(reverse: true));
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // V4-G06 reduce-motion 等价：环形脉冲停表原尺寸，进度环一次性入场
+    // 动画照常（有界、非持续）；恢复动效偏好后从头重启脉冲。
+    if (context.reduceMotion) {
+      if (_pulseController.isAnimating || _pulseController.value != 0) {
+        _pulseController
+          ..stop()
+          ..value = 0;
+      }
+      _pulseStarted = false;
+    } else if (!_pulseStarted) {
+      _pulseStarted = true;
+      unawaited(_pulseController.repeat(reverse: true));
+    }
+  }
+
+  bool _pulseStarted = false;
 
   @override
   void dispose() {

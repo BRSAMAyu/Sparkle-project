@@ -17,7 +17,14 @@ import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/home/home_routes.dart';
 
-// Screen-specific celebration gradient and accent colors.
+// 庆祝时刻固定美术底（V4-G06 登记的 dl-spec 豁免，同 rarity identity 惯例）：
+// 里程碑庆祝是“深夜星空 + 金”的一次性时刻面，与档位无关的固定美术方向。
+// 自包含对比度已机检钉死（test/goldens/v4_g06 四档审计：白/暖金对深蓝族
+// 5.3–16:1），关闭按钮 + reduce-motion 数字直出 + 低刺激彩带抑制（U-02）
+// 保证庆祝可关语义四档成立。改成随档派生属发布面美术决策，登记 Q08 待裁，
+// 不在本卡顺手改。
+// [coldColorLiteral 登记] 六枚冷相硬编码在该维度 ratchet 基线内（本文件
+// 基线 6，只降不升；替换为随档令牌需先裁美术方向，见上）。
 const _celebrationNavy = Color(0xFF13213C);
 const _celebrationMidBlue = Color(0xFF2F4F7A);
 const _celebrationGold = Color(0xFFF6C453);
@@ -127,7 +134,9 @@ class MilestoneCelebrationPayload {
       };
 
   static String _defaultShareHashtag(String milestoneId) =>
-      milestoneId == '30_day_learner' ? S.achievementMilestoneHashtag30Day : S.achievementMilestoneHashtagDefault;
+      milestoneId == '30_day_learner'
+          ? S.achievementMilestoneHashtag30Day
+          : S.achievementMilestoneHashtagDefault;
 }
 
 class MilestoneCelebrationScreen extends ConsumerStatefulWidget {
@@ -200,7 +209,8 @@ class _MilestoneCelebrationScreenState
             .shareToSystem(imageFile: imageFile, text: shareText);
         if (!mounted) return;
         if (result.isSuccess) {
-          AppFeedback.success(context, context.l10n.achievementMilestoneShareOpened);
+          AppFeedback.success(
+              context, context.l10n.achievementMilestoneShareOpened,);
         } else if (result.error != null) {
           AppFeedback.error(context, result.error!);
         }
@@ -258,7 +268,10 @@ class _MilestoneCelebrationScreenState
         child: Scaffold(
           backgroundColor: DS.surfacePrimary,
           body: SparkleConfetti(
-            play: true,
+            // V4-G06 reduce-motion 等价：系统减动效时庆祝彩带不发射
+            // （低刺激档已由 U-02 在 SparkleConfetti 内部抑制）；庆祝
+            // 内容（数字、徽章、可关语义）不受影响。
+            play: !context.reduceMotion,
             intensity: SparkleCelebrationIntensity.large,
             child: SafeArea(
               child: Stack(
@@ -307,12 +320,17 @@ class _MilestoneCelebrationScreenState
                                   icon: _isSharing
                                       ? LoadingIndicator.circular(size: 18)
                                       : const Icon(Icons.ios_share_rounded),
-                                  label: Text(_isSharing ? context.l10n.achievementMilestoneShareInProgress : context.l10n.achievementMilestoneShareNow),
+                                  label: Text(_isSharing
+                                      ? context.l10n
+                                          .achievementMilestoneShareInProgress
+                                      : context
+                                          .l10n.achievementMilestoneShareNow,),
                                 ),
                                 OutlinedButton.icon(
                                   onPressed: _continueLearning,
                                   icon: const Icon(Icons.check_circle_outline),
-                                  label: Text(context.l10n.achievementMilestoneContinueLearning),
+                                  label: Text(context.l10n
+                                      .achievementMilestoneContinueLearning,),
                                 ),
                               ],
                             ),
@@ -532,32 +550,37 @@ class _StatChip extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: 150,
-        padding: const EdgeInsets.all(DS.spacing16),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.08),
-          borderRadius: DS.borderRadius20,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.70),
-                  ),
-            ),
-            const SizedBox(height: DS.spacing8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ],
+  Widget build(BuildContext context) => ConstrainedBox(
+        // V4-G06 200% 文本：固定 150 宽在 2.0 缩放下截断标签——改下限
+        // 约束，卡片随文本放大增高（DESIGN_SYSTEM 布局条款：200% 时
+        // 允许更高卡片，不截断主内容）。
+        constraints: const BoxConstraints(minWidth: 150, maxWidth: 320),
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: DS.borderRadius20,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.70),
+                    ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
         ),
       );
 }

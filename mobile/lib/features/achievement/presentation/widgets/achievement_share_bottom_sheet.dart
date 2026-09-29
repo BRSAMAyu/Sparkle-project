@@ -149,13 +149,12 @@ class _AchievementShareBottomSheetState
   Future<void> _prepareShareCard() async {
     try {
       // Get share card with current template and privacy settings
-      final shareCard = await ref
-          .read(achievementProvider.notifier)
-          .shareAchievement(
-            widget.achievementId,
-            templateId: _selectedTemplateId,
-            privacySettings: _privacySettings,
-          );
+      final shareCard =
+          await ref.read(achievementProvider.notifier).shareAchievement(
+                widget.achievementId,
+                templateId: _selectedTemplateId,
+                privacySettings: _privacySettings,
+              );
 
       final cardUrl = shareCard?.cardUrl ?? widget.shareCardUrl;
 
@@ -510,17 +509,20 @@ class _AchievementShareBottomSheetState
     return Column(
       children: [
         // WeChat options (conditional)
+        // V4-G06：0xFF07C160 是微信品牌通道色（第三方品牌 identity，非主题
+        // 语义色），与 core/design/universal_share_bottom_sheet.dart 同款
+        // 既成惯例——不随四档变化，不属风格令牌范围。
         if (_wechatAvailable && _wechatInstalled) ...[
           _buildShareOption(
             icon: Icons.chat,
             label: l10n.shareToWeChatFriends,
-            color: const Color(0xFF07C160), // WeChat green
+            color: const Color(0xFF07C160), // WeChat brand channel green
             onTap: _shareToWeChatSession,
           ),
           _buildShareOption(
             icon: Icons.timeline,
             label: l10n.shareToWeChatMoments,
-            color: const Color(0xFF07C160), // WeChat green
+            color: const Color(0xFF07C160), // WeChat brand channel green
             onTap: _shareToWeChatTimeline,
           ),
         ],
@@ -626,8 +628,7 @@ class _AchievementShareBottomSheetState
     if (_shareCardFile == null) return;
 
     // l10n 文案在异步 gap 前同步取好，避免 await 后使用 build context。
-    final shareText =
-        context.l10n.shareUnlockMessage(widget.achievementName);
+    final shareText = context.l10n.shareUnlockMessage(widget.achievementName);
     try {
       await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
       await share_plus.SharePlus.instance.share(
@@ -737,11 +738,11 @@ class _AchievementShareBottomSheetState
       case ShareResult.error:
         if (mounted) {
           AppFeedback.error(
-          context,
-          context.l10n.shareFailed(
-            context.l10n.errorUnknown,
-          ),
-        );
+            context,
+            context.l10n.shareFailed(
+              context.l10n.errorUnknown,
+            ),
+          );
         }
     }
   }

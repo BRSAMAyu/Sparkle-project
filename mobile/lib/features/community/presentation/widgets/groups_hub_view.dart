@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +15,7 @@ import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/input_formatters.dart';
+import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -143,8 +145,7 @@ class _TodayCheckinSection extends ConsumerWidget {
             }
             // 冲刺群排前（V3 主线），同类内按今日打卡数降序，取前 3。
             final sorted = [...groups]..sort((a, b) {
-                final sprintDelta =
-                    (b.isSprint ? 1 : 0) - (a.isSprint ? 1 : 0);
+                final sprintDelta = (b.isSprint ? 1 : 0) - (a.isSprint ? 1 : 0);
                 if (sprintDelta != 0) return sprintDelta;
                 return b.todayCheckinCount.compareTo(a.todayCheckinCount);
               });
@@ -185,8 +186,7 @@ class _CheckinTile extends ConsumerWidget {
       padding: EdgeInsets.zero,
       onTap: () => context.push('/chat/group/${group.id}'),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           width: 40,
           height: 40,
@@ -273,41 +273,43 @@ Future<void> _showHubCheckinDialog(
           // S-04：可选目标关联——打卡后可一键回到 Goal trajectory（GJ16）。
           // 数据源是既有 /goals 列表（activeGoalsProvider），不建新真源；
           // 加载失败时下拉不可用但打卡仍可完成（回链是可选增强）。
-          Consumer(builder: (context, ref, _) {
-            final goalsAsync = ref.watch(activeGoalsProvider);
-            return goalsAsync.maybeWhen(
-              data: (goals) => goals.isEmpty
-                  ? const SizedBox.shrink()
-                  : DropdownButtonFormField<String>(
-                      key: const ValueKey('community-checkin-goal-picker'),
-                      decoration: InputDecoration(
-                        labelText:
-                            dialogContext.l10n.communityCheckinGoalLabel,
-                        // 语义提示走 label；组件内 hint 在窄容器会挤压溢出。
-                      ),
-                      items: [
-                        DropdownMenuItem<String>(
-                          child: Text(
-                            dialogContext.l10n.communityCheckinGoalNone,
-                            style: TextStyle(color: DS.textSecondary),
-                          ),
+          Consumer(
+            builder: (context, ref, _) {
+              final goalsAsync = ref.watch(activeGoalsProvider);
+              return goalsAsync.maybeWhen(
+                data: (goals) => goals.isEmpty
+                    ? const SizedBox.shrink()
+                    : DropdownButtonFormField<String>(
+                        key: const ValueKey('community-checkin-goal-picker'),
+                        decoration: InputDecoration(
+                          labelText:
+                              dialogContext.l10n.communityCheckinGoalLabel,
+                          // 语义提示走 label；组件内 hint 在窄容器会挤压溢出。
                         ),
-                        ...goals.map(
-                          (g) => DropdownMenuItem<String>(
-                            value: g.id,
+                        items: [
+                          DropdownMenuItem<String>(
                             child: Text(
-                              g.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              dialogContext.l10n.communityCheckinGoalNone,
+                              style: TextStyle(color: DS.textSecondary),
                             ),
                           ),
-                        ),
-                      ],
-                      onChanged: (value) => goalPickerValue = value,
-                    ),
-              orElse: () => const SizedBox.shrink(),
-            );
-          },),
+                          ...goals.map(
+                            (g) => DropdownMenuItem<String>(
+                              value: g.id,
+                              child: Text(
+                                g.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) => goalPickerValue = value,
+                      ),
+                orElse: () => const SizedBox.shrink(),
+              );
+            },
+          ),
         ],
       ),
       actions: [
@@ -325,10 +327,12 @@ Future<void> _showHubCheckinDialog(
             try {
               final link = await ref
                   .read(communityRepositoryProvider)
-                  .checkinWithGoalLink(group.id,
-                      todayDurationMinutes: duration,
-                      message: message,
-                      goalId: linkedGoalId,);
+                  .checkinWithGoalLink(
+                    group.id,
+                    todayDurationMinutes: duration,
+                    message: message,
+                    goalId: linkedGoalId,
+                  );
               // 回真源：今日打卡计数与群详情一并失效。
               ref
                 ..invalidate(myGroupsProvider)
@@ -344,12 +348,13 @@ Future<void> _showHubCheckinDialog(
                   context: context,
                   // 紧凑文案：动作按钮与消息同行，长文案会挤压溢出。
                   message: context.l10n.communityHubCheckinGoalSuccess(
-                      link.response.flameEarned,),
+                    link.response.flameEarned,
+                  ),
                   actionLabel:
                       context.l10n.communityHubCheckinViewGoalTrajectory,
-onAction: () => unawaited(
-                      hubRouter.push('/goals/${Uri.encodeComponent(goalId)}'),
-                    ),
+                  onAction: () => unawaited(
+                    hubRouter.push('/goals/${Uri.encodeComponent(goalId)}'),
+                  ),
                 );
               } else {
                 AppFeedback.success(
@@ -421,8 +426,8 @@ class _ArtifactFeedbackSection extends ConsumerWidget {
                     onAdopt: resources[index].isOwn
                         ? null // 自己的共享无「采纳到我的空间」语义
                         : () => unawaited(
-                            _adoptResource(context, ref, resources[index].id),
-                          ),
+                              _adoptResource(context, ref, resources[index].id),
+                            ),
                     // S-04：给同伴成果一条反馈（不自动成为 mastery）。
                     onFeedback: () => unawaited(
                       _showFeedbackDialog(context, ref, resources[index]),
@@ -431,8 +436,9 @@ class _ArtifactFeedbackSection extends ConsumerWidget {
                     onAdoptFeedback: resources[index].isOwn &&
                             resources[index].feedbackCount > 0
                         ? () => unawaited(
-                            _showAdoptEvidenceSheet(context, ref, resources[index]),
-                          )
+                              _showAdoptEvidenceSheet(
+                                  context, ref, resources[index],),
+                            )
                         : null,
                   ),
                 ),
@@ -493,7 +499,8 @@ Future<void> _showFeedbackDialog(
           children: [
             Text(
               dialogContext.l10n.sharedResourceFeedbackNoMasteryHint,
-              style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textSecondary),
+              style:
+                  TextStyle(fontSize: DS.fontSizeXs, color: DS.textSecondary),
             ),
             const SizedBox(height: DS.sm),
             Wrap(
@@ -504,8 +511,9 @@ Future<void> _showFeedbackDialog(
                       key: ValueKey('feedback-verdict-$v'),
                       label: _verdictLabel(dialogContext, v),
                       size: ButtonSize.small,
-                      onPressed:
-                          verdict == v ? null : () => setState(() => verdict = v),
+                      onPressed: verdict == v
+                          ? null
+                          : () => setState(() => verdict = v),
                     ),
                   )
                   .toList(),
@@ -537,16 +545,16 @@ Future<void> _showFeedbackDialog(
   commentController.dispose();
   if (ok != true) return;
   try {
-    await ref
-        .read(communityShareRepositoryProvider)
-        .giveFeedback(
+    await ref.read(communityShareRepositoryProvider).giveFeedback(
           sharedResourceId: resource.id,
           verdict: verdict,
           comment: comment,
         );
     if (!context.mounted) return;
     AppFeedback.success(
-        context, context.l10n.sharedResourceFeedbackThanks,);
+      context,
+      context.l10n.sharedResourceFeedbackThanks,
+    );
   } catch (e) {
     // N9：原始异常只进日志，用户面为固定人类话术。
     debugPrint('community resource feedback failed: $e');
@@ -600,17 +608,21 @@ Future<void> _showAdoptEvidenceSheet(
             children: [
               Text(
                 sheetContext.l10n.sharedResourceFeedbackSheetTitle(
-                    resource.resourceTitle ??
-                        sheetContext.l10n.sharedResourceTitle,),
+                  resource.resourceTitle ??
+                      sheetContext.l10n.sharedResourceTitle,
+                ),
                 style: const TextStyle(
-                    fontSize: DS.fontSizeMd, fontWeight: DS.fontWeightBold,),
+                  fontSize: DS.fontSizeMd,
+                  fontWeight: DS.fontWeightBold,
+                ),
               ),
               const SizedBox(height: DS.sm),
               if (items.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: DS.lg),
                   child: Text(
-                      sheetContext.l10n.sharedResourceFeedbackEmpty,),
+                    sheetContext.l10n.sharedResourceFeedbackEmpty,
+                  ),
                 )
               else
                 ...items.map(
@@ -618,12 +630,14 @@ Future<void> _showAdoptEvidenceSheet(
                     item: item,
                     onAdopt: item.isRetracted || item.isAdopted
                         ? null
-                        : () => unawaited(_adoptFeedback(
-                              context,
-                              ref,
-                              resource,
-                              item,
-                            ),),
+                        : () => unawaited(
+                              _adoptFeedback(
+                                context,
+                                ref,
+                                resource,
+                                item,
+                              ),
+                            ),
                   ),
                 ),
             ],
@@ -720,7 +734,9 @@ class _FeedbackTile extends StatelessWidget {
             Text(
               item.comment!,
               style: TextStyle(
-                  fontSize: DS.fontSizeXs, color: DS.textSecondary,),
+                fontSize: DS.fontSizeXs,
+                color: DS.textSecondary,
+              ),
             ),
         ],
       ),
@@ -847,7 +863,13 @@ class _CommunityHeroState extends State<_CommunityHero> {
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: Icon(Icons.hub_outlined, color: DS.neutral0),
+                // V4-G06 风格面：icon 前景按渐变最难端（brandPrimary）实算
+                // ——classic-dark 固定白墨 2.70:1 <3:1（非文字关键部件），
+                // 逐档取白/深墨中达标者。
+                child: Icon(
+                  Icons.hub_outlined,
+                  color: ThemeUtils.getContrastSafeText(DS.brandPrimary),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -951,8 +973,10 @@ class _RecommendationsSection extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text(context.l10n.communityRecommendedForYou,
-                  style: Theme.of(context).textTheme.titleMedium,),
+              Text(
+                context.l10n.communityRecommendedForYou,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const Spacer(),
               SparkleButton(
                 label: context.l10n.communityViewAll,
@@ -984,7 +1008,7 @@ class _RecommendationsSection extends ConsumerWidget {
                             context.push('/community/groups/${item.group.id}'),
                         onJoin: () {
                           unawaited(
-  ref
+                            ref
                                 .read(groupRecommendationsProvider.notifier)
                                 .join(item.group.id),
                           );
@@ -992,7 +1016,7 @@ class _RecommendationsSection extends ConsumerWidget {
                         },
                         onDismiss: () {
                           unawaited(
-  ref
+                            ref
                                 .read(groupRecommendationsProvider.notifier)
                                 .dismiss(item.group.id),
                           );
@@ -1052,8 +1076,10 @@ class _MyGroupsSection extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Text(context.l10n.communityMyGroups,
-                      style: Theme.of(context).textTheme.titleMedium,),
+                  Text(
+                    context.l10n.communityMyGroups,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const Spacer(),
                   SparkleButton(
                     label: context.l10n.communityViewAllGroups,
@@ -1163,7 +1189,10 @@ class _JoinedGroupTile extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               context.l10n.communityGroupSubtitle(
-                  roleLabel, group.memberCount, group.todayCheckinCount,),
+                roleLabel,
+                group.memberCount,
+                group.todayCheckinCount,
+              ),
               style: TextStyle(color: DS.textSecondary, fontSize: 12),
             ),
           ],

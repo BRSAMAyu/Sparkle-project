@@ -8,6 +8,7 @@ import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/input_formatters.dart';
+import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 
@@ -57,28 +58,35 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
             children: [
               // Guest mode warning banner
               if (isGuestMode)
-                Container(
-                  margin: const EdgeInsets.only(bottom: DS.lg),
-                  padding: const EdgeInsets.all(DS.md),
-                  decoration: BoxDecoration(
-                    color: DS.warningLight,
-                    borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-                    border:
-                        Border.all(color: DS.warning.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: DS.warning),
-                      const SizedBox(width: DS.sm),
-                      Expanded(
-                        child: Text(
-                          context.l10n.ptGuestWarning,
-                          style: TextStyle(color: DS.warning),
+                Builder(builder: (context) {
+                  // V4-G06 风格面：warning 文/图标压 warningLight 实算
+                  // 1.1–1.6:1 全档失败（账本警示不可读）——前景改按
+                  // warningLight 底色实算，四档 ≥4.5:1。
+                  final onWarningLight =
+                      ThemeUtils.getContrastSafeText(DS.warningLight);
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: DS.lg),
+                    padding: const EdgeInsets.all(DS.md),
+                    decoration: BoxDecoration(
+                      color: DS.warningLight,
+                      borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                      border:
+                          Border.all(color: DS.warning.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: onWarningLight),
+                        const SizedBox(width: DS.sm),
+                        Expanded(
+                          child: Text(
+                            context.l10n.ptGuestWarning,
+                            style: TextStyle(color: onWarningLight),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
+                      ],
+                    ),
+                  );
+                },),
 
               // Current Balance Card
               SparkleStaggerItem(
@@ -89,7 +97,13 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                     children: [
                       Icon(
                         Icons.flash_on_rounded,
-                        color: DS.neutral0,
+                        // V4-G06 风格面：accent 面在浅档（paperDay/quiet/
+                        // classic-light）是浅面板，固定白墨实算 1.2–1.4:1
+                        // 不可读——前景改按 accent 面底色实算，账本余额
+                        // 数字四档 ≥4.5:1。
+                        color: ThemeUtils.getContrastSafeText(
+                          DS.surfaceRoleColor(SparkleSurfaceRole.accent),
+                        ),
                         size: 32,
                       ),
                       const SizedBox(width: 16),
@@ -99,7 +113,9 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                           Text(
                             context.l10n.ptCurrentBalance,
                             style: TextStyle(
-                              color: DS.neutral0.withValues(alpha: 0.9),
+                              color: ThemeUtils.getContrastSafeText(
+                                DS.surfaceRoleColor(SparkleSurfaceRole.accent),
+                              ).withValues(alpha: 0.9),
                               fontSize: 14,
                             ),
                           ),
@@ -107,7 +123,9 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                           Text(
                             '$currentBalance',
                             style: TextStyle(
-                              color: DS.neutral0,
+                              color: ThemeUtils.getContrastSafeText(
+                                DS.surfaceRoleColor(SparkleSurfaceRole.accent),
+                              ),
                               fontSize: 28,
                               fontWeight: DS.fontWeightBold,
                             ),
@@ -334,7 +352,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     final quickAmounts = [100, 500, 1000, 2000, 5000];
 
     unawaited(
-  showSensoryModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         builder: (context) => Container(
           padding: const EdgeInsets.all(DS.lg),
@@ -386,7 +404,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     final recipientId = _recipientIdController.text;
 
     unawaited(
-  showDialog<void>(
+      showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(context.l10n.ptConfirmDialogTitle),

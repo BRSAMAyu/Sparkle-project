@@ -321,8 +321,11 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
               icon: Icons.grid_view,
               isActive: _viewMode == AchievementViewMode.grid,
               onTap: () {
-                unawaited(SensoryFeedbackService.emit(
-                    SensoryFeedbackEvent.selection,),);
+                unawaited(
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection,
+                  ),
+                );
                 setState(() => _viewMode = AchievementViewMode.grid);
               },
             ),
@@ -330,8 +333,11 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
               icon: Icons.view_list,
               isActive: _viewMode == AchievementViewMode.list,
               onTap: () {
-                unawaited(SensoryFeedbackService.emit(
-                    SensoryFeedbackEvent.selection,),);
+                unawaited(
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection,
+                  ),
+                );
                 setState(() => _viewMode = AchievementViewMode.list);
               },
             ),
@@ -387,7 +393,9 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
       GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: context.reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
+          duration: context.reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 200),
           curve: Curves.easeOut,
           padding: const EdgeInsets.all(DS.spacing8),
           decoration: BoxDecoration(
@@ -820,7 +828,8 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
             SparkleButton.outline(
               label: l10n.retry,
               onPressed: () {
-                unawaited(ref.read(achievementProvider.notifier).loadInitialData());
+                unawaited(
+                    ref.read(achievementProvider.notifier).loadInitialData(),);
               },
             ),
           ],
@@ -1034,7 +1043,9 @@ class _AnimatedCategoryChip extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: context.reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
+          duration: context.reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 200),
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing16,
@@ -1436,7 +1447,22 @@ class _PulsingBadgeState extends State<_PulsingBadge>
       duration: const Duration(milliseconds: 1800),
       vsync: this,
     );
-    unawaited(_controller.repeat(reverse: true));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // V4-G06 reduce-motion 等价：接近解锁徽章呼吸停表全不透明——提示
+    // 语义由徽章静态呈现，不依赖透明度脉动。
+    if (context.reduceMotion) {
+      if (_controller.isAnimating || _controller.value != 1.0) {
+        _controller
+          ..stop()
+          ..value = 1.0;
+      }
+    } else if (!_controller.isAnimating && _controller.value != 1.0) {
+      unawaited(_controller.repeat(reverse: true));
+    }
   }
 
   @override
@@ -1571,8 +1597,11 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
                 isSelected,
                 accentColor: RarityColorProvider.getColor(rarity),
                 onTap: () {
-                  unawaited(SensoryFeedbackService.emit(
-                      SensoryFeedbackEvent.selection,),);
+                  unawaited(
+                    SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection,
+                    ),
+                  );
                   setState(() {
                     _options = _options.copyWith(
                       rarity: _options.rarity == rarity ? null : rarity,
@@ -1609,8 +1638,11 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
                 _getStatusDisplayName(status, l10n),
                 isSelected,
                 onTap: () {
-                  unawaited(SensoryFeedbackService.emit(
-                      SensoryFeedbackEvent.selection,),);
+                  unawaited(
+                    SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection,
+                    ),
+                  );
                   setState(() {
                     if (status == AchievementStatus.all) {
                       _options = _options.copyWith(status: null);

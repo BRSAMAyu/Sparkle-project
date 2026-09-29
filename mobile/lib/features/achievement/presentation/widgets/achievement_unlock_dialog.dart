@@ -12,12 +12,18 @@ import 'package:sparkle/core/providers/release_flags_provider.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
+
+/// 渐变卡面前景墨色（V4-G06）：转发 ThemeUtils 双端口径（公式与守卫钉
+/// 同源，见 [ThemeUtils.getContrastSafeTextOnGradient]）。
+Color _inkOnGradient(Color a, Color b) =>
+    ThemeUtils.getContrastSafeTextOnGradient(a, b);
 
 enum _AchievementUnlockActionState {
   idle,
@@ -155,11 +161,24 @@ class _AchievementUnlockDialogState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (context.reduceMotion) {
+    // V4-G06 reduce-motion 等价：持续动效（光晕/粒子/旋转）统一由本处
+    // 按 reduce-motion 解析启停——reduce-motion 开则静态终态（光晕半亮、
+    // 无粒子、无旋转），庆祝语义（可关闭、可查看）不受影响；恢复时重启。
+    final reduceMotion = context.reduceMotion;
+    if (reduceMotion == _reduceMotion) return;
+    _reduceMotion = reduceMotion;
+    if (reduceMotion) {
       _glowController.stop();
       _particleController.stop();
+      _rotateController.stop();
+    } else {
+      _startRarityLoops();
     }
   }
+
+  // 哨兵初值 true：didChangeDependencies 首跑（reduceMotion=false 时）
+  // 必然进入启动分支，循环动效不因初值巧合而丢启动。
+  bool _reduceMotion = true;
 
   void _initAnimations() {
     // 缩放动画
@@ -217,7 +236,6 @@ class _AchievementUnlockDialogState
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementRare),
         );
-        unawaited(_glowController.repeat(reverse: true));
       case AchievementRarity.epic:
         unawaited(
           SensoryFeedbackService.emitSeries(
@@ -229,8 +247,6 @@ class _AchievementUnlockDialogState
             gap: const Duration(milliseconds: 150),
           ),
         );
-        unawaited(_glowController.repeat(reverse: true));
-        unawaited(_particleController.repeat());
       case AchievementRarity.legendary:
         unawaited(
           SensoryFeedbackService.emitSeries(
@@ -253,6 +269,24 @@ class _AchievementUnlockDialogState
             });
           }),
         );
+    }
+    // 持续动效循环不在此启动：统一由 didChangeDependencies 按
+    // reduce-motion 解析后经 _startRarityLoops 启动（initState 内不可
+    // 依赖 InheritedWidget）。
+  }
+
+  /// 稀有度持续动效循环（光晕/粒子/旋转）。仅 reduce-motion 关时由
+  /// [_startRarityAnimations]（首帧）或 didChangeDependencies（恢复）启动。
+  void _startRarityLoops() {
+    switch (widget.event.rarity) {
+      case AchievementRarity.common:
+        break;
+      case AchievementRarity.rare:
+        unawaited(_glowController.repeat(reverse: true));
+      case AchievementRarity.epic:
+        unawaited(_glowController.repeat(reverse: true));
+        unawaited(_particleController.repeat());
+      case AchievementRarity.legendary:
         unawaited(_rotateController.repeat());
         unawaited(_particleController.repeat());
         unawaited(_glowController.repeat(reverse: true));
@@ -300,8 +334,10 @@ class _AchievementUnlockDialogState
             if (rarity != AchievementRarity.common)
               Positioned.fill(
                 child: IgnorePointer(
+                  // V4-G06 reduce-motion 等价：庆祝彩带在系统减动效下不发射
+                  // （低刺激档已由 U-02 在 SparkleConfetti 内部抑制）。
                   child: SparkleConfetti(
-                    play: true,
+                    play: !context.reduceMotion,
                     enableSensory: false,
                     alignment: Alignment.center,
                     intensity: rarity == AchievementRarity.rare
@@ -374,13 +410,16 @@ class _AchievementUnlockDialogState
 
   List<Color> _confettiColors(AchievementRarity rarity) => switch (rarity) {
         AchievementRarity.common => [DS.neutral400],
+        // V4-G06 风格面：legendary 彩条去 off-token 琥珀硬编码
+        // （0xFFFFE082/0xFFFFC107/0xFFF8E1），走 warning/金 identity 族
+        // 令牌（rarityRare 与 warning 同一庆祝金语义，随档适配）。
         AchievementRarity.rare => [DS.rarityRare, DS.info, DS.warning],
         AchievementRarity.epic => [DS.rarityEpic, DS.warning, DS.info],
         AchievementRarity.legendary => [
-            const Color(0xFFFFE082),
-            const Color(0xFFFFC107),
-            const Color(0xFFFFF8E1),
+            DS.rarityRare,
             DS.warning,
+            DS.warningLight,
+            DS.rarityLegendary,
           ],
       };
 
@@ -450,9 +489,11 @@ class _AchievementUnlockDialogState
                   Text(
                     _getUnlockText(),
                     textAlign: TextAlign.center,
+                    // V4-G06 风格面：去 0.8 透明度压文字（DESIGN_SYSTEM
+                    // 文字阶禁则；实算墨色被压即失守 4.5:1）。
                     style: TextStyle(
                       fontSize: DS.fontSizeBase,
-                      color: colors.text.withValues(alpha: 0.8),
+                      color: colors.text,
                     ),
                   ),
 
@@ -461,9 +502,10 @@ class _AchievementUnlockDialogState
                     padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
                     child: Text(
                       _formatTime(widget.event.unlockedAt),
+                      // V4-G06 风格面：去 0.6 透明度压文字（同上禁则）。
                       style: TextStyle(
                         fontSize: DS.fontSizeXs,
-                        color: colors.text.withValues(alpha: 0.6),
+                        color: colors.text,
                       ),
                     ),
                   ),
@@ -745,7 +787,8 @@ class _AchievementUnlockDialogState
                 borderRadius: BorderRadius.circular(32),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFFD54F)
+                    // V4-G06：光环去 0xFFFFD54F 硬编码，走 warning 金族令牌。
+                    color: DS.warning
                         .withValues(alpha: 0.18 * _glowAnimation.value),
                     blurRadius: 36,
                     spreadRadius: 10,
@@ -826,6 +869,9 @@ class _AchievementUnlockDialogState
 
   Widget _buildRewardPreviewSection() {
     final colors = _getRarityColors();
+    // V4-G06 风格面：浮层 chip 底=neutral0（恒浅底），墨色不可随卡面
+    // 渐变实算结果（暗档=白墨）——chip 上按 chip 底实算（恒深墨）。
+    final onChip = DS.onColor(colors.background);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing12),
@@ -842,7 +888,7 @@ class _AchievementUnlockDialogState
             style: TextStyle(
               fontSize: DS.fontSizeSm,
               fontWeight: DS.fontWeightBold,
-              color: colors.text,
+              color: onChip,
             ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -859,7 +905,7 @@ class _AchievementUnlockDialogState
                       line,
                       style: TextStyle(
                         fontSize: DS.fontSizeXs,
-                        color: colors.text.withValues(alpha: 0.88),
+                        color: onChip.withValues(alpha: 0.88),
                       ),
                     ),
                   ),
@@ -874,6 +920,8 @@ class _AchievementUnlockDialogState
 
   Widget _buildEvidenceSection(String evidence) {
     final colors = _getRarityColors();
+    // V4-G06 风格面：chip 底恒浅，墨按 chip 底实算（见 reward 区注）。
+    final onChip = DS.onColor(colors.background);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing12),
@@ -896,7 +944,7 @@ class _AchievementUnlockDialogState
               evidence,
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
-                color: colors.text.withValues(alpha: 0.88),
+                color: onChip.withValues(alpha: 0.88),
                 height: 1.4,
               ),
             ),
@@ -908,6 +956,8 @@ class _AchievementUnlockDialogState
 
   Widget _buildGloryLinesSection() {
     final colors = _getRarityColors();
+    // V4-G06 风格面：chip 底恒浅，墨按 chip 底实算（见 reward 区注）。
+    final onChip = DS.onColor(colors.background);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing12),
@@ -935,7 +985,7 @@ class _AchievementUnlockDialogState
                   style: TextStyle(
                     fontSize: DS.fontSizeXs,
                     fontWeight: DS.fontWeightMedium,
-                    color: colors.text,
+                    color: onChip,
                   ),
                 ),
               ),
@@ -979,7 +1029,8 @@ class _AchievementUnlockDialogState
                     surface,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
-                      color: colors.text,
+                      // V4-G06 风格面：chip 底恒浅，墨按 chip 底实算。
+                      color: DS.onColor(colors.background),
                     ),
                   ),
                 ),
@@ -991,6 +1042,15 @@ class _AchievementUnlockDialogState
   }
 
   _RarityColors _getRarityColors() {
+    // V4-G06 风格面（庆祝卡固定美术底，同 milestone_celebration 的
+    // dl-spec 豁免）：渐变第二端原用随档语义色（warning/brandSecondary/
+    // info——它们是为「画布上文字」定标的语义色，作庆祝卡填充端后与
+    // 固定 identity 端明度跨档相撞，classic-light 下三稀有度全部落入
+    // 「无公共墨色」区间（rare 2.95:1 / epic 4.499:1 / legendary 4.02:1
+    // 双端下界）。现收敛为稀有度身份色系内取固定双端（端点亮度同侧，
+    // 单一实算墨四档 ≥4.5:1），随档语义色退出庆祝卡填充位。
+    // [Q08 登记] 身份端点的深浅选择属发布面美术维度，本卡按可读性
+    // 下限就地收敛；美术终裁见 Q08。
     switch (widget.event.rarity) {
       case AchievementRarity.common:
         return _RarityColors(
@@ -1003,34 +1063,46 @@ class _AchievementUnlockDialogState
           icon: DS.neutral600,
         );
       case AchievementRarity.rare:
+        const gold = DS.rarityRare;
         return _RarityColors(
-          primary: DS.rarityRare,
-          secondary: DS.warning,
-          border: DS.rarityRare,
-          glow: DS.rarityRare.withValues(alpha: 0.5),
-          text: DS.rarityRareText,
+          primary: gold,
+          secondary: Color.lerp(gold, Colors.black, 0.25)!,
+          border: gold,
+          glow: gold.withValues(alpha: 0.5),
+          // 卡面墨按双端实算（金系双端亮 → 深墨）。
+          text: _inkOnGradient(gold, Color.lerp(gold, Colors.black, 0.25)!),
           background: DS.neutral0.withValues(alpha: 0.9),
-          icon: DS.rarityRareText,
+          // 内圆恒浅底（neutral0），图标按内圆实算（恒深墨）——原
+          // rarityRareText 对暗档 neutral0(#F4F1EB) 仅 2.89:1（非文字
+          // 部件阈值 3:1）。
+          icon: DS.onColor(DS.neutral0),
         );
       case AchievementRarity.epic:
+        const purple = DS.rarityEpic;
+        final deepPurple = Color.lerp(purple, Colors.black, 0.35)!;
         return _RarityColors(
-          primary: DS.rarityEpic,
-          secondary: DS.brandSecondary,
-          border: DS.rarityEpic,
-          glow: DS.rarityEpic.withValues(alpha: 0.6),
-          text: DS.onBrandPrimary,
+          primary: purple,
+          secondary: deepPurple,
+          border: purple,
+          glow: purple.withValues(alpha: 0.6),
+          // 紫系双端暗 → 白墨四档恒定（紫端 4.67 / 深紫端 8.7）。
+          text: _inkOnGradient(purple, deepPurple),
           background: DS.neutral0.withValues(alpha: 0.95),
-          icon: DS.onBrandPrimary,
+          icon: DS.onColor(DS.neutral0),
         );
       case AchievementRarity.legendary:
+        const coral = DS.rarityLegendary;
+        final lightCoral = Color.lerp(coral, Colors.white, 0.3)!;
         return _RarityColors(
-          primary: DS.rarityLegendary,
-          secondary: DS.info,
+          primary: coral,
+          secondary: lightCoral,
           border: DS.rarityRare,
           glow: DS.rarityRare.withValues(alpha: 0.7),
-          text: DS.onBrandPrimary,
+          // 珊瑚端亮度在深墨侧 crossover 之上（L 0.33 > 0.18）——双端
+          // 取亮（珊瑚→浅珊瑚），深墨四档恒定（7.6 / 8.9）。
+          text: _inkOnGradient(coral, lightCoral),
           background: DS.neutral0.withValues(alpha: 0.95),
-          icon: DS.onBrandPrimary,
+          icon: DS.onColor(DS.neutral0),
         );
     }
   }
@@ -1187,9 +1259,10 @@ class _AchievementUnlockDialogState
           Text(
             milestone.description,
             textAlign: TextAlign.center,
+            // V4-G06 风格面：去 0.8 透明度压文字（同上禁则）。
             style: TextStyle(
               fontSize: DS.fontSizeXs,
-              color: colors.text.withValues(alpha: 0.8),
+              color: colors.text,
             ),
           ),
           if (milestone.reward != null) ...[

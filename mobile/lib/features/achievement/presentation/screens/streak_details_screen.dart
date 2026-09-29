@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -124,9 +125,7 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
     final bestRecord = stats.longestStreak > 0
         ? stats.longestStreak
         : math.max(stats.maxStreak, stats.currentStreak);
-    final freezeUsed = historyState.days
-        .where((day) => day.usedFreeze)
-        .length;
+    final freezeUsed = historyState.days.where((day) => day.usedFreeze).length;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -213,9 +212,8 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
             const SizedBox(height: DS.spacing8),
             SparkleButton.outline(
               label: l10n.retry,
-              onPressed: () => ref
-                  .read(streakHistoryProvider.notifier)
-                  .loadHistory(),
+              onPressed: () =>
+                  ref.read(streakHistoryProvider.notifier).loadHistory(),
             ),
           ],
         ),
@@ -247,55 +245,55 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
   }
 
   Widget _buildCalendarShell(AppLocalizations l10n, Widget child) => Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: DS.borderRadius16,
-        border: Border.all(color: DS.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.streakCalendarTitle,
-            style: TextStyle(
-              fontSize: DS.fontSizeBase,
-              fontWeight: DS.fontWeightSemibold,
-              color: DS.textPrimary,
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: DS.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.streakCalendarTitle,
+              style: TextStyle(
+                fontSize: DS.fontSizeBase,
+                fontWeight: DS.fontWeightSemibold,
+                color: DS.textPrimary,
+              ),
             ),
-          ),
-          const SizedBox(height: DS.spacing4),
-          Text(
-            l10n.streakCalendarRange(_historyDays),
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              color: DS.textSecondary,
+            const SizedBox(height: DS.spacing4),
+            Text(
+              l10n.streakCalendarRange(_historyDays),
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(height: DS.spacing16),
-          child,
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing16),
+            child,
+          ],
+        ),
+      );
 
   Widget _buildCalendarLegend(AppLocalizations l10n) => Wrap(
-      spacing: DS.spacing12,
-      runSpacing: DS.spacing8,
-      children: [
-        _LegendItem(
-          color: DS.semanticSuccess,
-          label: l10n.streakStatusActive,
-        ),
-        _LegendItem(
-          color: DS.semanticWarning,
-          label: l10n.streakStatusFrozen,
-        ),
-        _LegendItem(
-          color: DS.neutral300,
-          label: l10n.streakStatusMissed,
-        ),
-      ],
-    );
+        spacing: DS.spacing12,
+        runSpacing: DS.spacing8,
+        children: [
+          _LegendItem(
+            color: DS.semanticSuccess,
+            label: l10n.streakStatusActive,
+          ),
+          _LegendItem(
+            color: DS.semanticWarning,
+            label: l10n.streakStatusFrozen,
+          ),
+          _LegendItem(
+            color: DS.neutral300,
+            label: l10n.streakStatusMissed,
+          ),
+        ],
+      );
 
   Widget _buildCalendarGrid(
     List<StreakDayRecord> days,
@@ -375,9 +373,8 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
         ? DS.semanticError.withValues(alpha: 0.1)
         : DS.semanticWarning.withValues(alpha: 0.1);
     final border = isCritical ? DS.semanticError : DS.semanticWarning;
-    final text = isCritical
-        ? l10n.streakRiskNoFreeze
-        : l10n.streakRiskLowFreeze;
+    final text =
+        isCritical ? l10n.streakRiskNoFreeze : l10n.streakRiskLowFreeze;
 
     return _RiskHintCard(
       isCritical: isCritical,
@@ -418,18 +415,18 @@ class _AnimatedSectionState extends State<_AnimatedSection> {
 
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: _visible ? 1 : 0),
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) => Opacity(
-        opacity: value,
-        child: Transform.translate(
-          offset: Offset(0, 12 * (1 - value)),
-          child: child,
+        tween: Tween(begin: 0, end: _visible ? 1 : 0),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) => Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 12 * (1 - value)),
+            child: child,
+          ),
         ),
-      ),
-      child: widget.child,
-    );
+        child: widget.child,
+      );
 }
 
 // ---------------------------------------------------------------------------
@@ -500,38 +497,38 @@ class _StatTileState extends State<_StatTile>
 
   @override
   Widget build(BuildContext context) => FadeTransition(
-      opacity: _fadeAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: Container(
-          padding: const EdgeInsets.all(DS.spacing12),
-          decoration: BoxDecoration(
-            color: DS.surfacePrimary,
-            borderRadius: DS.borderRadius12,
-            border: Border.all(color: DS.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(widget.icon, color: widget.color, size: DS.iconSizeSm),
-              const SizedBox(height: DS.spacing8),
-              Text(
-                widget.title,
-                style: TextStyle(
-                  fontSize: DS.fontSizeXs,
-                  color: DS.textSecondary,
+        opacity: _fadeAnimation,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: Container(
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              color: DS.surfacePrimary,
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: DS.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(widget.icon, color: widget.color, size: DS.iconSizeSm),
+                const SizedBox(height: DS.spacing8),
+                Text(
+                  widget.title,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    color: DS.textSecondary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: DS.spacing4),
-              _AnimatedStatValue(
-                value: widget.value,
-                targetNumber: _parseLeadingInt(widget.value),
-              ),
-            ],
+                const SizedBox(height: DS.spacing4),
+                _AnimatedStatValue(
+                  value: widget.value,
+                  targetNumber: _parseLeadingInt(widget.value),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 // ---------------------------------------------------------------------------
@@ -593,26 +590,26 @@ class _LegendItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: DS.borderRadiusFull,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: DS.borderRadiusFull,
+            ),
           ),
-        ),
-        const SizedBox(width: DS.spacing6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: DS.fontSizeXs,
-            color: DS.textSecondary,
+          const SizedBox(width: DS.spacing6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              color: DS.textSecondary,
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 }
 
 // ---------------------------------------------------------------------------
@@ -690,7 +687,24 @@ class _CalendarCellState extends State<_CalendarCell>
           curve: Curves.easeInOut,
         ),
       );
-      unawaited(_pulseController!.repeat(reverse: true));
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // V4-G06 reduce-motion 等价：今日格呼吸停表为高亮峰值（标记语义由
+    // 静态高亮承载，不依赖持续动画）。
+    final pulse = _pulseController;
+    if (pulse == null) return;
+    if (context.reduceMotion) {
+      if (pulse.isAnimating) {
+        pulse
+          ..stop()
+          ..value = 1.0;
+      }
+    } else if (!pulse.isAnimating && pulse.value != 1.0) {
+      unawaited(pulse.repeat(reverse: true));
     }
   }
 
@@ -713,16 +727,20 @@ class _CalendarCellState extends State<_CalendarCell>
     final baseColor = switch (record.status) {
       StreakDayStatus.active => DS.semanticSuccess,
       // V3-FIX-259: weak=活动日但低于质量阈，色相介于有效与保护之间。
-      StreakDayStatus.weak => Color.lerp(DS.semanticSuccess, DS.semanticWarning, 0.5)!,
+      StreakDayStatus.weak =>
+        Color.lerp(DS.semanticSuccess, DS.semanticWarning, 0.5)!,
       StreakDayStatus.frozen => DS.semanticWarning,
       StreakDayStatus.missed => DS.neutral300,
       StreakDayStatus.unknown => DS.neutral300,
     };
 
+    // V4-G06 风格面：格底随档/随状态变化（weak=success×warning 中间色，
+    // 各档 warning 明度不同），textOnPrimary 按 brandPrimary 实算不对底——
+    // 改按实际格底实算（≥4.5:1），连续天数数字四档可读。
     final textColor = record.status == StreakDayStatus.missed ||
             record.status == StreakDayStatus.unknown
         ? DS.textSecondary
-        : DS.textOnPrimary;
+        : DS.onColor(baseColor);
 
     // Overlay icon for active / frozen days
     final overlayIcon = switch (record.status) {
@@ -905,39 +923,39 @@ class _RiskHintCardState extends State<_RiskHintCard>
 
   @override
   Widget build(BuildContext context) => SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Container(
-          padding: const EdgeInsets.all(DS.spacing16),
-          decoration: BoxDecoration(
-            color: widget.background,
-            borderRadius: DS.borderRadius16,
-            border: Border.all(color: widget.borderColor),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                widget.isCritical
-                    ? Icons.warning_amber_rounded
-                    : Icons.info_outline,
-                color: widget.borderColor,
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: Text(
-                  widget.text,
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    color: DS.textPrimary,
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Container(
+            padding: const EdgeInsets.all(DS.spacing16),
+            decoration: BoxDecoration(
+              color: widget.background,
+              borderRadius: DS.borderRadius16,
+              border: Border.all(color: widget.borderColor),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  widget.isCritical
+                      ? Icons.warning_amber_rounded
+                      : Icons.info_outline,
+                  color: widget.borderColor,
+                ),
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: Text(
+                    widget.text,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeSm,
+                      color: DS.textPrimary,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 class _StreakInsightBanner extends StatelessWidget {
@@ -955,31 +973,31 @@ class _StreakInsightBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.spacing12),
-      decoration: BoxDecoration(
-        color: DS.brandPrimary.withValues(alpha: 0.06),
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.15)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.lightbulb_outline, size: 18, color: DS.brandPrimary),
-          const SizedBox(width: DS.spacing8),
-          Expanded(
-            child: Text(
-              context.l10n.streakInsightBanner(
-                windowDays,
-                totalCheckins,
-                stats.currentStreak,
-              ),
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                color: DS.textPrimary,
-                height: 1.4,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.brandPrimary.withValues(alpha: 0.06),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.15)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.lightbulb_outline, size: 18, color: DS.brandPrimary),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                context.l10n.streakInsightBanner(
+                  windowDays,
+                  totalCheckins,
+                  stats.currentStreak,
+                ),
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  color: DS.textPrimary,
+                  height: 1.4,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 }

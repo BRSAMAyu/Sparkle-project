@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/core/utils/input_formatters.dart';
+import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
@@ -500,77 +502,102 @@ class _ContractCelebrationState extends State<_ContractCelebration>
   }
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: Colors.black.withValues(alpha: 0.4),
-        child: Semantics(
-          button: true,
-          label: context.l10n.celebrationDismiss,
-          child: GestureDetector(
-            onTap: widget.onDismiss,
-            behavior: HitTestBehavior.opaque,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 200,
-                    height: 200,
-                    child: AnimatedBuilder(
-                      animation: Listenable.merge([
-                        _iconController,
-                        _confettiController,
-                      ]),
-                      builder: (context, child) => CustomPaint(
-                        painter: _ConfettiPainter(
-                          particles: _particles,
-                          progress: _confettiController.value,
-                        ),
-                        child: child,
+  Widget build(BuildContext context) {
+    // V4-G06 风格面：勾徽与文案前景色随底色实算（四档语义槽明暗跨度大——
+    // dusk success 亮到衬白墨仅 1.59:1；浅档 40% 黑纱上的白字仅 3.1:1），
+    // 走 ThemeUtils.getContrastSafeText 逐档达标 ≥4.5:1。
+    final onSuccess = ThemeUtils.getContrastSafeText(DS.semanticSuccess);
+    final scrimmedSurface = Color.alphaBlend(
+      Colors.black.withValues(alpha: 0.4),
+      DS.surfacePrimary,
+    );
+    final onScrim = ThemeUtils.getContrastSafeText(scrimmedSurface);
+
+    return Material(
+      color: Colors.black.withValues(alpha: 0.4),
+      child: Semantics(
+        button: true,
+        label: context.l10n.celebrationDismiss,
+        child: GestureDetector(
+          onTap: widget.onDismiss,
+          behavior: HitTestBehavior.opaque,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 200,
+                  height: 200,
+                  child: AnimatedBuilder(
+                    animation: Listenable.merge([
+                      _iconController,
+                      _confettiController,
+                    ]),
+                    builder: (context, child) => CustomPaint(
+                      painter: _ConfettiPainter(
+                        particles: _particles,
+                        progress: _confettiController.value,
                       ),
-                      child: ScaleTransition(
-                        scale: _iconScale,
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: DS.semanticSuccess,
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    DS.semanticSuccess.withValues(alpha: 0.4),
-                                blurRadius: 24,
-                                spreadRadius: 4,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.check_rounded,
-                            color: Colors.white,
-                            size: 44,
-                          ),
+                      child: child,
+                    ),
+                    child: ScaleTransition(
+                      scale: _iconScale,
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: DS.semanticSuccess,
+                          boxShadow: [
+                            BoxShadow(
+                              color: DS.semanticSuccess.withValues(alpha: 0.4),
+                              blurRadius: 24,
+                              spreadRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.check_rounded,
+                          color: onSuccess,
+                          size: 44,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: DS.spacing16),
-                  FadeTransition(
-                    opacity: _textOpacity,
+                ),
+                const SizedBox(height: DS.spacing16),
+                // 文案垫令牌卡面：40% 黑纱叠浅档画布实算不足 4.5:1
+                // （classic-light 3.08 / paperDay 3.19 / quiet 3.07）——
+                // 庆祝可关语义（点按关闭 + 文案）必须在四档下都可读。
+                FadeTransition(
+                  opacity: _textOpacity,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing16,
+                      vertical: DS.spacing8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.surfacePrimary,
+                      borderRadius: DS.borderRadiusFull,
+                      border: Border.all(color: DS.border),
+                    ),
                     child: Text(
                       widget.celebrationLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: DS.fontSizeXl,
                         fontWeight: DS.fontWeightBold,
-                        color: Colors.white,
+                        color: onScrim,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 // =============================================================================
@@ -663,6 +690,9 @@ class _AnimatedProgressBar extends StatefulWidget {
 class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
     with SingleTickerProviderStateMixin {
   late final AnimationController _glowController;
+  // V4-G06 reduce-motion 等价：系统要求减动效时满进度辉光停表为静态半亮，
+  // 信息（已完成）由进度条本身承载，不靠持续动画。
+  bool _reduceMotion = false;
 
   @override
   void initState() {
@@ -671,7 +701,28 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    if (widget.progress >= 1.0) {
+    if (widget.progress >= 1.0 && !_reduceMotion) {
+      unawaited(_glowController.repeat(reverse: true));
+    } else if (widget.progress >= 1.0) {
+      _glowController.value = 1.0;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateMotionPreference(context.reduceMotion);
+  }
+
+  void _updateMotionPreference(bool reduceMotion) {
+    if (_reduceMotion == reduceMotion) return;
+    _reduceMotion = reduceMotion;
+    if (widget.progress < 1.0) return;
+    if (_reduceMotion) {
+      _glowController
+        ..stop()
+        ..value = 1.0;
+    } else if (!_glowController.isAnimating) {
       unawaited(_glowController.repeat(reverse: true));
     }
   }
@@ -679,8 +730,13 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
   @override
   void didUpdateWidget(_AnimatedProgressBar old) {
     super.didUpdateWidget(old);
-    if (widget.progress >= 1.0 && !_glowController.isAnimating) {
+    if (widget.progress >= 1.0 &&
+        !_glowController.isAnimating &&
+        !_reduceMotion) {
       unawaited(_glowController.repeat(reverse: true));
+    } else if (widget.progress >= 1.0 && _reduceMotion) {
+      if (_glowController.isAnimating) _glowController.stop();
+      if (_glowController.value != 1.0) _glowController.value = 1.0;
     } else if (widget.progress < 1.0 && _glowController.isAnimating) {
       _glowController
         ..stop()
@@ -795,9 +851,10 @@ class _ProgressBarPainter extends CustomPainter {
         ..color = isReached ? activeMilestoneColor : milestoneColor;
 
       canvas.drawCircle(
-          Offset(x.clamp(dotRadius, size.width - dotRadius), size.height / 2),
-          dotRadius,
-          dotPaint,);
+        Offset(x.clamp(dotRadius, size.width - dotRadius), size.height / 2),
+        dotRadius,
+        dotPaint,
+      );
     }
   }
 
@@ -857,6 +914,8 @@ class _RewardMultiplierRowState extends State<_RewardMultiplierRow>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
   late final Animation<double> _pulseScale;
+  // V4-G06 reduce-motion 等价：金色脉冲停表为静态原尺寸，倍率数字静态可读。
+  bool _reduceMotion = false;
 
   @override
   void initState() {
@@ -865,11 +924,24 @@ class _RewardMultiplierRowState extends State<_RewardMultiplierRow>
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     );
-    unawaited(_pulseController.repeat(reverse: true));
 
     _pulseScale = Tween<double>(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_reduceMotion == context.reduceMotion) return;
+    _reduceMotion = context.reduceMotion;
+    if (_reduceMotion) {
+      _pulseController
+        ..stop()
+        ..value = 0;
+    } else if (!_pulseController.isAnimating) {
+      unawaited(_pulseController.repeat(reverse: true));
+    }
   }
 
   @override
@@ -880,7 +952,14 @@ class _RewardMultiplierRowState extends State<_RewardMultiplierRow>
 
   @override
   Widget build(BuildContext context) {
-    const goldenAccent = Color(0xFFFFB300);
+    // V4-G06 风格面：奖励倍率徽章去 off-token 琥珀硬编码（0xFFFFB300/
+    // 0xFFFFC107），走 warning 槽（celebration 金同一语义族，随档适配）；
+    // 白字对琥珀底实算 1.63:1 全档失败——前景色改按底色实算，倍率数字
+    // （兑换/账本族数字）四档 ≥4.5:1 可读。
+    final badgeBase = DS.semanticWarning;
+    final badgeLight = DS.warningLight;
+    // 前景对渐变较亮端实算（更难侧），单色盖全徽章 ≥4.5:1。
+    final onBadge = ThemeUtils.getContrastSafeText(badgeLight);
 
     return Padding(
       padding: const EdgeInsets.only(top: DS.spacing8),
@@ -890,10 +969,10 @@ class _RewardMultiplierRowState extends State<_RewardMultiplierRow>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.auto_awesome,
                 size: 16,
-                color: goldenAccent,
+                color: badgeBase,
               ),
               const SizedBox(width: DS.spacing4),
               Text(
@@ -913,23 +992,23 @@ class _RewardMultiplierRowState extends State<_RewardMultiplierRow>
                 vertical: DS.spacing4,
               ),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFC107), Color(0xFFFFB300)],
+                gradient: LinearGradient(
+                  colors: [badgeLight, badgeBase],
                 ),
                 borderRadius: DS.borderRadius8,
                 boxShadow: [
                   BoxShadow(
-                    color: goldenAccent.withValues(alpha: 0.3),
+                    color: badgeBase.withValues(alpha: 0.3),
                     blurRadius: 8,
                   ),
                 ],
               ),
               child: Text(
                 '${widget.multiplier.toStringAsFixed(1)}x',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightBold,
-                  color: Colors.white,
+                  color: onBadge,
                 ),
               ),
             ),

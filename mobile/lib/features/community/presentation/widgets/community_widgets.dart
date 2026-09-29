@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 
@@ -98,64 +99,64 @@ class ChatBubble extends StatelessWidget {
           ),
         ),
         child: Align(
-        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          padding: const EdgeInsets.all(DS.md),
-          constraints: BoxConstraints(
-            maxWidth: _bubbleMaxWidth(context),
-          ),
-          decoration: BoxDecoration(
-            color: isMe ? DS.brandPrimary : DS.brandPrimary,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(16),
-              topRight: const Radius.circular(16),
-              bottomLeft: Radius.circular(isMe ? 16 : 4),
-              bottomRight: Radius.circular(isMe ? 4 : 16),
+          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            padding: const EdgeInsets.all(DS.md),
+            constraints: BoxConstraints(
+              maxWidth: _bubbleMaxWidth(context),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: DS.brandPrimary.withValues(alpha: 0.05),
-                blurRadius: 5,
-                offset: const Offset(0, 2),
+            decoration: BoxDecoration(
+              color: isMe ? DS.brandPrimary : DS.brandPrimary,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(isMe ? 16 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 16),
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                content,
-                style: TextStyle(
-                  color: isMe ? DS.brandPrimary : DS.brandPrimary87,
-                  fontSize: 15,
+              boxShadow: [
+                BoxShadow(
+                  color: DS.brandPrimary.withValues(alpha: 0.05),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
                 ),
-              ),
-              const SizedBox(height: DS.xs),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "${time.hour}:${time.minute.toString().padLeft(2, '0')}",
-                    style: TextStyle(
-                      color: isMe ? DS.brandPrimary70 : DS.brandPrimary45,
-                      fontSize: 10,
-                    ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  content,
+                  style: TextStyle(
+                    color: isMe ? DS.brandPrimary : DS.brandPrimary87,
+                    fontSize: 15,
                   ),
-                  if (isMe) ...[
-                    const SizedBox(width: DS.xs),
-                    Icon(
-                      isSent ? Icons.done_all : Icons.access_time,
-                      size: 12,
-                      color: isSent ? DS.brandPrimary70 : DS.brandPrimary38,
+                ),
+                const SizedBox(height: DS.xs),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "${time.hour}:${time.minute.toString().padLeft(2, '0')}",
+                      style: TextStyle(
+                        color: isMe ? DS.brandPrimary70 : DS.brandPrimary45,
+                        fontSize: 10,
+                      ),
                     ),
+                    if (isMe) ...[
+                      const SizedBox(width: DS.xs),
+                      Icon(
+                        isSent ? Icons.done_all : Icons.access_time,
+                        size: 12,
+                        color: isSent ? DS.brandPrimary70 : DS.brandPrimary38,
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
       );
 
   double _bubbleMaxWidth(BuildContext context) {
@@ -185,7 +186,22 @@ class _TypingIndicatorState extends State<TypingIndicator>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    unawaited(_controller.repeat());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // V4-G06 reduce-motion 等价：输入中三点停表静态梯度（仍在的信息：
+    // 对方输入中的状态由静态点列呈现，不依赖循环动画）。
+    if (context.reduceMotion) {
+      if (_controller.isAnimating) {
+        _controller
+          ..stop()
+          ..value = 0.4;
+      }
+    } else if (!_controller.isAnimating) {
+      unawaited(_controller.repeat());
+    }
   }
 
   @override

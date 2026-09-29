@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -91,6 +92,25 @@ class _AchievementDetailScreenState
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _requestAchievementDetail();
       });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // V4-G06 reduce-motion 等价：微缩放辉光停表中点（0.95–1.05 静态近似
+    // 原尺寸），连续粒子环停表——解锁状态由静态徽章承载，不依赖持续动画。
+    if (context.reduceMotion) {
+      if (_controller.isAnimating) {
+        _controller
+          ..stop()
+          ..value = 0.5;
+      }
+      if (_particleController.isAnimating) {
+        _particleController
+          ..stop()
+          ..value = 0;
+      }
     }
   }
 
@@ -370,7 +390,8 @@ class _AchievementDetailScreenState
           if (achievement.isUnlocked && contextStory != null) ...[
             _AnimatedSection(
               index: sectionIndex++,
-              child: _buildSectionTitle(context.l10n.achievementDetailUnlockMoment),
+              child: _buildSectionTitle(
+                  context.l10n.achievementDetailUnlockMoment,),
             ),
             const SizedBox(height: DS.spacing12),
             _AnimatedSection(
@@ -528,10 +549,9 @@ class _AchievementDetailScreenState
                       ? DS.semanticWarning
                       : DS.textSecondary,
                 ),
-                semanticLabel:
-                    (achievement.userProgress?.isPinned ?? false)
-                        ? l10n.achievementUnpin
-                        : l10n.achievementPin,
+                semanticLabel: (achievement.userProgress?.isPinned ?? false)
+                    ? l10n.achievementUnpin
+                    : l10n.achievementPin,
                 onPressed: () => _togglePin(achievement),
                 variant: ButtonVariant.ghost,
               ),
@@ -682,7 +702,8 @@ class _AchievementDetailScreenState
 
     final unlockedAt = progress?.unlockedAt;
     if (unlockedAt == null) return null;
-    return context.l10n.achievementDetailUnlockStory(_formatDate(unlockedAt), achievement.achievement.name);
+    return context.l10n.achievementDetailUnlockStory(
+        _formatDate(unlockedAt), achievement.achievement.name,);
   }
 
   List<Widget> _contextStoryChips(AchievementWithProgress achievement) {
@@ -699,8 +720,10 @@ class _AchievementDetailScreenState
       final label = daysToTarget == null
           ? planName
           : daysToTarget >= 0
-              ? context.l10n.achievementDetailDaysBeforeTarget(planName, daysToTarget)
-              : context.l10n.achievementDetailDaysAfterTarget(planName, daysToTarget.abs());
+              ? context.l10n
+                  .achievementDetailDaysBeforeTarget(planName, daysToTarget)
+              : context.l10n.achievementDetailDaysAfterTarget(
+                  planName, daysToTarget.abs(),);
       chips.add(_ContextChip(icon: Icons.flag_rounded, label: label));
     }
 
@@ -1535,7 +1558,7 @@ class _AchievementDetailScreenState
     }
 
     unawaited(
-  showAchievementShareSheet(
+      showAchievementShareSheet(
         context,
         achievementId: achievement.achievement.id,
         achievementName: achievement.achievement.name,
