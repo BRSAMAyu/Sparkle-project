@@ -52,6 +52,11 @@ V4-I05（经验策略影子验证与有界启用；``core/experience_strategy.py
 - **invalidate_on_source_withdrawal**：证据源撤回 → 相关策略失效（D03
   ``plan_recompute`` strategy 面消费；命中者 revoke（actor=
   ``evidence_withdrawal``），unaffected 显式保留；版本前后入审计）。
+  FIX-564：sweep 候选集 = **candidate/evidenced/active 全部非终态**（candidate
+  引用已撤源同样 revoke，admit/confirm 不再有绕行面）；入口加**真撤回验证
+  门**——报告的撤回须在真源证据面可见（memory 记录消失/无 outcome 证据；
+  decision 无未删 outcome 行），不可验证的报告 ValueError 拒绝（防虚假报告
+  误伤真实证据的 patch；见方法 docstring 的入口信任契约）。
 """
 
 from __future__ import annotations
@@ -66,11 +71,13 @@ from typing import Any, Mapping, Sequence
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.experience_strategy import (
     BENEFIT_OBSERVED,
+    SOURCE_POINTER_TYPE_DECISION,
+    SOURCE_POINTER_TYPE_MEMORY,
     STRATEGY_MODE_LIVE,
     STRATEGY_MODE_OFF,
     ExperienceStrategyCard,
@@ -117,7 +124,7 @@ from app.core.policy_patch import (
 from app.core.policy_patch import (
     proactive_gate_overrides as _proactive_overrides,
 )
-from app.core.retraction_recompute import RetractionImpact
+from app.core.retraction_recompute import RetractionImpact, RetractionKind, SourcePointer
 from app.core.time_utils import ensure_naive_utc, utcnow
 from app.models.intervention_lifecycle import InterventionLifecycleEvent
 from app.models.policy_patch import PolicyPatchRecord
@@ -655,28 +662,52 @@ class PolicyPatchService:
     ) -> dict[str, Any]:
         """证据源撤回 → 相关策略失效（D03 strategy 面消费；卡面验收③）。
 
+        FIX-564（I05R2 R2-D1 收口）：
+
+        - **sweep 候选集 = 全部非终态**（candidate/evidenced/active）——candidate
+          态引用已撤源的 patch 同样 revoke，撤回报告后 admit/confirm 不再存在
+          绕行面（revoked 终态 + T6 封闭；同内容重提议返回 revoked 行，异内容
+          重提议在真源已删时死于 admit 的 G1）。修法选型：sweep 纳 candidate
+          （权威收口点一次性 enforce），非 admit 前查撤回台账——台账在 A-05 可
+          消费的持久面不存在（D03/M-07 事件载荷不携带 expmem/decision 引用身
+          份），而 admit 前查真源已由 ``_verify_evidence`` 结构性承担；
+        - **入口信任契约（真撤回验证门）**：本入口是撤回的**报告面**（通知性
+          记账，不删真源数据），但只受理真源证据面**可见**的撤回——memory 引
+          用须在 fresh 投影（绕缓存）中记录消失或已无 outcome 方向证据；
+          decision 引用须无未删 ``outcome_observed`` 行。不可验证的报告
+          ValueError 拒绝、零 revoke（防虚假/过早报告误伤真实证据的 patch；
+          事件接线卡须在撤回在其所属域落定后投递）。inference 域撤回（源证据
+          合法存续）不可经本入口受理——inference 消费卡应走自己的失效路径，
+          或在证据面落定后经 ``result_retracted``/``material_deleted`` 报告；
         - 撤回目标 = 封闭 scheme 引用（``memory://experience/<rid>`` /
           ``decision://aurora_<id>``）；词表外 → ValueError（不猜）；
-        - 候选 = active/evidenced patch 的策略卡；影响判定 = D03
-          ``plan_recompute``（face=``strategy``，精确 ``SourcePointer`` 身份对；
-          跨域同值不构成同源）；
-        - 命中者 revoke（actor=``evidence_withdrawal``、reason=
-          ``evidence_source_withdrawal`` 入 transition_history；即时生效——
-          effective 集立即排除 + 版本 bump）；unaffected（合法其他来源）显式
-          保留——不删不改；
+        - 候选 = 非终态 patch 的策略卡；影响判定 = D03 ``plan_recompute``
+          （face=``strategy``，精确 ``SourcePointer`` 身份对；跨域同值不构成
+          同源）；
+        - 命中者 revoke（actor=``evidence_withdrawal``、审计如实记录撤回主体
+          与旁列 reason；即时生效——effective 集立即排除 + 版本 bump）；
+          unaffected（合法其他来源，含未命中的 candidate）显式保留——不删不改；
         - 返回审计：受影响 patch / 版本前后（content-free 引用级，无载荷）。
         """
         now_naive = _naive(now) or utcnow()
+        kind_value = RetractionKind(kind).value  # 词表校验前置（IO 前 fail-loud）
         target = source_pointer_of_ref(source_ref)
         if target is None:
             raise ValueError(f"source_ref {source_ref!r} is not a closed-scheme evidence ref")
         uid = UUID(str(user_id))
+        if not await self._source_withdrawal_visible(uid, target, now=now_naive):
+            raise ValueError(
+                f"source_ref {source_ref!r} withdrawal is not verifiable at its evidence source "
+                "(evidence still resolves); the withdrawal must land in its owning domain first"
+            )
         rows = list(
             (
                 await self.db.execute(
                     select(PolicyPatchRecord).where(
                         PolicyPatchRecord.user_id == uid,
-                        PolicyPatchRecord.state.in_(["active", "evidenced"]),
+                        # FIX-564：candidate 一并纳入——引用已撤源的 patch 不因
+                        # 尚未 admit 而豁免（撤回是账本事实，不是档位行为）。
+                        PolicyPatchRecord.state.in_(["candidate", "evidenced", "active"]),
                     )
                 )
             )
@@ -686,13 +717,15 @@ class PolicyPatchService:
         patches_by_id = {_row_to_patch(row).patch_id: _row_to_patch(row) for row in rows}
         cards = [strategy_card_for_patch(patch) for patch in patches_by_id.values()]
         version_before = compute_policy_patch_version([p for p in patches_by_id.values() if p.state == "active"])
-        verdicts = strategy_withdrawal_plan(kind, target, cards)
+        verdicts = strategy_withdrawal_plan(kind_value, target, cards)
         strategy_to_patch = {card.strategy_id: card.patch_id for card in cards}
         revoked: list[str] = []
+        revoked_states: dict[str, str] = {}
         for verdict in verdicts:
             if verdict.impact != RetractionImpact.AFFECTED:
                 continue  # unaffected：合法其他来源显式保留
             patch_id = strategy_to_patch[verdict.subject_id]
+            pre_state = patches_by_id[patch_id].state
             outcome = await self.revoke_patch(
                 uid,
                 patch_id,
@@ -702,17 +735,51 @@ class PolicyPatchService:
             )
             if outcome.record is not None:
                 revoked.append(patch_id)
+                revoked_states[patch_id] = pre_state
         remaining = list(await self.effective_patches(uid, now=now_naive))
         version_after = compute_policy_patch_version(remaining)
         return {
             "schema_version": "experience_strategy.v4.i05.v1",
             "withdrawn_source": source_ref,
-            "kind": str(kind),
+            "kind": kind_value,
             "affected_patch_ids": sorted(revoked),
+            "affected_states": {patch_id: revoked_states[patch_id] for patch_id in sorted(revoked)},
             "unaffected_patch_ids": sorted(set(patches_by_id) - set(revoked)),
             "policy_version_before": version_before,
             "policy_version_after": version_after,
         }
+
+    async def _source_withdrawal_visible(self, user_id: UUID, target: SourcePointer, *, now: datetime) -> bool:
+        """真撤回验证门（FIX-564）：报告的撤回在真源证据面是否可见（fresh 读）。
+
+        - memory 引用：fresh 投影（``use_cache=False``，撤回可见性不被 300s
+          投影缓存吞掉）中记录消失，或记录仍在但已无 outcome 方向证据
+          （outcome 墓碑口径——结果撤回后经验骨架可存续而证据面已撤）；
+        - decision 引用：该 decision 无未删 ``outcome_observed`` 行（admit 的
+          解析谓词同款——证据面不再解析 = 已撤可见）；
+        - 未知域 fail-closed（False = 不可验证 = 拒绝报告）。
+        """
+        if target.source_type == SOURCE_POINTER_TYPE_MEMORY:
+            projection = await ExperienceMemoryProjector(self.db).project(user_id=user_id, now=now, use_cache=False)
+            record = next((r for r in projection.records if r.record_id == target.source_id), None)
+            return record is None or not record.has_outcome_evidence
+        if target.source_type == SOURCE_POINTER_TYPE_DECISION:
+            remaining = int(
+                (
+                    await self.db.execute(
+                        select(func.count())
+                        .select_from(InterventionLifecycleEvent)
+                        .where(
+                            InterventionLifecycleEvent.not_deleted_filter(),
+                            InterventionLifecycleEvent.user_id == user_id,
+                            InterventionLifecycleEvent.decision_id == target.source_id,
+                            InterventionLifecycleEvent.event_type == LifecycleEventType.OUTCOME_OBSERVED.value,
+                        )
+                    )
+                ).scalar_one()
+            )
+            return remaining == 0
+        return False
 
     # ------------------------------------------------------------------
     # 6. 读面：effective 集 / 版本 / 决策输入

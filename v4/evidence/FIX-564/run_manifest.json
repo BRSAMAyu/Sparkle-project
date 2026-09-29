@@ -1,0 +1,121 @@
+{
+  "card": "V4-FIX-564",
+  "task": "撤源失效 sweep 缺 candidate 态 + 人工入口不验证源真已撤回（I05R2 R2-D1 产品缺陷闭环，P2）",
+  "agent": "wtF564",
+  "branch": "fix/v4/f564-sweep-candidate",
+  "base_sha": "d84cf6cc（main；state(fleet): FIX-571 闭账 FIXED@6110b6a5）",
+  "implementation_commit": "见 fix/v4/f564-sweep-candidate 分支 git log（feat(v4): FIX-564 撤源失效 sweep 纳 candidate + 人工入口真撤回验证门）；本 manifest 与实现同 commit 入库",
+  "generated_at_local": "2026-09-29",
+  "kind": "fix",
+  "product_code_changed": true,
+  "environment": {
+    "worktree": "wtF564（git worktree add ../wtF564 -b fix/v4/f564-sweep-candidate main，exit 0）",
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.11.15（venv 共享主检出 /Users/brsama/code/GitHub/Sparkle-project/backend/.venv）",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2",
+    "ruff": "0.15.8",
+    "black": "26.3.1（line-length 120）",
+    "env_vars": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite://",
+    "note": "backend/app/gen 主检出 symlink（gitignored 生成物，worktree 缺省不存在——test_hybrid_policy 收集需要；非本卡产物）"
+  },
+  "defect": {
+    "source": "V4-I05 review_r2.md D-1/R2-D1（wtI05 证据已随 I05 合并入 main）",
+    "statement": "invalidate_on_source_withdrawal sweep 候选集仅 active/evidenced——candidate 态引用已撤源的 patch 不进 sweep；之后 admit_evidence 照常爬档可 active（off 档亲证 tier=repeated→active；live 档正收益源放行——收益门只拦无收益不感知撤回；live 无收益源 evidenced 后 confirm 人工入口放行）；人工入口（撤回报告入口）不验证源真已撤回（入口契约=信任调用方）",
+    "defect_locations": [
+      "backend/app/services/policy_patch_service.py invalidate_on_source_withdrawal（main@d84cf6cc :679 state.in_([\"active\",\"evidenced\"])）",
+      "backend/app/services/policy_patch_service.py invalidate_on_source_withdrawal（无真源验证——报告直接受理）"
+    ]
+  },
+  "fix_option_choice": {
+    "chosen": "选项一：sweep 候选集纳 candidate 态（+ 人工入口真撤回验证门补门）",
+    "rejected": "选项二：admit 前查撤回台账",
+    "reasons": [
+      "台账在 A-05 可消费的持久面不存在：D03 retraction.registered 事件载荷携带 (retraction_id, kind, target_type=result, target_id=outcome marker)，M-07 memory.invalidated 携带 memory 表 UUID——两者都不携带 memory://experience/expmem_* / decision://aurora_* 引用身份；按 ref 身份查台账需新建映射存储（第二套身份系统，P2 资源姿态禁止）",
+      "admit 前查真源已结构性存在：_verify_evidence 在 admit 时逐条对真源重解析（M-06 fresh 投影 / D-05 未删 outcome 行）——真删的源 admit 走 G1 fail-closed（I05R2 已亲证）；台账查询对唯一危险形态「报告但源未真撤」零保护（该形态下台账要么为空要么同样不验证）",
+      "A 是权威收口点：sweep 是「该源已撤」这一事实在 A-05 的唯一确立点；在此对全部非终态（candidate/evidenced/active）一次性 enforce「引用已撤源的 patch 必 revoked」，admit/confirm 各自无需感知撤回（revoked 终态 + T6 封闭 + 内容寻址防复活：同内容重提议返回 revoked 行，异内容重提议真删后死于 G1）",
+      "两修互补闭环：入口验证门关「虚假/过早报告误伤」（源未真撤的报告被拒→真实证据的 patch 不被错误 revoke）；sweep 纳 candidate 关「真撤回后绕行」（候选集覆盖即无遗漏）。选项二两者皆不闭环"
+    ]
+  },
+  "entry_trust_contract": "invalidate_on_source_withdrawal 是撤回的「报告面」（通知性记账，不删真源数据），FIX-564 后入口契约 = 只受理真源证据面可见的撤回：memory 引用须在 fresh 投影（use_cache=False，不被 300s 投影缓存吞掉）中记录消失或已无 outcome 方向证据；decision 引用须无未删 outcome_observed 行（与 admit 解析谓词同款）。不可验证的报告 ValueError 拒绝、零 revoke。事件接线卡（未来）必须在撤回于其所属域落定（删除/墓碑已提交）后投递本入口。inference 域撤回（源证据合法存续）不可经本入口受理——inference 消费卡应走自己的失效路径，或在证据面落定后经 result_retracted/material_deleted 报告（已在方法 docstring 显式声明）",
+  "dual_mode_before_after": {
+    "probe": "tests/services/test_zz_f564_probe_tmp.py（用后即删，不入库；I05R2 对抗探针 B 组同款形态：candidate 引用源 R → invalidate_on_source_withdrawal(R) → admit/confirm 观察终态）",
+    "pre_fix_main_d84cf6cc": [
+      "PROBE mode=off  n_pos=2 n_neg=0 confirm=False | pre=candidate sweep_report=none after_sweep=candidate final=active",
+      "PROBE mode=live n_pos=3 n_neg=1 confirm=False | pre=candidate sweep_report=none after_sweep=candidate final=active",
+      "PROBE mode=live n_pos=2 n_neg=2 confirm=True  | pre=candidate sweep_report=none after_sweep=candidate final=evidenced->confirm->active"
+    ],
+    "post_fix_branch": [
+      "PROBE mode=off  n_pos=2 n_neg=0 confirm=False | 报告（源未真撤）→ ValueError 'withdrawal is not verifiable' 拒绝；patch 保留（源未撤=应保留）；真撤回后报告 → sweep 收走 candidate（affected_states[candidate]）→ admit T6 revoked（committed 测试 test_off_candidate_swept_then_admit_blocked 钉死）",
+      "PROBE mode=live n_pos=3 n_neg=1 confirm=False | 同上（test_live_positive_source_candidate_swept_then_admit_blocked 钉死——收益门无关，sweep 先收）",
+      "PROBE mode=live n_pos=2 n_neg=2 confirm=True  | 同上 + confirm 人工入口无可达 evidenced 行（revoked T6）（test_false_report_refused_then_true_withdrawal_closes_confirm_leg 钉死）"
+    ],
+    "pre_fix_committed_tests_red": "git stash push（仅服务文件）→ 同一测试集：TestWithdrawalSweepCandidateClosure 5/5 red（含 affected_patch_ids==[] 亲证 candidate 不进 sweep）；TestSourceWithdrawalInvalidation 4 测 setup 真撤回后依旧 green（原 sweep 语义兼容真撤回）→ 5 failed, 17 passed",
+    "reading_note": "修后探针行 final=active 是「虚假报告被拒后 patch 正常存活」的正确行为（源未真撤→证据为真→admit 照常），非缺陷残留；缺陷链的封闭由真撤回腿（committed 测试）与拒绝腿（验证门）共同承担"
+  },
+  "mutations": [
+    {
+      "id": "M1",
+      "mutation": "sweep 候选集移除 candidate（state.in_([\"evidenced\",\"active\"])）",
+      "result": "TestWithdrawalSweepCandidateClosure 5/5 failed（17 I05 测不受影响）——sweep 纳 candidate 被测试钉死",
+      "restored": "22 passed"
+    },
+    {
+      "id": "M2",
+      "mutation": "真撤回验证门旁路（if False）",
+      "result": "test_false_report_refused_then_true_withdrawal_closes_confirm_leg 恰 1 failed（其余 21 green）——验证门被独立钉死",
+      "restored": "22 passed"
+    }
+  ],
+  "commands": [
+    {
+      "purpose": "本卡测试（I05 服务层 17 断言零改动 + FIX-564 新增 5）",
+      "cmd": "cd backend && pytest tests/services/test_experience_strategy_service.py -q",
+      "exit_code": 0,
+      "summary": "22 passed"
+    },
+    {
+      "purpose": "I05 纯契约层（56 不动零削弱）",
+      "cmd": "cd backend && pytest tests/unit/test_experience_strategy.py -q",
+      "exit_code": 0,
+      "summary": "56 passed"
+    },
+    {
+      "purpose": "邻接面全量回归（I05 清单 17 文件 + experience_event_service + experience_presentation_adapter）",
+      "cmd": "cd backend && pytest tests/unit/test_experience_strategy.py tests/services/test_experience_strategy_service.py tests/unit/test_no_action_supplement.py tests/unit/test_memory_utility_gate.py tests/unit/test_memory_utility_gate_wiring.py tests/unit/test_semantic_selector.py tests/services/test_policy_patch_service.py tests/services/test_friction_chat_wiring.py tests/services/test_experience_memory_projector.py tests/core/test_attribution.py tests/core/test_retraction_recompute.py tests/services/test_retraction_recompute_service.py tests/unit/test_hybrid_policy.py tests/unit/test_context_selection_receipt_sources.py tests/unit/test_context_selection_receipt_wiring.py tests/services/test_intervention_lifecycle_service.py tests/core/test_experience_event.py tests/services/test_experience_event_service.py tests/services/test_experience_presentation_adapter.py -q",
+      "exit_code": 0,
+      "summary": "585 passed（两轮：mutation 前后各一轮全绿；A-05 39 + D03 34 + M-06/D-05/I-面 全含）"
+    },
+    {
+      "purpose": "ruff（全部改动文件）",
+      "cmd": "cd backend && ruff check app/services/policy_patch_service.py tests/services/test_experience_strategy_service.py",
+      "exit_code": 0,
+      "summary": "All checks passed（零新增）"
+    },
+    {
+      "purpose": "black（改动文件，line-length 120）",
+      "cmd": "cd backend && black --check --line-length app/services/policy_patch_service.py tests/services/test_experience_strategy_service.py",
+      "exit_code": 0,
+      "summary": "2 files would be left unchanged"
+    },
+    {
+      "purpose": "mypy 棘轮（全仓 ratchet 口径）",
+      "cmd": "bash scripts/ci/mypy_ratchet.sh",
+      "exit_code": 0,
+      "summary": "mypy errors: 59 / baseline: 77"
+    },
+    {
+      "purpose": "mypy 零新增确定性复核（fresh cache base vs branch 逐字节 diff）",
+      "cmd": "git stash（服务+测试两文件）→ rm -rf .mypy_cache → mypy app error 行 sort > base；pop → rm -rf .mypy_cache → 同口径 > branch；diff base branch",
+      "exit_code": 0,
+      "summary": "59 == 59，error 清单逐字节相同（diff 零输出）→ 改动文件（policy_patch_service.py / test_experience_strategy_service.py）直查零错误、全仓零新增"
+    }
+  ],
+  "files_changed": [
+    "backend/app/services/policy_patch_service.py（sweep 候选集 + 验证门 _source_withdrawal_visible + 入口契约 docstring + 审计 affected_states 键；模块头 I05 撤回条目同步更新）",
+    "backend/tests/services/test_experience_strategy_service.py（TestSourceWithdrawalInvalidation 4 测 setup 增真撤回步骤·断言零改动；新增 TestWithdrawalSweepCandidateClosure 5 测；模块 docstring 登记 FIX-564；新增 _withdraw_experience_source helper）"
+  ],
+  "openapi_gate": "未触 api/（纯服务层+测试）——OpenAPI 门不适用",
+  "model_calls": 0,
+  "note_git_incident": "M1 变异复原时误用 git checkout -- 丢弃过一次服务文件修改（无 stash 保护），随即按原 Edit 内容完整重放并全门禁复跑（22 passed + 585 passed + ruff/black/mypy 复核）；最终入库内容以 commit diff 为准"
+}

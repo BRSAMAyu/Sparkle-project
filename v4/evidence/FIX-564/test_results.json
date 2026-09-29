@@ -1,0 +1,53 @@
+{
+  "card": "V4-FIX-564",
+  "branch": "fix/v4/f564-sweep-candidate",
+  "base_sha": "d84cf6cc",
+  "generated_at_local": "2026-09-29",
+  "suite_counts": {
+    "i05_unit_unchanged": {"file": "tests/unit/test_experience_strategy.py", "count": 56, "result": "56 passed", "touched": false},
+    "i05_service_plus_fix564": {
+      "file": "tests/services/test_experience_strategy_service.py",
+      "i05_original": 17,
+      "fix564_new": 5,
+      "total": 22,
+      "result": "22 passed"
+    },
+    "neighbor_regression": {"files": 19, "result": "585 passed", "includes": ["A-05 test_policy_patch_service.py 39", "D03 test_retraction_recompute.py + test_retraction_recompute_service.py 34", "M-06 projector", "D-05 lifecycle service", "friction_chat_wiring", "experience_event/presentation 面"]}
+  },
+  "i05_contract_zero_weakening": {
+    "unit_56": "文件零改动",
+    "service_17": "断言零改动（git diff 移除行仅 2 处 docstring 首行扩注）；4 测 setup 增真撤回步骤（软删 D-05 行）——原 setup 在新入口契约下属不可验证报告",
+    "shadow_redline": "未触（TestShadowZeroBehaviorRedLine 3 测原样通过，含 585 回归）"
+  },
+  "fix564_new_tests": [
+    "test_off_candidate_swept_then_admit_blocked —— off 档复现链修后形态：真撤回报告 → candidate revoke（affected_states 钉 candidate 态收走）→ admit T6 / effective 空",
+    "test_live_positive_source_candidate_swept_then_admit_blocked —— live 正收益源（修前收益门放行亲证形态）：sweep 先收，收益门无关",
+    "test_false_report_refused_then_true_withdrawal_closes_confirm_leg —— 虚假报告（源未真撤）ValueError 拒绝零 revoke；真撤回后 confirm 人工入口无可达 evidenced 行（revoked T6）",
+    "test_unaffected_candidate_explicitly_preserved_and_admittable —— 反例（可失败）：未命中 candidate 显式保留且 admit 照常爬档（sweep 不越权）",
+    "test_decision_channel_candidate_swept_after_true_outcome_withdrawal —— decision:// 通道：outcome 行真撤（软删）后 result_retracted 报告 → candidate revoke（验证门双通道）"
+  ],
+  "pre_fix_red_run": {
+    "method": "git stash push（仅 backend/app/services/policy_patch_service.py）→ 同一测试集复跑",
+    "result": "5 failed, 17 passed",
+    "failures": [
+      "TestWithdrawalSweepCandidateClosure 5/5（含 audit['affected_patch_ids']==[] 亲证 candidate 不进 sweep）"
+    ],
+    "probe_pre_fix": [
+      "PROBE mode=off  n_pos=2 n_neg=0 confirm=False | after_sweep=candidate final=active",
+      "PROBE mode=live n_pos=3 n_neg=1 confirm=False | after_sweep=candidate final=active",
+      "PROBE mode=live n_pos=2 n_neg=2 confirm=True  | after_sweep=candidate final=evidenced->confirm->active"
+    ]
+  },
+  "mutations": [
+    {"id": "M1", "desc": "sweep 候选集移除 candidate", "red": "5 failed / 17 passed", "restored": "22 passed"},
+    {"id": "M2", "desc": "真撤回验证门旁路（if False）", "red": "恰 1 failed（false_report 测）/ 21 passed", "restored": "22 passed"}
+  ],
+  "gates": {
+    "ruff": "All checks passed（改动 2 文件零新增）",
+    "black_120": "2 files would be left unchanged",
+    "mypy_ratchet": "59 / baseline 77（exit 0）",
+    "mypy_zero_new": "fresh-cache base(d84cf6cc) vs branch：59 == 59，error 清单逐字节相同（diff 零输出）；改动文件直查零错误",
+    "openapi": "未触 api/ —— 不适用"
+  },
+  "model_calls": 0
+}

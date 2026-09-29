@@ -13,6 +13,10 @@
 - **撤回源后相关策略失效**：``invalidate_on_source_withdrawal`` 对命中源的
   active patch revoke（actor=evidence_withdrawal 审计），effective 集立即排
   除、版本 bump；其他来源 patch unaffected 显式保留。
+- **FIX-564（candidate 绕行闭环）**：sweep 候选集纳 candidate 态（真撤回报告
+  后 candidate 一并 revoke，admit/confirm 全 T6）；人工入口真撤回验证门——
+  源未真撤的虚假报告 ValueError 拒绝、零 revoke；未命中 candidate 显式保留
+  照常爬档；decision:// 通道同律。
 """
 
 from __future__ import annotations
@@ -35,6 +39,7 @@ from app.core.outcome_ledger import (
     derive_outcome_id,
 )
 from app.models.execution_intent import ExecutionMode
+from app.models.intervention_lifecycle import InterventionLifecycleEvent
 from app.models.policy_patch import PolicyPatchRecord
 from app.models.user import User
 from app.services.experience_memory_projector import ExperienceMemoryProjector
@@ -203,6 +208,27 @@ async def _propose_prefer_practice(db_session, user):
     )
     assert result.record is not None
     return svc, result.record
+
+
+async def _withdraw_experience_source(db_session, user, *, intervention_type: str) -> None:
+    """真撤回（M-07 删除链口径）：软删该用户该干预的全部未删生命周期行。
+
+    FIX-564：``invalidate_on_source_withdrawal`` 的入口验证门要求撤回报告先在
+    真源证据面可见——生产中由删除执行器（memory/result 域）落定，本 helper 是
+    其在测试内的等价真源动作（test_experience_memory_projector 软删先例同款）。
+    """
+    from datetime import datetime as _dt
+
+    await db_session.execute(
+        InterventionLifecycleEvent.__table__.update()
+        .where(
+            InterventionLifecycleEvent.user_id == user.id,
+            InterventionLifecycleEvent.intervention_type == intervention_type,
+            InterventionLifecycleEvent.deleted_at.is_(None),
+        )
+        .values(deleted_at=_dt.utcnow())
+    )
+    await db_session.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -513,12 +539,17 @@ class TestSourceWithdrawalInvalidation:
 
     @pytest.mark.parametrize("mode", ["off", "shadow", "live"])
     async def test_withdrawn_source_invalidates_related_patch(self, db_session, strategy_mode, mode):
-        """撤回源 → 相关策略失效（三档一致——失效不是模式行为，是账本事实）。"""
+        """撤回源 → 相关策略失效（三档一致——失效不是模式行为，是账本事实）。
+
+        FIX-564：报告前先真撤回（软删 D-05 行）——入口验证门要求撤回在真源
+        证据面可见；断言零改动（setup 增加真实撤回步骤）。
+        """
         strategy_mode(mode)
         user = await _make_user(db_session)
         svc, ids = await self._two_active_patches(db_session, user)
         practice_patch_id, practice_record_id = ids["practice"]
         explain_patch_id, _ = ids["explain"]
+        await _withdraw_experience_source(db_session, user, intervention_type="practice")
         version_before = await svc.policy_version(user.id, now=_NOW)
 
         audit = await svc.invalidate_on_source_withdrawal(
@@ -551,13 +582,17 @@ class TestSourceWithdrawalInvalidation:
             )
 
     async def test_reactivated_content_cannot_revive_after_withdrawal(self, db_session, strategy_mode):
-        """撤回失效后同内容再提议 = 同一 revoked 行（内容寻址），不可复活。"""
+        """撤回失效后同内容再提议 = 同一 revoked 行（内容寻址），不可复活。
+
+        FIX-564：真撤回（软删 D-05 行）先于报告——验证门要求撤回真源可见。
+        """
         strategy_mode("off")
         user = await _make_user(db_session)
         await _expose_and_link(db_session, user, intervention_type="practice", n_positive=2)
         svc, record = await _propose_prefer_practice(db_session, user)
         await svc.admit_evidence(user.id, record.patch_id, now=_NOW)
         record_id = await _experience_record_id(db_session, user, intervention_type="practice")
+        await _withdraw_experience_source(db_session, user, intervention_type="practice")
         await svc.invalidate_on_source_withdrawal(
             user.id, kind="material_deleted", source_ref=f"memory://experience/{record_id}", now=_NOW
         )
@@ -571,3 +606,163 @@ class TestSourceWithdrawalInvalidation:
         assert reproposed.record.state == "revoked"  # 终态不复活
         again = await svc.admit_evidence(user.id, record.patch_id, now=_NOW)
         assert again.record.state == "revoked" and again.reasons and "T6" in again.reasons[0]
+
+
+# ---------------------------------------------------------------------------
+# FIX-564 · 撤源失效 sweep 纳 candidate + 人工入口真撤回验证门（I05R2 R2-D1 闭环）
+# ---------------------------------------------------------------------------
+
+
+class TestWithdrawalSweepCandidateClosure:
+    """candidate 绕行缺口闭环（off/live 双档复现链的修后形态；修前红对照入
+    run_manifest）。
+
+    缺陷复现链（修前亲证可 active）：candidate 引用已撤源 → 报告撤回（sweep 仅
+    active/evidenced，candidate 豁免）→ admit 照常爬档（off = repeated 自动
+    active；live = 正收益源放行——收益门只拦无收益不感知撤回；无收益源经
+    evidenced 后 confirm 人工入口放行）。修后三段全部封闭：真撤回报告时
+    candidate 一并 revoke（终态，admit/confirm 全 T6）；虚假报告（源未真撤）
+    被验证门 ValueError 拒绝、零 revoke。
+    """
+
+    async def _candidate_on_practice(self, db_session, user, *, n_positive: int, n_negative: int = 0):
+        await _expose_and_link(
+            db_session, user, intervention_type="practice", n_positive=n_positive, n_negative=n_negative
+        )
+        record_id = await _experience_record_id(db_session, user, intervention_type="practice")
+        svc = PolicyPatchService(db_session)
+        result = await svc.propose_patch(
+            user.id,
+            surface="intervention_preference",
+            payload={"intervention": "practice", "direction": "prefer"},
+            evidence_refs=[f"memory://experience/{record_id}"],
+        )
+        assert result.record is not None
+        assert result.record.state == "candidate"  # 未 admit：缺陷链的起点态
+        return svc, result.record, record_id
+
+    async def test_off_candidate_swept_then_admit_blocked(self, db_session, strategy_mode):
+        """off 档：真撤回报告 → candidate revoke；admit T6（修前此链爬到 active）。"""
+        strategy_mode("off")
+        user = await _make_user(db_session)
+        svc, candidate, record_id = await self._candidate_on_practice(db_session, user, n_positive=2)
+        await _withdraw_experience_source(db_session, user, intervention_type="practice")
+
+        audit = await svc.invalidate_on_source_withdrawal(
+            user.id, kind="material_deleted", source_ref=f"memory://experience/{record_id}", now=_NOW
+        )
+        assert audit["affected_patch_ids"] == [candidate.patch_id]
+        assert audit["affected_states"][candidate.patch_id] == "candidate"  # sweep 从 candidate 态收走
+
+        swept = await svc._get_by_patch_id(candidate.patch_id)
+        assert swept.state == "revoked"
+        assert swept.revoke_reason == "evidence_source_withdrawal"
+        assert swept.transition_history[-1]["actor"] == "evidence_withdrawal"
+
+        admitted = await svc.admit_evidence(user.id, candidate.patch_id, now=_NOW)
+        assert admitted.record.state == "revoked"  # 终态不可 admit（修前此处可 active）
+        assert admitted.reasons and "T6" in admitted.reasons[0]
+        assert await svc.effective_patches(user.id, now=_NOW) == ()
+
+    async def test_live_positive_source_candidate_swept_then_admit_blocked(self, db_session, strategy_mode):
+        """live 档正收益源（修前收益门放行的亲证形态）：修后 sweep 先收，收益门无关。"""
+        strategy_mode("live")
+        user = await _make_user(db_session)
+        svc, candidate, record_id = await self._candidate_on_practice(db_session, user, n_positive=3, n_negative=1)
+        await _withdraw_experience_source(db_session, user, intervention_type="practice")
+        audit = await svc.invalidate_on_source_withdrawal(
+            user.id, kind="material_deleted", source_ref=f"memory://experience/{record_id}", now=_NOW
+        )
+        assert audit["affected_patch_ids"] == [candidate.patch_id]
+        admitted = await svc.admit_evidence(user.id, candidate.patch_id, now=_NOW)
+        assert admitted.record.state == "revoked"
+        assert admitted.reasons and "T6" in admitted.reasons[0]
+
+    async def test_false_report_refused_then_true_withdrawal_closes_confirm_leg(self, db_session, strategy_mode):
+        """live 无收益链两段：①虚假报告（源未真撤）ValueError 拒绝、零 revoke
+        （防误伤补门）；②真撤回后报告 → candidate 收走——confirm 人工入口无
+        evidenced 行可达（revoked T6；修前 confirm 可放行未 sweep 的行）。"""
+        strategy_mode("live")
+        user = await _make_user(db_session)
+        svc, candidate, record_id = await self._candidate_on_practice(db_session, user, n_positive=2, n_negative=2)
+
+        with pytest.raises(ValueError, match="not verifiable"):
+            await svc.invalidate_on_source_withdrawal(
+                user.id, kind="material_deleted", source_ref=f"memory://experience/{record_id}", now=_NOW
+            )
+        untouched = await svc._get_by_patch_id(candidate.patch_id)
+        assert untouched.state == "candidate"  # 虚假报告零副作用
+
+        await _withdraw_experience_source(db_session, user, intervention_type="practice")
+        audit = await svc.invalidate_on_source_withdrawal(
+            user.id, kind="material_deleted", source_ref=f"memory://experience/{record_id}", now=_NOW
+        )
+        assert audit["affected_patch_ids"] == [candidate.patch_id]
+        confirmed = await svc.confirm_patch(user.id, candidate.patch_id, now=_NOW)
+        assert confirmed.record.state == "revoked"
+        assert confirmed.reasons and "T6" in confirmed.reasons[0]
+
+    async def test_unaffected_candidate_explicitly_preserved_and_admittable(self, db_session, strategy_mode):
+        """反例（可失败）：sweep 纳 candidate 不越权——未命中 candidate 显式保留
+        且 admit 照常爬档（撤回只作用于命中源，无连带伤害）。"""
+        strategy_mode("off")
+        user = await _make_user(db_session)
+        await _expose_and_link(db_session, user, intervention_type="practice", n_positive=2)
+        practice_record = await _experience_record_id(db_session, user, intervention_type="practice")
+        await _expose_and_link(db_session, user, intervention_type="explain", n_positive=2)
+        explain_record = await _experience_record_id(db_session, user, intervention_type="explain")
+        svc = PolicyPatchService(db_session)
+        p1 = await svc.propose_patch(
+            user.id,
+            surface="intervention_preference",
+            payload={"intervention": "practice", "direction": "prefer"},
+            evidence_refs=[f"memory://experience/{practice_record}"],
+        )
+        p2 = await svc.propose_patch(
+            user.id,
+            surface="intervention_preference",
+            payload={"intervention": "explain", "direction": "prefer"},
+            evidence_refs=[f"memory://experience/{explain_record}"],
+        )
+        assert p1.record is not None and p2.record is not None
+        await _withdraw_experience_source(db_session, user, intervention_type="practice")
+        audit = await svc.invalidate_on_source_withdrawal(
+            user.id, kind="material_deleted", source_ref=f"memory://experience/{practice_record}", now=_NOW
+        )
+        assert audit["affected_patch_ids"] == [p1.record.patch_id]
+        assert p2.record.patch_id in audit["unaffected_patch_ids"]  # 未命中 candidate 显式保留
+        admitted = await svc.admit_evidence(user.id, p2.record.patch_id, now=_NOW)
+        assert admitted.record.state == "active"  # 合法源照常爬档
+
+    async def test_decision_channel_candidate_swept_after_true_outcome_withdrawal(self, db_session, strategy_mode):
+        """decision:// 通道同律：decision 的 outcome 行真撤（软删）后报告 →
+        candidate revoke（验证门双通道；result_retracted 撤回域）。"""
+        from app.core.intervention_lifecycle import LifecycleEventType
+
+        strategy_mode("off")
+        user = await _make_user(db_session)
+        decision_id = await _expose_and_link(db_session, user, intervention_type="practice", n_positive=2)
+        svc = PolicyPatchService(db_session)
+        result = await svc.propose_patch(
+            user.id,
+            surface="intervention_preference",
+            payload={"intervention": "practice", "direction": "prefer"},
+            evidence_refs=[f"decision://{decision_id}"],
+        )
+        assert result.record is not None
+        await db_session.execute(
+            InterventionLifecycleEvent.__table__.update()
+            .where(
+                InterventionLifecycleEvent.user_id == user.id,
+                InterventionLifecycleEvent.decision_id == decision_id,
+                InterventionLifecycleEvent.event_type == LifecycleEventType.OUTCOME_OBSERVED.value,
+                InterventionLifecycleEvent.deleted_at.is_(None),
+            )
+            .values(deleted_at=datetime.utcnow())
+        )
+        await db_session.commit()
+        audit = await svc.invalidate_on_source_withdrawal(
+            user.id, kind="result_retracted", source_ref=f"decision://{decision_id}", now=_NOW
+        )
+        assert audit["affected_patch_ids"] == [result.record.patch_id]
+        assert audit["affected_states"][result.record.patch_id] == "candidate"
