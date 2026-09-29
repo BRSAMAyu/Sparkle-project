@@ -45,3 +45,9 @@
 8. **全量 flutter test 长尾环境性风险。** 主检出基线存在个别依赖 10.0.2.2:8080 网关
    live 调用的 goldens 测试在全量并发跑时网络抖动失败（U11 记录 q03 goldens
    tearDownAll 一例，单测复跑全绿）。本卡零触碰该域；如复现按同口径归因，不计回归。
+
+
+## 一审勘误（C-2）：N9 基线下调归属分解（receipt 1a443b5f）
+- 本卡净贡献：arb 258→256（leaderboardSelfAnchorLoadFailed zh/en 占位删除）+ bareCatchVar 73→72（self_anchor_screen getter 化）；catchVarToString 净降 0。
+- 260→258 / 76→73 / 78→77 差额=开卡前已陈旧的基线导入（V3-FIX-490 删 learning-mode 孤儿屏+键；understanding_overview_view -3 为 U03 时代修复；U11 receipt §0 已实测记录 258/73/77 PASS）——update-baseline 导入陈旧差量为守卫工具固有行为，非本卡修复亦非掩盖。
+- 守卫脚本零改动、三检测维度原样、无任何检测面弱化（一审逐处 diff 核+双探针实证）。

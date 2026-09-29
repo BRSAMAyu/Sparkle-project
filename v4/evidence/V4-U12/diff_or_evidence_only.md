@@ -90,3 +90,9 @@ flame_level 分离钉）。
 参考图=提案非批准：本卡零参考图移植、零主题切换、零新颜色/新像素资产；UI 全部消费
 既有 `core/design` 令牌（DS.* / context.colors/typo/space/radius）。像素 preview 通道
 （F01/F02）未在本卡面接入 PixelFrame 换装（classic 零差量红线，见 limitations #1）。
+
+
+## 一审勘误（C-2）：N9 基线下调归属分解（receipt 1a443b5f）
+- 本卡净贡献：arb 258→256（leaderboardSelfAnchorLoadFailed zh/en 占位删除）+ bareCatchVar 73→72（self_anchor_screen getter 化）；catchVarToString 净降 0。
+- 260→258 / 76→73 / 78→77 差额=开卡前已陈旧的基线导入（V3-FIX-490 删 learning-mode 孤儿屏+键；understanding_overview_view -3 为 U03 时代修复；U11 receipt §0 已实测记录 258/73/77 PASS）——update-baseline 导入陈旧差量为守卫工具固有行为，非本卡修复亦非掩盖。
+- 守卫脚本零改动、三检测维度原样、无任何检测面弱化（一审逐处 diff 核+双探针实证）。

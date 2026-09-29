@@ -110,8 +110,10 @@ void main() {
     );
     await _pumpRedeemPro(tester, repo);
 
-    // 同帧两次触发（无 pump 间隔）：重入守卫吞掉第二次（第二次即便命中
-    // 也不再开新对话框；真实设备上第二击落屏障，同样不会产生第二次动作）。
+    // 同帧两次触发（无 pump 间隔）。注（一审 C-1 勘误）：本断言实测的是
+    // 框架 hit-test 层对同帧第二击的吞没——_actionInFlight 守卫在该路径
+    // 从未被执行（一审三组探针实证）；守卫是防御纵深，无独立测试钉，
+    // 验收 2 的幂等由服务端月顶屏障独立真证（见后端 photon 套件）。
     await tester
         .tap(find.byKey(const ValueKey('photon-redeem-pro-action-button')));
     await tester.tap(
