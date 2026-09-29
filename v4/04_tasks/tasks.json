@@ -4160,9 +4160,9 @@
       "id": "V4-G06",
       "title": "小队/自我锚/光子/成就——四风格商业化完备",
       "depends_on": [],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS",
       "kind": "implementation",
       "required_locks": [
         "ui-polish-g06"
@@ -4214,7 +4214,14 @@
         "preview 通道外发现需发布面决策项→登记 Q08 待裁"
       ],
       "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
-      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。"
+      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。",
+      "relay": {
+        "closed_at": "2026-09-30T30:55",
+        "closure_chain": "impl b8f0119c → R1 PASS_WITH_CHALLENGES(F-3 HIGH/F-1/F-2 返修门) → 返修 525da0ed 三项闭 → R2 PASS 三门全解除",
+        "merged_commits": "6fd48e72/654e3f7e/c4bc01f9/07c6f31a/e09043a1（cherry-pick 零冲突零重叠面）",
+        "merged_tree_verify": "DL-SPEC exit 0(persistentRepeatLoop 51/56)+analyze 全项目 0 issue+g06 golden/对比守卫/新钉/u15 棘轮 +28 绿(48≤49)+achievement 家族 +16 绿+树零脏(FIX-580 第二消费面实时验证)",
+        "info_items": "4 INFO 入 review_r2（epic 判负由固定紫端钉死/N2 10.1255 保守截断/map_screen:522 残留逐点偏好可顺手收敛/q03 探针副作用已由 FIX-580 闭账解决）"
+      }
     },
     {
       "id": "V4-G07",
