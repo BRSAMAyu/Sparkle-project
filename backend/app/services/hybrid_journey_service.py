@@ -34,6 +34,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any, Awaitable, Callable
 from uuid import UUID
 
@@ -79,6 +80,16 @@ _JUDGMENT_STAMP_REF_LIMIT = 16
 #: wt392 F1 · 同键终态 run 的 attempt 后缀探测上限（防御性封顶；正常重试
 #: 在 1-2 次内命中空闲键）。
 _MAX_JOURNEY_START_ATTEMPTS = 16
+
+#: FIX-583 · prep 执行显式超时（秒）。Q01 实测网关 30s 代理超时 503，而 prep
+#: 正常 4s 内完成——超时上限必须落在网关窗口以内，让请求在代理放弃前拿到
+#: 确定性失败（FAILED 补偿 + 可重试错误），而不是永久悬挂占死连接。
+PREP_TOOL_TIMEOUT_SECONDS = 20.0
+
+#: FIX-583 · RUNNING/prep 僵尸判定阈值（秒）。prep 常态秒级收口；超过此阈值
+#: 仍停在 RUNNING/prep 的 run 视为启动挂死僵尸（Q01 实证形态：run 永久
+#: RUNNING/prep、账本/产物零落库），启动自检将其补偿为 FAILED 释放幂等键。
+PREP_ZOMBIE_AFTER_SECONDS = 15 * 60
 
 #: LlmChat 注入面（J-04 同形）：messages → 原始文本；生产默认真实模型。
 LlmChat = Callable[[list[dict[str, str]]], Awaitable[str]]
@@ -404,7 +415,13 @@ async def _replay_payload(db: AsyncSession, run: AgentRun) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-async def _compensate_failed_start(service: AgentRunService, run: AgentRun, user_uuid: UUID) -> None:
+async def _compensate_failed_start(
+    service: AgentRunService,
+    run: AgentRun,
+    user_uuid: UUID,
+    *,
+    error_category: str = "prep_failed",
+) -> None:
     """wt392 F1 · prep 失败的启动 run 补偿为 FAILED（best-effort，不掩盖原异常）.
 
     run 在默认幂等键下已两次内部提交（``create_run`` + ``transition(RUNNING)``），
@@ -412,6 +429,11 @@ async def _compensate_failed_start(service: AgentRunService, run: AgentRun, user
     confirm 全 409，且无 cancel 路由）。诚实落 FAILED 终态：幂等键随之释放
     （重试开新 attempt），sweep 亦无需等 6h 判孤儿。补偿失败最坏退回 sweep
     判终 + 终态键释放双保险，原失败照常抛出。
+
+    FIX-583 · 补偿面扩到两处新调用方（error_category 区分归因）：
+    - prep 显式超时（``prep_timeout``）——工具成功后推进挂死不再无界；
+    - 启动自检回收 RUNNING/prep 超龄僵尸（``prep_zombie_reclaimed``）——
+      解除挂死 run 对同键重试的事实钉死。
     """
     try:
         await service.transition(
@@ -420,11 +442,33 @@ async def _compensate_failed_start(service: AgentRunService, run: AgentRun, user
             user_id=user_uuid,
             actor=TransitionActor.SYSTEM,
             reason="failed",
-            error_category="prep_failed",
+            error_category=error_category,
             source="server_service",
         )
     except Exception as exc:  # noqa: BLE001 — 补偿失败不掩盖原失败；sweep 兜底
         logger.warning("hybrid journey start compensation failed run={} err={}", run.id, exc)
+
+
+def _is_stale_prep_zombie(run: AgentRun, *, now: datetime | None = None) -> bool:
+    """FIX-583 · RUNNING/prep 超龄僵尸判定（启动自检的回收判据）.
+
+    Q01 实证僵尸形态：``status=RUNNING``、``current_stage=prep``、心跳/启动
+    时刻之后永不推进（账本与产物零落库）。prep 常态秒级，超
+    :data:`PREP_ZOMBIE_AFTER_SECONDS` 仍停留该形态即判僵尸——幂等 resolve 命中
+    它时不再原样回放（原样回放=把「旅程卡死」当「旅程状态」返给用户），而是
+    补偿 FAILED 开新 attempt。
+    """
+    if RunStatus(str(run.status)) is not RunStatus.RUNNING:
+        return False
+    if str(run.current_stage or "") != "prep":
+        return False
+    reference = run.heartbeat_at or run.started_at or run.created_at
+    if reference is None:
+        return False
+    current = now or datetime.now(UTC).replace(tzinfo=None)
+    if reference.tzinfo is not None:
+        reference = reference.astimezone(UTC).replace(tzinfo=None)
+    return (current - reference) > timedelta(seconds=PREP_ZOMBIE_AFTER_SECONDS)
 
 
 async def _create_journey_run(
@@ -469,15 +513,34 @@ async def start_hybrid_journey(
     判断挂起被 admin sweep 判 UNKNOWN_OUTCOME）时释放键开新 attempt——
     原样回放死 run 会把旅程永久钉死（无产物、无等待面、无 cancel 路径）；
     活跃 run 仍幂等回放（双击/重开不重复建 run）。
+
+    FIX-583（Q01 G6 挂死）：重活出请求事务 + prep 显式超时 + 僵尸 run 启动
+    自检回收——
+    - run 记录 + RUNNING 迁移在 prep 之前各自内部提交；prep 真实检索走
+      **独立会话**（executor owned-session 路径，账本随工具收尾自提交），
+      请求事务在 prep 前显式收口——检索挂起最多烧掉工具自己那条连接，
+      不再持有请求事务把本用户的 agent_runs 行锁一起钉死；
+    - prep 全程 ``asyncio.wait_for`` 显式超时（:data:`PREP_TOOL_TIMEOUT_SECONDS`，
+      落在网关 30s 窗口内），超时/失败统一走 wt392 F1 的 FAILED 补偿；
+    - 幂等 resolve 命中超龄 ``RUNNING/prep`` 僵尸（Q01 实证形态）时不再
+      原样回放，补偿 FAILED 开新 attempt（解除一次挂死对重试的钉死）。
     """
     user_uuid = UUID(str(user_id))
     anchor = await _resolve_anchor(db, user_id=user_uuid, task_id=UUID(str(task_id)) if task_id else None)
 
     service = AgentRunService(db)
     base_key = (str(idempotency_key).strip() if idempotency_key else None) or f"hybrid_journey:{anchor.task_id}"
-    created = await _create_journey_run(service, user_uuid=user_uuid, anchor=anchor, key=base_key, session_id=session_id)
+    created = await _create_journey_run(
+        service, user_uuid=user_uuid, anchor=anchor, key=base_key, session_id=session_id
+    )
     attempt = 1
-    while not created.created and is_terminal_run_status(RunStatus(str(created.run.status))):
+    while not created.created and (
+        is_terminal_run_status(RunStatus(str(created.run.status))) or _is_stale_prep_zombie(created.run)
+    ):
+        if not is_terminal_run_status(RunStatus(str(created.run.status))):
+            # FIX-583 · 僵尸回收：RUNNING/prep 超龄 → FAILED（释放键）再开新
+            # attempt；终态 run 走既有 wt392 语义（键已释放，直接开新 attempt）。
+            await _compensate_failed_start(service, created.run, user_uuid, error_category="prep_zombie_reclaimed")
         attempt += 1
         if attempt > _MAX_JOURNEY_START_ATTEMPTS:
             raise HybridJourneyStateError(
@@ -506,18 +569,27 @@ async def start_hybrid_journey(
             source="server_service",
         )
     ).run
+    # FIX-583 · 请求事务在 prep 前显式收口：transition 内部提交后 session 只剩
+    # refresh 打开的只读快照，这里提交掉——prep 期间请求会话零开放事务。
+    await db.commit()
 
     # ---- 段1 prep：真实注册工具经 X-06 完整执行链（权限 + 账本 + 真实检索）----
+    # FIX-583 · 重活出请求事务：db_session 传 None → executor 用自有会话执行
+    # 并在收尾自提交（owned 路径）；真实检索（LLM HyDE / embedding / 向量+词法）
+    # 期间请求会话不再持有任何未提交写与行锁。
     executor = tool_executor or ToolExecutor()
     try:
-        tool_result = await executor.execute_tool_call(
-            PREP_TOOL_NAME,
-            {"query": anchor.goal_title[:120], "limit": PREP_CITATION_LIMIT},
-            str(user_uuid),
-            db,
-            tool_call_id=f"j06_prep_{run.id}",
-            runtime_context={"run_id": str(run.id)},
-            idempotency_key=f"hybrid_journey:prep:{run.id}",
+        tool_result = await asyncio.wait_for(
+            executor.execute_tool_call(
+                PREP_TOOL_NAME,
+                {"query": anchor.goal_title[:120], "limit": PREP_CITATION_LIMIT},
+                str(user_uuid),
+                None,
+                tool_call_id=f"j06_prep_{run.id}",
+                runtime_context={"run_id": str(run.id)},
+                idempotency_key=f"hybrid_journey:prep:{run.id}",
+            ),
+            timeout=PREP_TOOL_TIMEOUT_SECONDS,
         )
         if not tool_result.success:
             logger.warning("hybrid journey prep tool failed run={} err={}", run.id, tool_result.error_message)
@@ -527,6 +599,15 @@ async def start_hybrid_journey(
         if not results:
             # 诚实失败：真实材料检索零命中 → 不建旅程产物、不编造引用。
             raise NoMaterialError()
+    except TimeoutError:
+        # FIX-583 · prep 显式超时：不再无界悬挂。wait_for 已取消工具协程
+        # （owned 会话随 async with 收口回滚），run 诚实落 FAILED 释放幂等键，
+        # 请求在网关窗口内拿到可重试失败。
+        logger.error("hybrid journey prep timed out run={} after {}s", run.id, PREP_TOOL_TIMEOUT_SECONDS)
+        await _compensate_failed_start(service, run, user_uuid, error_category="prep_timeout")
+        raise HybridJourneyStateError(
+            f"prep tool timed out after {PREP_TOOL_TIMEOUT_SECONDS:.0f}s; retry is safe (run compensated FAILED)"
+        ) from None
     except (HybridJourneyStateError, NoMaterialError):
         # wt392 F1 · 死 run 补偿：run 已在本键下两次内部提交（创建 + RUNNING），
         # 不补偿则重试永远 resolve 到这个无产物死 run。先把本次启动的 run 诚实

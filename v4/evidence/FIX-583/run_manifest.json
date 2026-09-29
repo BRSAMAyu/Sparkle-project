@@ -1,0 +1,42 @@
+{
+  "fix": "FIX-583",
+  "owner": "fix-agent(wtF583)",
+  "date": "2026-09-29",
+  "base": "3528623a (agent/v4/f583, main HEAD)",
+  "anchor": "Q01 真端验收 3/3 复现（wtQ01 v4/evidence/V4-Q01）：POST /journey/hybrid 100% 网关 30s 503；run 永久 RUNNING/prep；pg_stat_activity 锁快照 + 三僵尸 run 行（9ff03120/a77f9eb0/57f4a41f）",
+  "entry_chain": "backend/app/api/v1/journey.py:260 → backend/app/services/hybrid_journey_service.py start_hybrid_journey（修前 455 起）",
+  "changed_files": [
+    "backend/app/services/hybrid_journey_service.py（核心修复：prep 出请求事务 + 显式超时 + 僵尸启动自检回收）",
+    "backend/tests/unit/test_j06_hybrid_journey.py（+3 行：fixture 补 AsyncSessionLocal 指向测试引擎，owned-session 路径测试同装配）",
+    "backend/tests/unit/test_fix583_hybrid_start_hang.py（新增回归钉 3 条，可失败面）"
+  ],
+  "commands": [
+    ["PROTO_USE_DOCKER=0 make proto-gen", "0", "worktree 缺 app/gen（测试前置，gen 产物 gitignored 不入库）"],
+    ["pytest test_j06_hybrid_journey + test_wt392_r2v3_review（修复后基线）", "0（16 passed）", "既有 hybrid journey 契约零回退"],
+    ["pytest tests/unit/test_fix583_hybrid_start_hang.py", "0（3 passed, 2.09s）", "新增回归钉全绿"],
+    ["pytest j06 + wt392 + fix583 + j06_migration + hybrid_run_steps ×2", "0（40 passed）", "全家族回归"],
+    ["pytest j06 + wt392 + fix583 + j06_migration（格式化后终跑）", "0（23 passed, 69.94s）", "终态绿"],
+    ["MUTATION-A: prep 还原请求会话执行 + 拔除 wait_for 超时", "1（红：DID NOT RAISE）", "超时+会话归属测试命中；还原后绿"],
+    ["MUTATION-B: _is_stale_prep_zombie 判定恒 False", "1（红：RUNNING == FAILED 不成立）", "僵尸回收测试命中；还原后绿"],
+    ["MUTATION-C: 僵尸判定无视新鲜度（过度回收）", "1（红：幂等回放 run_id 不一致）", "防过度回收反向钉命中；还原后绿"],
+    ["black --check / ruff check 三改动文件", "0（ruff All checks passed）", "代码风格门"],
+    ["git status", "仅 3 个改动文件", "gen 产物 gitignored；仓库整洁"]
+  ],
+  "pytest_invocation": "cd backend && DATABASE_URL=sqlite:// SECRET_KEY=x /opt/homebrew/opt/python@3.11/bin/python3.11 -m pytest …（python3=3.14 无 pytest；主仓 .env 撞 demo-db 守卫）",
+  "environment_notes": [
+    "macOS 本机 pytest 级验证，未起真栈；运行中的 Q01 栈（gRPC 50051/8000/8080）未触碰，供 R1 复测",
+    "本机无 timeout 命令；所有超时语义在应用层 wait_for 实现",
+    "未 push；行为修复全部带可失败测试"
+  ],
+  "artifacts": {
+    "verification": "verification.md（含锁图定性）",
+    "limitations": "limitations.md",
+    "summary": "summary.md",
+    "audit": "audit.md",
+    "new_regression_tests": [
+      "test_prep_hang_times_out_compensates_and_does_not_pin_request_session",
+      "test_stale_running_prep_zombie_reclaimed_on_start",
+      "test_fresh_running_prep_still_replays_idempotently"
+    ]
+  }
+}

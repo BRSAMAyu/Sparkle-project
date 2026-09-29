@@ -119,6 +119,9 @@ async def j06_db_fixture(monkeypatch):
 
     monkeypatch.setattr(executor_module, "_agent_run_session_factory", factory)
     monkeypatch.setattr(executor_module, "_ledger_session_factory", factory)
+    # FIX-583 · prep 重活出请求事务后走 executor owned-session 路径
+    # （AsyncSessionLocal）——测试引擎同指向（StaticPool 同连接）。
+    monkeypatch.setattr(executor_module, "AsyncSessionLocal", factory)
 
     async with factory() as db:
         yield db
