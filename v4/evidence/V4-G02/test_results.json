@@ -1,0 +1,63 @@
+{
+  "task": "V4-G02",
+  "captured_at": "2026-09-29 +0800",
+  "worktree": "/Users/brsama/code/GitHub/wtG02",
+  "flutter": "3.41.3 stable",
+  "concurrency_policy": "全部 flutter test --concurrency=1（AGENTS.md 资源红线）；大命令前 df -h /（min 34G free > 15G 红线）、swap 峰值 5.5G < 10G 串行化阈",
+  "new_tests": {
+    "files": [
+      "mobile/test/widget/v4_g02_family_contrast_guard_test.dart",
+      "mobile/test/widget/v4_g02_family_golden_semantic_test.dart"
+    ],
+    "count": 32,
+    "breakdown": {
+      "contrast_guard_四档配对达阈": 4,
+      "contrast_guard_透明度压文字禁令扫描": 1,
+      "golden_组件面_stuck_sheet_×4档": 4,
+      "golden_组件面_openclaw_runtime_×4档": 4,
+      "golden_对话流_content_×4档": 4,
+      "golden_对话流_empty_×4档": 4,
+      "golden_对话流_streaming_×4档": 4,
+      "golden_对话流_model_failure_×4档": 4,
+      "golden_200文本_classic": 1,
+      "reduce_motion_活钉_pumpAndSettle": 1,
+      "reduce_motion_控制组_正常模式脉动可观测": 1
+    },
+    "golden_files": 25,
+    "golden_location": "mobile/test/widget/goldens/v4_g02/（stuck_sheet×4 + openclaw_runtime×4 + chat_flow content/empty/streaming/failure×4 + content_classic_200）",
+    "golden_signing": "macOS 签发（wt296 判例：Linux 字体渲染环境签名差 → 像素断言 Linux 跳过，语义钉全平台照跑）",
+    "result": "32 passed / 0 failed（--update-goldens 与无 flag 复跑双绿=确定性）"
+  },
+  "streaming_contrast_probe": {
+    "note": "流式增量在 quiet/dusk 对比衰减专项结论的数值表（修前 vs 修后；一次性探针，测试已还原不入库）",
+    "columns": "bubbleText/bubble（流式气泡正文）| text/streamCode（修后流式码面）| text/settledCode（落定码面）| text/oldDarkNeutral700（修前深档码面）| cursor/scaffold（光标/画布）",
+    "rows": {
+      "classic": {"bubble": 15.80, "streamCode_fixed": 14.04, "settledCode": 13.49, "oldDarkNeutral700": 1.94, "cursor": 16.37},
+      "paperDay": {"bubble": 12.59, "streamCode_fixed": 11.32, "settledCode": 10.25, "oldDarkNeutral700": 1.13, "cursor": 11.35},
+      "dusk": {"bubble": 9.68, "streamCode_fixed": 8.33, "settledCode": 8.33, "oldDarkNeutral700": 1.55, "cursor": 11.78},
+      "quiet": {"bubble": 14.81, "streamCode_fixed": 13.23, "settledCode": 12.48, "oldDarkNeutral700": 1.13, "cursor": 13.58}
+    },
+    "conclusion": "修前深档码面（neutral700 亮灰绿叠浅墨）四档 1.13-1.94:1 全部 <4.5 且在 quiet/dusk 最重（quiet 1.13、dusk 1.55）——即卡面特有风险的量化根因。修正后流式与落定同源 surfaceTertiary：四档 8.33-14.04:1（最低 dusk 8.33 = 阈值 1.85 倍），流式/落定差 ≤1.07:1（paperDay），增量转落定无可感知跳变；流式增量本身（气泡文/光标）最低 9.68:1（dusk），无衰减面。"
+  },
+  "regression": [
+    {"scope": "chat_f566 两测文件（F566 语义零 diff 红线）", "result": "5 passed / 0 failed", "raw_tail": "00:06 +5: All tests passed!"},
+    {"scope": "test/features/chat + G02 两测 + test/features/recovery", "result": "329 passed / 0 failed", "raw_tail": "03:09 +329: All tests passed!", "note": "首跑 1 失败（websocket_chat_service_v2_a2_offline_queue 的 extra_context Map 契约测）；单跑×3 全绿 + 同批复跑全绿 → 批跑时序 flake 非回归（该测属 data 层，本卡零改动）"},
+    {"scope": "test/unit + test/core/widgets + chat 邻接 widget 测 + openclaw 两测", "result": "348 passed + 3 skipped", "raw_tail": "02:10 +348 ~3: All tests passed!"},
+    {"scope": "test/core/design + test/features/aurora", "result": "286 passed / 0 failed", "raw_tail": "01:40 +286: All tests passed!"},
+    {"scope": "test/widget 全目录", "result": "527 passed + 4 skipped", "raw_tail": "05:58 +527 ~4: All tests passed!"},
+    {"scope": "受影响面补跑（status bar 两测 + aurora + G02 两测）", "result": "54 passed / 0 failed", "raw_tail": "00:18 +54: All tests passed!"},
+    {"scope": "action_card/status bar 邻接 7 测文件", "result": "21 passed / 0 failed", "raw_tail": "00:10 +21: All tests passed!"}
+  ],
+  "analyze": {
+    "command": "flutter analyze --no-pub",
+    "result": "No issues found!",
+    "note": "新测文件曾带 2 info（冗余 import）本会话即修；本地 dart format tall-style 与仓库 require_trailing_commas lint 代差 3 处手工对齐（FIX-566 同款处置，未全仓跑格式器）"
+  },
+  "rule_guards": {
+    "UI-TOKENS": "PASS — ratchet holds at color=213/275, fontSize=557/727 (159 files with hardcoded tokens)（基线只降：fontSize 632→557、color 225→213）",
+    "DL-SPEC": "PASS — persistentRepeatLoop=53/56（本卡新起表点曾 +4 违例 → 起表收敛单调用点后 56→53 只降不升）；其余维度 ratchet holds",
+    "SPACING-RHYTHM": "PASS — spacingHalfStep=1590/1623（初版静态分支曾两文件 +1 → 单点结构修正后回基线内）",
+    "full_suite_baseline": "全量守卫首跑 SPACING-RHYTHM FAIL（即上述两 +1，已闭环）；其余规则族（ENUM-PARITY 77 条 FAIL=0 WARN=7、V4S04-ASSETS/DPR PASS 等）与基线同源，SPACING/DL-SPEC/UI-TOKENS 三规则修后单跑 PASS"
+  },
+  "l10n": "零改动（arb 中英键集合不动；无新增文案）"
+}

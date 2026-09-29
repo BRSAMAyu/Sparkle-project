@@ -3910,9 +3910,12 @@
       "id": "V4-G02",
       "title": "对话/卡住/Hybrid/运行台——四风格商业化完备",
       "depends_on": [],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
+      "status": "done",
+      "implementation_state": "REVIEW_READY",
       "evidence_verdict": "NOT_RUN",
+      "evidence": "v4/evidence/V4-G02/",
+      "delivery_branch": "agent/v4/g02",
+      "delivery_sha": "96f8d1bbd6ca00c1c27ce674db05af7dd0dcf92d",
       "kind": "implementation",
       "required_locks": [
         "ui-polish-g02"

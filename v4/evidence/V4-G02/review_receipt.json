@@ -1,0 +1,29 @@
+{
+  "task": "V4-G02",
+  "status": "REVIEW_READY",
+  "reviewer": null,
+  "reviewer_session": null,
+  "review_date": null,
+  "verdict": null,
+  "reviewed_commit": null,
+  "base_commit": "f64d8590",
+  "branch": "agent/v4/g02",
+  "worktree": "/Users/brsama/code/GitHub/wtG02",
+  "delivery_commits": ["b3eeac17（主提交：65 文件，含前任 34 dirty 继承 + 本会话闭环）", "96f8d1bb（走查回环修正：shimmer 单点槽/打字点单路径/起表收敛单点，分支头）"],
+  "risk": "normal（普通任务：1 份独立未参与会话审查 + 当前集成 SHA 可失败测试）",
+  "review_scope_hint": [
+    "红线核验：chat_provider/滚动物理/F566 语义零 diff（git diff f64d8590..96f8d1bb -- mobile/lib/features/chat/presentation/providers mobile/lib/features/chat/data 应只剩 message_notification_service 呈现样式）；chat_f566 两测 5/5",
+    "验收 1：对比度守卫四档配对是否真实有牙（改 toneOnTint 收敛比例/换 QuietChip 描边槽应红）；透明度压文字禁令扫描是否可被注入击穿",
+    "验收 2：golden 语义钉非恒真（QuietChip border==neutral600 钉、白面字面量零命中钉、toneOnTint 四档断言、reduce-motion 活钉+控制组）；golden 确定性（同机复跑零 diff）",
+    "验收 3：三棘轮只降不升（UI-TOKENS 213/275、557/727；DL-SPEC persistentRepeatLoop 56→53；SPACING 1590/1623）+ analyze 零 + 回归 7 批",
+    "需复核裁决：G02-D5 自纠（shimmer 单点槽结构）是否需补独立视觉回归；streaming golden 播种态 vs 真实 send 流边界（L2）；格式器 reflow 噪声两文件（L5）行级语义不变复核",
+    "走查豁免面：stuck journey 行为验收归 J-05/U02/FIX-569（本卡只核呈现）；isLast 连接线既有行为登记（留行为卡）"
+  ],
+  "challenges_pre_registered": [
+    "挑战 1：golden 断言 Linux 跳过是否构成『CI 可失败』缩水——答：语义钉全平台照跑（32 测中 27 全平台断言），像素断言按 wt296 判例属环境签名边界；若审查判需 Linux 像素绿，需签发机迁移方案再裁",
+    "挑战 2：toneOnTint 是 DS 层新派生公式，是否触碰『风格真源唯一（theme_manager/pixel_preview_theme）』——答：派生公式挂 DS 静态层转发（值源仍是 ThemeManager 调色板，与 brandPrimaryDeep 同律），未建第二真源；如审查判应下沉 theme_manager，属等价迁移非缺陷",
+    "挑战 3：textTertiary getter 值变更（透明度派生 → 定标槽）影响全 app 消费面而非仅家族——答：定标槽本身四档 ≥4.5 已由 B2-3a 覆盖自动测，属『呈现层转向既有已校准真源』；core/design 286 测全绿背书",
+    "挑战 4：empty 态 golden 在 dusk/quiet 下若 l10n 或快速动作数据演化会破基线——答：seed 走安静 harness（dashboard/plan 静默仓），基线演化随 l10n 键变更需重签，属 golden 常规维护"
+  ],
+  "placeholders_note": "reviewer 字段由独立审查会话覆写（V4-B04 判例）"
+}

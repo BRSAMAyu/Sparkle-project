@@ -1,0 +1,65 @@
+{
+  "task": "V4-G02",
+  "title": "对话/卡住/Hybrid/运行台——四风格商业化完备（chat/aurora/openclaw 家族打磨）",
+  "kind": "implementation",
+  "status": "REVIEW_READY",
+  "branch": "agent/v4/g02",
+  "worktree": "/Users/brsama/code/GitHub/wtG02",
+  "base_commit": "f64d8590（agent/v4/g02 建卡头；main 同源 F566 闭账态）",
+  "source_sha": "96f8d1bbd6ca00c1c27ce674db05af7dd0dcf92d（分支头；交付 = b3eeac17 主提交 + 96f8d1bb 走查回环修正）",
+  "captured_at": "2026-09-29 +0800",
+  "timezone": "Asia/Shanghai (+0800)",
+  "resume_note": "本卡为断点续跑：前任 agent 因宿主机强制重启阵亡，worktree 未提交改动 dirty=34（33 lib + 1 新测文件）为其工作。本会话先 git status + 逐文件 diff 盘点（全部保留、零丢弃），在其基础上继续：修复其对比度守卫暴露的剩余缺陷（G02-D3 QuietChip 描边）、测试配对同步出厂口径、补齐 reduce-motion/200%/golden+语义钉验收面并闭环提交。",
+  "prior_work_inventory": {
+    "dirty_files": 34,
+    "pattern": [
+      "design_system.dart：textTertiary 停止 textSecondary@0.6 透明度派生 → 转发 B2-3a 定标槽；新增 DS.toneOnTint 收敛槽（浅档 tone 向 textPrimary 收敛 12%，深档恒等）",
+      "流式气泡（chat_screen）：码面/描边去亮度分叉（G02-D1/D2 前任标注）",
+      "家族 30 文件：fontSize 10/11/11.5/12.5/13 → DS.fontSizeXs；透明度压文字 5 处 → 离散槽；classic-only 字面量退役（E8F5EF/B5DDC8/7C3AED/F2EAFE/0EA5A4/4F46E5/F7F9FC/D8E1EF/Colors.white@0.5）",
+      "toneOnTint 应用：status_awareness_bar 多胶囊族/agent_workflow_panel/_Badge/openclaw primitives/chat_accessory_pill",
+      "新测：v4_g02_family_contrast_guard_test.dart（四档对比度守卫 + 透明度压文字禁令扫描；遗留 2 处冗余 import info + classic 7 配对未达阈——本会话闭合）"
+    ]
+  },
+  "environment": {
+    "platform": "darwin 25.6.0 arm64",
+    "flutter": "3.41.3 stable（homebrew，本机唯一安装；48c32af034）",
+    "note": "worktree 缺 gitignored mobile/lib/gen（proto 产物），前任自主仓检出拷入（不入库）后 analyze/test 全通——FIX-561/FIX-566 同款环境处置"
+  },
+  "redline_zero_diff": {
+    "claim": "chat_provider / 滚动物理 / F566 语义零 diff（纯呈现层）",
+    "verification": "diff 全量核对：38 文件全部位于 presentation/widgets|screens、data/services/message_notification_service（仅 InAppNotificationBanner/MessageBadge 呈现样式）、core/design/design_system（getter 派生层）；chat_provider.dart、chat_scroll_anchor、_scrollToBottom/_handleScroll、F566 两测文件零改动；chat_f566 两测 5/5 全绿"
+  },
+  "defects": {
+    "fixed_by_prior_agent_inherited": [
+      {"id": "G02-D1", "desc": "流式码面深档 neutral700 叠浅墨文本四档塌陷（classic-dark 1.94 / dusk 1.55 / paperDay 1.13 / quiet 1.13:1）→ 与落定路径同源 surfaceTertiary", "evidence": "修正后四档 8.33-14.04:1（本会话探针表见 test_results.json streaming_probe）"},
+      {"id": "G02-D2", "desc": "流式气泡描边亮度分叉取灰 + openclaw 展开面 Colors.white@0.5（dusk 白纱）→ 主题描边槽 + surfacePrimary@0.5", "evidence": "golden 语义钉（白面字面量零命中）+ dusk 目检"},
+      {"desc": "toneOnTint 收敛槽（classic tone@tint 4.30-4.48:1 → ≥4.9:1）+ 字号令牌化 + 字面量退役 + 透明度压文字禁令", "evidence": "对比度守卫 5/5"}
+    ],
+    "fixed_by_this_session": [
+      {"id": "G02-D3", "desc": "卡住 QuietChip 描边 borderSubtle 对胶囊面（surfaceSecondary@0.7 叠卡面同源，描边为唯一辨识边界）classic 实测 1.22:1 < 非文字关键部件阈 3.0；border(neutral300)=1.29、neutralOutline=2.26、neutral500=2.85 递进均不足 → neutral600（classic 5.18:1，四档守卫钉死）", "evidence": "task_stuck_card.dart + v4_g02_family_contrast_guard_test + golden 语义钉（border==DS.neutral600）"},
+      {"id": "G02-D4", "desc": "家族 9 处无条件 repeat 动画不尊重 reduce-motion（status_awareness_bar _ShimmerDot、action_card 呼吸、plan_review_card 扫光、agent_avatar_stack/switcher 脉动、collaboration_timeline shimmer、regeneration_prompt 进度、review_appeal_card 徽章脉动、aurora 打字点）→ 全部降级静态终态（S01 判例：不装动画壳、直落终态；恢复正常重挂）", "evidence": "活钉：AgentAvatarStack reduce-motion 下 pumpAndSettle（修前必超时）+ 控制组（正常模式脉动可观测）；9 文件逐一登载"},
+      {"id": "G02-D5", "desc": "（走查回环自纠）_ShimmerDot 静态分支初版误渲染四点列——组件即单点槽、外层 _ShimmerRow 负责四点排布（四点×四槽=16 点视觉 bug）→ 单静态点；aurora 打字点改单渲染路径（停表+相位冻结 0.0 → 三点全 0.2）", "evidence": "SPACING-RHYTHM 棘轮暴露（spacingHalfStep +1），修正后棘轮 PASS"}
+    ],
+    "behavior_deferrals": [],
+    "note": "零行为语义缺陷登记需求：走查未发现需立 FIX 的行为面问题；_buildTimelineNode 引用外层 isLast getter（恒 false，连接线不渲染）为既有行为，未顺手修（超风格面，留给行为卡裁决）"
+  },
+  "commands_and_exit_codes": [
+    {"cmd": "flutter analyze --no-pub", "exit": 0, "result": "No issues found!"},
+    {"cmd": "flutter test test/widget/v4_g02_family_contrast_guard_test.dart --concurrency=1", "exit": 0, "result": "5/5 passed"},
+    {"cmd": "flutter test test/widget/v4_g02_family_golden_semantic_test.dart --update-goldens --concurrency=1（macOS 签发）后无 flag 复跑", "exit": 0, "result": "27/27 passed（确定性复现）"},
+    {"cmd": "flutter test test/unit/chat_f566_retry_reuse_path_test.dart test/widget/chat_f566_retry_force_scroll_jump_latest_test.dart --concurrency=1", "exit": 0, "result": "5/5 passed（F566 语义零 diff 红线）"},
+    {"cmd": "flutter test test/features/chat test/widget/v4_g02_family_{contrast_guard,golden_semantic}_test.dart test/features/recovery --concurrency=1（同口径复跑）", "exit": 0, "result": "329/329 passed"},
+    {"cmd": "flutter test test/unit test/core/widgets test/widget/chat_scroll_test.dart … openclaw 两测 --concurrency=1", "exit": 0, "result": "348 passed + 3 skipped"},
+    {"cmd": "flutter test test/core/design test/features/aurora --concurrency=1", "exit": 0, "result": "286/286 passed"},
+    {"cmd": "flutter test test/widget --concurrency=1", "exit": 0, "result": "527 passed + 4 skipped"},
+    {"cmd": "受影响面补跑（status bar/aurora/G02 两测）", "exit": 0, "result": "54/54 passed"},
+    {"cmd": "action_card/status bar 邻接 7 测文件", "exit": 0, "result": "21/21 passed"},
+    {"cmd": "python3 scripts/guards/check_ui_design_tokens_ratchet.py", "exit": 0, "result": "PASS — color=213/275, fontSize=557/727（159 files；较基线只降）"},
+    {"cmd": "python3 scripts/guards/check_dl_spec_ratchet.py", "exit": 0, "result": "PASS — persistentRepeatLoop=53/56（本卡 56→53 只降不升）"},
+    {"cmd": "python3 scripts/guards/check_spacing_rhythm_ratchet.py", "exit": 0, "result": "PASS — spacingHalfStep=1590/1623"},
+    {"cmd": "bash scripts/run_all_rule_guards.sh --rule SPACING-RHYTHM / DL-SPEC / UI-TOKENS", "exit": 0, "result": "all rule guards passed"},
+    {"cmd": "全量守卫基线（bash scripts/run_all_rule_guards.sh）", "exit": 1, "result": "SPACING-RHYTHM FAIL（本卡 spacingHalfStep 两文件 +1）→ 走查回环修正后单跑 PASS；其余规则族基线记录见 limitations（ENUM-PARITY PASS 77 条 WARN=7 等），全量绿以单规则复跑为准"}
+  ],
+  "l10n": "arb 键集合零改动（本卡纯呈现层，无新增文案；golden 面文案 = 既有 l10n 键 + style_preview_seed 冻结 seed）",
+  "artifacts_sha256_file": "v4/evidence/V4-G02/artifacts_sha256.txt"
+}
