@@ -8,7 +8,14 @@
 // 判例：pixel_a11y_f06_test / G01 家族对比度复算 / G02 家族守卫（WCAG 2.x
 // 相对亮度公式；半透明面按 alpha 解析合成到最近不透明宿主面后计算）。
 //
-// 钉住的都是本家族修过的真实缺陷配对（详见各 case 注）：
+// 配对层钉：本文件全部为 token 数学复算（E- 控制组判负防探针自证），
+// 钉的是本家族修过的真实缺陷配对；不泵产品屏——实现接线由实现级钉
+// 承载（V4-G06R1/F-2：地图状态 chip 见
+// test/features/achievement/presentation/screens/achievement_map_state_chip_nail_test.dart，
+// 布局/色彩形态见 g06_four_style golden）。配对层与实现层两层口径
+// 不可互替，缺任一层即出现 R1/M-B 式 mutation 存活盲区。
+//
+// 配对清单（详见各 case 注）：
 //   · streak 日历格数字墨（按实际格底实算，含 weak=success×warning 中间色）
 //   · 成就解锁弹窗固定美术渐变双端墨（ThemeUtils.getContrastSafeTextOnGradient）
 //   · 弹窗内圆图标（rarity identity 色对 neutral0 浅底，非文字 ≥3:1）
@@ -92,9 +99,10 @@ void main() {
     test('成就解锁弹窗固定美术渐变双端墨 ≥4.5:1（三稀有度，四档同值）', () {
       // 庆祝卡=固定美术底（milestone 豁免同款）：渐变双端收敛为稀有度
       // 身份色系（端点亮度同侧），与 achievement_unlock_dialog
-      // ._getRarityColors 同源。随档语义色退出填充位——classic-light 的
-      // warning/brandSecondary/info 端曾使三稀有度全部无公共墨色
-      // （2.95/4.499/4.02:1），旧配对在 E- 控制组钉死。
+      // ._getRarityColors 同源。随档语义色退出填充位——classic-light 默认
+      // 板的 warning/brandSecondary/info 端曾使三稀有度全部无公共墨色
+      // （真实默认板旧配对 3.431/4.498/3.600:1，V4-G06R1/F-1 勘误口径），
+      // 旧配对在 E- 控制组钉死。
       const gold = Color(0xFFFFD700); // DS.rarityRare
       const purple = Color(0xFF9B59B6); // DS.rarityEpic
       const coral = Color(0xFFFF6B6B); // DS.rarityLegendary
@@ -128,20 +136,25 @@ void main() {
     });
 
     test('E- 控制组：旧随档语义渐变端配对必须判负（无公共墨色的实证）', () {
-      // classic-light 旧第二端（warning/brandSecondary/info）与固定
-      // identity 端的最好公共墨下界——全部低于正文 4.5:1。
+      // classic-light（=SparkleColors.light() 默认板，V4-G06R1/F-1 勘误：
+      // 直接引用 _allProfiles['classic-light'] 真值，R1 首版曾误用
+      // highContrast-light 的 semanticWarning #8B4500 与 CB-friendly-light
+      // 的 brandSecondary/info #56B4E9/#0072B2）旧第二端与固定 identity
+      // 端的最好公共墨下界——真实默认板复算 3.431/4.498/3.600，
+      // 全部低于正文 4.5:1（epic 贴线但不达标）。
+      final classic = _allProfiles['classic-light']!;
       final impossiblePairs = <String, (Color, Color)>{
-        'rare×classic-light(gold→warning#8B4500)': (
+        'rare×classic-light(gold→semanticWarning)': (
           const Color(0xFFFFD700),
-          const Color(0xFF8B4500),
+          classic.semanticWarning,
         ),
-        'epic×classic-light(purple→sky#56B4E9)': (
+        'epic×classic-light(purple→brandSecondary)': (
           const Color(0xFF9B59B6),
-          const Color(0xFF56B4E9),
+          classic.brandSecondary,
         ),
-        'legendary×classic-light(coral→info#0072B2)': (
+        'legendary×classic-light(coral→semanticInfo)': (
           const Color(0xFFFF6B6B),
-          const Color(0xFF0072B2),
+          classic.semanticInfo,
         ),
       };
       for (final MapEntry(key: label, value: ends) in impossiblePairs.entries) {

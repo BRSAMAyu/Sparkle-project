@@ -15,7 +15,7 @@
       "covers": [
         "streak 格数字墨按实际格底实算（含 weak 中间色）四档 ≥4.5:1",
         "弹窗固定美术渐变双端墨（身份色系收敛后）≥4.5:1",
-        "E-: classic-light 旧随档语义渐变端配对（2.95/4.499/4.02:1）判负",
+        "E-: classic-light 旧随档语义渐变端配对判负（V4-G06R1/F-1 勘误后引 SparkleColors.light() 真值：3.431/4.498/3.600）",
         "弹窗内圆图标墨（onColor(neutral0)）≥3:1 + E- 旧 rare identity 金 2.89:1 判负",
         "庆祝可关文案 surfacePrimary 卡面承诺 ≥4.5:1",
         "光子访客横幅 warning 墨压 warningLight ≥4.5:1",
@@ -39,6 +39,35 @@
       ],
       "reduce_motion_note": "MediaQuery.disableAnimations=true 泵制：火堆静帧/彩带不发射/徽章停表——golden 同时钉住 reduce-motion 等价形态"
     }
+  },
+  "rework_r1": {
+    "erratum": "E- 旧渐变配对改钉 SparkleColors.light() 默认板真值后数字勘误：2.95/4.499/4.02（旧合成对，其中实为 4.050）→ 真实 classic-light 旧配对 3.431/4.498/3.600，判负结论不变",
+    "new_pins": {
+      "map_state_chip_impl_nail": {
+        "file": "mobile/test/features/achievement/presentation/screens/achievement_map_state_chip_nail_test.dart",
+        "tests": 1,
+        "layer": "实现级（配对层守卫不覆盖的实现接线，闭 R1/M-B mutation 存活盲区）",
+        "asserts": [
+          "渲染墨 == DS.textSecondary（token 接线契约，M-B 回退必红）",
+          "渲染墨对 deepSpace 详情面板（配对层同式模型）≥4.5:1（classic-light 可见性语义）"
+        ],
+        "pump_path": "真实 AchievementMapScreen → 种子仓单节点 blocked → 画布节点点按 → showSensoryModalBottomSheet → _AchievementNodeBottomSheet → _MetaChip（disableAnimations=true reduce-motion 形态）",
+        "mutation_probe": {
+          "M-B": "color: DS.textSecondary → Colors.white70 → 钉红（Expected Color(0.4235,0.3961,0.3647)=#6C655D / Actual Color(alpha:0.7020,1,1,1)=white70）",
+          "restored": "git checkout -- 还原 → 钉绿"
+        }
+      }
+    },
+    "suites": [
+      { "path": "test/widget/v4_g06_family_contrast_guard_test.dart", "passed": 11, "failed": 0, "note": "E- 改钉默认板后判负不变" },
+      { "path": "test/goldens", "passed": 86, "failed": 0, "skipped": 15, "note": "零漂移" },
+      { "path": "test/features/achievement", "passed": 16, "failed": 0, "note": "含新钉" },
+      { "path": "test/features/community + test/features/photon + test/core/design", "passed": 415, "failed": 0 },
+      { "path": "test/widget/u15_longtail_closure_guard_test.dart", "passed": 14, "failed": 0 },
+      { "path": "scripts/guards/check_dl_spec_ratchet.py", "exit": 0, "note": "persistentRepeatLoop=52/56，contract 屏 2≤3" },
+      { "path": "scripts/run_all_rule_guards.sh", "exit": 1, "note": "失败仅 AQ/BG 环境性既有（backend/app/gen 未生成，非本卡）；DL-SPEC PASS" }
+    ],
+    "analyzer": { "cmd": "flutter analyze --no-pub", "issues": 0 }
   },
   "baseline_issuance": "flutter test --update-goldens test/goldens/g06_four_style/（本机=基线机，单次签发；变更需独立签理由）"
 }

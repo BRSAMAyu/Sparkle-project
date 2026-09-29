@@ -61,5 +61,27 @@
     "rf06_high_risk_faces_touched": 0,
     "shop_files_touched": 0,
     "asset_ledger_changes": 0
+  },
+  "rework_r1": {
+    "basis": "review_r1.md（PASS_WITH_CHALLENGES）：F-3 HIGH 合并门 + F-1/F-2 MEDIUM；返修基 = a885b27f",
+    "dispositions": {
+      "F-3": "①收敛回单一启动点（推荐项）：_AnimatedProgressBarState 启停决策收敛进 _syncGlowMotion()，三个生命周期入口只调它，`.repeat` 全文件唯一 4→2 ≤ 基线 3；不选②（本文件可收敛，白名单前提不成立）不选③（基线 JSON 与守卫序列化格式不一致，--update-baseline 会全文件重排）；reduce-motion 等价语义不变",
+      "F-1": "E- 控制组三对改引 _allProfiles['classic-light']（SparkleColors.light()）真值 #7D5C26/#7A8BA6/#48678D，替换误用的 highContrast/CB 板色；重算 3.431/4.498/3.600 全部 <4.5 判负不变（'4.02' 实为 4.050，勘误入 B6e）",
+      "F-2": "新增实现级 widget 钉 achievement_map_state_chip_nail_test.dart：真实泵制 map 屏→点按节点→详情面板 _MetaChip，断言渲染墨==DS.textSecondary 且对 deepSpace 面板 ≥4.5:1；M-B mutation（white70 回退）红 / 还原绿 双向探针亲跑",
+      "minor": "守卫头注收窄为配对层/实现层两层口径（F-2 措辞）；legendary '7.6/8.9' 第二值勘误 10.12（N2，B6e 行）"
+    },
+    "commands": [
+      { "cmd": "flutter analyze --no-pub", "exit": 0, "result": "No issues found!" },
+      { "cmd": "python3 scripts/guards/check_dl_spec_ratchet.py", "exit": 0, "result": "PASS persistentRepeatLoop=52/56（contract 屏 2≤3）" },
+      { "cmd": "flutter test test/widget/v4_g06_family_contrast_guard_test.dart --concurrency=1", "exit": 0, "result": "+11 全绿（E- 改钉默认板后判负不变）" },
+      { "cmd": "flutter test test/features/achievement/presentation/screens/achievement_map_state_chip_nail_test.dart --concurrency=1", "exit": 0, "result": "+1 绿；同钉在 M-B mutation 形态下红（Expected #6C655D / Actual white70）" },
+      { "cmd": "flutter test test/goldens --concurrency=1", "exit": 0, "result": "+86 ~15 全绿（零漂移）" },
+      { "cmd": "flutter test test/features/achievement --concurrency=1", "exit": 0, "result": "+16 全绿（含新钉）" },
+      { "cmd": "flutter test test/features/community test/features/photon test/core/design --concurrency=1", "exit": 0, "result": "+415 全绿" },
+      { "cmd": "flutter test test/widget/u15_longtail_closure_guard_test.dart --concurrency=1", "exit": 0, "result": "+14 全绿" },
+      { "cmd": "bash scripts/run_all_rule_guards.sh", "exit": 1, "result": "失败仅 AQ/BG（backend/app/gen 未生成的环境性既有失败，非本卡——本卡零 backend/生成物触碰）；DL-SPEC PASS；V4S04-ASSETS PASS（ledger=49）" }
+    ],
+    "golden_baseline": "8 张 g06 golden PNG SHA 逐字节零变更（artifacts_sha256.txt PNG 行不动）",
+    "card_status": "维持 REVIEW_READY，待同卡再审闭账；不 push"
   }
 }

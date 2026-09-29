@@ -692,6 +692,10 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
   late final AnimationController _glowController;
   // V4-G06 reduce-motion 等价：系统要求减动效时满进度辉光停表为静态半亮，
   // 信息（已完成）由进度条本身承载，不靠持续动画。
+  // V4-G06R1（F-3 闭账）：启停决策收敛进 _syncGlowMotion 单一启动点——
+  // initState/didChangeDependencies/didUpdateWidget 三个生命周期入口只调
+  // 它，`.repeat` 全文件唯一，生命周期拆分不再抬高 DL-SPEC
+  // persistentRepeatLoop 棘轮计数；判定矩阵与逐点写法语义等价。
   bool _reduceMotion = false;
 
   @override
@@ -701,46 +705,40 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    if (widget.progress >= 1.0 && !_reduceMotion) {
-      unawaited(_glowController.repeat(reverse: true));
-    } else if (widget.progress >= 1.0) {
-      _glowController.value = 1.0;
-    }
+    _syncGlowMotion();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _updateMotionPreference(context.reduceMotion);
-  }
-
-  void _updateMotionPreference(bool reduceMotion) {
-    if (_reduceMotion == reduceMotion) return;
-    _reduceMotion = reduceMotion;
-    if (widget.progress < 1.0) return;
-    if (_reduceMotion) {
-      _glowController
-        ..stop()
-        ..value = 1.0;
-    } else if (!_glowController.isAnimating) {
-      unawaited(_glowController.repeat(reverse: true));
-    }
+    _reduceMotion = context.reduceMotion;
+    _syncGlowMotion();
   }
 
   @override
   void didUpdateWidget(_AnimatedProgressBar old) {
     super.didUpdateWidget(old);
-    if (widget.progress >= 1.0 &&
-        !_glowController.isAnimating &&
-        !_reduceMotion) {
-      unawaited(_glowController.repeat(reverse: true));
-    } else if (widget.progress >= 1.0 && _reduceMotion) {
+    _syncGlowMotion();
+  }
+
+  /// 单一启动点（幂等）：满格且未减动效才持续辉光；减动效停表静态半亮；
+  /// 进度回落停表归零。
+  void _syncGlowMotion() {
+    if (widget.progress < 1.0) {
+      if (_glowController.isAnimating) {
+        _glowController
+          ..stop()
+          ..value = 0;
+      }
+      return;
+    }
+    if (_reduceMotion) {
       if (_glowController.isAnimating) _glowController.stop();
       if (_glowController.value != 1.0) _glowController.value = 1.0;
-    } else if (widget.progress < 1.0 && _glowController.isAnimating) {
-      _glowController
-        ..stop()
-        ..value = 0;
+      return;
+    }
+    if (!_glowController.isAnimating) {
+      unawaited(_glowController.repeat(reverse: true));
     }
   }
 
