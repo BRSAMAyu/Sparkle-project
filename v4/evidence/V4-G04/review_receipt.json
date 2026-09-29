@@ -1,0 +1,23 @@
+{
+  "task": "V4-G04",
+  "status": "PENDING",
+  "independent_reviewers_required": 1,
+  "note": "三程续跑收口完成（实现 commit 1d699d83，28 files +1724/-98；证据随后独立 commit）。终证台账（本机可复跑真实退出码）：全量单批 +3408 ~23 All tests passed（F1，第二程发起/第三程收割）；S8/S9 证据路径修复后 G04 套 +21 全绿且 raw/ 成对证据 8 文件真实落盘（F2）；core/design 终态 +335 全绿（F3）；analyze No issues found（F4）；repeat 棘轮 48 文件/90 调用点 = base 零漂移；ui-tokens 棘轮 PASS color=123/275 fontSize=632/727。第三程补修两处前任遗留证据路径缺陷（S8 裸 await toImage 超时 / S9 语义 dump 恒空表使跨档钉空转），均测试文件内、断言语义不减，登记于 diff_or_evidence_only §第三程续跑与 limitations §1.5。断点三程事实（双会话并发产出→静默接管→孤儿回归收割）如实登记。审查挑战 CH-1~CH-6 预登记于 limitations.md §4。自报完成不算完成——本 receipt 在独立未参与会话审查落账前恒为 PENDING。",
+  "reviewer": null,
+  "verdict": null,
+  "challenges": [
+    "CH-1 三程续跑完整性（三程产出无同点互写，以 commit 拆分与时间线核对）",
+    "CH-2 palette 落位 core/design 是否规避棘轮（反方：pixel_preview_theme 先例 + 守卫立法本意）",
+    "CH-3 S5 掌握度契约钉更新是否删断言取绿（反方：断言不减 + owner 钉保留 + G4-1 新增）",
+    "CH-4 上传浮层 reduce-motion 证据层级（位置零位移 vs RGBA 字节级，G01 CH-6 同构）",
+    "CH-5 触达 48dp 的密度收窄实测口径（Container 50dp + tight 48 约束 vs 主题密度 -2dp）",
+    "CH-6 第三程 S8/S9 修复是否恰在证据生成前（反方：缺陷在常规跑不可达分支、F1 全量先于修复且全绿；正方可主张『先声明完成』的时序问题——差异仅测试文件证据落盘路径，产品码零触碰）"
+  ],
+  "evidence_dir": "v4/evidence/V4-G04/",
+  "base_sha": "27a47d2ff864f9766ff330030df0d5d0e45221f0",
+  "head_sha": "1d699d83（实现 commit；证据文件在其后的证据 commit，见分支顶）",
+  "branch": "agent/v4/g04",
+  "worktree": "/Users/brsama/code/GitHub/wtG04",
+  "date_created": "2026-09-29",
+  "date_final_evidence": "2026-09-29"
+}

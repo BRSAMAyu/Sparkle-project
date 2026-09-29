@@ -1,0 +1,60 @@
+{
+  "task": "V4-G04",
+  "date": "2026-09-29",
+  "flutter": "3.41.3 stable",
+  "concurrency": "全程 --concurrency=1（AGENTS.md 资源红线）",
+  "batches": [
+    {
+      "id": "F1",
+      "purpose": "全量回归单批（第二任续跑会话 18:49:53 后台发起，配额中断后由第三程会话收割；product code 与实现 commit 1d699d83 完全一致，其后仅有测试文件内证据路径修复）",
+      "command": "cd mobile && flutter test --concurrency=1（mobile 全量）",
+      "passed": 3408,
+      "skipped": "~23（既有 skip，非本卡新增）",
+      "failed": 0,
+      "exit_code": 0,
+      "wall_clock": "约 27 分钟（18:49:53 启动 → ~19:17 收尾）",
+      "runner_tail": "+3408 ~23: All tests passed! / FULL_EXIT=0（/tmp/g04_full.log）",
+      "note": "含 golden 套 test/goldens/g04_four_style/（2 测 8 张常态容差比对）与 test/core/design/g04_family_four_style_test.dart 在内全绿"
+    },
+    {
+      "id": "F2",
+      "purpose": "G04 套 + G04_EVIDENCE_DIR 证据落盘（第三程续跑修复 S8/S9 后终态）",
+      "command": "G04_EVIDENCE_DIR=<abs>/v4/evidence/V4-G04/raw flutter test --concurrency=1 test/core/design/g04_family_four_style_test.dart",
+      "passed": 21,
+      "failed": 0,
+      "exit_code": 0,
+      "runner_tail": "00:02 +21: All tests passed!",
+      "note": "修复前实况（如实登记）：S8 修复前同命令 D 组证据落盘路径裸 await toImage 在 fake-async 区永不完成 → 10 分钟超时 -1（两连跑复现）；S9 修复前语义 txt 恒 0 字节（跨档恒等钉空转）。两修后 +21 全绿且 raw/ 8 文件真实落盘"
+    },
+    {
+      "id": "F3",
+      "purpose": "core/design 目录终态复跑（S8/S9 测试文件修复后全目录认证）",
+      "command": "cd mobile && flutter test --concurrency=1 test/core/design",
+      "passed": 335,
+      "failed": 0,
+      "exit_code": 0,
+      "runner_tail": "00:59 +335: All tests passed!"
+    },
+    {
+      "id": "F4",
+      "purpose": "flutter analyze（终态）",
+      "command": "cd mobile && flutter analyze",
+      "result": "No issues found! (ran in 6.4s)",
+      "exit_code": 0
+    }
+  ],
+  "ratchets": {
+    "repeat": {
+      "command": "git grep -l '\\.repeat(' -- 'mobile/lib/*.dart' | wc -l；git grep -c 求和",
+      "base_27a47d2f": "48 文件",
+      "head": "48 文件 / 90 调用点",
+      "verdict": "零漂移，只降不升达标"
+    },
+    "ui_tokens": {
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py",
+      "exit_code": 0,
+      "verdict": "PASS — color=123/275（基线冻结时 225，只降）、fontSize=632/727 持平（177 文件）"
+    }
+  },
+  "note": "第二任会话登记的分批回归（galaxy 191 / error_book+learning+knowledge+seed_library 68 / core-design 335）由 F1 全量单批 3408 全绿收编覆盖；本文件数字均为本机可复跑命令的真实退出码与 runner 尾行。"
+}

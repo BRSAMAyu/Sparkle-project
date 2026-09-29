@@ -1,0 +1,151 @@
+{
+  "task": "V4-G04",
+  "title": "星图/学习/错题/资料——四风格商业化完备",
+  "date": "2026-09-29",
+  "executor": "V4-G04 第三程续跑会话（worktree /Users/brsama/code/GitHub/wtG04，分支 agent/v4/g04，base=27a47d2f；两任前任均配额中断：第一任遗留 dirty 19 文件全部继承，第二任完成实现与走查收口后于 18:49 发起全量回归、写至证据文档即中断，其后台回归由本会话收割；实现 commit 1d699d83，零丢弃）",
+  "source_sha_base": "27a47d2ff864f9766ff330030df0d5d0e45221f0",
+  "source_sha_head": "1d699d83（实现 commit；证据文件在其后的证据 commit）",
+  "no_push": true,
+  "heavy_token_required": false,
+  "risk": "normal",
+  "lock": {
+    "required": "ui-polish-g04",
+    "lease": "NOT_RUN（sparkle-coordination-v2 私有远端未配置于本机，G01/S01 同口径）；冲突面以 diff 自证：RF-06 三高危文件（dashboard_screen/compact_status_bar/task_execution_screen）零触碰、无 shop|/s04|v3-output|routes/|backend/|proto/ 命中（grep 实证）；双会话并发产出事实与处置见 diff_or_evidence_only §断点续跑与 §第三程续跑"
+  },
+  "toolchain": {
+    "flutter": "3.41.3 stable",
+    "host": "darwin 25.6.0 arm64",
+    "resource_redlines": "全程 flutter test --concurrency=1；每轮前 df -h /（全程 35Gi 可用，未触 15G 红线）；swap 系统级 3.8G/5G（macOS 常态，无测试期耗尽）；mobile/build 用后即清；golden PNG 为入库基线资产（B04/G01 同判例）非运行时垃圾"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "盘点继承（git status 17 modified + 4 untracked 入口；git diff 1043 行逐行读取）",
+      "command": "git status && git diff && git diff --stat",
+      "exit_code": 0,
+      "note": "前任两程产出全部继承零丢弃：14 修（A1-A12）+ palette + G04 套 + golden 套 + 证据文档三件"
+    },
+    {
+      "id": 2,
+      "purpose": "孤儿进程判定：发现第二任会话 18:49:53 发起的 flutter test --concurrency=1 全量后台跑仍在执行（父 zcode-cli 宿主）",
+      "command": "ps -o pid,ppid,lstart,command -p 10954 10956; tail /tmp/g04_full.log",
+      "exit_code": 0,
+      "note": "决策：不杀不弃——该跑正是 receipt 引用的『全量单批』证据，等其完成收割（约 27 分钟）；期间只做只读审计避免 CPU 争用污染时序敏感测试"
+    },
+    {
+      "id": 3,
+      "purpose": "卡面规格与兄弟判例对照",
+      "command": "tasks.json V4-G04 全字段；v4/02_design/{SCREEN_FAMILIES,ACCESSIBILITY_ASSETS,DESIGN_SYSTEM}.md 抽查；v4/evidence/V4-G01/ 五件套结构对照",
+      "exit_code": 0,
+      "note": "48dp 自定标准、4.5:1/3:1 阈值、G01 七文件结构（含 artifacts_sha256.txt）确认"
+    },
+    {
+      "id": 4,
+      "purpose": "双棘轮守卫（不依赖 flutter，等全量期间先跑）",
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py；git grep -l '\\.repeat(' -- 'mobile/lib/*.dart' | wc -l",
+      "exit_code": 0,
+      "note": "ui-tokens PASS color=123/275 fontSize=632/727；repeat 48 文件/90 调用点 = base 27a47d2f 零漂移"
+    },
+    {
+      "id": 5,
+      "purpose": "走查自证：家族令牌外颜色 owner 清点 + RF-06 禁触面",
+      "command": "grep -rln 'Color(0x' mobile/lib/features/{galaxy,documents,error_book,learning,knowledge,seed_library,vocabulary}/；git diff --name-only | grep -iE 'shop|/s04|v3-output|routes/|backend/|proto/|dashboard_screen|compact_status_bar|task_execution_screen'",
+      "exit_code": 0,
+      "note": "features 七模块仅 sector_config.dart 一个名单 owner（palette 在 core/design 层）；RF-06 零命中"
+    },
+    {
+      "id": 6,
+      "purpose": "FIX-581 边界核实（briefing 称 main 已合、本分支祖先核对）",
+      "command": "git merge-base --is-ancestor 188264fb HEAD",
+      "exit_code": 1,
+      "note": "本分支不含 FIX-581 merge——harness 为 0.5% 定容差版（FIX-383 单位口径）；与证据文档『FIX-581 另卡不归本卡』登记一致，golden 用 b04InstallTolerantComparator 同一模式"
+    },
+    {
+      "id": 7,
+      "purpose": "收割 F1 全量回归（第二任发起的孤儿跑）",
+      "command": "grep FULL_EXIT /tmp/g04_full.log",
+      "exit_code": 0,
+      "note": "+3408 ~23: All tests passed! FULL_EXIT=0（约 27 分钟）"
+    },
+    {
+      "id": 8,
+      "purpose": "G04 套证据落盘首跑（G04_EVIDENCE_DIR 置位）",
+      "command": "G04_EVIDENCE_DIR=... flutter test --concurrency=1 test/core/design/g04_family_four_style_test.dart",
+      "exit_code": 1,
+      "note": "D 组 10 分钟超时 -1（两连跑复现）——S8 缺陷实证：裸 await boundary.toImage 在 fake-async 测试区永不完成；无环境变量时不进落盘分支，故常规跑（含 F1 全量）全绿"
+    },
+    {
+      "id": 9,
+      "purpose": "S8 修复：D 组证据落盘包入 tester.runAsync 真异步窗口（F05 _capture / G05 同款判例）",
+      "command": "Edit mobile/test/core/design/g04_family_four_style_test.dart（toImage/toByteData/写盘移入 runAsync）",
+      "exit_code": 0,
+      "note": "超时消除；复跑发现语义 txt 0 字节——S9 缺陷浮出"
+    },
+    {
+      "id": 10,
+      "purpose": "S9 修复：语义树 dump 由 `widget is Semantics` 直查（泵内恒空，跨档恒等钉空转）改 F05 渲染层口径（RenderParagraph 文本 + RenderSemanticsAnnotations 标签）",
+      "command": "Edit 同文件 dumpSemantics；复跑",
+      "exit_code": 1,
+      "note": "首版 RenderSemanticsAnnotations.properties.label 非空判 String? 编译错，补 null 判后过（如实登记）"
+    },
+    {
+      "id": 11,
+      "purpose": "G04 套终态复跑（证据落盘）",
+      "command": "G04_EVIDENCE_DIR=... flutter test --concurrency=1 test/core/design/g04_family_four_style_test.dart",
+      "exit_code": 0,
+      "note": "00:02 +21: All tests passed!；raw/ 落盘 4 PNG（108-154KB）+ 4 语义树 txt（各 8515 字节，四档同构——钉非空转且通过）"
+    },
+    {
+      "id": 12,
+      "purpose": "flutter analyze 终态",
+      "command": "cd mobile && flutter analyze",
+      "exit_code": 0,
+      "note": "No issues found! (ran in 6.4s)"
+    },
+    {
+      "id": 13,
+      "purpose": "core/design 终态全目录复跑",
+      "command": "cd mobile && flutter test --concurrency=1 test/core/design",
+      "exit_code": 0,
+      "note": "00:59 +335: All tests passed!"
+    },
+    {
+      "id": 14,
+      "purpose": "实现 commit",
+      "command": "git add <16 产品文件 + palette + G04 套 + golden 套> && git commit",
+      "exit_code": 0,
+      "note": "1d699d83，28 files changed +1724/-98"
+    }
+  ],
+  "llm_usage": {
+    "actual_model_and_usage": "本卡为纯工程实现，无 LLM 调用、无模型产出物"
+  },
+  "diff_scope": {
+    "product_code_changed": 16,
+    "product_code_files": [
+      "mobile/lib/core/design/tokens_v2/galaxy_canvas_palette.dart（新增：画布身份色板单一名源，值逐位保留）",
+      "mobile/lib/features/documents/presentation/screens/document_library_screen.dart",
+      "mobile/lib/features/error_book/presentation/screens/error_detail_screen.dart",
+      "mobile/lib/features/error_book/presentation/screens/review_screen.dart",
+      "mobile/lib/features/error_book/presentation/widgets/error_card.dart",
+      "mobile/lib/features/galaxy/data/services/galaxy_monitoring_integration.dart",
+      "mobile/lib/features/galaxy/presentation/screens/galaxy_draft_review_screen.dart",
+      "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart",
+      "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart",
+      "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_document_upload_overlay.dart",
+      "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart",
+      "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart",
+      "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_simulation_settings_sheet.dart",
+      "mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart",
+      "mobile/lib/features/galaxy/presentation/widgets/galaxy_contribution_banner.dart",
+      "mobile/lib/features/knowledge/presentation/screens/knowledge_detail_screen.dart",
+      "mobile/lib/features/learning/presentation/screens/learning_journey_screen.dart"
+    ],
+    "test_files_changed": [
+      "mobile/test/core/design/g04_family_four_style_test.dart（新增 21 测 + 第三程 S8/S9 证据路径修复）",
+      "mobile/test/goldens/g04_four_style/g04_four_style_golden_test.dart（新增 2 测 8 张基线）",
+      "mobile/test/features/error_book/presentation/widgets/error_card_mastery_band_test.dart（契约钉随呈现契约更新）"
+    ],
+    "behavior_diff": "纯呈现层：颜色/墨色/tint/触达尺寸/一次迭代物化；无路由/状态/交互/契约变更"
+  }
+}
