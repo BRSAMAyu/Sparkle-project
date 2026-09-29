@@ -57,6 +57,7 @@ from app.schemas.galaxy import (
 )
 from app.services.decay_service import DecayService
 from app.services.expansion_service import ExpansionService
+from app.services.galaxy.capability_channel import CLIENT_SELF_REPORT_CHANNEL, CapabilityChannel
 from app.services.galaxy.mastery_evidence import EvidenceObservation, MasteryEvidenceType
 
 # WT337：节点详情 relatedPlans 标题不吃「TOUR 冲刺 {run}」token 名。
@@ -425,12 +426,27 @@ async def spark_node(
     点亮/增强知识点
 
     当用户完成学习任务时调用，更新掌握度并可能触发 LLM 拓展。
-    G-01: 附带 outcome 证据时走贝叶斯证据融合；缺省走 legacy 时间公式（封顶 40）。
+    V4-D04（FIX-562）：附带 outcome 证据时先过能力通道门——客户端自报主张
+    真相面恒为 SELF_REPORTED（无 D-02 账本条目、无 quiz 物化、无服务端核验）
+    → PRACTICED 通道，只解锁 + 留观测溯源，**永不推进掌握度后验**；服务端
+    核验的独立检验走 X-08 outcome 捕获 → G-02 吸收器（VERIFIED 才融合）。
+    缺省走纯时长活动痕迹路径（零掌握度增长）。
     """
     outcome_obs = None
     if request is not None and request.outcome is not None:
+        # FIX-562 · V4-D04 通道门：先经 D04 通道权威判定（capability_channel
+        # 单一事实源）。判 VERIFIED 即拒绝（fail-closed 防御面：词表若漂移，
+        # 此面也永不融合客户端主张）；PRACTICED/更严通道则把主张降级进自评
+        # 独立观察通道——``MasteryEvidenceType.SELF_REPORT``（融合权重 0、
+        # ``fuse_mastery`` 只记账不融合、账本重放跳过）：claim 留观测溯源，
+        # 融合面封死。
+        if CLIENT_SELF_REPORT_CHANNEL is CapabilityChannel.VERIFIED:  # pragma: no cover - 词表漂移防御
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="client self-reported outcome cannot be server-verified; fusion refused",
+            )
         outcome_obs = EvidenceObservation(
-            evidence_type=MasteryEvidenceType(request.outcome.evidence_type),
+            evidence_type=MasteryEvidenceType.SELF_REPORT,
             value=request.outcome.value,
             confidence=request.outcome.confidence,
         )

@@ -1,0 +1,124 @@
+{
+  "card": "V3-FIX-562",
+  "task": "spark client 自报绕过 D04 通道门（D04 一审 F-2 产品缺陷闭环，P2）",
+  "agent": "wtF562",
+  "branch": "fix/v4/f562-spark-selfreport",
+  "base_sha": "04b97fbefcbb22220b17a2d1f2872c7b7f1f6821",
+  "generated_at_local": "2026-09-29",
+  "kind": "fix",
+  "product_code_changed": true,
+  "environment": {
+    "worktree": "wtF562（git worktree add ../wtF562 -b fix/v4/f562-spark-selfreport main，exit 0）",
+    "python": "3.11.15（venv 共享主检出 /Users/brsama/code/GitHub/Sparkle-project/backend/.venv）",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2",
+    "ruff": "0.15.8",
+    "black": "26.3.1",
+    "note": "backend/app/gen 由主检出 cp -R 复制（gitignored 不入库）；worktree .env 将 DATABASE_URL 指向 sparkle_f562_test（TEST-DBGUARD 拒绝演示库形状）"
+  },
+
+  "defect_location": {
+    "bypass_face": "backend/app/api/v1/galaxy.py:430-436（main@04b97fbe 行号）——POST /nodes/{node_id}/spark 把客户端 SparkOutcomeEvidence（schemas/galaxy.py:79，仅 pydantic 界校验）直接构造成 EvidenceObservation 传 fusion 面",
+    "fusion_sink": "backend/app/services/galaxy/stats_service.py:163-166——spark_node 对任意非空 outcome 直接 fuse_mastery 贝叶斯融合（无通道判定）",
+    "reward_reach": "backend/app/services/galaxy/stats_service.py:319-330——mastery≥80 → AchievementEvent.NODE_MASTERED（成就光子奖励面可达）",
+    "channel_authority_bypassed": "backend/app/services/galaxy/capability_channel.py classify_outcome_channel（D04 唯一通道入口）与 TRUTH_CLASS_CHANNELS[SELF_REPORTED]→PRACTICED（:86-91）",
+    "caller_census": "spark_node 全部生产调用方中，仅该 REST 路由传 outcome；subtasks.py:133 / task_service.py:781,804 / galaxy_grpc_service.py:453 / event_listener.py:130 / feedback_service.py:354 均纯时长（D04 已零增长）"
+  },
+
+  "adjudication": {
+    "verdict": "DEFECT_FIX（修，非钉现状）",
+    "self_reported_semantics": "静态映射 SELF_REPORTED→PRACTICED 是 D04 有意的保守设计，不动：封闭词表 docstring 明文「自报完成……可解锁（参与足迹可见）、可留溯源，永不推进掌握度后验」；缺陷不在词表，在 spark 路由完全绕过 classify_outcome_channel。",
+    "evidence_a": "设计真源 v4/03_intelligence/DATA_AND_GRAPH.md §星图权威：「独立测验/修正过的练习证据才能支撑相应能力描述」——客户端主张的 quiz 无 D-02 账本条目、无 quiz 物化、无服务端核验，不是独立检验",
+    "evidence_b": "SparkOutcomeEvidence 自身契约「self_report 永远不接受为 outcome——自评走独立通道，不与测验混算」与路由实际按 claim 名义（quiz/task_outcome）融合自相矛盾——declared intent ≠ behavior，判定缺陷",
+    "evidence_c": "D04 卡面「在关系型主星图中接有效outcome」：「有效」由通道门定义（D-02 真相面 × 撤回投影）；该面的客户端 outcome 无真相面",
+    "evidence_d": "D04 一审 review_r1.md F-2 定性为「通道纪律的旁路面」，要求销账前显式处置；台账 v3/06_agent_fleet/DYNAMIC_ISSUES.md V3-FIX-562 行 OPEN",
+    "consequence_chain": "自报 quiz 90/0.9 一击把新节点推到 ~81（越过 mastered 门槛 80）→ NODE_MASTERED → 成就引擎读共享 mastery 标量发光子（奖励完整性面越权）",
+    "fix_per_ledger": "按台账修法第一选项「spark 路由 outcome 归 SELF_REPORTED 通道（融合面封死）」：capability_channel 新增 CLIENT_SELF_REPORT_CHANNEL 权威（等价引用封闭词表，单一事实源）+ 路由 fail-closed 拒绝门（权威判 VERIFIED 即 422，词表漂移也不融合）+ 主张降级 MasteryEvidenceType.SELF_REPORT 自评独立观察通道（G-01 既有词表：融合权重 0.0、fuse_mastery 只记账不融合 mastery_evidence.py:246-249、账本重放跳过）——claim 留观测溯源、参与足迹（解锁/时长/计数）照常",
+    "not_in_scope": "成就引擎 mastery_threshold 读共享标量的其余写入面（quiz 级服务端流：error book / exam sprint / set-point）非本缺陷面，未动；台账建议第二选项「服务端核验门」由既有 X-08 quiz 物化 → D-02 账本 → G-02 吸收器 VERIFIED 通道承担，不另建第二核验"
+  },
+
+  "changed_files": [
+    "backend/app/api/v1/galaxy.py（路由通道门 + fail-closed 拒绝 + docstring 对齐强制行为；+20/-2）",
+    "backend/app/services/galaxy/capability_channel.py（CLIENT_SELF_REPORT_CHANNEL 权威 + __all__；+11）",
+    "backend/tests/unit/test_capability_channel.py（+1 权威钉测：恒 PRACTICED 且等价引用词表）",
+    "backend/tests/api/test_fix562_spark_selfreport_channel_gate.py（新增 4 测：正例零融合/反例重复自报不可达 mastered/词表漂移 422/服务级合法融合不受损）",
+    "docs/contracts/openapi_snapshot.json（机械再生：仅 2 条 spark endpoint description——旧描述描述的是缺陷行为「附带 outcome 证据时走贝叶斯证据融合」，与新强制行为对齐；请求/响应 schema 零变化）"
+  ],
+
+  "commands": [
+    {
+      "purpose": "建 worktree + 复制 gitignored 生成产物",
+      "cmd": "git worktree add ../wtF562 -b fix/v4/f562-spark-selfreport main && cp -R Sparkle-project/backend/app/gen wtF562/backend/app/gen",
+      "exit_code": 0,
+      "evidence": "HEAD=04b97fbefcbb22220b17a2d1f2872c7b7f1f6821（main 最新，含 FIX-562 派发提交）"
+    },
+    {
+      "purpose": "修复前基线：D04 通道契约测全绿",
+      "cmd": "pytest tests/unit/test_capability_channel.py tests/services/galaxy/test_outcome_absorption_channels.py tests/services/galaxy/test_spark_activity_trace_and_capability_labels.py -q",
+      "exit_code": 0,
+      "evidence": "29 passed + 14 passed（两批）；确认基线无既有失败"
+    },
+    {
+      "purpose": "mutation 自验（反证可失败）：临时把路由恢复为修复前行为（claim 按名义类型直传融合）",
+      "cmd": "python3 inline-mutation（SELF_REPORT → MasteryEvidenceType(request.outcome.evidence_type)）&& pytest tests/api/test_fix562_spark_selfreport_channel_gate.py -q",
+      "exit_code": 1,
+      "evidence": "2 failed（test_self_reported_quiz_claim_never_fuses_mastery / test_repeated_self_report_claims_cannot_reach_mastered）+ 2 passed（drift 门测钉的是拒绝门本身；服务级对照面不受 mutation 影响）——正反两面均可失败，钉住缺陷而非实现细节；随后恢复修复，git diff --stat 复核"
+    },
+    {
+      "purpose": "修复后：FIX-562 新测 + 通道契约测",
+      "cmd": "pytest tests/api/test_fix562_spark_selfreport_channel_gate.py tests/unit/test_capability_channel.py -q",
+      "exit_code": 0,
+      "evidence": "27 passed（新增 4 + 通道 23，含新增权威钉测）"
+    },
+    {
+      "purpose": "D04 通道契约不削弱：吸收链/穷举/重放/统计全量回归",
+      "cmd": "pytest tests/unit/test_capability_channel.py tests/services/galaxy/test_outcome_absorption.py tests/services/galaxy/test_outcome_absorption_channels.py tests/services/galaxy/test_spark_activity_trace_and_capability_labels.py tests/services/galaxy/test_mastery_evidence.py tests/services/galaxy/test_mastery_effect_kind_replay.py tests/services/galaxy/test_stats_service.py -q",
+      "exit_code": 0,
+      "evidence": "121 passed，零断言削弱（本分支对 D04 测试文件零删改，仅 additive 钉测）"
+    },
+    {
+      "purpose": "galaxy 服务目录全量 + 关联面回归",
+      "cmd": "pytest tests/services/galaxy/ -q；pytest tests/services/test_x08_outcome_ledger_gj.py tests/unit/test_j06_hybrid_journey.py -q；pytest tests/api/test_task_complete_galaxy_outbox.py -q；pytest tests/api/test_galaxy_graph_shield_invalidation.py tests/api/test_wt392_r2v3_galaxy_shield_gaps.py tests/api/test_fix562_spark_selfreport_channel_gate.py tests/unit/test_capability_channel.py -q",
+      "exit_code": 0,
+      "evidence": "178 passed / 11 passed / 4 passed / 32 passed"
+    },
+    {
+      "purpose": "ruff 机械门（4 个改动文件）",
+      "cmd": "ruff check app/api/v1/galaxy.py app/services/galaxy/capability_channel.py tests/api/test_fix562_spark_selfreport_channel_gate.py tests/unit/test_capability_channel.py",
+      "exit_code": 0,
+      "evidence": "All checks passed!"
+    },
+    {
+      "purpose": "black 零新增核验",
+      "cmd": "black --diff <改动文件>：main 与分支 hunk 数对比",
+      "exit_code": 0,
+      "evidence": "10 == 10 hunks（galaxy.py 与 test_capability_channel.py 在 main 即属 tests 树既有 black 漂移族，D04 审查 O-3 已披露；本分支零新增漂移；新增两个文件 clean）"
+    },
+    {
+      "purpose": "mypy 零新增核验",
+      "cmd": "mypy app/api/v1/galaxy.py app/services/galaxy/capability_channel.py（main 与分支输出 sort+diff）",
+      "exit_code": 0,
+      "evidence": "两侧各 34 errors in 32 files，唯一差异 = 既有 galaxy.py:977→993 行号位移（本文件 +16 行所致），错误内容逐字相同——零新增"
+    },
+    {
+      "purpose": "OpenAPI 机械门（触 backend/app/api/）",
+      "cmd": "python3 scripts/check_openapi_contract.py（drift→exit 1）→ python3 scripts/check_openapi_contract.py --update → 复跑",
+      "exit_code": 0,
+      "evidence": "初跑 exit 1 检出 2 处 endpoint description 漂移（路由 docstring 更新，机械导出）；--update 再生后 diff 仅该 2 行，复跑 exit 0 passed；请求/响应 schema 零变化"
+    }
+  ],
+
+  "test_counts": {
+    "new_tests": 5,
+    "new_test_files": ["backend/tests/api/test_fix562_spark_selfreport_channel_gate.py (4)"],
+    "new_unit_pins": ["test_client_self_report_channel_is_practiced"],
+    "mutation_red": 2,
+    "regression_green": "41 + 121 + 178 + 11 + 4 + 32 全部 passed"
+  },
+
+  "limitations": [
+    "成就引擎 mastery_threshold 仍读共享 mastery_score 标量；本修复封死其客户端可控入口（spark 自报融合面），其余服务端写入面（error book / exam sprint / set-point）不在本缺陷范围",
+    "gRPC RecordNodeInteraction 与其余 spark_node 调用方本就不传 outcome（纯时长零增长），未改",
+    "mobile/gateway 无任何调用方发送 spark outcome（grep 复核），行为变更零现网调用方受影响"
+  ]
+}

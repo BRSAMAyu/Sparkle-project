@@ -21,6 +21,7 @@ from app.core.outcome_ledger import (
     derive_outcome_id,
 )
 from app.services.galaxy.capability_channel import (
+    CLIENT_SELF_REPORT_CHANNEL,
     TRUTH_CLASS_CHANNELS,
     CapabilityChannel,
     classify_outcome_channel,
@@ -261,3 +262,13 @@ def test_node_channel_none_for_locked_nodes():
 def test_channel_vocabulary_closed(channel: CapabilityChannel):
     """词表封闭四值。"""
     assert channel.value in {"verified", "practiced", "non_human", "trace_only"}
+
+
+def test_client_self_report_channel_is_practiced():
+    """FIX-562：API 面客户端自报 outcome 的通道权威恒为 PRACTICED（零融合）。
+
+    客户端主张无 D-02 账本条目、无 quiz 物化、无服务端核验——真相面恒为
+    SELF_REPORTED；权威等价引用封闭词表（单一事实源，漂移即随动暴露）。
+    """
+    assert CLIENT_SELF_REPORT_CHANNEL is CapabilityChannel.PRACTICED
+    assert CLIENT_SELF_REPORT_CHANNEL is TRUTH_CLASS_CHANNELS[TruthClass.SELF_REPORTED]

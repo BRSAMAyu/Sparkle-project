@@ -69113,7 +69113,7 @@
     },
     "/api/v1/galaxy/node/{node_id}/spark": {
       "post": {
-        "description": "点亮/增强知识点\n\n当用户完成学习任务时调用，更新掌握度并可能触发 LLM 拓展。\nG-01: 附带 outcome 证据时走贝叶斯证据融合；缺省走 legacy 时间公式（封顶 40）。",
+        "description": "点亮/增强知识点\n\n当用户完成学习任务时调用，更新掌握度并可能触发 LLM 拓展。\nV4-D04（FIX-562）：附带 outcome 证据时先过能力通道门——客户端自报主张\n真相面恒为 SELF_REPORTED（无 D-02 账本条目、无 quiz 物化、无服务端核验）\n→ PRACTICED 通道，只解锁 + 留观测溯源，**永不推进掌握度后验**；服务端\n核验的独立检验走 X-08 outcome 捕获 → G-02 吸收器（VERIFIED 才融合）。\n缺省走纯时长活动痕迹路径（零掌握度增长）。",
         "operationId": "spark_node_api_v1_galaxy_node__node_id__spark_post",
         "parameters": [
           {
@@ -70187,7 +70187,7 @@
     },
     "/api/v1/galaxy/nodes/{node_id}/spark": {
       "post": {
-        "description": "点亮/增强知识点\n\n当用户完成学习任务时调用，更新掌握度并可能触发 LLM 拓展。\nG-01: 附带 outcome 证据时走贝叶斯证据融合；缺省走 legacy 时间公式（封顶 40）。",
+        "description": "点亮/增强知识点\n\n当用户完成学习任务时调用，更新掌握度并可能触发 LLM 拓展。\nV4-D04（FIX-562）：附带 outcome 证据时先过能力通道门——客户端自报主张\n真相面恒为 SELF_REPORTED（无 D-02 账本条目、无 quiz 物化、无服务端核验）\n→ PRACTICED 通道，只解锁 + 留观测溯源，**永不推进掌握度后验**；服务端\n核验的独立检验走 X-08 outcome 捕获 → G-02 吸收器（VERIFIED 才融合）。\n缺省走纯时长活动痕迹路径（零掌握度增长）。",
         "operationId": "spark_node_api_v1_galaxy_nodes__node_id__spark_post",
         "parameters": [
           {
