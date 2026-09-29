@@ -61,7 +61,11 @@ async def _make_user(db_session: AsyncSession) -> User:
     return user
 
 
-_NOW = datetime(2026, 9, 25, 10, 0, 0)
+# FIX-585c B 型深审：服务端 EvidenceInsightService.build_cards 默认 now=None →
+# 真实 utcnow() 开 30 天窗（evidence_insight_service.py:123-124），冻结基点会让
+# 窗内数据（_NOW-2h）在 2026-10-25 08:00 UTC 后集体出窗（同构 stuck_journey
+# 时间炸弹）→ 基点动态化（首例同款修法），45 天窗外样本语义不变。
+_NOW = datetime.utcnow()
 
 
 async def _seed_lifecycle_event(

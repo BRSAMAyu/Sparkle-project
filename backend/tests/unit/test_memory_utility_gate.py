@@ -336,6 +336,8 @@ def test_token_cost_penalizes_longer_content():
 def test_stale_penalty_grows_beyond_free_window():
     fresh = extract_utility_features(
         _episodic_item(id="ep-fresh", resolved_at=None, occurred_at=NOW - timedelta(days=5)),
+        now=NOW,  # FIX-585c：漏传 now 会走真实 datetime.now() 回退，age 随墙钟增长，
+        #           追平 stale 侧 90d 满罚后 fresh_score==stale_score（爆点 2026-12-22）
     )
     stale = extract_utility_features(
         _episodic_item(id="ep-stale", resolved_at=None, occurred_at=NOW - timedelta(days=120)),
