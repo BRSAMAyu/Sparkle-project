@@ -17,3 +17,7 @@
 8. **物理设备/三端截图矩阵不在本卡**：真机截图、HEAVY 三端矩阵归 Q05 重卡审查（no_duplicate_rule：G 卡返绿使 Q05 有据可过）；本卡 UI 证据 = 确定性 golden 25 张 + 语义钉（REPAINBoundary 渲染，非真机）。
 
 9. **isLast 连接线**：collaboration_timeline 时间轴连接线因外层 `isLast` getter 恒 false 而不渲染——既有行为语义疑点，超风格面未顺手修，留行为卡裁决。
+
+## Errata (leader, 2026-09-30, R1 info 收口 + 跨卡冲突注记)
+- 跨卡冲突：aurora_core_session_sheet 与 G03 已合并重构（单路径 _dots+相位透明度）重叠——冲突区取 G03 版（其 R1 已验），G02 非冲突增量（令牌/着色扫描）自动保留；合并态补修 G02 分支带回的 pattern_list 旧闭合与 aurora 静态 0.2 覆盖（恢复相位 opacity）。
+- R1-1：守卫浅档流式码面模型（ink@6
