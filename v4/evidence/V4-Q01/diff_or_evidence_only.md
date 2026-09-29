@@ -78,3 +78,5 @@ part2（真重启接续可见性）：未执行——part1 闭环未完成前无
 - 本目录 `diff_or_evidence_only.md` / `run_manifest.json` / `test_results.json` / `review_receipt.json` / `limitations.md` 五件套 + `raw/`（栈留痕、各运行 console/steps/帧、语义树）+ `db/`（只读 DB 证据）+ `video/`（引擎帧合成录像，出处披露见 manifest）。
 - `scripts/devtools/q01_synth_video.py`、`scripts/devtools/q01_db_evidence.py` 为可复跑工具（一性脚本入 devtools 目录规范）。
 - 原始帧与录像大文件按资源红线归档外置盘（sha256 见 run_manifest §artifacts），主盘保留证据清单与压缩件。
+
+> R1 勘误见 limitations.md 尾节（三 MEDIUM/两 LOW 采纳全文）。

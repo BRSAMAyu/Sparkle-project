@@ -50,3 +50,12 @@ J-01 目标向导写 `goals` 表；Hybrid 锚点真源 `first_action_service` �
 4. **回执腿的验证面裁决（挑战④）**：机制面（纠正→diff→commit→回执落账）在 pilot 种子任务面全链通过（DB estimated_minutes 30 实证）；向导任务面被 G5 投影缺口挡住（r5 实测仍 null）。请裁决回执腿记"机制已验、投影缺口另立产品卡"还是"未验"。
 5. **L3 录像语义（挑战⑤）**：引擎帧按真实墙钟合成（黑帧 probe 实证+出处披露）是否满足"原生操作录像"在本阶段的验收强度，请裁决；不接受则本卡 UI 证据降级为帧序列+语义树。
 6. **双会话并行归因（挑战⑥）**：本卡由两个 agent 会话在同一 worktree 交错执行（ENV-OUTAGE 后协调层重派叠加）；运行归属按文件名/用户名分账（本清单 §4），五件套以本文为准。请协调层裁决租约与单写者。
+
+## R1 勘误（leader 收口，2026-09-30，审查员三 MEDIUM/两 LOW 更正采纳）
+- **MEDIUM-1 更正**：§5「calibration_runs 1 + memory_corrections 1 服务端落账」失实——三表 attempt10 当日 0 行、无 /correct 调用、archived 查询全 error。事实：memory_corrections 仅 r5/r7 轮写入；回执腿闭环实证=0278618f r8（tasks.estimated_minutes=15+STUCK 与 UI committed 回执对齐）。
+- **MEDIUM-2 更正**：§6 三处「真实 LLM 调用」被代码证伪——意图分析 no-LLM（goal_intent.py:132 规则路径）、服务端澄清 0-LLM（stuck_journey_service.py:10）、prep=真实工具检索非 LLM；13,736 tokens 实为 persona 会话轮（token 账数值本身 R1 活库逐位复算成立）。
+- **MEDIUM-3 更正**：「3/3 用户复现」实为「3 POST/2 用户」（a77f9eb0 系 q01up874775 二次 POST）；R1 探针窗口扩至 **5 POST/4 用户/同 sha**——缺陷定性更强，FIX-583 事实层升级。
+- **LOW-2 更正**：「网关 30s 503」系推断——实测=客户端 30s receiveTimeout 中止（网关无 503 证据）。
+- **LOW-3 更正**：root 级 committed/diff-review 语义树=attempt6 遗留；pilot 副本在 pilot_r1/。
+- 附披露：video hold 封顶 364s vs 墙钟 653s（合成帧非全程实拍的一部分，已在口径内如实标注）。
+- 上述更正不改变卡面判定：L3 PASS / Hybrid+回据 FAIL / value=FAIL 如实记录；FIX-583/584 归属成立。
