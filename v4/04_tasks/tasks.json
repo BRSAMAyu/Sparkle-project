@@ -3512,10 +3512,14 @@
     "V4-I08",
     "V4-U07"
    ],
-   "status": "in_progress",
-   "implementation_state": "REVIEW_READY",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
    "evidence_verdict": "PASS_WITH_CHALLENGES",
-   "review": "PENDING（独立审查未开始；review_receipt.json 已留锚点）。self_note: 测量方法面成立（四时刻分离/分母纪律/成本三源/报红义务）；被测系统面 M04/M05/M06 FAIL、M07 PASS——value 判定以独立审查为准",
+   "review": {
+    "r1": "30ce0c6c PASS_WITH_CHALLENGES（测量成立不需重测：分位全格复现+416 对账+L2 P99 真实慢帧+成本 $0.156710 分毫不差+I06 迁移合规+凭据纪律亲验；四红项定性：①②产品面→FIX-573/③TOCTOU 采集伪象部分推翻（fastlane 26/26 达标 I09 承诺）/④fleet 环境面→FIX-571）",
+    "remediation": "38fbde14 C-1..C-7 勘误（归属总表+TOCTOU 根因+M04 数值 10.1-10.4s/39.0-40.3s+分布 225+22+3+悬空引用补节+58 非 59+红项②收窄）；零代码零重测零 raw 触碰",
+    "integration_reverify": "验证卡零产品码；I06 补迁移+schema.sql 成对入合并（一审已核幂等可回退）；OpenAPI 门随合并跑"
+   },
    "kind": "verification",
    "required_locks": [
     "qa-latency"
