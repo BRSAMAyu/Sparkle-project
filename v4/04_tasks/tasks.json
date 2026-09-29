@@ -2396,9 +2396,9 @@
     "V4-F03",
     "V4-U08"
    ],
-   "status": "PENDING",
-   "implementation_state": "REVIEW_READY",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "APPROVE_WITH_CONDITIONS_CLOSED",
    "evidence_summary": "专注低刺激收口保守侧落地：页面主体（动作/计时/退出）零增删；结算只认实测——stop() 新增 isLoggingSession 重复结算守卫（结算窗口重入不双结算），中断/杀进程零写入钉死（不假保存），重开恢复同一 startTime 墙钟续算（不重置），估时只在结束面作对照注脚（实际专注N分钟/计划N分钟分列，U08 actualMinutes 同口径）；强制长反思移除（ReflectionDialog barrierDismissible:false+卡点必填 整删），新增 focus_session_outcome_sheet：可选一句成果（溯源头=任务名+实测分钟+原文入 Cognitive fragment）+跳过/记录成果双一等路径+barrier 可关（点空白=跳过，留空记录=跳过零输入可离开）；失败不庆祝：saveSession 失败不进成果面/不出奖励摘要、error 如实呈现、快照保留可恢复（R2-03），intervention acted 回执改到真实落库后（F03）；减动效静态支：火苗循环动画 context.reduceMotion 静态分支（N33/S01 同口径），减动效+声音全关全链路可用且 transientCallbackCount==0；ambient 只接状态（暂停/恢复同步 pauseAmbient/resumeAmbient，续播受 U14 ambient_enabled 门控默认不自动播放），零新音频机制。l10n 双语 +6 键（focusOutcome*）gen-l10n 再生零既有键改动（10195 键 PASS）。新增 11 测（结算5+动线5+证据1，每验收面一正一反+突变自证 M1 摘守卫/M2 估时顶替/M3 失败出成果面 均 +4 -1 必红已亲验还原）；focus 套件 19 绿，mobile 全量 3087 passed/23 skipped（既有豁免）/0 failed；analyze 零 issue；全量 rule guards PASS。RF-06 三冲突面/backend/proto/路由零 diff；零模型调用。基线 4152266c；待 1 位独立审查（normal），review_receipt.json 预登记 6 挑战点（CH-1 中断 status 口径/CH-2 失败退出语义/CH-3 顺序双会话幂等/CH-4 acted 时点/CH-5 saving 态逃生门/CH-6 harness 强度）",
    "kind": "implementation",
    "required_locks": [
@@ -2447,7 +2447,12 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "e4cb4564 APPROVE_WITH_CONDITIONS（验收三条全亲证：中断/杀进程零写入+durationMinutes 唯一来源实测+重开毫秒保留+失败零庆祝+全关链路 transientCallbackCount==0；M1 亲放摘守卫→saveSession 2 次双结算实证+还原字节级一致；reflection_dialog 整删零残留；CH-1~6 全裁决（CH-1 启发式充分/CH-5 逃生门实存）；focus 19+674 抽批+L10N 10195 键；merge-tree 零交集）",
+    "remediation": "C1 screenshots_note 像素口径勘误（独立渲染快照非叠层实拍——sheet 存在性由语义 dump+flow 测承载）",
+    "integration_reverify": "本 commit 即合并态（C2：双侧 gen-l10n 再生+focus 套件随合并跑）"
+   }
   },
   {
    "id": "V4-U10",
