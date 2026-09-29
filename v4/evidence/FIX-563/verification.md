@@ -35,3 +35,6 @@ docker compose -f docker-compose.prod.yml config                # exit 0（哑�
 
 - `docker ps`（动手前基线与收尾复核一致）：`sparkle_db` / `sparkle_redis` / `sparkle_minio` 全程 `Up 19 hours (healthy)`，镜像 `sparkle-cosmos-sparkle_db` 等——现役栈属 sparkle-cosmos 项目，本卡全程零重启零重建零改名。
 - `scripts/dev/up.sh` 新门未真跑（会 up 容器，踩红线）；门逻辑由 supervisor 同构预检（`check_data_plane_owner` 真机 absent 分支）+ 单测覆盖佐证。
+
+## Errata (leader, 2026-09-30, R1 发现1 收口)
+- 「可执行容器操作+旧名残留 0」声称被 R1 多行感知扫描证伪：start_celery.sh 三处 `docker run \` 续行后的 `--name sparkle_celery_worker/beat/flower` 漏检（单行 grep 局限）。已 leader 快修改名 sparkle_proj_*（bash -n 过+多行重扫全仓零残留）；同脚本 `--network sparkle-flutter_default` 与 env URL 旧引用系改项目名后不可达的死债（fail-loud），归 FIX-577。

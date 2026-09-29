@@ -20,7 +20,7 @@ fi
 # Start Celery services
 echo "✅ Starting Celery Worker and Beat..."
 docker run -d \
-    --name sparkle_celery_worker \
+    --name sparkle_proj_celery_worker \
     --network sparkle-flutter_default \
     -e DATABASE_URL=postgresql://postgres:change-me@sparkle_db:5432/sparkle \
     -e REDIS_URL=redis://:change-me@sparkle_redis:6379/1 \
@@ -31,7 +31,7 @@ docker run -d \
     celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
 
 docker run -d \
-    --name sparkle_celery_beat \
+    --name sparkle_proj_celery_beat \
     --network sparkle-flutter_default \
     -e DATABASE_URL=postgresql://postgres:change-me@sparkle_db:5432/sparkle \
     -e REDIS_URL=redis://:change-me@sparkle_redis:6379/1 \
@@ -43,7 +43,7 @@ docker run -d \
 # Start Flower
 echo "✅ Starting Flower monitoring..."
 docker run -d \
-    --name sparkle_flower \
+    --name sparkle_proj_flower \
     --network sparkle-flutter_default \
     -p 5555:5555 \
     mher/flower:1.2.0 \
