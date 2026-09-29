@@ -3206,9 +3206,9 @@
     "V4-D03",
     "V4-U11"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
-   "evidence_verdict": "NOT_RUN",
+   "status": "IN_PROGRESS",
+   "implementation_state": "REVIEW_READY",
+   "evidence_verdict": "FINDINGS_OPEN_1MED_2LOW_PENDING_REVIEW",
    "kind": "verification",
    "required_locks": [
     "privacy-review"

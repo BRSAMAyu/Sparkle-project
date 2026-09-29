@@ -1,0 +1,37 @@
+{
+  "card_id": "V4-P02",
+  "risk": "high",
+  "independent_reviewers_required": 2,
+  "status": "REVIEWED_R1_R2_PENDING_SIGNOFF",
+  "note": "作者不自审：两位独立审查会话已分别落盘 review_r1.md（160485dc）与 review_r2.md。R2 维持 R1 裁决 PASS_WITH_CHALLENGES：F1 终审中危维持（独立探针复现），F2/F3 抽验通过，R1 四项 CHALLENGES 复核均为文档级（订正清单见 review_r2.md §3，归作者会话落实）。最终签收由协调方据两份 receipt 落盘。",
+  "author_session": "wtP02",
+  "author_branch": "agent/v4/p02",
+  "evidence_dir": "v4/evidence/V4-P02/",
+  "reviews": [
+    {
+      "round": "r1",
+      "session": "wtP02R1",
+      "receipt": "review_r1.md",
+      "receipt_commit": "160485dc",
+      "reviewed_sha": "8c4c4aa0",
+      "verdict": "PASS_WITH_CHALLENGES",
+      "date": "2026-09-29",
+      "summary": "F1 中危复现成立（自建探针零修改复现）；F2/F3 定性属实；范围钉①=真实不存在；守卫面与 148 回归独立复跑全绿；4 项 CH（文档级）。"
+    },
+    {
+      "round": "r2",
+      "session": "wtP02R2",
+      "receipt": "review_r2.md",
+      "reviewed_sha": "8c4c4aa0 + r1 receipt 160485dc",
+      "verdict": "PASS_WITH_CHALLENGES（维持 R1）",
+      "date": "2026-09-29",
+      "summary": "F1 终审中危维持（自建 4 探针独立复现 4/4 绿，R13+威胁模型+严重度推理独立复核）；F2 类级边界亲放守住；F3 双 grep 通过（GET 预签实测 3 处均主对象，结论同向）；P1.3/P2.4 双亲放 PASS；O-1 精化（reflection 需白名单证据类型才达 fallthrough，生产零调用方）；R1 CH-1/2/3/4 全部确认为文档级；148 全量独立复跑 8/8 绿；8 件证据 sha256 全对；修复 (b)+(d) 可行性确认（既有确认车道在位）。"
+    }
+  ],
+  "review_focus_suggestions": [
+    "F1 复现：按 redteam_playbook.md §1 S1-P1.1 重建探针（载荷逐字），验证 UserPreferencesCenter.explicit 三键落地与 EXPLICIT 链头",
+    "P3.1b 窗口口径：0/6 实测依赖单进程事件循环调度语义；审查可评估多 worker/多进程部署下窗口是否仍收敛（本卡 limitations#3 已声明）",
+    "F3 严重度裁决：存储残留 vs 无 GET 路径的缓释是否成立；mobile 侧是否经其它通道消费缩略图",
+    "探针用后即删核验：git log 该分支不应存在探针文件提交"
+  ]
+}
