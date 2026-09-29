@@ -1936,9 +1936,9 @@
     "V4-I04",
     "V4-I06"
    ],
-   "status": "in_progress",
-   "implementation_state": "REVIEW_READY",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "PASS_AFTER_REWORK",
    "kind": "implementation",
    "required_locks": [
     "ui-recovery"
@@ -1987,7 +1987,13 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "10acec52 FAIL（B-1 source 词表外端到端不可达——服务探针实证每次 400，fake 测试结构性盲区；B-2 幂等键终态重放静默回输入相）",
+    "remediation": "1384a1fe B-1 客户端入词表 source='task'（契约边界推理+词表镜像常量防再犯）+B-2 盐随提案意图+终态重放守卫；recovery 27→32；X-03 契约 45/45 零回退",
+    "r2": "36fc8344 PASS（B-1/B-2 彻底关闭：镜像逐值亲验+独立端到端探针 4/4（recovery_sheet 400 复现+task 全链真通含 estimated_minutes 真实变更 15）+镜像=活钉 mutation 红；B-2 三测绿+3 轮取消循环/409 不换键/终态守卫兜底=双防线；回执门时序钉维持 mutation 红；merge-tree 双基准 NO-CONFLICT；O-1..O-3 登记——O-2 服务端冻结测漏 ProposalSource→FIX-574）",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑"
+   }
   },
   {
    "id": "V4-U03",
