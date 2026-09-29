@@ -3206,9 +3206,9 @@
     "V4-D03",
     "V4-U11"
    ],
-   "status": "IN_PROGRESS",
-   "implementation_state": "REVIEW_READY",
-   "evidence_verdict": "FINDINGS_OPEN_1MED_2LOW_PENDING_REVIEW",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "PASS_WITH_FINDINGS_OPEN",
    "kind": "verification",
    "required_locks": [
     "privacy-review"
@@ -3258,7 +3258,13 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "160485dc PASS_WITH_CHALLENGES（F1 中危维持：威胁模型内逐字+亲放复现三键写入+R13 违反链亲读；4 探针亲放+148 复跑；4 挑战文档级；修复排序 (b)+(d) 近期）",
+    "r2": "602ee098 PASS_WITH_CHALLENGES（F1 终审中危维持：4 自建探针独立复现 4/4+中危不到高推理核（user_id scope 无跨账号）+权威压制 R2-2 亲测；守卫抽检 2/2 超额；O-1 精化 reflection fallthrough 窗口；修复可行性确认（既有确认车道在位）；148 全量独立复跑 8/8）",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑",
+    "findings": "F1 中危→FIX-575 修复在航；(a) provenance 结构性归契约 owner；F2/F3 低危随 FIX-575/台账登记"
+   }
   },
   {
    "id": "V4-P03",
