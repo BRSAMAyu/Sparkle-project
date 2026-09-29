@@ -1,0 +1,96 @@
+{
+  "task": "FIX-573",
+  "title": "引擎计量缺陷族修复——Q04 红项①no_generation 带 token / 红项②取消轮次记账归零（P2 产品面闭环）",
+  "kind": "fix",
+  "branch": "fix/v4/f573-metering",
+  "worktree": "/Users/brsama/code/GitHub/wtF573",
+  "base_commit": "39553c6a（任务简报 main=a75a7b99，建 worktree 时 main 已前进一个 fleet state 提交 39553c6a，非代码变更；a75a7b99 含于其历史）",
+  "source_sha": "代码 commit 105900e7（fix/v4/f573-metering 头，含修复+测试；本 manifest 所在 evidence commit 紧随其后）",
+  "captured_at": "2026-09-29T08:40 ~ 2026-09-29T09:10 +0800",
+  "timezone": "Asia/Shanghai (+0800)",
+  "evidence_source": "v4/evidence/V4-Q04/review_r1.md §2 四红项定性归属表（红项①②=产品面→本卡；③遗留 main-12 行与④=fleet 环境面另派卡）",
+  "defect_1": {
+    "name": "no_generation 带 token",
+    "q04_shape": "L2-r1/r3/r4-08 恰 3 行 no_generation_model_estimated，tok=216/216/277，无 usage 帧、77-112s 首 delta（deep 推理真实生成）",
+    "root_cause_locations": [
+      "backend/app/orchestration/response_builder.py::_cleanup —— 产生链：resolve_metering_model_key(context_data, has_real_usage=实测帧>0)（无键+无实测帧 → no_generation_model）→ 合成估算块（修前 L1773-1789 区段）由 assistant/user 文本估出 216/216/277 token（usage_source=estimated）→ FIX545 bisect 二分为 no_generation_model_estimated",
+      "backend/app/agents/standard_workflow.py:2083-2088 —— 模型键回填仅在 generation 节点 selection 非空时写 generation_model_key/model_used；该形态轮次模型键缺失（未回填），计量层只余 no_generation 家族标签可挂"
+    ],
+    "fix": "估算块之后、bisect 之前插入改挂：model_key==no_generation_model 且 (prompt|completion)_tokens>0 → 改记 unattributed_model（有真实用量、模型键未知=正确桶语义），METERING_NO_GENERATION_REATTRIBUTED{surface=cleanup} 计数 + warning 日志。成本可见性保留：usage_source=estimated 如实降级，计量标签无价目 → cost=None 未核价（I10 未知键语义不变）。no_generation 家族行自此零 token。",
+    "fix_locations": [
+      "backend/app/core/metrics.py:62-69 —— 新计数器 METERING_NO_GENERATION_REATTRIBUTED",
+      "backend/app/orchestration/response_builder.py:1783-1807 —— 改挂块（bisect 语义原样保留为回归防线）"
+    ],
+    "boundary_check": "I09 fastlane 0tok 承诺面不受影响（deterministic lane 跳过估算 → 0 token 行，test_cleanup_zero_model_lane_records_no_synthetic_tokens 绿）；I10 检出桶语义保留（bisect 函数与其单测 test_bisect_* 原样全绿）；I10 cleanup 产生面测 test_cleanup_synthetic_estimate_detected_and_relabeled 的落桶断言随 FIX-573 改桶契约更新（任务令『该形态改记正确桶』必然更新该断言，docstring 注明缘由，cost/usage_source/检出防线断言全保留）"
+  },
+  "defect_2": {
+    "name": "取消轮次记账归零",
+    "q04_shape": "L2-CANCEL 服务端续生成：t=20.366s usage 帧 13,320 tok/$0.001332 早于 delta+取消（帧级收据实锤），库行终态 no_generation_model/0tok——真实成本未入账",
+    "root_cause_locations": [
+      "backend/app/orchestration/execution_engine.py::_execute_graph（修前 L1949-2019）—— total_prompt_tokens/total_completion_tokens 是生成器局部变量，仅在图正常完成后写入 result_holder（修前 L2014-2016）；客户端取消触发 GeneratorExit（修前 L2017-2019）时局部累积随生成器闭合同丢失，result_holder 无 token",
+      "backend/app/orchestration/orchestrator.py::process_stream finally（修前 L4126-4156）—— 取消路径 total_*=0、final_state=None 进 _cleanup → 账面 0tok；模型键面亦无 context 可归因 → no_generation_model"
+    ],
+    "fix": "三段收口：(a) usage 帧消费时即时落 result_holder（超时/取消路径均可见）；(b) GeneratorExit 排空队列中已入队未消费的 usage 收据再退出——取消前已产生的帧必入账，取消后才产生、未及入队的帧才归零；(c) orchestrator finally 从 result_holder 恢复收据（仅实际补账时 METERING_CANCEL_RECEIPT_RECOVERED.inc()，正常完成路径局部值本就等于收据值不误计），并以共享 WorkflowState.context_data 兜底模型归因（generation 节点在 LLM 调用前已回填模型键；state=initial_state 同对象语义见 statechart_engine.py:243）。",
+    "fix_locations": [
+      "backend/app/core/metrics.py:71-78 —— 新计数器 METERING_CANCEL_RECEIPT_RECOVERED",
+      "backend/app/orchestration/execution_engine.py:1987-1996（帧级收据即时落账）、2016-2021（图任务取消分支落账）、2027-2046（GeneratorExit 排水）",
+      "backend/app/orchestration/orchestrator.py:4126-4172（finally 收据恢复 + 上下文兜底 + _cleanup 传参）",
+      "backend/app/orchestration/response_builder.py:1667（context_data_fallback 参数）、1686-1693（final_state=None 时兜底 context）"
+    ],
+    "boundary_check": "不破坏 RB-02 超时路径契约（timed_out 判定与 ERROR 帧语义原样，仅补收据入账）；I09/I10 契约测不受影响；不造第二计量权威（仍走 _cleanup → TokenTracker.record_usage → BillingWorker 单链）"
+  },
+  "commands": [
+    {
+      "cmd": "cd /Users/brsama/code/GitHub/wtF573/backend && DATABASE_URL=postgresql+asyncpg://postgres:placeholder@127.0.0.1:5432/sparkle_test .venv-python -m pytest tests/unit/test_v4_f573_metering_fixes.py -q",
+      "exit_code": 0,
+      "result": "7 passed in 0.57s（正例 5 + 反例 2；反例=复现 Q04 原始红项形态必须被拒）"
+    },
+    {
+      "cmd": "同环境 -m pytest tests/unit/test_v4_i10_metering_truth.py tests/unit/test_metering_model_attribution.py tests/unit/test_deterministic_lane.py tests/test_stream_heartbeat.py tests/unit/test_billing_worker.py -q",
+      "exit_code": 0,
+      "result": "96 passed in 4.37s（I10 契约 24 + 归因 8 + I09 快慢分层 50 + 心跳 7 + billing 7）"
+    },
+    {
+      "cmd": "同环境 -m pytest tests/test_orchestrator_simple.py tests/test_orchestrator_init.py tests/test_orchestrator_fsm.py tests/unit/test_mirofish_wiring_finish.py tests/unit/test_v3_fix336_intent_stable_idempotency.py tests/unit/test_done_tail_latency.py tests/unit/test_simulation_engine_db_none_stream_contract.py tests/unit/test_stage_events_e03.py -q",
+      "exit_code": 0,
+      "result": "61 passed in 100.25s（orchestrator/stream/_cleanup 相邻面）"
+    },
+    {
+      "cmd": "mutation 自验：git stash 修复五文件 → 同环境 -m pytest tests/unit/test_v4_f573_metering_fixes.py -q",
+      "exit_code": 1,
+      "result": "6 failed, 1 passed（修前红：①形状落桶测、①不变量反例测、②取消收据测×3、+_run_cleanup 新签名不可调用；唯一绿=bisect 语义守卫，按设计不随修复变化）→ git stash pop 复绿 7/7"
+    },
+    {
+      "cmd": "-m mypy app/orchestration/response_builder.py app/orchestration/execution_engine.py app/orchestration/orchestrator.py app/core/metrics.py",
+      "exit_code": 0,
+      "result": "Found 37 errors in 35 files（基线同法 39 errors；本卡一处新错 assignment 已修，零新增，总量 ≤77 门内）"
+    },
+    {
+      "cmd": "-m ruff check <六个变更文件>",
+      "exit_code": 0,
+      "result": "All checks passed!"
+    },
+    {
+      "cmd": "black 零新增判定（black 26.3.1 格式化后对比：基线 39553c6a 版本与本卡版本各自 black -q 格式化后 diff）",
+      "exit_code": 0,
+      "result": "四文件格式化后差异全部落在本卡新增代码区域（既有代码零新增偏离；仓库现存格式为 black 24/25 时代产物，基线本身在 black 26 下即 4 文件 would-reformat，与本卡无关）"
+    }
+  ],
+  "reproduction_vs_fix": {
+    "defect_1": {
+      "before": "_cleanup(无模型键 context + assistant 文本 + 0 实测帧) → 落账行 model=no_generation_model_estimated、tokens=216/216/277（估算）、cost=None —— 即 Q04 三红行形状",
+      "after": "同输入 → model=unattributed_model、tokens 同（估算保留）、usage_source=estimated、cost=None、sparkle_metering_no_generation_reattributed_total{surface=cleanup}+1；no_generation 家族行恒零 token（不变量反例测横跨 Q04 形状与澄清门/模板直出形状）"
+    },
+    "defect_2": {
+      "before": "取消前 usage 帧已消费（局部累积 1100+13320）→ GeneratorExit → result_holder 无 token → finally 以 0/0 调 _cleanup → 账面 no_generation_model/0tok —— 即 Q04 L2-CANCEL 形状",
+      "after": "同序列 → result_holder 即时持有 1100/13320；GeneratorExit 排空已入队收据（+10/+20）→ 1110/13340；finally 恢复后 _cleanup 落账 model=真实模型键（共享 context 兜底）或 unattributed_model（无兜底）、tokens=measured 收据、success=false 成本照记；METERING_CANCEL_RECEIPT_RECOVERED 仅实际补账时 +1"
+    }
+  },
+  "environment": "macOS darwin arm64；Python 3.11.15（主检出 .venv，worktree 零新装依赖）；backend/.env 为 symlink 指向主检出（只读引用，Q04 收据 §4 同款纪律，worktree 零凭据落盘）；backend/app/gen 为 gitignored 生成物，自主检出复制（make proto-gen 产物，零手改）；单测零真模型、零外部服务连接（TEST-DBGUARD 会话门以 DATABASE_URL=sparkle_test 形状通过，未连接任何库）",
+  "honesty_boundaries": [
+    "本卡为引擎计量面单测闭环修复，未重跑 Q04 端到端采样（共享库凭据失效面=红项④ fleet 环境卡范围，不阻塞本卡）；端到端效果以下次 Q 线重测为准",
+    "红项①的『为何模型键未回填』上游成因（standard_workflow selection 缺失的具体触发路径）未在本卡展开——计量面改挂后该形态无论上游成因如何均落正确桶；上游回填收敛留待后续观测 METERING_NO_GENERATION_REATTRIBUTED 计数",
+    "取消后才产生、未及入队的 usage 帧不可恢复（无收据即无账）——任务口径明确『取消后的才可归零』",
+    "I10 test_cleanup_synthetic_estimate_detected_and_relabeled 的落桶断言更新属任务授权的契约演进（『该形态改记正确桶』），非删断言取绿：cost/usage_source/检出防线断言全数保留并加强"
+  ]
+}
