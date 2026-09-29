@@ -71,7 +71,10 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
       if (!mounted) return;
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       AppFeedback.success(context, context.l10n.guestUpgradeSuccess);
-      context.go('/profile');
+      // V4-U06（FIX-541 裁决）：升级成功 = 身份切换完成，落点回「今天」
+      // （/home 驾驶舱）——用户是在使用途中升级的，不是来看设置的；
+      // 落「我的」= 落点错置（wt802 实测 6/7 直落「我的」的反例面）。
+      context.go('/home');
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(context, UserFacingError.from(e));
@@ -124,7 +127,9 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
         context,
         context.l10n.guestUpgradeSocialSuccess,
       );
-      context.go('/profile');
+      // V4-U06（FIX-541 裁决）：同邮箱腿——社交升级成功落「今天」（/home），
+      // 不落「我的」（升级是途中的身份切换，非去设置页）。
+      context.go('/home');
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(context, UserFacingError.from(e));
