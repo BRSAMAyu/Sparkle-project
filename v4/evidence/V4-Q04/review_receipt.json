@@ -9,7 +9,7 @@
     "billing_reds_reported": 4,
     "real_model_spend_usd": 0.17,
     "product_code_changed": false,
-    "data_plane_writes": "产品自身代码路径的正常业务写入 + Alembic i06 迁移补齐 + 死信恢复直插 59 行（BillingWorker 同列映射）——均为留证的操作",
+    "data_plane_writes": "产品自身代码路径的正常业务写入 + Alembic i06 迁移补齐 + 死信恢复直插 58 行（BillingWorker 同列映射；一审 C-7 勘误：原记 59，差额 1 为 duplicate 跳过行）——均为留证的操作",
     "secrets": "零回显零落盘；.env 只读 symlink 引用"
   },
   "review_anchors": [
@@ -18,5 +18,7 @@
     "v4/evidence/V4-Q04/raw/*.jsonl（抽查行：四时刻字段、outcome、is_cache_hit、usage_frame 与 DB 行对账）",
     "summary-main.md 分位表与 test_results.json 数值一致性",
     "limits：limitations.md 第 2 节环境偏离的处置是否越权（Alembic 补迁移/凭据历史引用/死信直插）——审查者需独立裁决并在本 receipt 落判"
-  ]
+  ],
+  "errata_commit": "38fbde144df2baf3609a8c850840570c3ca8dcbd",
+  "errata_note": "一审 wtQ04R1 PASS_WITH_CHALLENGES（review_r1.md）C-1..C-7 勘误已落于 agent/v4/q04 @ 38fbde14：C-1/C-2 红项③定量/根因订正（fastlane 13 行经自身恢复批全部落库 no_generation_model/0tok=I09 26/26 达标、early-return 假设撤回；main 14→12 混合面；根因=汇总 join 23:42:03 与恢复批 23:42:02 的 TOCTOU 竞态采集伪象）；C-3 M04 数值订正 10.1–10.4s/39.0–40.3s（FAIL 不变）；C-4 分布 225+22+3；C-6 attempt_reconciliation 补节；C-7 恢复 58 行；C-5 红项②收窄（L2 帧级收据实锤/L0-L3 推断）。四红项归属总表见 diff_or_evidence_only.md。零代码零重测；raw/、cost_rollup/、review_r1.md 未动。"
 }
