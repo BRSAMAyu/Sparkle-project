@@ -63,8 +63,9 @@ const _kGoalTitle = String.fromEnvironment('Q01_GOAL_TITLE',
     defaultValue: '数据结构期中冲刺',);
 const _kTaskTitle = String.fromEnvironment('Q01_TASK_TITLE',
     defaultValue: '二叉树遍历',);
-const _kMinutes = String.fromEnvironment('Q01_MINUTES', defaultValue: '15');
-const _kUser = String.fromEnvironment('Q01_USER');
+// dart-define 预留位 Q01_MINUTES / Q01_USER：现版本时长目标固定 15（校准循环
+// 硬编码）、用户名按次生成（driveIdentityAnchor 的 q01up<ts>），原常量无引用
+// 已删（CI56 Q01 lint 预算清零；如需恢复由卡片重开）。
 /// J-01 向导支线开关（v3 默认关）：r5 实证向导计划任务不落任务列表投影 →
 /// 校准「仅本次」锚点结构性缺席；v3 主径=列表空态真实任务创建。向导的
 /// 真 LLM 意图分析+计划 preview 证据已在 r4/r5 捕获并保留（证据五件套
@@ -200,22 +201,33 @@ Future<void> main() async {
       await testTester.runAsync(() async {
         final handle = testTester.ensureSemantics();
         await testTester.pump(const Duration(milliseconds: 300));
-        final owner = RendererBinding.instance.pipelineOwner.semanticsOwner;
+        // 语义等价替换（2026-09-29 _probe_owner_test probe 实证）：runApp
+        // 路径下根 RenderView 的 owner 即旧 deprecated pipelineOwner 实例
+        // （SemanticsOwner identical、rootSemanticsNode=0）；rootPipelineOwner
+        // 是另一 owner（SemanticsOwner 非同一对象、rootSemanticsNode=null），
+        // 直换会把 dump 打成空树。RenderObject.owner 非 deprecated，语义同旧链；
+        // views 为空的退化路径与旧代码同落 "(semantics tree empty)"。
+        final views = RendererBinding.instance.renderViews;
+        final owner = views.isEmpty ? null : views.first.owner?.semanticsOwner;
         final root = owner?.rootSemanticsNode;
-        final buf = StringBuffer();
-        buf.writeln('# semantics dump $tag run=$_kRun leg=$_kLeg '
-            'ts=${DateTime.now().toIso8601String()}');
+        final buf = StringBuffer()
+          ..writeln('# semantics dump $tag run=$_kRun leg=$_kLeg '
+              'ts=${DateTime.now().toIso8601String()}');
         if (root == null) {
           buf.writeln('(semantics tree empty)');
         } else {
           void walk(sem.SemanticsNode node, int depth) {
             final rect = node.rect;
+            // hasFlag(bit) → flagsCollection 类型位（SDK _toBitMask 同源位；
+            // probe 同树 5 节点 old/new 全等）。isChecked 旧位=CheckedState.isTrue。
             final flags = <String>[];
-            if (node.hasFlag(sem.SemanticsFlag.isButton)) flags.add('button');
-            if (node.hasFlag(sem.SemanticsFlag.isTextField)) {
+            if (node.flagsCollection.isButton) flags.add('button');
+            if (node.flagsCollection.isTextField) {
               flags.add('textField');
             }
-            if (node.hasFlag(sem.SemanticsFlag.isChecked)) flags.add('checked');
+            if (node.flagsCollection.isChecked == ui.CheckedState.isTrue) {
+              flags.add('checked');
+            }
             buf.writeln('${'  ' * depth}[${node.id}] '
                 'label="${node.label}" '
                 'value="${node.value}" '
@@ -302,13 +314,6 @@ Future<void> main() async {
       f = find.widgetWithText(FilledButton, label);
       if (f.evaluate().isNotEmpty) return f.first;
     }
-    return null;
-  }
-
-  bool? primaryEnabled(WidgetTester tester, Finder f) {
-    final w = f.evaluate().first.widget;
-    if (w is SparkleButton) return w.onPressed != null;
-    if (w is FilledButton) return w.onPressed != null;
     return null;
   }
 
@@ -1232,7 +1237,9 @@ Future<void> main() async {
         // 兜底：/tasks（应用内路由，披露）——种子或既有任务仍在时的旧链
         final ctx = tester.element(find.byType(Navigator).first);
         clicks[0]++;
-        ctx.push('/tasks');
+        // push 的 Future 在路由 pop 时才完成（r4 死锁实证）——unawaited，
+        // 同 task_create_opened 与投影水化两处 push 先例，不修 lint 改语义。
+        unawaited(ctx.push('/tasks'));
         await waitUntil(
           tester,
           () => textAny(['待处理', '全部']) != null,
@@ -1680,6 +1687,7 @@ Future<void> main() async {
         await shot('$_kRun/$_kLeg/16-scope-choice.png');
         await dumpTexts(tester, 'scope-choice');
         recordStep('correction_submitted', scopeOk,
+            'calibration submit tapped=$submitted (revealAndTap 回执, 入账不改变门); '
             'semantic correction accepted; scope cards visible=$scopeOk',);
 
         // 仅本次：调整这次行动（不动长期偏好）
@@ -1740,7 +1748,9 @@ Future<void> main() async {
         await shot('$_kRun/$_kLeg/19-diff-review.png');
         await dumpTexts(tester, 'diff-review');
         await dumpSemantics('diff-review');
-        recordStep('diff_review', diffOk, 'server diff visible=$diffOk');
+        recordStep('diff_review', diffOk,
+            'proposal CTA tapped=$proposalOk (revealAndTap 回执, 入账不改变门); '
+            'server diff visible=$diffOk');
 
         // 确认调整 → 等真实回执（已按本次约束落账 + receipt id）
         final confirmOk = await revealAndTap(
