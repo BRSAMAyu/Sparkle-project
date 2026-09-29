@@ -3842,6 +3842,435 @@
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
       "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+    },
+    {
+      "id": "V4-G01",
+      "title": "首页/目标/任务/日历——四风格商业化完备",
+      "depends_on": [],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-polish-g01"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "02_design/SCREEN_FAMILIES.md",
+        "02_design/ACCESSIBILITY_ASSETS.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "02_design/TOKENS.proposal.json",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "home",
+        "goal",
+        "task",
+        "plan",
+        "calendar"
+      ],
+      "source_anchors": [],
+      "objective": "该家族在 classic/paperDay/dusk/quiet 全部四风格下达到商业化默认完备：每屏任一风格可作发布默认而无风格专属缺陷。",
+      "work": "逐屏×四风格走查：清零 classic-only 硬编码（只走 core/design 令牌）；四风格下对比度/200% 文本/reduce-motion 等价逐面复算（ACCESSIBILITY_ASSETS 阈值）；密集信息可读性；15 态中该家族可 widget 级复现的状态全覆盖；每风格 golden/语义钉（确定性 seed，F05 判例）；发现的风格面缺陷就地修（不动行为语义/不放松既有门）。",
+      "acceptance": [
+        "家族内零风格专属缺陷：任一风格下无对比度失败/文本截断/令牌外颜色/布局破碎",
+        "四风格各有确定性 golden+语义钉且 CI 可失败",
+        "既有功能测试全绿+analyze 零+repeat 棘轮只降不升"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": false
+      },
+      "path_policy": "UI 消费 mobile/lib/core/design/ 令牌；RF-06 高危面（dashboard_screen/compact_status_bar/task_execution_screen）可改但须在 diff 叙证登记（RF-06 为他仓独立 lineage，切片移植冲突已盘点）；l10n 双语纯增量；风格真源唯一（theme_manager/pixel_preview_theme），禁第二真源。",
+      "stop_conditions": [
+        "发现行为语义缺陷超风格面→登记 FIX 不顺手修",
+        "连续三轮未改善停止写反例归因",
+        "preview 通道外发现需发布面决策项→登记 Q08 待裁"
+      ],
+      "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
+      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。"
+    },
+    {
+      "id": "V4-G02",
+      "title": "对话/卡住/Hybrid/运行台——四风格商业化完备",
+      "depends_on": [],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-polish-g02"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "02_design/SCREEN_FAMILIES.md",
+        "02_design/ACCESSIBILITY_ASSETS.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "02_design/TOKENS.proposal.json",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "chat",
+        "aurora",
+        "openclaw"
+      ],
+      "source_anchors": [],
+      "objective": "该家族在 classic/paperDay/dusk/quiet 全部四风格下达到商业化默认完备：每屏任一风格可作发布默认而无风格专属缺陷。",
+      "work": "逐屏×四风格走查：清零 classic-only 硬编码（只走 core/design 令牌）；四风格下对比度/200% 文本/reduce-motion 等价逐面复算（ACCESSIBILITY_ASSETS 阈值）；密集信息可读性；15 态中该家族可 widget 级复现的状态全覆盖；每风格 golden/语义钉（确定性 seed，F05 判例）；发现的风格面缺陷就地修（不动行为语义/不放松既有门）。",
+      "acceptance": [
+        "家族内零风格专属缺陷：任一风格下无对比度失败/文本截断/令牌外颜色/布局破碎",
+        "四风格各有确定性 golden+语义钉且 CI 可失败",
+        "既有功能测试全绿+analyze 零+repeat 棘轮只降不升"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": false
+      },
+      "path_policy": "UI 消费 mobile/lib/core/design/ 令牌；RF-06 高危面（dashboard_screen/compact_status_bar/task_execution_screen）可改但须在 diff 叙证登记（RF-06 为他仓独立 lineage，切片移植冲突已盘点）；l10n 双语纯增量；风格真源唯一（theme_manager/pixel_preview_theme），禁第二真源。",
+      "stop_conditions": [
+        "发现行为语义缺陷超风格面→登记 FIX 不顺手修",
+        "连续三轮未改善停止写反例归因",
+        "preview 通道外发现需发布面决策项→登记 Q08 待裁"
+      ],
+      "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
+      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。"
+    },
+    {
+      "id": "V4-G03",
+      "title": "记忆/Aurora理解——四风格商业化完备",
+      "depends_on": [],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-polish-g03"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "02_design/SCREEN_FAMILIES.md",
+        "02_design/ACCESSIBILITY_ASSETS.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "02_design/TOKENS.proposal.json",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "memory",
+        "aurora",
+        "cognitive"
+      ],
+      "source_anchors": [],
+      "objective": "该家族在 classic/paperDay/dusk/quiet 全部四风格下达到商业化默认完备：每屏任一风格可作发布默认而无风格专属缺陷。",
+      "work": "逐屏×四风格走查：清零 classic-only 硬编码（只走 core/design 令牌）；四风格下对比度/200% 文本/reduce-motion 等价逐面复算（ACCESSIBILITY_ASSETS 阈值）；密集信息可读性；15 态中该家族可 widget 级复现的状态全覆盖；每风格 golden/语义钉（确定性 seed，F05 判例）；发现的风格面缺陷就地修（不动行为语义/不放松既有门）。",
+      "acceptance": [
+        "家族内零风格专属缺陷：任一风格下无对比度失败/文本截断/令牌外颜色/布局破碎",
+        "四风格各有确定性 golden+语义钉且 CI 可失败",
+        "既有功能测试全绿+analyze 零+repeat 棘轮只降不升"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": false
+      },
+      "path_policy": "UI 消费 mobile/lib/core/design/ 令牌；RF-06 高危面（dashboard_screen/compact_status_bar/task_execution_screen）可改但须在 diff 叙证登记（RF-06 为他仓独立 lineage，切片移植冲突已盘点）；l10n 双语纯增量；风格真源唯一（theme_manager/pixel_preview_theme），禁第二真源。",
+      "stop_conditions": [
+        "发现行为语义缺陷超风格面→登记 FIX 不顺手修",
+        "连续三轮未改善停止写反例归因",
+        "preview 通道外发现需发布面决策项→登记 Q08 待裁"
+      ],
+      "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
+      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。"
+    },
+    {
+      "id": "V4-G04",
+      "title": "星图/学习/错题/资料——四风格商业化完备",
+      "depends_on": [],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-polish-g04"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "02_design/SCREEN_FAMILIES.md",
+        "02_design/ACCESSIBILITY_ASSETS.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "02_design/TOKENS.proposal.json",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "galaxy",
+        "error_book",
+        "document",
+        "vocabulary",
+        "knowledge",
+        "seed_library",
+        "learning"
+      ],
+      "source_anchors": [],
+      "objective": "该家族在 classic/paperDay/dusk/quiet 全部四风格下达到商业化默认完备：每屏任一风格可作发布默认而无风格专属缺陷。",
+      "work": "逐屏×四风格走查：清零 classic-only 硬编码（只走 core/design 令牌）；四风格下对比度/200% 文本/reduce-motion 等价逐面复算（ACCESSIBILITY_ASSETS 阈值）；密集信息可读性；15 态中该家族可 widget 级复现的状态全覆盖；每风格 golden/语义钉（确定性 seed，F05 判例）；发现的风格面缺陷就地修（不动行为语义/不放松既有门）。",
+      "acceptance": [
+        "家族内零风格专属缺陷：任一风格下无对比度失败/文本截断/令牌外颜色/布局破碎",
+        "四风格各有确定性 golden+语义钉且 CI 可失败",
+        "既有功能测试全绿+analyze 零+repeat 棘轮只降不升"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": false
+      },
+      "path_policy": "UI 消费 mobile/lib/core/design/ 令牌；RF-06 高危面（dashboard_screen/compact_status_bar/task_execution_screen）可改但须在 diff 叙证登记（RF-06 为他仓独立 lineage，切片移植冲突已盘点）；l10n 双语纯增量；风格真源唯一（theme_manager/pixel_preview_theme），禁第二真源。",
+      "stop_conditions": [
+        "发现行为语义缺陷超风格面→登记 FIX 不顺手修",
+        "连续三轮未改善停止写反例归因",
+        "preview 通道外发现需发布面决策项→登记 Q08 待裁"
+      ],
+      "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
+      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。"
+    },
+    {
+      "id": "V4-G05",
+      "title": "洞察/复盘/报告——四风格商业化完备",
+      "depends_on": [],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-polish-g05"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "02_design/SCREEN_FAMILIES.md",
+        "02_design/ACCESSIBILITY_ASSETS.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "02_design/TOKENS.proposal.json",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "insights",
+        "report",
+        "cognitive",
+        "reviews"
+      ],
+      "source_anchors": [],
+      "objective": "该家族在 classic/paperDay/dusk/quiet 全部四风格下达到商业化默认完备：每屏任一风格可作发布默认而无风格专属缺陷。",
+      "work": "逐屏×四风格走查：清零 classic-only 硬编码（只走 core/design 令牌）；四风格下对比度/200% 文本/reduce-motion 等价逐面复算（ACCESSIBILITY_ASSETS 阈值）；密集信息可读性；15 态中该家族可 widget 级复现的状态全覆盖；每风格 golden/语义钉（确定性 seed，F05 判例）；发现的风格面缺陷就地修（不动行为语义/不放松既有门）。",
+      "acceptance": [
+        "家族内零风格专属缺陷：任一风格下无对比度失败/文本截断/令牌外颜色/布局破碎",
+        "四风格各有确定性 golden+语义钉且 CI 可失败",
+        "既有功能测试全绿+analyze 零+repeat 棘轮只降不升"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": false
+      },
+      "path_policy": "UI 消费 mobile/lib/core/design/ 令牌；RF-06 高危面（dashboard_screen/compact_status_bar/task_execution_screen）可改但须在 diff 叙证登记（RF-06 为他仓独立 lineage，切片移植冲突已盘点）；l10n 双语纯增量；风格真源唯一（theme_manager/pixel_preview_theme），禁第二真源。",
+      "stop_conditions": [
+        "发现行为语义缺陷超风格面→登记 FIX 不顺手修",
+        "连续三轮未改善停止写反例归因",
+        "preview 通道外发现需发布面决策项→登记 Q08 待裁"
+      ],
+      "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
+      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。"
+    },
+    {
+      "id": "V4-G06",
+      "title": "小队/自我锚/光子/成就——四风格商业化完备",
+      "depends_on": [],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-polish-g06"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "02_design/SCREEN_FAMILIES.md",
+        "02_design/ACCESSIBILITY_ASSETS.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "02_design/TOKENS.proposal.json",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "community",
+        "photon",
+        "achievement"
+      ],
+      "source_anchors": [],
+      "objective": "该家族在 classic/paperDay/dusk/quiet 全部四风格下达到商业化默认完备：每屏任一风格可作发布默认而无风格专属缺陷。",
+      "work": "逐屏×四风格走查：清零 classic-only 硬编码（只走 core/design 令牌）；四风格下对比度/200% 文本/reduce-motion 等价逐面复算（ACCESSIBILITY_ASSETS 阈值）；密集信息可读性；15 态中该家族可 widget 级复现的状态全覆盖；每风格 golden/语义钉（确定性 seed，F05 判例）；发现的风格面缺陷就地修（不动行为语义/不放松既有门）。",
+      "acceptance": [
+        "家族内零风格专属缺陷：任一风格下无对比度失败/文本截断/令牌外颜色/布局破碎",
+        "四风格各有确定性 golden+语义钉且 CI 可失败",
+        "既有功能测试全绿+analyze 零+repeat 棘轮只降不升"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": false
+      },
+      "path_policy": "UI 消费 mobile/lib/core/design/ 令牌；RF-06 高危面（dashboard_screen/compact_status_bar/task_execution_screen）可改但须在 diff 叙证登记（RF-06 为他仓独立 lineage，切片移植冲突已盘点）；l10n 双语纯增量；风格真源唯一（theme_manager/pixel_preview_theme），禁第二真源。",
+      "stop_conditions": [
+        "发现行为语义缺陷超风格面→登记 FIX 不顺手修",
+        "连续三轮未改善停止写反例归因",
+        "preview 通道外发现需发布面决策项→登记 Q08 待裁"
+      ],
+      "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
+      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。"
+    },
+    {
+      "id": "V4-G07",
+      "title": "账号/设置/通知/异常/长尾——四风格商业化完备",
+      "depends_on": [],
+      "status": "PENDING",
+      "implementation_state": "NOT_STARTED",
+      "evidence_verdict": "NOT_RUN",
+      "kind": "implementation",
+      "required_locks": [
+        "ui-polish-g07"
+      ],
+      "heavy_token_required": false,
+      "risk": "normal",
+      "independent_reviewers": 1,
+      "specs": [
+        "02_design/SCREEN_FAMILIES.md",
+        "02_design/ACCESSIBILITY_ASSETS.md",
+        "02_design/DESIGN_SYSTEM.md",
+        "02_design/TOKENS.proposal.json",
+        "V4_DONE.md"
+      ],
+      "modules": [
+        "auth",
+        "user",
+        "settings",
+        "notification_center",
+        "splash"
+      ],
+      "source_anchors": [],
+      "objective": "该家族在 classic/paperDay/dusk/quiet 全部四风格下达到商业化默认完备：每屏任一风格可作发布默认而无风格专属缺陷。",
+      "work": "逐屏×四风格走查：清零 classic-only 硬编码（只走 core/design 令牌）；四风格下对比度/200% 文本/reduce-motion 等价逐面复算（ACCESSIBILITY_ASSETS 阈值）；密集信息可读性；15 态中该家族可 widget 级复现的状态全覆盖；每风格 golden/语义钉（确定性 seed，F05 判例）；发现的风格面缺陷就地修（不动行为语义/不放松既有门）。",
+      "acceptance": [
+        "家族内零风格专属缺陷：任一风格下无对比度失败/文本截断/令牌外颜色/布局破碎",
+        "四风格各有确定性 golden+语义钉且 CI 可失败",
+        "既有功能测试全绿+analyze 零+repeat 棘轮只降不升"
+      ],
+      "outputs": [
+        "diff_or_evidence_only.md",
+        "run_manifest.json",
+        "test_results.json",
+        "review_receipt.json",
+        "limitations.md"
+      ],
+      "evidence_required": {
+        "source_sha": true,
+        "build_id": true,
+        "commands_and_exit_codes": true,
+        "scope_and_denominator": true,
+        "artifacts_sha256": true,
+        "actual_model_and_usage_if_llm": true,
+        "screenshots_video_and_semantics_if_ui": true,
+        "physical_device_scope_if_sensory": false
+      },
+      "path_policy": "UI 消费 mobile/lib/core/design/ 令牌；RF-06 高危面（dashboard_screen/compact_status_bar/task_execution_screen）可改但须在 diff 叙证登记（RF-06 为他仓独立 lineage，切片移植冲突已盘点）；l10n 双语纯增量；风格真源唯一（theme_manager/pixel_preview_theme），禁第二真源。",
+      "stop_conditions": [
+        "发现行为语义缺陷超风格面→登记 FIX 不顺手修",
+        "连续三轮未改善停止写反例归因",
+        "preview 通道外发现需发布面决策项→登记 Q08 待裁"
+      ],
+      "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
+      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。"
     }
   ]
 }
