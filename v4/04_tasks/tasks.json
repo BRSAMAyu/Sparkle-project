@@ -3666,9 +3666,9 @@
         "V4-S02",
         "V4-S03"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS_WITH_CHALLENGES",
       "kind": "verification",
       "required_locks": [
         "qa-sensory"
@@ -3714,7 +3714,8 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "progress_note": "2026-09-29 wtQ06：REVIEW_READY 交付（分支 agent/v4/q06，base f13a21ef，证据头 83247329+状态 2a3c1bd4，未 push）。验证卡零产品码差量举证：事件乐谱 9 行×6 态=54 格逐格具名可失败测试（M-Rn-Cm，锚点三档：调用级 SystemChannels mock 记账/语义级 F03 适配器/widget 级），只消费 F03/S03/S02/S01/F02 一线权威；新测 58（54 格+4 补充）全绿+experience 77/services 142/design 261 回归+analyze 零 issue；勘误如实（首跑 15 败=测试装置缺陷，产品码零改动，raw jsonl 为最终态复跑）。R1=PASS_WITH_CHALLENGES（receipt ae5e4c37→main 合并）：三验收复现过（58/58+142/142）、零产品码全量属实、3 格 mutation 独立证实（MU1 SystemSound 记账/MU2 R6-C3 event_id/MU3 ?? 吞 null 全红）、六预登记挑战全裁决成立（R1-C2 C4 缺口登记足够不记 FAIL——卡面 acceptance 不含 background 行；R1-C4 copyKey 是冻结文案表既有键非第二契约；R1-C5 L1 如实登记判例适用）；P2×4：C4 列按「2 格独立行为证据+7 格登记」计不得宣称 9 格独立全证、build_id/screenshots 宜显式不适用注记、C6 分母口径膨胀判成立。已知限制 L1-L8（无真机 DEVICE_UNVERIFIED、C4 列 GAP_INTEGRATION 归 S03-L5/D01/B05/FIX-569 contract-owner 面）。"
     },
     {
       "id": "V4-Q07",
