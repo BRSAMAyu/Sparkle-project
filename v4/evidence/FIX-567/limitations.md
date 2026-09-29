@@ -28,3 +28,6 @@ worktree 无 .env：全部 pytest 以进程级 `SECRET_KEY=x` + 自然 sqlite �
 ## 6. 验收状态
 
 自报完成 ≠ 完成：按验收模型，本卡 DONE 需独立未参与会话 R1 审查（review_receipt.json 已预登记 scope 与预挑战点）。台账行已置 FIXED@5290e010（指向证据），若 R1 裁决返工，台账按接力机制回翻。
+
+## Errata (leader, 2026-09-30)
+- R1 F-2 措辞限定：run_manifest 中「gateway 全域 grep 零引用」应读作「网关**手写面**零引用」——receipt 字样在自动生成物 schema.sql:2077 与 sqlc models.go:2784 存在（生成物随 DB 契约再生成，非逻辑携带）；实质主张（零 WS 帧/零网关逻辑）经 R1 亲验成立。
