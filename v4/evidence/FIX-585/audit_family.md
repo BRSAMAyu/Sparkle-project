@@ -26,7 +26,7 @@ DATABASE_URL=sqlite:// SECRET_KEY=x /opt/homebrew/opt/python@3.11/bin/python3.11
   tests/test_db_partitioning.py tests/test_context_manager.py tests/unit/test_calibration_receipt.py \
   tests/unit/test_exam_sprint_days_left_local.py tests/unit/test_share_card_service.py tests/unit/test_glm_batch_adaptive.py -q
 → 18 passed, 2 skipped (test_db_partitioning 两用例 sqlite 下守卫自跳), EXIT=0
-日志：v4/evidence/FIX-585/six_files_pytest.log
+日志：`six_files_pytest.log` 本地留存于本目录（`.log` 按 .gitignore 不入库，关键结果已内联于上）
 ```
 
 > 「未爆≠安全」的反向校验同样成立：本审计不是以跑绿为判据，而是以消费链实查为判据；跑绿仅证明当前未爆与改动无回归。
