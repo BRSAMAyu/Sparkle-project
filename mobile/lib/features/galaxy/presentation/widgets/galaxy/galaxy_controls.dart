@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/tokens_v2/galaxy_canvas_palette.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
@@ -36,7 +37,7 @@ class GalaxyControls extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final backgroundColor = isDarkMode
-        ? const Color(0xAA0F1726)
+        ? GalaxyCanvasPalette.glassPanelControls
         : DS.neutral0.withValues(alpha: 0.78);
     final borderColor = isDarkMode
         ? DS.neutral0.withValues(alpha: 0.12)
@@ -44,7 +45,9 @@ class GalaxyControls extends StatelessWidget {
     final iconColor =
         isDarkMode ? DS.neutral0 : DS.neutral900.withValues(alpha: 0.87);
     final glowColor =
-        isDarkMode ? const Color(0xFF78A7FF) : const Color(0xFF2A5BD7);
+        isDarkMode
+            ? GalaxyCanvasPalette.glowBlueDark
+            : GalaxyCanvasPalette.glowBlueLight;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
@@ -169,7 +172,9 @@ class GalaxySectorIndicator extends StatelessWidget {
         opacity: 1,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: (isDarkMode ? const Color(0xCC101722) : DS.neutral0)
+            color: (isDarkMode
+                    ? GalaxyCanvasPalette.sectorChipPanel
+                    : DS.neutral0)
                 .withValues(alpha: 0.88),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: color.withValues(alpha: 0.35)),
@@ -228,8 +233,14 @@ class _ControlButton extends StatelessWidget {
         message: tooltip,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
-          width: 44,
-          height: 44,
+          // V4-G04：触达目标 44→48dp（ACCESSIBILITY_ASSETS「项目移动触达
+          // 目标 48dp 是自定标准」；缩放控件是画布主操作路径）。容器取
+          // 50 = 48 可点区 + 2×1 描边内缩（Container 装饰边框会把子约束
+          // 各收 1dp，实测 48 盒只剩 46 可点）；IconButton tight 钉 48。
+          // 右栏预留 sectorLabelRightRail=96dp，按钮组（~60dp 含内边距）
+          // 不挤占标签区。
+          width: 50,
+          height: 50,
           decoration: BoxDecoration(
             color: isActive
                 ? (activeGlowColor ?? iconColor).withValues(alpha: 0.14)
@@ -257,6 +268,15 @@ class _ControlButton extends StatelessWidget {
           ),
           child: IconButton(
             tooltip: tooltip,
+            // tight 约束钉 48×48：主题默认密度会把 min 约束再收 2dp
+            //（实测 46），触达面必须足额 48。
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(
+                minWidth: 48,
+                minHeight: 48,
+                maxWidth: 48,
+                maxHeight: 48,
+              ),
             onPressed: () {
               unawaited(
                 SensoryFeedbackService.emit(
@@ -276,7 +296,6 @@ class _ControlButton extends StatelessWidget {
               size: 20,
               semanticLabel: tooltip,
             ),
-            visualDensity: VisualDensity.compact,
           ),
         ),
       );

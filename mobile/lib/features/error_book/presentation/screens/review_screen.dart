@@ -384,7 +384,10 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   Text(
                     context.l10n.ebCorrectAnswer,
                     style: theme.textTheme.titleSmall?.copyWith(
-                      color: DS.success,
+                      // V4-G04：语义由 label 承载；success 全强度 titleSmall
+                      // 浅档 2.7:1（G05 同判例）→ 文字墨 textPrimary，
+                      // 色相保留在图标与 tint 底/描边。
+                      color: DS.textPrimary,
                       fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
@@ -767,7 +770,10 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         Text(
           value,
           style: theme.textTheme.headlineMedium?.copyWith(
-            color: color,
+            // V4-G04：统计数值是大字（≥3:1 档），但 warningLight/success
+            // 在浅档 1.9–2.7:1 仍不足；数值语义由下方 label 承载，
+            // 色相保留在图标 → 文字墨 textPrimary。
+            color: DS.textPrimary,
             fontWeight: DS.fontWeightBold,
           ),
         ),

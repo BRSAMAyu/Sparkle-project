@@ -583,7 +583,11 @@ class _LibraryHeroCard extends StatelessWidget {
                       context.l10n.studyMaterialsHeroTitle,
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
+                                // V4-G04：hero 渐变在浅档（classic 浅/
+                                // paperDay/quiet）经 deepSpaceStart 浅彩
+                                // 派生为亮面，白字仅 1.1:1——墨色随画布
+                                // 亮度取对侧（深档白字逐位保留）。
+                                color: _heroInk(context),
                                 fontWeight: FontWeight.w700,
                                 height: 1.1,
                               ),
@@ -592,7 +596,7 @@ class _LibraryHeroCard extends StatelessWidget {
                     Text(
                       context.l10n.studyMaterialsHeroSubtitle,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.76),
+                            color: _heroInkSecondary(context),
                             height: 1.45,
                           ),
                     ),
@@ -650,6 +654,18 @@ class _LibraryHeroCard extends StatelessWidget {
   }
 }
 
+/// V4-G04：hero 墨色随画布亮度取对侧——深档（classic dark/dusk）白字
+/// 逐位保留，浅档走正文墨（textPrimary/textSecondary 四档 ≥4.5:1）。
+Color _heroInk(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : DS.textPrimary;
+
+Color _heroInkSecondary(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+        ? Colors.white.withValues(alpha: 0.76)
+        : DS.textSecondary;
+
 class _HeroMetric extends StatelessWidget {
   const _HeroMetric({
     required this.label,
@@ -660,16 +676,21 @@ class _HeroMetric extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    // V4-G04：玻璃面与墨同随画布亮度（深档白玻璃逐位保留，浅档反转为
+    // 墨玻璃，白字白底 1.1:1 缺陷消除）。
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final glassBase = isDark ? Colors.white : DS.neutral900;
+    return Container(
       constraints: const BoxConstraints(minWidth: 120),
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing12,
         vertical: DS.spacing12,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: glassBase.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: glassBase.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -678,7 +699,7 @@ class _HeroMetric extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
+                  color: _heroInk(context),
                   fontWeight: FontWeight.w700,
                 ),
           ),
@@ -686,12 +707,16 @@ class _HeroMetric extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  // 深档 0.70 逐位保留（原值），浅档走 textSecondary。
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.7)
+                      : DS.textSecondary,
                 ),
           ),
         ],
       ),
     );
+  }
 }
 
 class _MiniGalaxyIllustration extends StatelessWidget {
@@ -740,9 +765,12 @@ class _MiniGalaxyIllustration extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(
+              // V4-G04（续跑收口）：accent 渐变容器图标墨走 colorScheme.onPrimary
+              // 唯一槽（G01 A8/A9 同判例）——白字在 dusk 亮 accent 上 2.2:1
+              // (<3:1 图形档)，onPrimary 四档按 accentInk 校准自动取对侧。
+              child: Icon(
                 Icons.auto_awesome_rounded,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
           ),
@@ -1428,14 +1456,22 @@ class _DocumentGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (icon, accent) = switch (fileType) {
-      'pdf' => (Icons.picture_as_pdf_rounded, const Color(0xFFE06A6A)),
-      'docx' => (Icons.description_rounded, const Color(0xFF63A1FF)),
-      'pptx' => (Icons.slideshow_rounded, const Color(0xFFFFB45E)),
-      'md' => (Icons.notes_rounded, const Color(0xFF74C8A6)),
-      'image' => (Icons.image_rounded, const Color(0xFFC88BFF)),
+    // V4-G04：文件类型身份色收敛语义槽（pdf→error、docx→info、
+    // pptx→warning、md→success、image→reflection，G01 纸屑六槽同判例），
+    // 浅档经同色相加深保证图标 ≥3:1、类型标签 ≥4.5:1（原五枚 pastel
+    // 字面量浅档 1.7–3.1:1 全面不足）；深档全强度槽值逐位保持。
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final (icon, baseAccent) = switch (fileType) {
+      'pdf' => (Icons.picture_as_pdf_rounded, DS.semanticError),
+      'docx' => (Icons.description_rounded, DS.info),
+      'pptx' => (Icons.slideshow_rounded, DS.semanticWarning),
+      'md' => (Icons.notes_rounded, DS.semanticSuccess),
+      'image' => (Icons.image_rounded, DS.taskReflection),
       _ => (Icons.insert_drive_file_rounded, DS.textSecondary),
     };
+    final accent = isDark
+        ? baseAccent
+        : Color.lerp(baseAccent, Colors.black, 0.38)!;
 
     return Container(
       width: 60,
@@ -1460,7 +1496,10 @@ class _DocumentGlyph extends StatelessWidget {
           Text(
             fileType.toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: accent,
+                  // V4-G04：类型语义由标签文本唯一承载；全强度 accent 做
+                  // 小字在 dusk 档 4.17:1 不达标（G05 文本墨同判例），
+                  // 文字墨走 textPrimary，色相保留在图标与 tint。
+                  color: DS.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
           ),
@@ -1543,7 +1582,10 @@ class _StatusBadge extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: color,
+                  // V4-G04：状态语义由 label 文案唯一承载（processing 带
+                  // 进度百分数）；warning/success/error 全强度做 labelMedium
+                  // 在浅档 1.9–3.6:1（G05 pill 同判例），文字墨走 textPrimary。
+                  color: DS.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
           ),
@@ -1942,9 +1984,11 @@ class _LargeGalaxyIllustration extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(
+              // V4-G04（续跑收口）：同上——onPrimary 唯一槽（G01 A8/A9 同判例），
+              // dusk 亮 accent 上白字 1.9:1 (<3:1) 由校准 accentInk 对侧墨消除。
+              child: Icon(
                 Icons.auto_awesome_rounded,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
                 size: 42,
               ),
             ),

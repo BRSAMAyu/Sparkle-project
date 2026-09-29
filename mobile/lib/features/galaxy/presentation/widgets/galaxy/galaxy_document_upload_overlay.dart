@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/design/tokens_v2/galaxy_canvas_palette.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_document_upload_provider.dart';
 
@@ -54,7 +55,7 @@ class GalaxyDocumentUploadOverlay extends StatelessWidget {
                         vertical: DS.spacing10,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0A1320).withValues(alpha: 0.9),
+                        color: GalaxyCanvasPalette.uploadPanelVeil.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
                           color: statusColor.withValues(alpha: 0.36),
@@ -138,7 +139,7 @@ class GalaxyDocumentUploadOverlay extends StatelessWidget {
       case GalaxyDocumentUploadPhase.findingKnowledge:
       case GalaxyDocumentUploadPhase.buildingNodes:
       case GalaxyDocumentUploadPhase.idle:
-        return const Color(0xFF7BE7FF);
+        return GalaxyCanvasPalette.pipelineCyan;
     }
   }
 
@@ -191,7 +192,7 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
     return GraphiteCardSurface(
       padding: const EdgeInsets.all(DS.spacing18),
       motionToken: SparkleMotionToken.scene,
-      backgroundColor: const Color(0xFF0B1523).withValues(alpha: 0.92),
+      backgroundColor: GalaxyCanvasPalette.uploadPanel.withValues(alpha: 0.92),
       borderColor: accentColor.withValues(alpha: 0.22),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -333,7 +334,7 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
       case GalaxyDocumentUploadPhase.findingKnowledge:
       case GalaxyDocumentUploadPhase.buildingNodes:
       case GalaxyDocumentUploadPhase.idle:
-        return const Color(0xFF7BE7FF);
+        return GalaxyCanvasPalette.pipelineCyan;
     }
   }
 
@@ -441,7 +442,7 @@ class _StageStepper extends StatelessWidget {
                         color: item.complete || item.active
                             ? (item.complete
                                 ? DS.success
-                                : const Color(0xFF7BE7FF))
+                                : GalaxyCanvasPalette.pipelineCyan)
                             : DS.neutral0.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(999),
                       ),
@@ -565,7 +566,10 @@ class _GalaxyUploadTrailPainter extends CustomPainter {
         target.dx,
         target.dy,
       );
-    final metrics = path.computeMetrics();
+    // V4-G04 修复：PathMetrics 是一次性可迭代——isEmpty 消费一次后 .first
+    // 再迭代会抛 "Bad state: No element"（widget 测试引擎实测必现）。
+    // 物化一次再判空，绘制输出逐位不变。
+    final metrics = path.computeMetrics().toList(growable: false);
     if (metrics.isEmpty) {
       return;
     }
@@ -574,7 +578,7 @@ class _GalaxyUploadTrailPainter extends CustomPainter {
     final accent = switch (phase) {
       GalaxyDocumentUploadPhase.success => DS.success,
       GalaxyDocumentUploadPhase.failed => DS.error,
-      _ => const Color(0xFF7BE7FF),
+      _ => GalaxyCanvasPalette.pipelineCyan,
     };
 
     final glowPaint = Paint()
@@ -612,7 +616,7 @@ class _GlowingDocumentOrb extends StatelessWidget {
     final color = switch (phase) {
       GalaxyDocumentUploadPhase.success => DS.success,
       GalaxyDocumentUploadPhase.failed => DS.error,
-      _ => const Color(0xFF7BE7FF),
+      _ => GalaxyCanvasPalette.pipelineCyan,
     };
 
     return SparkleAttentionPulse(
@@ -641,7 +645,7 @@ class _GlowingDocumentOrb extends StatelessWidget {
         ),
         child: const Icon(
           Icons.menu_book_rounded,
-          color: Color(0xFF04111F),
+          color: GalaxyCanvasPalette.uploadPanelDeep,
           size: 22,
         ),
       ),
@@ -659,7 +663,7 @@ class _TargetGlow extends StatelessWidget {
     final color = switch (phase) {
       GalaxyDocumentUploadPhase.success => DS.success,
       GalaxyDocumentUploadPhase.failed => DS.error,
-      _ => const Color(0xFF7BE7FF),
+      _ => GalaxyCanvasPalette.pipelineCyan,
     };
 
     final ringCount = phase == GalaxyDocumentUploadPhase.success ? 3 : 2;

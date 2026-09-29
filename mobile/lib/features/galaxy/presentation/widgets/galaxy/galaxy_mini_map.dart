@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/tokens_v2/galaxy_canvas_palette.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
@@ -55,7 +56,7 @@ class GalaxyMiniMap extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: isDarkMode
-                    ? const Color(0xAA101A2B)
+                    ? GalaxyCanvasPalette.glassPanelMiniMap
                     : DS.neutral0.withValues(alpha: 0.8),
                 border: Border.all(color: frameColor),
                 borderRadius: BorderRadius.circular(18),
@@ -119,9 +120,13 @@ class _GalaxyMiniMapPainter extends CustomPainter {
     final scaleX = size.width / math.max(1, paddedBounds.width);
     final scaleY = size.height / math.max(1, paddedBounds.height);
     final trackColor =
-        isDarkMode ? const Color(0xFF152238) : const Color(0xFFEFF3F8);
+        isDarkMode
+            ? GalaxyCanvasPalette.miniMapTrack
+            : GalaxyCanvasPalette.miniMapTrackLight;
     final viewportColor =
-        isDarkMode ? const Color(0xFF88B4FF) : const Color(0xFF3563DA);
+        isDarkMode
+            ? GalaxyCanvasPalette.miniMapViewport
+            : GalaxyCanvasPalette.miniMapViewportLight;
 
     canvas.drawRect(Offset.zero & size, Paint()..color = trackColor);
 

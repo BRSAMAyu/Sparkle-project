@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/tokens_v2/galaxy_canvas_palette.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_performance_monitor.dart';
 
@@ -326,11 +327,11 @@ class PerformanceSummary {
   Color get statusColor {
     switch (status) {
       case PerformanceStatus.optimal:
-        return const Color(0xFF4CAF50);
+        return GalaxyCanvasPalette.perfOptimal;
       case PerformanceStatus.degraded:
-        return const Color(0xFFFFA726);
+        return GalaxyCanvasPalette.perfDegraded;
       case PerformanceStatus.critical:
-        return const Color(0xFFF44336);
+        return GalaxyCanvasPalette.perfCritical;
     }
   }
 

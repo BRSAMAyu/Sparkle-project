@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/design/tokens_v2/galaxy_canvas_palette.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -2171,7 +2172,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     final selection = await showMenu<_GalaxyEmptySpaceAction>(
       context: context,
-      color: const Color(0xFF0C1626),
+      color: GalaxyCanvasPalette.menuPanel,
       position: RelativeRect.fromRect(
         Rect.fromCenter(
           center: command.screenPosition,
@@ -2308,7 +2309,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         .firstOrNull;
     final color = node != null
         ? SectorConfig.getGlowColor(node.sector)
-        : const Color(0xFFFFD700);
+        : GalaxyCanvasPalette.celebrationGold;
 
     final entry = _CelebrationEntry(
       id: 'milestone:${event.nodeId}:${DateTime.now().microsecondsSinceEpoch}',
@@ -3404,7 +3405,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Widget build(BuildContext context) {
     super.build(context);
     const isDarkMode = _useDarkGalaxyTheme;
-    const backgroundColor = isDarkMode ? Color(0xFF060A12) : Color(0xFFF5F6F8);
+    const backgroundColor = isDarkMode
+        ? GalaxyCanvasPalette.canvasShell
+        : GalaxyCanvasPalette.canvasBaseLight;
     final displaySettings = ref.watch(galaxyDisplaySettingsProvider);
     final graph = _graph;
     final currentSector = _currentSector();
@@ -3442,7 +3445,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       scaffoldBackgroundColor: backgroundColor,
       colorScheme: baseTheme.colorScheme.copyWith(
         brightness: Brightness.dark,
-        surface: const Color(0xFF101929),
+        surface: GalaxyCanvasPalette.chromePanel,
         onSurface: DS.neutral0,
       ),
     );
@@ -4100,8 +4103,8 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             gradient: const LinearGradient(
               colors: <Color>[
-                Color(0xE6223658),
-                Color(0xE6142038),
+                GalaxyCanvasPalette.hudBannerTop,
+                GalaxyCanvasPalette.hudBannerBottom,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -4195,7 +4198,7 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
                       child: FilledButton.icon(
                         style: FilledButton.styleFrom(
                           backgroundColor: DS.neutral0,
-                          foregroundColor: const Color(0xFF182238),
+                          foregroundColor: GalaxyCanvasPalette.onSurfaceButtonInk,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         onPressed: onReview,
@@ -4233,7 +4236,7 @@ class _GalaxyDraftPendingIndicator extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           child: Ink(
             decoration: BoxDecoration(
-              color: const Color(0xD9101A2C),
+              color: GalaxyCanvasPalette.zoomPillPanel,
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
                 color: DS.neutral0.withValues(alpha: 0.1),
@@ -4469,7 +4472,9 @@ class _GalaxyOverviewStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
         decoration: BoxDecoration(
-          color: (isDarkMode ? const Color(0xCC101929) : DS.neutral0)
+          color: (isDarkMode
+                  ? GalaxyCanvasPalette.chromePanelBarrier
+                  : DS.neutral0)
               .withValues(alpha: 0.88),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
@@ -4541,7 +4546,7 @@ class _OverviewMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = isDarkMode ? DS.neutral0 : const Color(0xFF101828);
+    final foreground = isDarkMode ? DS.neutral0 : GalaxyCanvasPalette.hudInkLight;
     final secondary = isDarkMode
         ? DS.neutral0.withValues(alpha: 0.62)
         : DS.galaxyShadow.withValues(alpha: 0.54);
@@ -4593,7 +4598,7 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xE6101929),
+          color: GalaxyCanvasPalette.chromePanelLegend,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: DS.neutral0.withValues(alpha: 0.08)),
         ),
@@ -4695,7 +4700,9 @@ class _StatusOrbPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final baseColor =
-        isDarkMode ? const Color(0xFF7CA9FF) : const Color(0xFF3A67DA);
+        isDarkMode
+            ? GalaxyCanvasPalette.glowBlueAmbient
+            : GalaxyCanvasPalette.glowBlueAmbientLight;
     canvas
       ..drawCircle(
         center,

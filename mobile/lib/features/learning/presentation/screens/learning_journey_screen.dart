@@ -227,9 +227,13 @@ class _MaterialCardState extends State<_MaterialCard> {
             if (parse.needsManualInput && widget.manualInput == null) ...[
               const SizedBox(height: DS.sm),
               // OCR 失败/不支持 → 手输替代（不假装已识别）。
+              // V4-G04：警示语义由文案承载；warning 全强度做小字在
+              // classic 浅/paperDay/quiet 仅 1.9–2.2:1（G05 同判例），
+              // 正文墨收敛 textSecondary（四档 ≥4.5:1）。
               Text(
                 l10n.learningManualInputHint,
-                style: theme.textTheme.bodySmall?.copyWith(color: DS.warning),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: DS.textSecondary),
               ),
               const SizedBox(height: DS.xs),
               Row(
@@ -263,7 +267,10 @@ class _MaterialCardState extends State<_MaterialCard> {
               const SizedBox(height: DS.sm),
               Text(
                 l10n.learningManualInputSaved,
-                style: theme.textTheme.bodySmall?.copyWith(color: DS.semanticSuccess),
+                // V4-G04：成功语义由文案承载（success 全强度小字浅档
+                // 2.7:1 < 4.5，G05 同判例），正文墨走 textSecondary。
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: DS.textSecondary),
               ),
             ],
           ],
@@ -292,12 +299,19 @@ class _ParseStatusChip extends StatelessWidget {
       key: Key('learning_parse_status_${parse.status.name}'),
       padding: const EdgeInsets.symmetric(horizontal: DS.sm, vertical: DS.xs),
       decoration: BoxDecoration(
+        // 状态色只承载底 tint（图形档 ≥3:1 由描边/tint 边界与全强度色
+        // 相邻判别），文字墨统一 textPrimary——success/warning/error/
+        // info 全强度做 labelSmall 在浅档 2.7–4.9:1 不齐（G05 判例），
+        // 状态语义由 [label] 文案唯一承载。
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color),
+        style: Theme.of(context)
+            .textTheme
+            .labelSmall
+            ?.copyWith(color: DS.textPrimary),
       ),
     );
   }
@@ -407,7 +421,10 @@ class _CheckCardState extends State<_CheckCard> {
               Text(
                 key: const Key('learning_check_degraded'),
                 l10n.learningCheckDegraded,
-                style: theme.textTheme.bodySmall?.copyWith(color: DS.semanticError),
+                // V4-G04：降级语义由文案承载（error 全强度小字浅档
+                // 3.6:1 < 4.5，G05 同判例），正文墨走 textPrimary。
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: DS.textPrimary),
               )
             else if (question != null) ...[
               Text(

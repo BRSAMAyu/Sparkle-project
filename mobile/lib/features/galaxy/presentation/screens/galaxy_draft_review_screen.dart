@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_card.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/tokens_v2/galaxy_canvas_palette.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_draft_review_models.dart';
@@ -48,15 +49,15 @@ class _GalaxyDraftReviewScreenState
     return Theme(
       data: Theme.of(context).copyWith(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF050914),
+        scaffoldBackgroundColor: GalaxyCanvasPalette.draftScaffold,
       ),
       child: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFF07111F),
-              Color(0xFF0C1830),
-              Color(0xFF050914),
+              GalaxyCanvasPalette.draftGradientLow,
+              GalaxyCanvasPalette.draftGradientHigh,
+              GalaxyCanvasPalette.draftScaffold,
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -71,7 +72,10 @@ class _GalaxyDraftReviewScreenState
             // APPBAR-VARIANT：返回钮降档 ghost（导航工具类不占实心强调档）。
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              icon: Icon(Icons.arrow_back_rounded, color: DS.textPrimary),
+              // V4-G04：本屏强制深空暗底（恒暗画布族），回退图标墨走
+              // DS.neutral0 与兄弟元素同源；DS.textPrimary 随 profile 变，
+              // 浅色档会把深墨图标漏进暗底（<3:1 不可见）。
+              icon: Icon(Icons.arrow_back_rounded, color: DS.neutral0),
               semanticLabel: l10n.back,
               onPressed: () => context.pop(),
             ),

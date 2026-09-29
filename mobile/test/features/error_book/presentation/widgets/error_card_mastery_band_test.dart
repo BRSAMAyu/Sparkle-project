@@ -8,7 +8,10 @@ import '../../../../shared/i18n_test_helper.dart';
 
 /// N12（A-SPEC2 改造 #1）验收：error_card 掌握度位
 /// 1. 档位人话为主、百分数次级；
-/// 2. 渲染色 == 单一 owner `masteryBandColor` 的输出（同输入同色）；
+/// 2. 渲染色：进度条 == 单一 owner `masteryBandColor` 的输出（同输入同色）；
+///    档位文字墨 == textPrimary（V4-G04：档位语义由文案唯一承载，色相保留
+///    在进度条/tint——全强度 success/warning 做小字在像素档不齐 4.5:1，
+///    g04_family_four_style_test G4-1 同口径）；
 /// 3. error 槽负向断言（测试与渲染读同一 ThemeManager 未初始化态 → light 主题）。
 void main() {
   setUp(setUpI18nForTesting);
@@ -36,9 +39,9 @@ void main() {
         find.byType(LinearProgressIndicator),
       );
       expect(bar.valueColor!.value, masteryBandColor(entry.key));
-      // 档位文字颜色与进度条同色（同输入同色）。
+      // 档位文字墨走 textPrimary（V4-G04：语义由文案承载，见文件头注 2）。
       final bandText = tester.widget<Text>(find.text(entry.value));
-      expect(bandText.style?.color, masteryBandColor(entry.key));
+      expect(bandText.style?.color, DS.textPrimary);
       // 负向断言：error 槽不参与掌握度位。
       expect(masteryBandColor(entry.key), isNot(DS.semanticError));
     });

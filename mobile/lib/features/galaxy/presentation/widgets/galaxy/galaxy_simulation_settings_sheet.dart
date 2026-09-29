@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/tokens_v2/galaxy_canvas_palette.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
 
@@ -38,7 +39,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final maxSheetHeight = MediaQuery.of(context).size.height * 0.82;
     final backgroundColor = isDarkMode
-        ? const Color(0xEE0E1523)
+        ? GalaxyCanvasPalette.glassPanelSettings
         : DS.neutral0.withValues(alpha: 0.95);
     final borderColor = isDarkMode
         ? DS.neutral0.withValues(alpha: 0.1)
@@ -61,7 +62,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
               colors: [
                 backgroundColor,
                 Color.alphaBlend(
-                  const Color(0xFF6B8CFF)
+                  GalaxyCanvasPalette.glowBlueSettings
                       .withValues(alpha: isDarkMode ? 0.08 : 0.04),
                   backgroundColor,
                 ),

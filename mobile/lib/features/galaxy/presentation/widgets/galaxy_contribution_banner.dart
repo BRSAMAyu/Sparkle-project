@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/tokens_v2/galaxy_canvas_palette.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
@@ -38,11 +39,11 @@ class GalaxyContributionBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final surface = isDarkMode
-        ? const Color(0xCC0F1728)
+        ? GalaxyCanvasPalette.glassPanelBanner
         : DS.neutral0.withValues(alpha: 0.94);
     final border =
         (isDarkMode ? DS.neutral0 : DS.neutral900).withValues(alpha: 0.08);
-    final foreground = isDarkMode ? DS.neutral0 : const Color(0xFF111827);
+    final foreground = isDarkMode ? DS.neutral0 : GalaxyCanvasPalette.bannerInkLight;
     final secondary = foreground.withValues(alpha: 0.68);
 
     return Material(
@@ -248,7 +249,7 @@ class GalaxyContributionDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = isDarkMode ? DS.neutral0 : const Color(0xFF111827);
+    final foreground = isDarkMode ? DS.neutral0 : GalaxyCanvasPalette.bannerInkLight;
     final secondary = foreground.withValues(alpha: 0.68);
 
     return SafeArea(

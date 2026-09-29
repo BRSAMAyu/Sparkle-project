@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/tokens_v2/galaxy_canvas_palette.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
@@ -67,17 +68,26 @@ Color galaxyMasteryNodeColor({
   required int masteryScore,
   required bool isDarkMode,
 }) {
+  // V4-G04：色值收敛进 GalaxyCanvasPalette 单一名源（值逐位不变）。
   final mastery = galaxyMasteryRatio(masteryScore);
   if (mastery < 0.25) {
-    return isDarkMode ? const Color(0xFF77808C) : const Color(0xFF9AA3AD);
+    return isDarkMode
+        ? GalaxyCanvasPalette.masteryLow
+        : GalaxyCanvasPalette.masteryLowLight;
   }
   if (mastery < 0.5) {
-    return isDarkMode ? const Color(0xFF73B7FF) : const Color(0xFF4F9FE8);
+    return isDarkMode
+        ? GalaxyCanvasPalette.masteryMid
+        : GalaxyCanvasPalette.masteryMidLight;
   }
   if (mastery < 0.75) {
-    return isDarkMode ? const Color(0xFF8FE6B0) : const Color(0xFF4BC77E);
+    return isDarkMode
+        ? GalaxyCanvasPalette.masteryHigh
+        : GalaxyCanvasPalette.masteryHighLight;
   }
-  return isDarkMode ? const Color(0xFF2EF28A) : const Color(0xFF16A85A);
+  return isDarkMode
+      ? GalaxyCanvasPalette.masteryFull
+      : GalaxyCanvasPalette.masteryFullLight;
 }
 
 class GalaxyLabelCache {
@@ -343,10 +353,11 @@ class StarMapPainter extends CustomPainter {
 
   static const int _nodeBudget = 500;
   static const int _edgeBudget = 800;
-  static const Color _darkBackground = Color(0xFF0A0E17);
-  static const Color _darkRadial = Color(0xFF0D1525);
-  static const Color _lightBackground = Color(0xFFF5F6F8);
-  static const Color _lightRadial = Color(0xFFEBEDF2);
+  // V4-G04：深空画布身份色阶收敛进 GalaxyCanvasPalette（值逐位不变）。
+  static const Color _darkBackground = GalaxyCanvasPalette.canvasBase;
+  static const Color _darkRadial = GalaxyCanvasPalette.canvasRadial;
+  static const Color _lightBackground = GalaxyCanvasPalette.canvasBaseLight;
+  static const Color _lightRadial = GalaxyCanvasPalette.canvasRadialLight;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -489,7 +500,7 @@ class StarMapPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3.6
-          ..color = const Color(0xFFFFD166).withValues(alpha: 0.9),
+          ..color = GalaxyCanvasPalette.predictionGold.withValues(alpha: 0.9),
       );
     }
 
@@ -503,9 +514,9 @@ class StarMapPainter extends CustomPainter {
       final risk = overlay.nodeRiskLevels[nodeId] ?? 'low';
       final predictedMastery = overlay.predictedMasteryByNodeId[nodeId];
       final ringColor = switch (risk) {
-        'high' => const Color(0xFFFF7B54),
-        'medium' => const Color(0xFFFFC857),
-        _ => const Color(0xFF59D98E),
+        'high' => GalaxyCanvasPalette.riskHigh,
+        'medium' => GalaxyCanvasPalette.riskMedium,
+        _ => GalaxyCanvasPalette.riskLow,
       };
       final ringRadius = (node.radius * camera.scale).clamp(8.0, 32.0) + 8;
       canvas.drawCircle(
@@ -645,7 +656,13 @@ class StarMapPainter extends CustomPainter {
         [
           Colors.transparent,
           Colors.transparent,
-          (isDarkMode ? DS.neutral900 : const Color(0xFFCBD2DD)).withValues(
+          // V4-G04：暗角墨钉死为画布身份值（原 dark 分支 DS.neutral900 随
+          // profile 漂移——浅色档会把深墨漏进恒暗画布；钉 classic dark
+          // 既有输出 F4F1EB，classic/dusk 输出不变、浅档画布恒定）。
+          (isDarkMode
+                  ? GalaxyCanvasPalette.vignetteInk
+                  : GalaxyCanvasPalette.vignetteInkLight)
+              .withValues(
             alpha: isDarkMode ? 0.12 : 0.06,
           ),
         ],
@@ -870,9 +887,13 @@ class StarMapPainter extends CustomPainter {
     );
     final starPaint = Paint()..style = PaintingStyle.fill;
     final warmBase =
-        isDarkMode ? const Color(0xFFFFF4E6) : const Color(0xFF6E6354);
+        isDarkMode
+        ? GalaxyCanvasPalette.labelInkWarm
+        : GalaxyCanvasPalette.starInkLightWarm;
     final coolBase =
-        isDarkMode ? const Color(0xFFE6F0FF) : const Color(0xFF526173);
+        isDarkMode
+        ? GalaxyCanvasPalette.labelInkCool
+        : GalaxyCanvasPalette.starInkLightCool;
 
     for (var index = 0; index < effectiveCount; index++) {
       final rawX = random.nextDouble() * width;
@@ -1750,7 +1771,7 @@ class StarMapPainter extends CustomPainter {
           nodeCenter,
           radius * 1.55 * pulseFactor,
           Paint()
-            ..color = const Color(0xFFFF4444)
+            ..color = GalaxyCanvasPalette.errorPulse
                 .withValues(alpha: errorIntensity * nodeAlpha)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
             ..style = PaintingStyle.stroke
@@ -1894,7 +1915,7 @@ class StarMapPainter extends CustomPainter {
   }) {
     final clampedUrgency = urgency.clamp(0.0, 1.0);
     final pulse = 0.5 + 0.5 * math.sin(ambientPhase * 2.4 + seed);
-    final accent = Color.lerp(color, const Color(0xFFFFD166), 0.28)!;
+    final accent = Color.lerp(color, GalaxyCanvasPalette.predictionGold, 0.28)!;
     final outerRadius = radius * ui.lerpDouble(1.8, 2.65, pulse)!;
     final innerRadius = radius * ui.lerpDouble(1.35, 1.9, pulse)!;
     final haloAlpha = (0.08 + clampedUrgency * 0.12) * nodeAlpha;
@@ -2675,7 +2696,9 @@ class StarMapPainter extends CustomPainter {
     final masteryRatio = galaxyMasteryRatio(node.masteryScore);
     if (masteryRatio < 0.05) {
       final grayed = Color.lerp(
-        isDarkMode ? const Color(0xFF3A404A) : const Color(0xFFB8BFC8),
+        isDarkMode
+            ? GalaxyCanvasPalette.dimNodeBase
+            : GalaxyCanvasPalette.dimNodeBaseLight,
         sectorColor,
         0.35,
       )!;
@@ -2714,7 +2737,9 @@ class StarMapPainter extends CustomPainter {
         dotCenter,
         dotRadius + 1.4,
         Paint()
-          ..color = (isDarkMode ? const Color(0xFF060A12) : DS.neutral0)
+          ..color = (isDarkMode
+              ? GalaxyCanvasPalette.masteryDotVeil
+              : DS.neutral0)
               .withValues(alpha: 0.92 * nodeAlpha),
       )
       ..drawCircle(

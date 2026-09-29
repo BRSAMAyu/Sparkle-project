@@ -211,7 +211,10 @@ class ErrorCard extends StatelessWidget {
                             masteryBandLabel(error.masteryLevel, context.l10n),
                             style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: DS.fontWeightSemibold,
-                              color: masteryBandColor(error.masteryLevel),
+                              // V4-G04：档位语义由文案承载；success/warning
+                              // 全强度做 labelSmall 浅档 1.9–2.7:1（G05 pill
+                              // 同判例），文字墨走 textPrimary（≥4.5:1）。
+                              color: DS.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 2),

@@ -35,10 +35,13 @@ class GalaxyNodePreviewCard extends StatelessWidget {
     final sectorName = SectorConfig.getLocalizedName(node.sector);
     final sectorColor = sectorStyle.primaryColorFor(isDarkMode: isDarkMode);
     final glowColor = sectorStyle.glowColorFor(isDarkMode: isDarkMode);
+    // V4-G04：暗档底走当前主题 colorScheme.surface——星图强制暗子树内
+    // = chromePanel（101929，与既有输出同族）；dusk 档外挂（style preview
+    // 面）时随暮色表面，不再漏 classic 藏青。
     final backgroundColor = isDarkMode
         ? Color.alphaBlend(
             sectorColor.withValues(alpha: 0.08),
-            const Color(0xE6151D30),
+            Theme.of(context).colorScheme.surface,
           )
         : Color.alphaBlend(
             sectorColor.withValues(alpha: 0.05),

@@ -75,6 +75,12 @@ class KnowledgeDetailScreen extends ConsumerWidget {
     final sectorStyle = SectorConfig.getStyle(detail.node.sector);
     final theme = Theme.of(context);
     final l10n = context.l10n;
+    // V4-G04：领域色按环境亮度取档——原 primaryColor 恒取深档 pastel，
+    // 浅色档收藏星标在浅面上仅 2.2:1；浅档走 light 档（≥4.5:1），
+    // 深档逐位保持。
+    final isDarkSector = theme.brightness == Brightness.dark;
+    final sectorPrimary = sectorStyle.primaryColorFor(isDarkMode: isDarkSector);
+    final sectorGlow = sectorStyle.glowColorFor(isDarkMode: isDarkSector);
     final visibleRelations =
         detail.relations.where(_isRenderableRelation).toList(growable: false);
 
@@ -122,7 +128,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                 icon: Icon(
                   detail.userStats.isFavorite ? Icons.star : Icons.star_border,
                   color: detail.userStats.isFavorite
-                      ? sectorStyle.primaryColor
+                      ? sectorPrimary
                       : DS.textPrimary,
                 ),
                 // A11Y-BATCH6A：两态钮按当前态命名（甲式单节点）。
@@ -150,12 +156,12 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                     colors: [
                       Color.lerp(
                         DS.surfaceCanvas,
-                        sectorStyle.primaryColor,
+                        sectorPrimary,
                         0.28,
                       )!,
                       Color.lerp(
                         DS.surfaceCanvas,
-                        sectorStyle.glowColor,
+                        sectorGlow,
                         0.16,
                       )!,
                       DS.surfaceCanvas,

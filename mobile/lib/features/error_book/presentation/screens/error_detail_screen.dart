@@ -283,6 +283,10 @@ class ErrorDetailScreen extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // V4-G04：档位色保留在 tint 底/描边与图标（装饰档，档位语义由
+          // [masteryBandLabel] 文案唯一承载）；success/warning 全强度做
+          // labelMedium 文本在浅档 1.9–2.7:1（G05 pill 同判例），文字墨
+          // 收敛 textPrimary（四档 ≥4.5:1）。
           Icon(
             switch (masteryBandOf(mastery)) {
               MasteryBand.high => Icons.star,
@@ -297,7 +301,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Text(
             masteryBandLabel(mastery, context.l10n),
             style: theme.textTheme.labelMedium?.copyWith(
-              color: color,
+              color: DS.textPrimary,
               fontWeight: DS.fontWeightSemibold,
             ),
           ),
@@ -608,7 +612,10 @@ class ErrorDetailScreen extends ConsumerWidget {
               Text(
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
-                  color: color,
+                  // V4-G04：「你的答案/正确答案」语义由 label 承载；
+                  // success 全强度做 titleSmall 在浅档 2.7:1（G05 同判例），
+                  // 文字墨走 textPrimary，色相保留在图标与 tint 描边。
+                  color: DS.textPrimary,
                   fontWeight: DS.fontWeightSemibold,
                 ),
               ),
