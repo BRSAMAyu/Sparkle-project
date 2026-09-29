@@ -1,0 +1,49 @@
+{
+  "fix": "FIX-581",
+  "owner": "leader(配额接管, 前任 agent 机制层继承)",
+  "date": "2026-09-30",
+  "base": "291618e4 (main merged into agent/v4/f581)",
+  "anchor": "CI53=36546247412 g01 task_list paperDay golden 0.62% (8227px) > 0.5% local band; dashboard pass",
+  "commands": [
+    [
+      "flutter test b04_tolerant_comparator_test --concurrency=1",
+      "0 (×2, +11)",
+      "机制钉含 CI 两态/带界/归属"
+    ],
+    [
+      "flutter test g01_four_style_golden --concurrency=1",
+      "0 (×3 连跑)",
+      "本地严格口径行为不变"
+    ],
+    [
+      "flutter test b04_visual_baseline_capture + g06_four_style_golden",
+      "0",
+      "两消费面绿"
+    ],
+    [
+      "flutter analyze test/goldens/b04_visual_baseline/",
+      "6 issues (main 基线 8, 新增 0, 卡内触碰点顺手 -2)",
+      "lint 门"
+    ],
+    [
+      "MUTATION-M2: throw TestFailure→FlutterError",
+      "1 (红) 错位归属断言命中",
+      "还原后 0 绿"
+    ],
+    [
+      "MUTATION-M1: 拔除 CI 分支恒本地口径",
+      "1 (红)",
+      "还原后 0 绿"
+    ],
+    [
+      "GITHUB_ACTIONS=true flutter test g01_four_style_golden",
+      "0",
+      "真实检测路径 e2e"
+    ],
+    [
+      "全仓 matchesGoldenFile 无保护面扫描",
+      "UNPROTECTED=0",
+      "审计兜底"
+    ]
+  ]
+}
