@@ -112,6 +112,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   String? _dataControlsStatus;
   AmbientScene _ambientScene = AmbientScene.none;
   double _ambientVolume = 0.5;
+
+  /// V4-S02：提示音独立音量（与环境音量互不连带）。
+  double _sfxVolume = 1.0;
   Timer? _learningPrefsDebounce;
 
   String? _learningPreferenceStatus;
@@ -186,6 +189,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final ambientScene = await SensoryFeedbackService.getSavedAmbientScene();
     final ambientVolume = await SensoryFeedbackService.getAmbientVolume();
     final ambientEnabled = await SensoryFeedbackService.isAmbientEnabled();
+    final sfxVolume = await SensoryFeedbackService.getSfxVolume();
     if (!mounted) {
       return;
     }
@@ -196,6 +200,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       _ambientScene = ambientScene;
       _ambientVolume = ambientVolume;
       _ambientEnabled = ambientEnabled;
+      _sfxVolume = sfxVolume;
       _audioDegraded = SensoryFeedbackService.audioPlaybackDegraded;
       _sensoryReady = true;
     });
@@ -483,6 +488,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     await SensoryFeedbackService.setAmbientVolume(value);
   }
 
+  /// V4-S02：提示音独立音量（只写提示音音量轴，不触碰环境音量）。
+  Future<void> _setSfxVolume(double value) async {
+    setState(() => _sfxVolume = value);
+    await SensoryFeedbackService.setSfxVolume(value);
+  }
+
   void _scheduleLearningPreferenceUpdate({
     required double depth,
     required double curiosity,
@@ -725,6 +736,37 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               ),
                               const Icon(Icons.surround_sound_rounded,
                                   size: 18,),
+                            ],
+                          ),
+                          // V4-S02：提示音独立音量（环境/提示音两独立音量的
+                          // 提示音侧；随提示音开关置灰——关了提示音，调
+                          // 音量是不诚实的中间态）。
+                          const SizedBox(height: DS.spacing12),
+                          Text(
+                            l10n.sensorySfxVolumeTitle,
+                            key: const ValueKey('sensory-sfx-volume-title'),
+                            style:
+                                DS.labelSmall.copyWith(color: DS.textSecondary),
+                          ),
+                          Row(
+                            children: [
+                              const Icon(Icons.volume_mute_rounded, size: 18),
+                              Expanded(
+                                child: Slider(
+                                  key: const ValueKey('sensory-sfx-volume'),
+                                  value: _sfxVolume,
+                                  divisions: 10,
+                                  onChanged: _sensoryReady && _soundEnabled
+                                      ? (value) =>
+                                          setState(() => _sfxVolume = value)
+                                      : null,
+                                  onChangeEnd: _sensoryReady && _soundEnabled
+                                      ? (value) =>
+                                          unawaited(_setSfxVolume(value))
+                                      : null,
+                                ),
+                              ),
+                              const Icon(Icons.volume_up_rounded, size: 18),
                             ],
                           ),
                         ],

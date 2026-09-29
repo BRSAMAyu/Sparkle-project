@@ -380,6 +380,12 @@ abstract class AppLocalizations {
   /// **'环境音音量'**
   String get sensoryAmbientVolumeTitle;
 
+  /// 独立于环境音量；录音时提示音自动静音
+  ///
+  /// In zh, this message translates to:
+  /// **'提示音音量'**
+  String get sensorySfxVolumeTitle;
+
   /// No description provided for @bgmSectionTitle.
   ///
   /// In zh, this message translates to:

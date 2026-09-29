@@ -47,6 +47,10 @@
   "sensoryAuroraLinkSubtitle": "Let Aurora gently adjust music, haptics, and moments of celebration",
   "sensoryAmbientSceneTitle": "Focus Ambience",
   "sensoryAmbientVolumeTitle": "Ambient Volume",
+  "sensorySfxVolumeTitle": "Prompt Sound Volume",
+  "@sensorySfxVolumeTitle": {
+    "description": "Independent of ambient volume; auto-muted while recording"
+  },
   "bgmSectionTitle": "Background Music",
   "bgmLoadingSubtitle": "Loading music preferences...",
   "bgmEnabledTitle": "Enable Background Music",

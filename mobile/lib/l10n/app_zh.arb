@@ -47,6 +47,10 @@
   "sensoryAuroraLinkSubtitle": "允许 Aurora 根据状态轻柔调整音乐、触感和庆祝反馈",
   "sensoryAmbientSceneTitle": "专注环境音",
   "sensoryAmbientVolumeTitle": "环境音音量",
+  "sensorySfxVolumeTitle": "提示音音量",
+  "@sensorySfxVolumeTitle": {
+    "description": "独立于环境音量；录音时提示音自动静音"
+  },
   "bgmSectionTitle": "背景音乐",
   "bgmLoadingSubtitle": "正在读取音乐偏好...",
   "bgmEnabledTitle": "启用背景音乐",

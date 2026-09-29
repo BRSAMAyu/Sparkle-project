@@ -1,0 +1,98 @@
+{
+ "task": "V4-S02",
+ "date": "2026-09-29",
+ "flutter_version": "3.41.3 stable",
+ "new_tests": {
+  "total": 40,
+  "suites": [
+   {
+    "file": "test/core/services/audio_focus_controller_s02_test.dart",
+    "cases": 22,
+    "result": "22 passed, 0 failed",
+    "covers": "音频焦点状态机逐迁移（每面一正一反）：IDLE⇄USER_PLAYING、TTS duck/解除（含恢复目标依赖 duck 而 TTS 先结束的次序）、录音抢占/恢复（含无会话不造会话）、来电抢占/恢复（含多抢占并存只结束其一仍暂停）、耳机拔出 STOPPED_BY_USER 不自续反例钉、重开不自续（会话态不持久化）、监听面裁决分发与异常不反噬"
+   },
+   {
+    "file": "test/core/services/audio_asset_gate_s02_test.dart",
+    "cases": 5,
+    "result": "5 passed, 0 failed",
+    "covers": "合法资产门 ⇄ S04 账本对账（账本→门逐键 + 门→账本无私货 + 数量相等）；反例钉：PROPOSED curated BGM（商用许可未证实）必被拒、未知路径缺省拒绝；服务面提示音规格表 24 事件引用路径全部持证"
+   },
+   {
+    "file": "test/core/services/sensory_feedback_service_s02_test.dart",
+    "cases": 13,
+    "result": "13 passed, 0 failed",
+    "covers": "验收1 正：默认偏好 emit 零播放调用；反例：显式开启后发声；重开不自续（场景+开关已保存的 dispose 重装载零自动播放、焦点 IDLE、对照显式点播才出声）；验收2 正：录音抢占期间 emit 零输出（反例钉·录音回录被拦）、反演：结束后恢复；录音抢占暂停环境床/结束恢复（调用级 pause/resume 记账）；TTS duck 压低至 用户音量×0.25/结束复原（调用级 setVolume 记账）；duck 期间调音量不越权放大；耳机拔出 → stop 且 resumeAmbient 拒绝自续；两独立音量键级隔离一正一反；提示音音量乘入输出（0.22×0.5=0.11）；环境床场景全部持证"
+   }
+  ]
+ },
+ "updated_existing_tests": {
+  "rationale": "V4 规格显式变更的两处默认值（MOTION_AUDIO_HAPTICS §声音设计「默认环境声与提示音关闭」+ 卡验收1「未明确点播无声音」）；均为断言更新至新规格行为并留注释锚点，无删除断言凑绿",
+  "files": [
+   {
+    "file": "test/core/services/sensory_feedback_service_p2_10_test.dart",
+    "change": "『sound preference defaults on』→『defaults off (V4-S02)』+ 开关往返持久化断言保留；sound budget 测试前置显式开启（预算语义以已点播为前提）",
+    "result": "6 passed"
+   },
+   {
+    "file": "test/core/services/sensory_feedback_service_u14_test.dart",
+    "change": "向后兼容用例：U14 继承机制 → S02 绝对缺省关闭（比继承更强，U14 保护意图不减）；新增『提示音开着、无 ambient 键也缺省关闭』用例（10 用例 = 原 9 + 1）",
+    "result": "10 passed"
+   },
+   {
+    "file": "test/widget/unified_settings_ambient_toggle_test.dart",
+    "change": "ambient_enabled 显式种子为开（本测主旨是开关持久化而非缺省值；缺省面归 s02 新测）",
+    "result": "2 passed"
+   }
+  ]
+ },
+ "new_widget_tests": [
+  {
+   "file": "test/widget/unified_settings_sfx_volume_test.dart",
+   "cases": 2,
+   "result": "2 passed",
+   "covers": "正：提示音音量滑杆可见、调整落持久层且不连带环境音量；反：提示音开关关闭后滑杆置灰（不提供无声可调的假中间态）"
+  }
+ ],
+ "regression_batches": [
+  {
+   "batch": "S02 触达面全量（新测+U14+默认更新+设置面 8 文件）",
+   "result": "68 passed, 0 failed"
+  },
+  {
+   "batch": "录音服务/聊天组件/社区/场景音/J6/BGM 设置面",
+   "result": "33 passed, 0 failed"
+  },
+  {
+   "batch": "F03 适配器/聊天 provider/BGM 服务",
+   "result": "133 passed, 0 failed"
+  },
+  {
+   "batch": "tools 全量+聊天输入+U14 语音权限",
+   "result": "12 passed, 0 failed"
+  },
+  {
+   "batch": "design 全量+q03 harness",
+   "result": "265 passed, 0 failed"
+  },
+  {
+   "batch": "core/services+widget+features/user 域全量",
+   "result": "663 passed, 4 skipped (既有 skip), 0 failed"
+  },
+  {
+   "batch": "features/chat 域全量",
+   "result": "265 passed, 0 failed"
+  },
+  {
+   "batch": "全量套件 flutter test（分母口径）",
+   "result": "3119 passed / 23 skipped（既有 skip）/ 0 failed — exit 0（flutter test 全量，实录于本卡作业终端）"
+  }
+ ],
+ "static_analysis": {
+  "command": "flutter analyze --no-pub",
+  "result": "No issues found!"
+ },
+ "rule_guards": {
+  "command": "bash scripts/run_all_rule_guards.sh",
+  "result": "88 rules 全 PASS（SPACING-RHYTHM 一次真违例现场修复：新增半步档改基栅格，未动基线未加豁免）"
+ }
+}
