@@ -38,8 +38,8 @@
   ],
   "r1_verdict": "FAIL（review_r1.md @4d23cb8a+bc507e32；B-1 source 词表外 + B-2 终态重放死端）",
   "rework": {
-    "note": "一审 FAIL 返修（B-1/B-2），返修 commit SHA 见本文件 rework.commit_sha（由返修后的注记 commit 填写）",
-    "commit_sha": "PENDING（注记 commit 填写）",
+    "note": "一审 FAIL 返修（B-1/B-2）；本注记 commit 为返修 commit 的后继（SHA 不可自指，注记其后继提交）",
+    "commit_sha": "1384a1fe（fix(v4): U02 一审 B-1/B-2——source 入词表+终态后换键）",
     "b1_decision": "客户端改用词表内 source=task（裁决与理由见 diff_or_evidence_only.md 返修节）；词表镜像常量 + 穿透 fake 的真仓库契约测试；mutation 自验红→还原绿",
     "b2_fix": "终态后重建换新键（cancelAdjustment/reAdjustAfterConflict 成功取消后 rotate salt）+ buildAdjustment 终态重放 fail-closed 守卫；正测「取消后重建换新键+新对照可落账」+ mutation 自验红→还原绿",
     "probe": "直调服务探针（临时 pytest 用后已删）：recovery_sheet → ValueError(closed vocabulary)；task → created=True/PENDING/权威 diff/同键重放 created=False/approve→COMMITTED+receipt+任务字段真实变更"
