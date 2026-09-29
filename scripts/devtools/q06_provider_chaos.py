@@ -215,7 +215,7 @@ def mock_requests_since(iso_since: str) -> list[dict]:
 def clear_engine_health() -> None:
     """清 chaos 引擎 redis db2 的 llm:* 健康键（场景间环境复位）。"""
     subprocess.run(
-        ["docker", "exec", "sparkle_redis", "sh", "-c",
+        ["docker", "exec", "sparkle_proj_redis", "sh", "-c",
          "redis-cli -a sparkle_dev_redis_2026 -n 2 --scan --pattern 'llm:*' | xargs -r redis-cli -a sparkle_dev_redis_2026 -n 2 DEL >/dev/null 2>&1; exit 0"],
         capture_output=True, timeout=15, check=False,
     )

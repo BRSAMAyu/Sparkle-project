@@ -260,7 +260,7 @@ cd "$PROJECT_ROOT"
 
 if [ "$SKIP_DOCKER" = false ]; then
     log_info "检查数据库连接..."
-    if docker ps | grep -q sparkle_db; then
+    if docker ps | grep -q sparkle_proj_db; then
         log_success "数据库容器运行中"
     else
         log_error "数据库容器未运行"

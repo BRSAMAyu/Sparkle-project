@@ -53,7 +53,7 @@ cd backend
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ Step 5: 验证 Redis Stack                                         │
-│   命令: docker exec sparkle_redis redis-cli MODULE LIST          │
+│   命令: docker exec sparkle_proj_redis redis-cli MODULE LIST          │
 │   预期: search 模块已加载                                       │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -106,7 +106,7 @@ python scripts/init_age_extension.py && \
 echo -e "\n=== Step 3: 应用数据库迁移 ===" && \
 alembic upgrade head && \
 echo -e "\n=== Step 4: 验证 Redis Stack ===" && \
-docker exec sparkle_redis redis-cli MODULE LIST | grep search && \
+docker exec sparkle_proj_redis redis-cli MODULE LIST | grep search && \
 echo -e "\n=== Step 5: 初始化 Redis Search ===" && \
 python scripts/init_redis_index.py && \
 python scripts/init_semantic_cache_index.py && \
@@ -185,14 +185,14 @@ INFO  [alembic.runtime.migration] Running upgrade -> xxx_add_embedding_column
 
 **如果失败**:
 - 检查迁移文件: `backend/alembic/versions/`
-- 手动检查数据库: `docker exec -it sparkle_db psql -U sparkle -c "\dt"`
+- 手动检查数据库: `docker exec -it sparkle_proj_db psql -U sparkle -c "\dt"`
 
 ---
 
 ### Step 4: 验证 Redis Stack
 
 ```bash
-docker exec sparkle_redis redis-cli MODULE LIST | grep search
+docker exec sparkle_proj_redis redis-cli MODULE LIST | grep search
 ```
 
 **预期输出**:

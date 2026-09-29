@@ -1,0 +1,8 @@
+# sparkle_agent_grpc 抓取目标 — dev 形制（docker-compose.yml 基座挂载本目录到
+# /etc/prometheus/targets）。FIX-563 前本 job 走 static：prod container_name 与
+# dev 服务名同名（sparkle_agent）两形制通吃；分化后 prod 容器名为
+# sparkle_proj_agent，改走 file_sd 按形制解耦（挂载面即形制开关，见
+# prometheus.yml 头注）。dev = compose 服务名 sparkle_agent（服务名不分化，
+# Docker user-defined 网络按「服务名 + container_name」双轨解析）。
+- targets:
+    - 'sparkle_agent:50051'

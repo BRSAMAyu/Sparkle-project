@@ -47,9 +47,9 @@ docker compose ps
 ```
 sparkle_api        running
 sparkle_gateway    running
-sparkle_db         running
-sparkle_redis      running
-sparkle_minio      running
+sparkle_proj_db         running
+sparkle_proj_redis      running
+sparkle_proj_minio      running
 ```
 
 ### 1.3 验证后端服务
@@ -228,7 +228,7 @@ docker logs sparkle_gateway | grep "WebSocket connected"
 
 ```bash
 # 1. 检查用户是否存在
-docker exec sparkle_db psql -U sparkle -c \
+docker exec sparkle_proj_db psql -U sparkle -c \
   "SELECT username, email FROM users WHERE username = 'device_test_user';"
 
 # 2. 检查后端日志
@@ -489,7 +489,7 @@ docker logs sparkle_api | grep -i "create.*task\|POST.*tasks"
 docker logs sparkle_api | grep -i "error\|validation"
 
 # 3. 检查数据库
-docker exec sparkle_db psql -U sparkle -c \
+docker exec sparkle_proj_db psql -U sparkle -c \
   "SELECT * FROM tasks ORDER BY created_at DESC LIMIT 5;"
 ```
 

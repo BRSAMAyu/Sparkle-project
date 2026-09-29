@@ -16,7 +16,7 @@ groups:
         annotations:
           summary: "Celery Worker 宕机"
           description: "Worker {{ $labels.instance }} 已停止响应超过2分钟"
-          runbook: "检查 docker logs sparkle_celery_worker"
+          runbook: "检查 docker logs sparkle_proj_celery_worker"
 
       # 告警: Celery Beat 宕机
       - alert: CeleryBeatDown

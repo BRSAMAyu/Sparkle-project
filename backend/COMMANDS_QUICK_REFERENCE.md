@@ -16,7 +16,7 @@ python scripts/init_age_extension.py
 alembic upgrade head
 
 # 4. 验证 Redis Stack
-docker exec sparkle_redis redis-cli MODULE LIST | grep search
+docker exec sparkle_proj_redis redis-cli MODULE LIST | grep search
 
 # 5. 初始化 Redis Search
 python scripts/init_redis_index.py
@@ -70,7 +70,7 @@ python scripts/init_graph_schema.py
 
 ```bash
 # 验证 Redis Stack 模块
-docker exec sparkle_redis redis-cli MODULE LIST
+docker exec sparkle_proj_redis redis-cli MODULE LIST
 
 # 初始化知识节点索引
 python scripts/init_redis_index.py
@@ -82,7 +82,7 @@ python scripts/init_semantic_cache_index.py
 python scripts/sync_pg_to_redis.py
 
 # 清空 Redis 数据
-docker exec sparkle_redis redis-cli FLUSHALL
+docker exec sparkle_proj_redis redis-cli FLUSHALL
 ```
 
 ### Embedding 相关
@@ -131,7 +131,7 @@ docker compose logs -f db
 docker compose logs -f redis
 
 # 进入 PostgreSQL 容器
-docker exec -it sparkle_db psql -U sparkle
+docker exec -it sparkle_proj_db psql -U sparkle
 
 # 进入 Redis 容器
 docker exec -it sparkle_redis redis-cli

@@ -17,7 +17,7 @@ query 语料，按 L0 快答 / L1 标准 / L2 深推理 / L3 编排·长上下�
                                       [--out-dir DIR]
   python3 bench_ai_stack_l0_l3.py summarize [--out-dir DIR]
 
-依赖：主仓 backend/.venv（grpc / httpx）；DB 归因经 `docker exec sparkle_db psql`。
+依赖：主仓 backend/.venv（grpc / httpx）；DB 归因经 `docker exec sparkle_proj_db psql`。
 默认输出目录：<repo>/v3-output/WT372-E08-BENCH/
 """
 
@@ -46,7 +46,7 @@ HTTP_BASE = "http://127.0.0.1:8000/api/v1"
 # 复测须用新建 bench guest，避免既有用户记忆/状态污染前后对照。
 GUEST_ID = os.environ.get("E08_BENCH_GUEST", "wt372_e08_bench")
 REQ_PREFIX = os.environ.get("E08_REQ_PREFIX", "wt372-e08")
-PSQL_CONTAINER = "sparkle_db"
+PSQL_CONTAINER = "sparkle_proj_db"
 PSQL_USER = "postgres"
 PSQL_DB = "sparkle"
 

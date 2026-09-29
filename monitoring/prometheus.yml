@@ -25,8 +25,8 @@ rule_files:
 #   - dev compose 挂 ./monitoring/targets/dev → 该路径，prod compose 挂
 #     ./monitoring/targets/prod → 同一路径：**挂载面即形制开关**，规则文件与
 #     Grafana 面板零改动，无需 PROMETHEUS_ARGS 或配置双份；
-#   - 两目录文件同名同构（gateway/backend/node/cadvisor 四件）：backend.yml 由
-#     sparkle_backend 与四个模块 metrics job 共用；prod 比 dev 多 node/cadvisor
+#   - 两目录文件同名同构（gateway/backend/agent/node/cadvisor 五件）：backend.yml
+#     由 sparkle_backend 与四个模块 metrics job 共用；prod 比 dev 多 node/cadvisor
 #     的真实目标（dev 无对应服务，文件留空 [] → job 无序列，no-data 而非常驻
 #     down）；新增环境 = 新增一个同名目录 + compose 改一行挂载；
 #   - 目标名与所在形制的服务真实名逐字对齐（Docker user-defined 网络按
@@ -36,9 +36,9 @@ rule_files:
 #
 # job_name 一律不变：告警规则（sparkle_slo_alerts.yml 等）与 Grafana 面板按
 # job 标签取数，改 job 名会连锁破坏告警与面板；目标文件也不得改写 job 标签
-# （由 job_name 统一赋值）。环境无关的目标保持 static：prometheus 自抓、
-# alertmanager、sparkle_agent（prod container_name 与 dev 服务名同名，两形制
-# 通吃）。
+# （由 job_name 统一赋值）。环境无关的目标保持 static：prometheus 自抓与
+# alertmanager（FIX-563 起 agent 也改 file_sd——prod container_name 已分化为
+# sparkle_proj_agent，不再与 dev 服务名同名，static 通吃前提失效）。
 # ─────────────────────────────────────────────────────────────────────────────
 
 scrape_configs:
@@ -51,12 +51,13 @@ scrape_configs:
     static_configs:
       - targets: ['alertmanager:9093']
 
-  - job_name: 'sparkle_agent_grpc'
-    # sparkle_agent 在两种形制下均可解析（prod container_name 与 dev 服务名同名），保持不变
-    static_configs:
-      - targets: ['sparkle_agent:50051']
-
   # —— 环境相关：file_sd 指向 /etc/prometheus/targets/（dev/prod compose 各挂各的目标目录）——
+  - job_name: 'sparkle_agent_grpc'
+    # FIX-563：prod 容器名分化为 sparkle_proj_agent，static「同名通吃」失效，改 file_sd
+    file_sd_configs:
+      - files:
+          - '/etc/prometheus/targets/agent.yml'
+
   - job_name: 'sparkle_gateway'
     file_sd_configs:
       - files:

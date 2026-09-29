@@ -12,7 +12,7 @@
   t_complete_s     完整交付时刻（gateway 终帧 type=meta 或流正常结束）
 
 成本三源对账：流内 usage 帧（引擎回执，I10 单一核价权威）+ DB token_usage 归因
-（只读 SELECT，docker exec sparkle_db psql）+ bench 侧官方价表（复用 E08 价表，
+（只读 SELECT，docker exec sparkle_proj_db psql）+ bench 侧官方价表（复用 E08 价表，
 来源日期绑定）。计费完整性红项：no_generation 带 token、未归因 token、usage 帧缺失。
 
 分母纪律：每条发送的 query 计一层分母；error/timeout/cancel 全部保留在分母内，
@@ -59,7 +59,7 @@ HTTP_BASE = os.environ.get("Q04_HTTP_BASE", "http://127.0.0.1:8001/api/v1")
 GUEST_ID = os.environ.get("Q04_GUEST", "wtQ04_bench")
 REQ_PREFIX = os.environ.get("Q04_REQ_PREFIX", "wtq04")
 OUT_DIR = Path(os.environ.get("Q04_OUT_DIR", str(REPO_ROOT / "outputs" / "V4-Q04")))
-PSQL_CONTAINER = os.environ.get("Q04_PSQL_CONTAINER", "sparkle_db")
+PSQL_CONTAINER = os.environ.get("Q04_PSQL_CONTAINER", "sparkle_proj_db")
 PSQL_USER = "postgres"
 PSQL_DB = "sparkle"
 

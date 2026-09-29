@@ -193,7 +193,7 @@ make smoke
 
 ```bash
 # 检查数据库
-docker ps | grep sparkle_db
+docker ps | grep sparkle_proj_db
 
 # 检查 Python 环境
 source venvs/sparkle/bin/activate
@@ -296,7 +296,7 @@ bash ~/ops/amadeus_setup_20260210/scripts/start_colima.sh
 **解决:**
 ```bash
 # 检查容器状态
-docker ps | grep sparkle_db
+docker ps | grep sparkle_proj_db
 
 # 强制 stamp
 FORCE_STAMP=1 make db-migrate
@@ -331,8 +331,8 @@ make help
 make env-check
 
 # 查看日志
-docker logs -f sparkle_db
-docker logs -f sparkle_redis
+docker logs -f sparkle_proj_db
+docker logs -f sparkle_proj_redis
 ```
 
 ---

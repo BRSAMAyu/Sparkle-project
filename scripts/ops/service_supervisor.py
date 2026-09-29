@@ -15,10 +15,13 @@ into the repo, self-anchoring, testable, limited-retry:
   consecutive failures → one restart attempt; ``cooldown_s`` between
   attempts; ``max_restarts_per_hour`` → further failures raise ALERT and
   stop restarting so the root cause surfaces.
-- **FIX-557 data-plane iron rule**: the supervisor NEVER starts/stops
-  containers and NEVER touches volumes. Before data-plane checks it reads
-  ``docker inspect sparkle_db`` mounts (read-only) and ALERTs if the volume
-  prefix is not ``sparkle-cosmos_`` (silent empty-volume misownership).
+- **FIX-557 data-plane iron rule (FIX-563 semantics)**: the supervisor NEVER
+  starts/stops containers and NEVER touches volumes. Before data-plane checks
+  it reads ``docker inspect sparkle_proj_db`` mounts (read-only) and ALERTs if
+  the volume prefix is not ``sparkle-project_`` — i.e. our uniquely-named
+  container (FIX-563) is mounted on a foreign (sparkle-cosmos_*) volume. A
+  missing container is NOT a violation: post-FIX-563 names are repo-unique, so
+  absence cannot shadow anyone's data.
 - **Alerts** append JSONL to ``artifacts/ops/supervisor_alerts.jsonl``.
 
 Modes:
@@ -44,8 +47,8 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "ops"))
 from supervisor_probe import ProbeState, ServicePolicy, probe_service  # noqa: E402
 
 ALERT_LOG = REPO_ROOT / "artifacts" / "ops" / "supervisor_alerts.jsonl"
-DATA_VOLUME_OWNER_PREFIX = "sparkle-cosmos_"
-DATA_CONTAINER = "sparkle_db"
+DATA_VOLUME_OWNER_PREFIX = "sparkle-project_"  # FIX-563: this repo's own volumes
+DATA_CONTAINER = "sparkle_proj_db"  # FIX-563: repo-unique name (was sparkle_db)
 
 
 def default_services() -> list[dict[str, Any]]:
@@ -96,7 +99,12 @@ def default_services() -> list[dict[str, Any]]:
 
 
 def check_data_plane_owner() -> dict[str, Any]:
-    """Read-only FIX-557 precheck: is sparkle_db mounted on the true volume?"""
+    """Read-only FIX-557/563 precheck: is our data-plane container misowned?
+
+    Post-FIX-563 the container name is repo-unique (sparkle_proj_db), so the
+    only violation left to guard is a foreign volume attached to OUR container.
+    Absent container = nothing to guard (green, with a note).
+    """
     try:
         out = subprocess.run(
             [
@@ -117,10 +125,17 @@ def check_data_plane_owner() -> dict[str, Any]:
             "detail": f"docker inspect failed: {exc}",
         }
     if out.returncode != 0:
+        # docker CLI phrasing varies ("No such object" / "error: no such object")
+        if "no such object" in (out.stderr or "").lower():
+            return {
+                "check": "data_plane_owner",
+                "ok": True,
+                "detail": f"{DATA_CONTAINER} absent — nothing to guard (FIX-563: repo-unique names cannot shadow foreign volumes)",
+            }
         return {
             "check": "data_plane_owner",
             "ok": False,
-            "detail": f"sparkle_db not inspectable: {out.stderr.strip()}",
+            "detail": f"{DATA_CONTAINER} not inspectable: {out.stderr.strip()}",
         }
     mounts = out.stdout.strip()
     ok = DATA_VOLUME_OWNER_PREFIX in mounts
@@ -131,7 +146,7 @@ def check_data_plane_owner() -> dict[str, Any]:
         "note": (
             ""
             if ok
-            else f"volume prefix is not {DATA_VOLUME_OWNER_PREFIX}* — possible silent empty-volume misownership (FIX-557); do NOT rebuild from this repo, see scripts/RESTACK_RUNBOOK.md"
+            else f"volume prefix is not {DATA_VOLUME_OWNER_PREFIX}* — cross-repo volume misownership on a repo-unique container (FIX-557/FIX-563); do NOT rebuild from this repo, see scripts/RESTACK_RUNBOOK.md"
         ),
     }
 
@@ -140,8 +155,8 @@ def check_data_plane_services() -> list[dict[str, Any]]:
     """Observe-only data-plane health (never restarts containers)."""
     checks: list[dict[str, Any]] = []
     probes = [
-        ("postgres", ["docker", "exec", "sparkle_db", "pg_isready", "-U", "postgres"]),
-        ("redis", ["docker", "exec", "sparkle_redis", "redis-cli", "ping"]),
+        ("postgres", ["docker", "exec", "sparkle_proj_db", "pg_isready", "-U", "postgres"]),
+        ("redis", ["docker", "exec", "sparkle_proj_redis", "redis-cli", "ping"]),
         ("minio", None),  # HTTP below
     ]
     for name, cmd in probes:

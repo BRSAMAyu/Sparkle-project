@@ -252,7 +252,7 @@ version: '3.8'
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: sparkle_db
+    container_name: sparkle_proj_db
     environment:
       POSTGRES_USER: sparkle
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -271,7 +271,7 @@ services:
 
   redis:
     image: redis/redis-stack-server:latest
-    container_name: sparkle_redis
+    container_name: sparkle_proj_redis
     restart: always
     # 不暴露到公网
     ports:

@@ -48,7 +48,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "change-me")
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "change-me")
-BEAT_CONTAINER = "sparkle_celery_beat"
+BEAT_CONTAINER = "sparkle_proj_celery_beat"  # FIX-563：本仓容器名单侧分化（旧 sparkle_celery_beat）
 BEAT_IMAGE = os.getenv("CELERY_BEAT_IMAGE", "sparkle-project-sparkle_api:latest")
 
 

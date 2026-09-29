@@ -1,0 +1,6 @@
+# sparkle_agent_grpc 抓取目标 — prod 形制（docker-compose.prod.yml 挂载本目录到
+# /etc/prometheus/targets）。FIX-563 容器名单侧分化后 agent 容器名为
+# sparkle_proj_agent（本仓唯一前缀；旧名 sparkle_agent 与 sparkle-cosmos 仓碰撞，
+# 已废除）。下次 prod 部署重建容器后生效。
+- targets:
+    - 'sparkle_proj_agent:50051'

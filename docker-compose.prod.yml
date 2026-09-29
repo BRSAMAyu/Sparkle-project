@@ -63,7 +63,7 @@ x-resources:
 services:
   db_migrate:
     image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
-    container_name: sparkle_db_migrate
+    container_name: sparkle_proj_db_migrate
     command: ["alembic", "upgrade", "head"]
     environment:
       - DATABASE_URL=${DATABASE_URL}
@@ -78,7 +78,7 @@ services:
   # 与 dev 侧 sparkle_age_init 等价：运行 backend/scripts/init_age_extension.py
   db_age_init:
     image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
-    container_name: sparkle_db_age_init
+    container_name: sparkle_proj_db_age_init
     command: ["python", "scripts/init_age_extension.py"]
     environment:
       - DATABASE_URL=${DATABASE_URL}
@@ -100,7 +100,7 @@ services:
 
   nginx:
     image: nginx:1.27-alpine
-    container_name: sparkle_nginx
+    container_name: sparkle_proj_nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -125,7 +125,7 @@ services:
 
   gateway_blue:
     image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-gateway}:${IMAGE_TAG:?IMAGE_TAG must be set}
-    container_name: sparkle_gateway_blue
+    container_name: sparkle_proj_gateway_blue
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
@@ -187,7 +187,7 @@ services:
 
   gateway_green:
     image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-gateway}:${IMAGE_TAG:?IMAGE_TAG must be set}
-    container_name: sparkle_gateway_green
+    container_name: sparkle_proj_gateway_green
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
@@ -247,7 +247,7 @@ services:
 
   backend:
     image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
-    container_name: sparkle_backend
+    container_name: sparkle_proj_backend
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
@@ -347,7 +347,7 @@ services:
 
   agent:
     image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
-    container_name: sparkle_agent
+    container_name: sparkle_proj_agent
     restart: unless-stopped
     command: python grpc_server.py
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
@@ -437,7 +437,7 @@ services:
 
   celery_worker:
     image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
-    container_name: sparkle_celery_worker
+    container_name: sparkle_proj_celery_worker
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     command: celery -A app.core.celery_app worker -l warning -Q high_priority,default,low_priority --concurrency=4
@@ -476,7 +476,7 @@ services:
 
   celery_glm_batch_worker:
     image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
-    container_name: sparkle_celery_glm_batch_worker
+    container_name: sparkle_proj_celery_glm_batch_worker
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     command: celery -A app.core.celery_app worker -l warning -Q glm_batch --autoscale=6,2 --hostname=glm-batch@%h
@@ -516,7 +516,7 @@ services:
 
   celery_beat:
     image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
-    container_name: sparkle_celery_beat
+    container_name: sparkle_proj_celery_beat
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     command: celery -A app.core.celery_app beat -l warning
@@ -562,7 +562,7 @@ services:
       args:
         AGE_REF: PG16/v1.6.0-rc0
     image: sparkle/pgvector-age:pg16
-    container_name: sparkle_db
+    container_name: sparkle_proj_db
     restart: unless-stopped
     command:
       - "postgres"
@@ -607,7 +607,7 @@ services:
 
   redis:
     image: redis/redis-stack-server:7.4.0-v8
-    container_name: sparkle_redis
+    container_name: sparkle_proj_redis
     restart: unless-stopped
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -644,7 +644,7 @@ services:
 
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: sparkle_minio
+    container_name: sparkle_proj_minio
     command: server /data --console-address ":9001"
     restart: unless-stopped
     environment:
@@ -665,7 +665,7 @@ services:
 
   minio_rbac_init:
     image: minio/mc:RELEASE.2025-09-07T16-13-09Z
-    container_name: sparkle_minio_rbac_init
+    container_name: sparkle_proj_minio_rbac_init
     restart: "no"
     depends_on:
       minio:
@@ -711,7 +711,7 @@ services:
 
   tempo:
     image: grafana/tempo:2.4.1
-    container_name: sparkle_tempo
+    container_name: sparkle_proj_tempo
     restart: unless-stopped
     command:
       - "-config.file=/etc/tempo/tempo.yaml"
@@ -734,7 +734,7 @@ services:
 
   prometheus:
     image: quay.io/prometheus/prometheus:v2.53.4
-    container_name: sparkle_prometheus
+    container_name: sparkle_proj_prometheus
     restart: unless-stopped
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -771,7 +771,7 @@ services:
 
   alertmanager:
     image: prom/alertmanager:v0.27.0
-    container_name: sparkle_alertmanager
+    container_name: sparkle_proj_alertmanager
     restart: unless-stopped
     command:
       - "/bin/sh"
@@ -803,7 +803,7 @@ services:
 
   node_exporter:
     image: quay.io/prometheus/node-exporter:v1.8.2
-    container_name: sparkle_node_exporter
+    container_name: sparkle_proj_node_exporter
     restart: unless-stopped
     pid: host
     command:
@@ -830,7 +830,7 @@ services:
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.2
-    container_name: sparkle_cadvisor
+    container_name: sparkle_proj_cadvisor
     restart: unless-stopped
     privileged: true
     devices:
@@ -857,7 +857,7 @@ services:
 
   loki:
     image: grafana/loki:2.9.8
-    container_name: sparkle_loki
+    container_name: sparkle_proj_loki
     restart: unless-stopped
     command:
       - "-config.file=/etc/loki/local-config.yaml"
@@ -879,7 +879,7 @@ services:
 
   promtail:
     image: grafana/promtail:2.9.8
-    container_name: sparkle_promtail
+    container_name: sparkle_proj_promtail
     restart: unless-stopped
     command:
       - "-config.file=/etc/promtail/config.yml"
@@ -901,7 +901,7 @@ services:
 
   grafana:
     image: grafana/grafana-oss:11.1.4
-    container_name: sparkle_grafana
+    container_name: sparkle_proj_grafana
     restart: unless-stopped
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER must be set}

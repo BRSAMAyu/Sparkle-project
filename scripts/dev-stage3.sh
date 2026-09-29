@@ -6,16 +6,21 @@ LOG_DIR="$ROOT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
 # Start infra (Postgres/Redis/MinIO) if needed
-# FIX-557 铁律：本地共享数据面（sparkle_db/redis/minio）属主是 sparkle-cosmos 仓 compose。
-# 本仓 compose 与其同名容器冲突，直接 `make dev-up` 会踩容器名/数据卷陷阱——
-# 仅在共享三容器全部健康时继续，否则提示按 cosmos 仓启动，不自动重建。
-if docker ps --format '{{.Names}}' | grep -qx sparkle_db \
+# FIX-557/FIX-563 数据面在位门：本仓容器名已单侧分化（sparkle_proj_db/redis/minio），
+# sparkle-cosmos 仓保持 sparkle_db/redis/minio 旧名——两栈任一在位即可（引擎进程走
+# localhost 端口，不逐容器名对接）；两者皆缺则提示按对照表启动，本脚本不自动重建。
+# 对照表与 -p 纪律见 scripts/RESTACK_RUNBOOK.md。
+if docker ps --format '{{.Names}}' | grep -qx sparkle_proj_db \
+  && docker ps --format '{{.Names}}' | grep -qx sparkle_proj_redis \
+  && docker ps --format '{{.Names}}' | grep -qx sparkle_proj_minio; then
+  : # 本仓（sparkle-project）数据面在位，继续
+elif docker ps --format '{{.Names}}' | grep -qx sparkle_db \
   && docker ps --format '{{.Names}}' | grep -qx sparkle_redis \
   && docker ps --format '{{.Names}}' | grep -qx sparkle_minio; then
-  : # 共享数据面在位，继续
+  echo "NOTE: 数据面为 sparkle-cosmos 仓栈（sparkle_db/redis/minio，FIX-563 前共享形态），本脚本不动它。" >&2
 else
-  echo "⚠️  共享数据面容器（sparkle_db/redis/minio）未全部运行。" >&2
-  echo "    数据面属主=sparkle-cosmos 仓 compose（FIX-557），请在该仓启动后再跑本脚本。" >&2
+  echo "⚠️  数据面容器未全部运行（本仓=sparkle_proj_db/redis/minio；cosmos 仓=sparkle_db/redis/minio）。" >&2
+  echo "    按仓库对应启动（对照表见 scripts/RESTACK_RUNBOOK.md）；本脚本不自动重建。" >&2
   exit 1
 fi
 

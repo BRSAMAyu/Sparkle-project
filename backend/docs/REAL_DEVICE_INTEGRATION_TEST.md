@@ -94,7 +94,7 @@ const String apiBaseUrl = String.fromEnvironment(
 docker exec sparkle_api alembic current
 # 应输出: 5f2b9b3c0e6f (head)
 
-docker exec sparkle_db psql -U postgres -d sparkle -c "
+docker exec sparkle_proj_db psql -U postgres -d sparkle -c "
 SELECT tablename FROM pg_tables 
 WHERE schemaname='public' AND tablename LIKE 'event_%';"
 # 应输出:
@@ -261,15 +261,15 @@ docker compose logs sparkle_gateway | grep -i "error\|5[0-9][0-9]"
 
 ```bash
 # 查看用户
-docker exec sparkle_db psql -U postgres -d sparkle -c "
+docker exec sparkle_proj_db psql -U postgres -d sparkle -c "
 SELECT id, username, email, created_at FROM users ORDER BY created_at DESC LIMIT 5;"
 
 # 查看 Outbox 积压
-docker exec sparkle_db psql -U postgres -d sparkle -c "
+docker exec sparkle_proj_db psql -U postgres -d sparkle -c "
 SELECT COUNT(*) as pending FROM event_outbox WHERE published_at IS NULL;"
 
 # 查看最近错误
-docker exec sparkle_db psql -U postgres -d sparkle -c "
+docker exec sparkle_proj_db psql -U postgres -d sparkle -c "
 SELECT * FROM chat_messages ORDER BY created_at DESC LIMIT 5;"
 ```
 

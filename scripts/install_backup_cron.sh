@@ -100,7 +100,7 @@ do_run_now() {
     return 0
   fi
   warn "首次备份失败（不阻塞上线）。排查: cd ${REPO_DIR} && bash scripts/backup_prod_data.sh"
-  warn "常见原因: docker 权限（cron 用户需能 docker exec sparkle_db）/ .env 缺 REDIS_PASSWORD"
+  warn "常见原因: docker 权限（cron 用户需能 docker exec sparkle_proj_db）/ .env 缺 REDIS_PASSWORD"
   return 2
 }
 

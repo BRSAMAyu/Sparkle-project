@@ -9,6 +9,17 @@ mkdir -p "$LOG_DIR"
 
 MODE="${1:---tail}"
 
+# FIX-563：compose logs 用「服务名」、docker ps 按本仓分化后「容器名」探活。
+# 旧清单混用且含 dash 形错名（sparkle-db/sparkle-redis 系初始 commit 既有债，P03-R2 登记）。
+PAIRS=(
+  "sparkle_db:sparkle_proj_db"
+  "redis:sparkle_proj_redis"
+  "minio:sparkle_proj_minio"
+  "sparkle_gateway:sparkle_proj_gateway"
+  "sparkle_agent:sparkle_proj_agent"
+  "sparkle_api:sparkle_proj_api"
+)
+
 log() { echo "[$(date '+%H:%M:%S')] [logs] $*"; }
 
 case "$MODE" in
@@ -16,8 +27,9 @@ case "$MODE" in
     log "Saving all logs to $LOG_DIR..."
 
     # Docker container logs
-    for svc in sparkle-db sparkle-redis minio sparkle-gateway sparkle-agent sparkle-api; do
-      if docker ps --format '{{.Names}}' | grep -q "$svc"; then
+    for pair in "${PAIRS[@]}"; do
+      svc="${pair%%:*}"; ctr="${pair##*:}"
+      if docker ps --format '{{.Names}}' | grep -q "^${ctr}$"; then
         docker compose logs --no-color "$svc" > "$LOG_DIR/docker_${svc}.log" 2>&1 || true
         log "  Saved docker_${svc}.log"
       fi
@@ -38,8 +50,9 @@ case "$MODE" in
 
     # Build the list of running services
     SERVICES=()
-    for svc in sparkle-db sparkle-redis minio sparkle-gateway sparkle-agent sparkle-api; do
-      if docker ps --format '{{.Names}}' | grep -q "$svc"; then
+    for pair in "${PAIRS[@]}"; do
+      svc="${pair%%:*}"; ctr="${pair##*:}"
+      if docker ps --format '{{.Names}}' | grep -q "^${ctr}$"; then
         SERVICES+=("$svc")
       fi
     done

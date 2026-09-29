@@ -65,7 +65,7 @@ import 'package:sparkle/main.dart' as app;
 ///    marker is MEASUREMENT DATA, not harness failure — J-01 O1) → one demo
 ///    chat round. G4 DB probes (memory_goals/episodic_memories both 0 rows,
 ///    registration_source='guest') are run by the orchestrator via
-///    `docker exec sparkle_db psql` (runbook §5) — this driver prints
+///    `docker exec sparkle_proj_db psql` (runbook §5; FIX-563 前旧名 sparkle_db) — this driver prints
 ///    `J02_GUEST_USER=<username>` for that purpose and does NOT touch docker.
 ///  * Leg U (upgrade): guest-state GuestConversionCard → register form →
 ///    in-place flip (same session, no logout-to-login, registrationSource

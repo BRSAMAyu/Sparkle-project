@@ -11,7 +11,7 @@ if ! docker image ls | grep -q "sparkle_backend"; then
 fi
 
 # Check if Redis is running
-if ! docker ps | grep -q "sparkle_redis"; then
+if ! docker ps | grep -q "sparkle_proj_redis"; then
     echo "❌ Redis not running. Please start main services first:"
     echo "   docker compose up -d redis"
     exit 1
@@ -53,8 +53,8 @@ echo ""
 echo "✅ Celery services started!"
 echo ""
 echo "📊 Services:"
-echo "   - Worker: docker logs -f sparkle_celery_worker"
-echo "   - Beat: docker logs -f sparkle_celery_beat"
+echo "   - Worker: docker logs -f sparkle_proj_celery_worker"
+echo "   - Beat: docker logs -f sparkle_proj_celery_beat"
 echo "   - Flower: http://localhost:5555"
 echo ""
 echo "🔄 Useful commands:"

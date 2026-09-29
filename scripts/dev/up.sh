@@ -21,43 +21,56 @@ if ! command -v make >/dev/null 2>&1; then
   die "make not found."
 fi
 
-# ── 2. Start Docker infrastructure (FIX-557 owner precheck first) ──
-# sparkle_db container name is global and first-come-first-served; the TRUE
-# data volume lives under the sparkle-cosmos compose project. Rebuilding from
-# this repo inside a dead-container window would silently mount an empty
-# sparkle-project_* volume. See scripts/RESTACK_RUNBOOK.md.
-DB_MOUNTS="$(docker inspect sparkle_db --format '{{range .Mounts}}{{.Name}} {{end}}' 2>/dev/null || true)"
-case "$DB_MOUNTS" in
-  *sparkle-cosmos_*)
-    log "sparkle_db exists and is owned by the sparkle-cosmos data volume — NOT recreating data plane (FIX-557 safe)."
-    SKIP_DB_UP=1
-    ;;
-  *sparkle-project_*)
-    die "sparkle_db is mounted on a sparkle-project_* volume (silent empty-volume misownership, FIX-557). Do NOT rebuild from this repo — follow scripts/RESTACK_RUNBOOK.md corrective steps."
-    ;;
-  *)
-    if docker volume ls --format '{{.Name}}' 2>/dev/null | grep -q '^sparkle-cosmos_.*postgres'; then
-      if [ "${SPARKLE_ALLOW_RESTACK:-0}" != "1" ]; then
-        die "sparkle_db container absent but true data volume (sparkle-cosmos_*) exists. Recreating from this repo would detach the real data (FIX-557). Re-run from the sparkle-cosmos repo, or set SPARKLE_ALLOW_RESTACK=1 to override deliberately."
-      fi
-      log "WARNING: SPARKLE_ALLOW_RESTACK=1 — rebuilding data plane from this repo deliberately (FIX-557 override)."
-    fi
-    ;;
-esac
-
-if [ "${SKIP_DB_UP:-0}" != "1" ]; then
-  log "Starting Docker services (PostgreSQL, Redis, MinIO)..."
-  if ! (cd "$ROOT_DIR" && docker compose up -d sparkle_db redis minio) >"$LOG_DIR/docker_up.log" 2>&1; then
-    cat "$LOG_DIR/docker_up.log"
-    die "Docker compose up failed. Check $LOG_DIR/docker_up.log"
-  fi
-  log "Docker services started."
+# ── 2. Start Docker infrastructure (FIX-557/FIX-563 data-plane owner precheck) ──
+# FIX-563: this repo's data-plane containers are uniquely named
+# (sparkle_proj_db / sparkle_proj_redis / sparkle_proj_minio) while the
+# sparkle-cosmos repo keeps sparkle_db / sparkle_redis / sparkle_minio — the
+# cross-repo name collision behind FIX-557 is structurally dead, and rebuilding
+# from this repo can only ever attach THIS repo's sparkle-project_* volumes.
+# The precheck (one gate, was db-only) now walks all three data-plane services
+# and verifies ownership consistency before any up. See scripts/RESTACK_RUNBOOK.md.
+LEGACY_RUNNING="$(docker ps --format '{{.Names}}' 2>/dev/null | grep -cE '^sparkle_(db|redis|minio)$' || true)"
+if [ "${LEGACY_RUNNING:-0}" != "0" ]; then
+  log "NOTE: $LEGACY_RUNNING legacy container(s) (sparkle_db/sparkle_redis/sparkle_minio) running — they belong to the sparkle-cosmos stack and will NOT be touched. This repo's data plane (sparkle_proj_*) publishes the same host ports; if up fails on port binding, stop the legacy stack deliberately first. See scripts/RESTACK_RUNBOOK.md."
 fi
+
+for dp in "sparkle_proj_db:postgres" "sparkle_proj_redis:redis" "sparkle_proj_minio:minio"; do
+  ctr="${dp%%:*}"; kind="${dp##*:}"
+  mounts="$(docker inspect "$ctr" --format '{{range .Mounts}}{{.Name}} {{end}}' 2>/dev/null || true)"
+  case "$mounts" in
+    *sparkle-cosmos_*)
+      die "$ctr is mounted on a sparkle-cosmos_* volume (cross-repo misownership). Do NOT proceed from this repo — follow scripts/RESTACK_RUNBOOK.md corrective steps."
+      ;;
+    *sparkle-project_*)
+      log "$ctr present, volume owned by this repo ($kind) — ownership precheck OK (FIX-563)."
+      ;;
+    "")
+      # Container absent: with repo-unique names (FIX-563) creating it is always
+      # safe — it can only attach this repo's sparkle-project_* volumes. Legacy
+      # sparkle-cosmos_* volumes belong to the other repo's stack and stay
+      # untouched; warn so a fresh (possibly empty) data plane is not mistaken
+      # for data loss (FIX-557 lesson).
+      if docker volume ls --format '{{.Name}}' 2>/dev/null | grep -q "^sparkle-cosmos_.*${kind}"; then
+        log "WARNING: legacy sparkle-cosmos_*${kind} volume exists (other repo's data plane, left untouched). This repo starts its own fresh sparkle-project_* ${kind} data plane (FIX-563)."
+      fi
+      ;;
+    *)
+      die "$ctr has unrecognised volume mounts ('$mounts'); inspect manually before up — see scripts/RESTACK_RUNBOOK.md."
+      ;;
+  esac
+done
+
+log "Starting Docker services (PostgreSQL, Redis, MinIO)..."
+if ! (cd "$ROOT_DIR" && docker compose up -d sparkle_db redis minio) >"$LOG_DIR/docker_up.log" 2>&1; then
+  cat "$LOG_DIR/docker_up.log"
+  die "Docker compose up failed. Check $LOG_DIR/docker_up.log"
+fi
+log "Docker services started."
 
 # ── 3. Wait for PostgreSQL ──
 log "Waiting for PostgreSQL..."
 for i in $(seq 1 30); do
-  if docker exec sparkle_db pg_isready -U "${POSTGRES_USER:-brsama}" >/dev/null 2>&1; then
+  if docker exec sparkle_proj_db pg_isready -U "${POSTGRES_USER:-brsama}" >/dev/null 2>&1; then
     log "PostgreSQL ready."
     break
   fi
@@ -70,8 +83,8 @@ done
 # ── 4. Wait for Redis ──
 log "Waiting for Redis..."
 for i in $(seq 1 15); do
-  # P03-R1：容器名修正（原 sparkle-redis 致步骤4恒死）
-  if docker exec sparkle_redis redis-cli ping >/dev/null 2>&1; then
+  # FIX-563：容器名随单侧分化更新（sparkle_redis→sparkle_proj_redis；更早 P03-R1 曾修 dash 形旧债 sparkle-redis）
+  if docker exec sparkle_proj_redis redis-cli ping >/dev/null 2>&1; then
     log "Redis ready."
     break
   fi

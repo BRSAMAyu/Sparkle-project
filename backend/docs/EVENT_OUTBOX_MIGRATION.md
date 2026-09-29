@@ -89,8 +89,8 @@ docker exec sparkle_api alembic current
 # 应输出: 5f2b9b3c0e6f (head)
 
 # 验证表结构
-docker exec sparkle_db psql -U postgres -d sparkle -c "\d event_outbox"
-docker exec sparkle_db psql -U postgres -d sparkle -c "\d event_sequence_counters"
+docker exec sparkle_proj_db psql -U postgres -d sparkle -c "\d event_outbox"
+docker exec sparkle_proj_db psql -U postgres -d sparkle -c "\d event_sequence_counters"
 ```
 
 ### 生产环境

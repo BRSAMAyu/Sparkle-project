@@ -13,7 +13,7 @@
   python3 q06_perf_bench.py run [--layers L0,L1,L2,L3] [--reps 2] [--out-dir DIR]
   python3 q06_perf_bench.py summarize [--out-dir DIR]
 
-依赖：主仓 backend/.venv；引擎 + billing worker（redis db1）在位；sparkle_db 容器。
+依赖：主仓 backend/.venv；引擎 + billing worker（redis db1）在位；sparkle_proj_db 容器。
 默认输出：<worktree>/v3-output/WT406-Q06-PERF/
 """
 
@@ -42,7 +42,7 @@ HTTP_BASE = os.environ.get("Q06_HTTP_BASE", "http://127.0.0.1:8000/api/v1")
 GUEST_FREE = os.environ.get("Q06_GUEST_FREE", "wt406_q06_bench_free")
 GUEST_PRO = os.environ.get("Q06_GUEST_PRO", "wt406_q06_bench_pro")
 REQ_PREFIX = os.environ.get("Q06_REQ_PREFIX", "wt406q06")
-PSQL = ["docker", "exec", "sparkle_db", "psql", "-U", "postgres", "-d", "sparkle", "-Atc"]
+PSQL = ["docker", "exec", "sparkle_proj_db", "psql", "-U", "postgres", "-d", "sparkle", "-Atc"]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bench_ai_stack_l0_l3 import (  # noqa: E402

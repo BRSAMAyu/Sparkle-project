@@ -8,7 +8,7 @@
 #
 # Prerequisites (verified 2026-09-25/26 on this machine):
 #   * Go gateway :8080 healthy (curl localhost:8080/health)
-#   * docker: sparkle_db / sparkle_redis / sparkle_minio up
+#   * docker: sparkle_proj_db / sparkle_proj_redis / sparkle_proj_minio up
 #   * flutter macOS desktop enabled
 #   * one-time worktree setup (gitignored artifacts):
 #       make proto-gen

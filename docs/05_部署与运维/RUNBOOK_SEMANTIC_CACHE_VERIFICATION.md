@@ -39,7 +39,7 @@ Simulate a Redis/RediSearch failure.
 **Action:**
 1. Stop the Redis container:
    ```bash
-   docker stop sparkle_redis
+   docker stop sparkle_proj_redis
    ```
 2. Send a **new** Chat Query (one that isn't cached).
 3. Verify the chat still works (fallback to PGVector).
@@ -51,7 +51,7 @@ Run the metrics command again.
 
 **Restore:**
 ```bash
-docker start sparkle_redis
+docker start sparkle_proj_redis
 ```
 
 ---

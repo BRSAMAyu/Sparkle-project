@@ -3,7 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sparkle_routing_service
+    container_name: sparkle_proj_routing_service
     command: ["uvicorn", "services.routing.main:app", "--host", "0.0.0.0", "--port", "8001"]
     ports:
       - "8001:8001"
@@ -18,7 +18,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sparkle_learning_service
+    container_name: sparkle_proj_learning_service
     command: ["uvicorn", "services.learning.main:app", "--host", "0.0.0.0", "--port", "8002"]
     ports:
       - "8002:8002"
@@ -33,7 +33,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sparkle_visualization_service
+    container_name: sparkle_proj_visualization_service
     command: ["uvicorn", "services.visualization.main:app", "--host", "0.0.0.0", "--port", "8003"]
     ports:
       - "8003:8003"

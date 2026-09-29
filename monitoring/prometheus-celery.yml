@@ -12,7 +12,7 @@ scrape_configs:
   # Celery Worker 指标
   - job_name: 'celery_worker'
     static_configs:
-      - targets: ['sparkle_celery_worker:8080']
+      - targets: ['sparkle_proj_celery_worker:8080']
     metrics_path: /metrics
     scrape_interval: 10s
     labels:
@@ -22,7 +22,7 @@ scrape_configs:
   # Celery Beat 指标
   - job_name: 'celery_beat'
     static_configs:
-      - targets: ['sparkle_celery_beat:8080']
+      - targets: ['sparkle_proj_celery_beat:8080']
     metrics_path: /metrics
     scrape_interval: 30s
     labels:

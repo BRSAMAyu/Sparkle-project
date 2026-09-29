@@ -21,7 +21,7 @@
       "id": 1,
       "targets": [
         {
-          "expr": "up{job=~\"postgres|sparkle_db|db\"}",
+          "expr": "up{job=~\"postgres|sparkle_db|sparkle_proj_db|db\"}",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -43,7 +43,7 @@
       "id": 2,
       "targets": [
         {
-          "expr": "up{job=~\"redis|sparkle_redis\"}",
+          "expr": "up{job=~\"redis|sparkle_redis|sparkle_proj_redis\"}",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -65,7 +65,7 @@
       "id": 3,
       "targets": [
         {
-          "expr": "up{job=~\"minio|sparkle_minio\"}",
+          "expr": "up{job=~\"minio|sparkle_minio|sparkle_proj_minio\"}",
           "legendFormat": "{{job}}",
           "refId": "A"
         }

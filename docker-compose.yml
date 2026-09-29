@@ -6,7 +6,7 @@ services:
       dockerfile: docker/pgvector-age.Dockerfile
       args:
         AGE_REF: PG16/v1.6.0-rc0
-    container_name: sparkle_db
+    container_name: sparkle_proj_db
     # 基础镜像 CMD 即 postgres，此处显式重申以追加慢查询日志面（OPS-QUIRKS 裁决 1 最小修 S）
     command:
       - "postgres"
@@ -42,7 +42,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sparkle_age_init
+    container_name: sparkle_proj_age_init
     env_file:
       - .env
     command: python scripts/init_age_extension.py
@@ -64,7 +64,7 @@ services:
 
   redis:
     image: redis/redis-stack-server:7.4.0-v8
-    container_name: sparkle_redis
+    container_name: sparkle_proj_redis
     restart: unless-stopped
     ports:
       - "127.0.0.1:6379:6379"
@@ -90,7 +90,7 @@ services:
 
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: sparkle_minio
+    container_name: sparkle_proj_minio
     restart: unless-stopped
     hostname: minio
     entrypoint: ["minio"]
@@ -126,7 +126,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sparkle_api
+    container_name: sparkle_proj_api
     restart: unless-stopped
     env_file:
       - .env
@@ -227,7 +227,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sparkle_agent
+    container_name: sparkle_proj_agent
     restart: unless-stopped
     env_file:
       - .env
@@ -418,7 +418,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sparkle_celery_beat
+    container_name: sparkle_proj_celery_beat
     restart: unless-stopped
     env_file:
       - .env
@@ -459,7 +459,7 @@ services:
     build:
       context: ./backend/gateway
       dockerfile: Dockerfile
-    container_name: sparkle_gateway
+    container_name: sparkle_proj_gateway
     restart: unless-stopped
     env_file:
       - .env
@@ -520,7 +520,7 @@ services:
   # ==================== Monitoring Simplified ====================
   tempo:
     image: grafana/tempo:2.4.1
-    container_name: sparkle_tempo
+    container_name: sparkle_proj_tempo
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
       - ./monitoring/tempo.yaml:/etc/tempo.yaml
@@ -539,7 +539,7 @@ services:
 
   prometheus:
     image: quay.io/prometheus/prometheus:v2.53.4
-    container_name: sparkle_prometheus
+    container_name: sparkle_proj_prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--web.enable-lifecycle"
@@ -575,7 +575,7 @@ services:
 
   alertmanager:
     image: prom/alertmanager:v0.27.0
-    container_name: sparkle_alertmanager
+    container_name: sparkle_proj_alertmanager
     command:
       - "/bin/sh"
       - "-c"
@@ -597,7 +597,7 @@ services:
 
   loki:
     image: grafana/loki:2.9.8
-    container_name: sparkle_loki
+    container_name: sparkle_proj_loki
     command: [ "-config.file=/etc/loki/local-config.yaml" ]
     volumes:
       - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml:ro
@@ -616,7 +616,7 @@ services:
 
   promtail:
     image: grafana/promtail:2.9.8
-    container_name: sparkle_promtail
+    container_name: sparkle_proj_promtail
     command: [ "-config.file=/etc/promtail/config.yml" ]
     volumes:
       - ./monitoring/promtail-config.yaml:/etc/promtail/config.yml:ro
@@ -636,7 +636,7 @@ services:
 
   grafana:
     image: grafana/grafana-oss:11.1.4
-    container_name: sparkle_grafana
+    container_name: sparkle_proj_grafana
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set for security}

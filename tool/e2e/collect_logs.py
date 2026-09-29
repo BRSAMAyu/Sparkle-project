@@ -34,7 +34,9 @@ def collect():
     results = {}
 
     # Docker container logs
-    for svc in ["sparkle-db", "sparkle-redis", "minio", "sparkle-gateway", "sparkle-agent", "sparkle-api"]:
+    # FIX-563：docker compose logs 取「服务名」（服务名不分化）；旧清单的 dash 形
+    # sparkle-db/sparkle-redis 系初始 commit 既有债（对服务名与容器名皆错，恒 FAIL）。
+    for svc in ["sparkle_db", "redis", "minio", "sparkle_gateway", "sparkle_agent", "sparkle_api"]:
         ok = run(
             f"docker compose -f {ROOT_DIR}/docker-compose.yml logs --no-color --tail=500 {svc}",
             LOG_DIR / f"docker_{svc}_{timestamp}.log",

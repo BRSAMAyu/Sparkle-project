@@ -416,7 +416,7 @@ step2_images() {
 step3_db() {
   info "[3/9] 数据库与 Redis 起稳"
   if [[ "$PLAN_MODE" == "true" ]]; then
-    plan_emit "docker compose up -d db redis → 轮询 sparkle_db 健康(pg_isready) 与 sparkle_redis 健康"
+    plan_emit "docker compose up -d db redis → 轮询 db/redis 服务健康（pg_isready/redis-cli；FIX-563 后容器名 sparkle_proj_*）"
     return 0
   fi
   compose up -d db redis

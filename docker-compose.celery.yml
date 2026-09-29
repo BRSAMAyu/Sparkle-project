@@ -10,7 +10,7 @@ services:
       args:
         - BUILDKIT_INLINE_CACHE=1
     image: sparkle_backend  # Use the backend image
-    container_name: sparkle_celery_worker
+    container_name: sparkle_proj_celery_worker
     command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}}
@@ -33,7 +33,7 @@ services:
       args:
         - BUILDKIT_INLINE_CACHE=1
     image: sparkle_backend
-    container_name: sparkle_celery_beat
+    container_name: sparkle_proj_celery_beat
     command: celery -A app.core.celery_app beat -l info
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}}
@@ -50,7 +50,7 @@ services:
   # Flower - monitoring
   flower:
     image: ${FLOWER_IMAGE:-mher/flower:1.2.0}
-    container_name: sparkle_flower
+    container_name: sparkle_proj_flower
     command: celery --broker=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1 flower --port=5555 --persistent=True --db=/flower_data/flower.db
     ports:
       - "5555:5555"
@@ -67,7 +67,7 @@ services:
   # Redis (shared with main stack)
   redis:
     image: redis/redis-stack-server:latest
-    container_name: sparkle_redis
+    container_name: sparkle_proj_redis
     volumes:
       - ./redis_data:/data
       - ./redis.conf:/redis-stack.conf
@@ -92,7 +92,7 @@ services:
       args:
         AGE_REF: PG16/v1.6.0-rc0
     image: sparkle/pgvector-age:pg16
-    container_name: sparkle_db
+    container_name: sparkle_proj_db
     ports:
       - "5432:5432"
     environment:

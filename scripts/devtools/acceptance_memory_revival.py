@@ -4,7 +4,7 @@
 对应多端实测 docs/competition/2026-tmall-hackathon/多端实测/memory-rag-seedlib-eval.md
 的 A1/A2(短问句)/B1+B1' 场景。前置条件：
   1. 主栈在跑：gateway :8080（新版引擎已 apply memory-revival patch 并重启）
-  2. PostgreSQL/Redis/MinIO 容器在跑（sparkle_db / sparkle_redis / sparkle_minio）
+  2. PostgreSQL/Redis/MinIO 容器在跑（sparkle_proj_db / sparkle_proj_redis / sparkle_proj_minio）
   3. Celery worker 已启动（bash scripts/devtools/start_celery_worker_dev.sh）
   4. 本机可 docker exec（DB 断言用，不消耗 LLM）
 
@@ -35,7 +35,7 @@ import websocket
 # 默认主栈 :8080；WS 地址随 HTTP 地址自动推导。
 GATEWAY = os.environ.get("ACCEPTANCE_GATEWAY", "http://localhost:8080").rstrip("/")
 _WS_BASE = GATEWAY.replace("http", "ws", 1)
-DB_CONTAINER = "sparkle_db"
+DB_CONTAINER = "sparkle_proj_db"
 DB_NAME = "sparkle"
 RAG_KEYWORD = "MRV-7749"  # 本轮验收专用唯一关键词，避免历史数据干扰
 RESULTS: list[dict] = []

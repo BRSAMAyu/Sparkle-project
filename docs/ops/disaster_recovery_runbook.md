@@ -22,12 +22,12 @@ Run from the repository root on the production maintenance host.
 
 ```bash
 export BACKUP_ROOT=/var/backups/sparkle
-export POSTGRES_CONTAINER=sparkle_db
+export POSTGRES_CONTAINER=sparkle_proj_db
 export POSTGRES_DB=sparkle
 export POSTGRES_USER=postgres
-export REDIS_CONTAINER=sparkle_redis
+export REDIS_CONTAINER=sparkle_proj_redis
 export REDIS_PASSWORD="$REDIS_PASSWORD"
-export MINIO_CONTAINER=sparkle_minio
+export MINIO_CONTAINER=sparkle_proj_minio
 bash scripts/backup_prod_data.sh
 ```
 

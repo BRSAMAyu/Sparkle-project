@@ -8,8 +8,8 @@
 
 ```bash
 # 已运行的服务
-✅ sparkle_db      (PostgreSQL + pgvector) - localhost:5432
-✅ sparkle_redis   (Redis) - localhost:6379
+✅ sparkle_proj_db      (PostgreSQL + pgvector) - localhost:5432
+✅ sparkle_proj_redis (Redis) - localhost:6379
 ```
 
 ---
@@ -92,8 +92,8 @@ docker ps --filter "name=sparkle" --format "table {{.Names}}\t{{.Status}}\t{{.Po
 **预期输出**:
 ```
 NAME                    STATUS          PORTS
-sparkle_db              Up 5 minutes    0.0.0.0:5432->5432/tcp
-sparkle_redis           Up 5 minutes    0.0.0.0:6379->6379/tcp
+sparkle_proj_db              Up 5 minutes    0.0.0.0:5432->5432/tcp
+sparkle_proj_redis           Up 5 minutes    0.0.0.0:6379->6379/tcp
 sparkle_celery_worker   Up X seconds    (no ports)
 sparkle_celery_beat     Up X seconds    (no ports)
 sparkle_flower          Up X seconds    0.0.0.0:5555->5555/tcp

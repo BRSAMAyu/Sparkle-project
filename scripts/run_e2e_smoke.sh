@@ -141,11 +141,12 @@ compose_up() {
   "${COMPOSE[@]}" up -d --build sparkle_agent sparkle_api
   "${COMPOSE[@]}" up -d --build --no-deps sparkle_gateway
 
-  wait_for_container "sparkle_db" 180
-  wait_for_container "sparkle_redis" 180
-  wait_for_container "sparkle_agent" 180
-  wait_for_container "sparkle_api" 180
-  wait_for_container "sparkle_gateway" 180
+  # FIX-563：wait_for_container 走 docker inspect=容器名；本仓分化后为 sparkle_proj_*
+  wait_for_container "sparkle_proj_db" 180
+  wait_for_container "sparkle_proj_redis" 180
+  wait_for_container "sparkle_proj_agent" 180
+  wait_for_container "sparkle_proj_api" 180
+  wait_for_container "sparkle_proj_gateway" 180
 
   wait_for_http "http://127.0.0.1:8000/health" 180
   wait_for_http "http://127.0.0.1:8080/api/v1/health" 180

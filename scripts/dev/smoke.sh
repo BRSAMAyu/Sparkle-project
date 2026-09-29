@@ -29,9 +29,9 @@ smoke_check() {
 
 log "Running smoke tests..."
 
-# ── 1. Infrastructure ──
-smoke_check "infra_postgres"  "docker exec sparkle-db pg_isready -U ${POSTGRES_USER:-brsama} >/dev/null 2>&1"
-smoke_check "infra_redis"     "docker exec sparkle-redis redis-cli ping 2>&1 | grep -q PONG"
+# ── 1. Infrastructure（FIX-563：容器名分化 sparkle_*→sparkle_proj_*，并修 dash 形旧债 sparkle-db/sparkle-redis）──
+smoke_check "infra_postgres"  "docker exec sparkle_proj_db pg_isready -U ${POSTGRES_USER:-brsama} >/dev/null 2>&1"
+smoke_check "infra_redis"     "docker exec sparkle_proj_redis redis-cli ping 2>&1 | grep -q PONG"
 
 # ── 2. Make smoke (existing) ──
 if [ -f "$ROOT_DIR/Makefile" ]; then

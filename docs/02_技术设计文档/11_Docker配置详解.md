@@ -12,11 +12,13 @@ Sparkle 使用 Docker Compose 编排所有服务。本配置涵盖了基础设�
 
 ### 2.1 基础设施 (Infrastructure)
 
-| 服务名 | 镜像 | 端口 | 说明 |
-| :--- | :--- | :--- | :--- |
-| `sparkle_db` | `pgvector/pgvector:pg16` | 5432 | 核心数据库，支持向量扩展 |
-| `sparkle_redis` | `redis/redis-stack-server` | 6379 | 缓存、队列、会话存储 |
-| `sparkle_minio` | `minio/minio` | 9000/9001 | 对象存储 (S3 兼容) |
+| 服务名 | 容器名（FIX-563 分化后） | 镜像 | 端口 | 说明 |
+| :--- | :--- | :--- | :--- | :--- |
+| `sparkle_db` | `sparkle_proj_db` | `pgvector/pgvector:pg16` | 5432 | 核心数据库，支持向量扩展 |
+| `redis` | `sparkle_proj_redis` | `redis/redis-stack-server` | 6379 | 缓存、队列、会话存储 |
+| `minio` | `sparkle_proj_minio` | `minio/minio` | 9000/9001 | 对象存储 (S3 兼容) |
+
+> FIX-563：本仓 `container_name` 单侧分化加 `_proj_` 中缀（与 sparkle-cosmos 仓的 `sparkle_*` 容器名区分，根除跨仓同名误击）；**compose 服务名/容器内 DNS 不变**，服务间访问仍用服务名。对照表与 `-p` 纪律见 `scripts/RESTACK_RUNBOOK.md`。
 
 ### 2.2 应用服务 (Applications)
 

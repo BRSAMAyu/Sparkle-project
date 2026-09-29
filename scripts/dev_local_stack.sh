@@ -290,9 +290,10 @@ smoke() {
 case "${1:-}" in
   up)
     start_infra
-    wait_for_container_health "sparkle_db"
-    wait_for_container_health "sparkle_redis"
-    wait_for_container_health "sparkle_minio"
+    # FIX-563：容器名随本仓单侧分化（sparkle_*→sparkle_proj_*）
+    wait_for_container_health "sparkle_proj_db"
+    wait_for_container_health "sparkle_proj_redis"
+    wait_for_container_health "sparkle_proj_minio"
     init_age_schema
     init_knowledge_index
     RUNTIME_EXPORTS="$(build_runtime_env_exports)"

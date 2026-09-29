@@ -3,7 +3,7 @@
 # Load environment variables from .env (optional — won't error if missing)
 -include .env
 
-DB_CONTAINER=sparkle_db
+DB_CONTAINER=sparkle_proj_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
 DB_NAME?=$(if $(POSTGRES_DB),$(POSTGRES_DB),sparkle)
 PROTO_TOOLCHAIN_IMAGE?=sparkle/proto-toolchain:latest
@@ -376,14 +376,14 @@ celery-up:
 		cd backend && docker build -t sparkle_backend .; \
 	fi
 	@echo "   Starting services..."
-	@docker run -d --name sparkle_celery_worker --network sparkle-project_default \
+	@docker run -d --name sparkle_proj_celery_worker --network sparkle-project_default \
 		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
 		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-e CELERY_RESULT_BACKEND=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/2 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=4 2>/dev/null || echo "Worker may already be running"
-	@docker run -d --name sparkle_celery_glm_batch_worker --network sparkle-project_default \
+	@docker run -d --name sparkle_proj_celery_glm_batch_worker --network sparkle-project_default \
 		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
 		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
@@ -391,35 +391,35 @@ celery-up:
 		-e GLM_BATCH_MAX_CONCURRENCY=2 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app worker -l info -Q glm_batch --concurrency=2 --hostname=glm-batch@%h 2>/dev/null || echo "GLM batch worker may already be running"
-	@docker run -d --name sparkle_celery_beat --network sparkle-project_default \
+	@docker run -d --name sparkle_proj_celery_beat --network sparkle-project_default \
 		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
 		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app beat -l info 2>/dev/null || echo "Beat may already be running"
 	@if [ "$(FLOWER_ENABLE)" = "1" ]; then \
-		docker run -d --name sparkle_flower --network sparkle-project_default -p 5555:5555 \
+		docker run -d --name sparkle_proj_flower --network sparkle-project_default -p 5555:5555 \
 			$(FLOWER_IMAGE) celery --broker=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 flower --port=5555 2>/dev/null || echo "Flower may already be running"; \
 	else \
 		echo "ℹ️  Flower disabled. Set FLOWER_ENABLE=1 to start it."; \
 	fi
 	@echo "✅ Celery services started!"
-	@echo "   Worker: docker logs -f sparkle_celery_worker"
-	@echo "   GLM Batch Worker: docker logs -f sparkle_celery_glm_batch_worker"
-	@echo "   Beat: docker logs -f sparkle_celery_beat"
+	@echo "   Worker: docker logs -f sparkle_proj_celery_worker"
+	@echo "   GLM Batch Worker: docker logs -f sparkle_proj_celery_glm_batch_worker"
+	@echo "   Beat: docker logs -f sparkle_proj_celery_beat"
 	@echo "   Flower: http://localhost:5555"
 
 celery-logs-worker:
 	@echo "📊 Celery Worker Logs..."
-	@docker logs -f sparkle_celery_worker 2>/dev/null || echo "Worker not running"
+	@docker logs -f sparkle_proj_celery_worker 2>/dev/null || echo "Worker not running"
 
 celery-logs-glm:
 	@echo "📊 Celery GLM Batch Worker Logs..."
-	@docker logs -f sparkle_celery_glm_batch_worker 2>/dev/null || echo "GLM batch worker not running"
+	@docker logs -f sparkle_proj_celery_glm_batch_worker 2>/dev/null || echo "GLM batch worker not running"
 
 celery-logs-beat:
 	@echo "📊 Celery Beat Logs..."
-	@docker logs -f sparkle_celery_beat 2>/dev/null || echo "Beat not running"
+	@docker logs -f sparkle_proj_celery_beat 2>/dev/null || echo "Beat not running"
 
 celery-flower:
 	@echo "🌐 Opening Flower Dashboard..."
@@ -427,13 +427,13 @@ celery-flower:
 
 celery-restart:
 	@echo "🔄 Restarting Celery services..."
-	@docker stop sparkle_celery_worker sparkle_celery_glm_batch_worker sparkle_celery_beat 2>/dev/null || true
-	@docker rm sparkle_celery_worker sparkle_celery_glm_batch_worker sparkle_celery_beat 2>/dev/null || true
+	@docker stop sparkle_proj_celery_worker sparkle_proj_celery_glm_batch_worker sparkle_proj_celery_beat 2>/dev/null || true
+	@docker rm sparkle_proj_celery_worker sparkle_proj_celery_glm_batch_worker sparkle_proj_celery_beat 2>/dev/null || true
 	@make celery-up
 
 celery-flush:
 	@echo "🗑️  Flushing Celery queues..."
-	@docker exec sparkle_redis redis-cli -n 1 FLUSHDB 2>/dev/null || echo "Redis not running"
+	@docker exec sparkle_proj_redis redis-cli -n 1 FLUSHDB 2>/dev/null || echo "Redis not running"
 
 celery-status:
 	@echo "📊 Celery Services Status..."
@@ -441,8 +441,8 @@ celery-status:
 
 celery-stop:
 	@echo "🛑 Stopping Celery services..."
-	@docker stop sparkle_celery_worker sparkle_celery_glm_batch_worker sparkle_celery_beat sparkle_flower 2>/dev/null || true
-	@docker rm sparkle_celery_worker sparkle_celery_glm_batch_worker sparkle_celery_beat sparkle_flower 2>/dev/null || true
+	@docker stop sparkle_proj_celery_worker sparkle_proj_celery_glm_batch_worker sparkle_proj_celery_beat sparkle_proj_flower 2>/dev/null || true
+	@docker rm sparkle_proj_celery_worker sparkle_proj_celery_glm_batch_worker sparkle_proj_celery_beat sparkle_proj_flower 2>/dev/null || true
 	@echo "✅ Celery services stopped"
 
 # 启动完整开发环境 (包含 Celery)
@@ -462,7 +462,7 @@ dev-all:
 	@echo ""
 	@echo "📊 Monitoring:"
 	@echo "   - Flower: http://localhost:5555"
-	@echo "   - Redis CLI: docker exec -it sparkle_redis redis-cli"
+	@echo "   - Redis CLI: docker exec -it sparkle_proj_redis redis-cli"
 	@echo ""
 	@echo "🔧 Quick Commands:"
 	@echo "   make celery-status     # Check Celery services"

@@ -16,7 +16,7 @@ scrape_configs:
     pipeline_stages:
       - docker: {}
       - match:
-          selector: '{container="sparkle_backend"}'
+          selector: '{container="sparkle_proj_backend"}'
           stages:
             - regex:
                 expression: '(.*)password(.*)'
@@ -25,7 +25,7 @@ scrape_configs:
                 expression: '(.*)key(.*)'
                 replace: '***'
       - match:
-          selector: '{container="sparkle_gateway"}'
+          selector: '{container="sparkle_proj_gateway"}'
           stages:
             - regex:
                 expression: '(.*)Authorization(.*)'

@@ -19,7 +19,7 @@ from typing import Any
 
 from .models import SIM_RUN_SCHEMA, SIM_STEP_SCHEMA, RunManifest
 
-DB_CONTAINER = "sparkle_db"
+DB_CONTAINER = "sparkle_proj_db"
 DB_NAME = "sparkle"
 
 

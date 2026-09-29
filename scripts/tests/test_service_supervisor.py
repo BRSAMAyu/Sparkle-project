@@ -9,9 +9,11 @@ against REAL decoy processes on ephemeral ports:
    restart command, decoy comes back, next cycle is green;
 4. FIX-542 at the supervisor layer: restart commands run with
    ``cwd=REPO_ROOT`` regardless of the caller's CWD (asserted via ``pwd``);
-5. FIX-557 owner precheck: real ``docker inspect`` reports the
-   ``sparkle-cosmos_`` prefix green; a monkeypatched wrong prefix is RED and
-   would alert (read-only check — no container is ever mutated);
+5. FIX-557 owner precheck under FIX-563 semantics: real ``docker inspect``
+   is green when our repo-unique container is absent or owns a
+   ``sparkle-project_*`` volume; a foreign ``sparkle-cosmos_*`` volume on our
+   container is RED and would alert (read-only check — no container is ever
+   mutated);
 6. observe mode withholds restarts (alerts instead of acting).
 
 No real stack ports (8000/8080/50051) are touched; everything runs on
@@ -239,24 +241,56 @@ def test_restart_cap_alerts_instead_of_looping(alert_redirect):
 
 
 def test_fix557_owner_precheck_real_and_negative(monkeypatch):
-    """Real (read-only) precheck on this machine + wrong-prefix negative."""
+    """Real (read-only) precheck on this machine + FIX-563 semantics matrix.
+
+    FIX-563 inverted the ownership truth table: this repo's container is
+    repo-unique (sparkle_proj_db), so ``sparkle-project_*`` mounts are OURS
+    (green), a foreign ``sparkle-cosmos_*`` mount on our container is the
+    violation (RED), and an absent container is nothing-to-guard (green).
+    """
     real = sup.check_data_plane_owner()
     assert real["check"] == "data_plane_owner"
-    if real["ok"]:
-        assert "sparkle-cosmos_" in real["detail"], real
-    else:
-        # Either docker is down (no daemon) or misowned — both must say why.
+    if real["ok"] and "absent" not in real.get("detail", ""):
+        assert "sparkle-project_" in real["detail"], real
+    elif not real["ok"]:
+        # Docker daemon down (or other inspect failure) — must say why.
         assert real["detail"], real
 
     class FakeOut:
-        returncode = 0
-        stdout = "sparkle-project_sparkle_postgres_data "
-        stderr = ""
+        def __init__(self, returncode=0, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
 
-    monkeypatch.setattr(sup.subprocess, "run", lambda *a, **k: FakeOut())
-    wrong = sup.check_data_plane_owner()
-    assert wrong["ok"] is False
-    assert "FIX-557" in wrong["note"] and "RESTACK_RUNBOOK" in wrong["note"]
+    # Foreign volume attached to OUR container → RED + actionable note.
+    monkeypatch.setattr(
+        sup.subprocess,
+        "run",
+        lambda *a, **k: FakeOut(stdout="sparkle-cosmos_sparkle_postgres_data "),
+    )
+    foreign = sup.check_data_plane_owner()
+    assert foreign["ok"] is False
+    assert "FIX-563" in foreign["note"] and "RESTACK_RUNBOOK" in foreign["note"]
+
+    # Our own volume → GREEN (post-FIX-563 this is the owner, not a violation).
+    monkeypatch.setattr(
+        sup.subprocess,
+        "run",
+        lambda *a, **k: FakeOut(stdout="sparkle-project_sparkle_postgres_data "),
+    )
+    ours = sup.check_data_plane_owner()
+    assert ours["ok"] is True
+
+    # Absent container → GREEN with an explanatory note (unique names cannot
+    # shadow foreign volumes — the FIX-557 accident form is structurally dead).
+    monkeypatch.setattr(
+        sup.subprocess,
+        "run",
+        lambda *a, **k: FakeOut(returncode=1, stderr="Error: No such object: sparkle_proj_db"),
+    )
+    absent = sup.check_data_plane_owner()
+    assert absent["ok"] is True
+    assert "absent" in absent["detail"]
 
 
 def tmp_cfg(port: int, tmp: Path | None = None) -> Path:

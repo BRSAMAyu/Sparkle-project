@@ -5,7 +5,7 @@ app.main:app --env-file .env）跑 HTTP+WS 全链路：注册两个真实测试�
 建冲刺小队、错题分享/撤回/再分享、群 WS 实时广播、断连重连、以及第二
 引擎进程（同 PostgreSQL/Redis/MinIO 数据面）下的跨实例广播。
 
-数据面只读复用既有 sparkle_db/sparkle_redis/sparkle_minio 容器（FIX-557
+数据面只读复用既有 sparkle_proj_db/sparkle_proj_redis/sparkle_proj_minio 容器（FIX-557
 口径）；测试账号为本次注册的真实账号（u11_a_<ts>/u11_b_<ts>），demo 角色
 不冒充真人。
 

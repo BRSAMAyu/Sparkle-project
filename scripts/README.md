@@ -8,7 +8,7 @@
 
 | 文档 | 用途 |
 |---|---|
-| [RESTACK_RUNBOOK.md](RESTACK_RUNBOOK.md) | 本机 dev 栈数据面重建手册——**sparkle_db 属主铁律**（真数据卷属 sparkle-cosmos 仓，重建前必查 `docker inspect` 卷前缀）+ 09-28 事故复盘与纠偏步骤（FIX-557） |
+| [RESTACK_RUNBOOK.md](RESTACK_RUNBOOK.md) | 本机 dev 栈数据面重建手册——**两仓容器名对照表与 `-p` 纪律**（FIX-563 本仓单侧分化 `sparkle_proj_*`，跨仓同名碰撞根除；真数据卷属主、重建前必查 `docker inspect` 卷前缀）+ 09-28 事故复盘与纠偏步骤（FIX-557） |
 
 ## 主要脚本（按用途）
 

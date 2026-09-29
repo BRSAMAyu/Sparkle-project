@@ -44,13 +44,13 @@ warn() {
 
 log "Running health checks..."
 
-# ── Docker services ──
+# ── Docker services（FIX-563：本仓容器名单侧分化 sparkle_*→sparkle_proj_*）──
 check "docker_daemon"       "docker info >/dev/null 2>&1"
-check "postgres_connect"    "docker exec sparkle_db pg_isready -U ${POSTGRES_USER:-brsama} >/dev/null 2>&1"
-check "redis_ping"          "docker exec sparkle_redis redis-cli ping >/dev/null 2>&1"
+check "postgres_connect"    "docker exec sparkle_proj_db pg_isready -U ${POSTGRES_USER:-brsama} >/dev/null 2>&1"
+check "redis_ping"          "docker exec sparkle_proj_redis redis-cli ping >/dev/null 2>&1"
 
 # MinIO — check if container is running and bucket is accessible
-check "minio_running"       "docker ps --format '{{.Names}}' | grep -q 'minio'"
+check "minio_running"       "docker ps --format '{{.Names}}' | grep -Eq '(^|_)minio$'"
 warn  "minio_bucket"        "curl -sf http://localhost:9000/minio/health/live >/dev/null 2>&1"
 
 # ── Python Backend ──
