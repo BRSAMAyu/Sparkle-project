@@ -167,7 +167,8 @@ Map<String, dynamic> _pendingProjection(String id) => <String, dynamic>{
       'proposal_id': id,
       'status': 'PENDING',
       'command_type': 'task.update_fields',
-      'source': 'recovery_sheet',
+      // X-03 投影回显 source（ProposalSource 词表内值；一审 B-1 后客户端恒发 'task'）。
+      'source': 'task',
       'summary': '仅本次：今天只有十五分钟',
       'diff': <String, dynamic>{
         'before': <String, dynamic>{'estimated_minutes': 40},

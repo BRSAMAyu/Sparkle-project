@@ -5,6 +5,32 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/shared/widgets/action_proposal/proposal_card_models.dart';
 
+/// X-03 `ActionCommandType` 封闭词表镜像（单一真源：backend
+/// `app/core/action_command.py`；同 `ProposalSource`——词表冻结，新增项
+/// 是契约变更，客户端不得私开词表外值）。
+const List<String> kActionCommandTypeVocabularyMirror = <String>[
+  'task.update_status',
+  'task.update_fields',
+  'task.create_batch',
+];
+
+/// X-03 `ProposalSource` 封闭词表镜像（单一真源：backend
+/// `app/core/action_command.py`；服务端 create 对词表外值抛
+/// `unknown proposal source … (closed vocabulary)` → 路由 400）。
+/// 词表冻结：新增项是契约变更，须由 X-03 契约 owner 随服务端冻结测试
+/// 一并登记后才可在此同步——客户端不得私开词表外值（一审 B-1 教训）。
+const List<String> kProposalSourceVocabularyMirror = <String>[
+  'chat',
+  'task',
+  'aurora',
+  'system',
+  'api',
+];
+
+/// V4-U02「仅本次」调整提案的入口标记（词表内取值；选择理由见
+/// [ActionProposalRepository.createAdjustmentProposal] 头注）.
+const String _kAdjustmentProposalSource = 'task';
+
 /// U-04 · task 侧挂载 Action Proposal 的数据面.
 ///
 /// 真源是 X-03 的统一 command path（网关 `/api/v1/action-proposals` 纯代理 →
@@ -23,6 +49,15 @@ class ActionProposalRepository {
   /// `task.update_fields`（白名单字段，见后端 TASK_FIELD_WHITELIST）。
   /// 返回**原始投影**（含权威 receipt 本体；回执门解析在消费方 fail-closed
   /// 进行——经卡模型中转会丢 receipt 本体）。
+  ///
+  /// 一审 B-1 返修：`source` 必须取服务端封闭词表内值
+  ///（backend `app/core/action_command.py` `ProposalSource` =
+  /// `{chat, task, aurora, system, api}`；词表外服务端 create 即
+  /// ValueError → 400，「仅本次」链路端到端不可达）。此处取 `task`——
+  /// 本提案产生于任务侧挂载的 recovery 校准面（subject 是任务、命令是
+  /// `task.update_fields`），是词表内最准确的入口标记；surface 级溯源
+  /// （recovery sheet）由随提案持久进审计的 `summary`（用户纠正原话）
+  /// 承载，不私开词表外值。新增入口时同样只能从词表取值。
   Future<Map<String, dynamic>> createAdjustmentProposal({
     required String taskId,
     required Map<String, dynamic> fields,
@@ -34,7 +69,7 @@ class ActionProposalRepository {
       data: <String, dynamic>{
         'command_type': 'task.update_fields',
         'payload': <String, dynamic>{'task_id': taskId, 'fields': fields},
-        'source': 'recovery_sheet',
+        'source': _kAdjustmentProposalSource,
         'idempotency_key': idempotencyKey,
         if (summary != null && summary.isNotEmpty) 'summary': summary,
       },

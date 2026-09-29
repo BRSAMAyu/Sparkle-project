@@ -65,6 +65,15 @@ enum RecoveryCalibrationPhase {
 /// X-03 投影状态词表（本面消费的封闭子集；其余一律 unknown，不猜）。
 const String _kProposalCommitted = 'COMMITTED';
 
+/// 服务端终态词表（`ProposalStatus` 终态封闭：无出边；镜像自 backend
+/// `app/core/action_command.py`）。create 重放命中终态 = 这份幂等键已
+/// 消耗在新意图之外（一审 B-2）——不得当作可确认对照呈现。
+const Set<String> _kTerminalProposalStatuses = <String>{
+  'CANCELLED',
+  'REJECTED',
+  'EXPIRED',
+};
+
 /// 服务端提案投影的 fail-closed 解析视图（只保留本面要渲染的字段）。
 @immutable
 class RecoveryProposalView {
@@ -214,9 +223,12 @@ class RecoveryCalibrationController
     required String taskId,
     int? baselineMinutes,
   })  : _taskId = taskId,
-        // 会话盐：同一张 sheet 打开期内重试共用同一幂等键（服务端 X-09
-        // 恰一次）；重开 sheet = 新意图 = 新键，不吞掉前次终态。
-        _createKeySalt = DateTime.now().microsecondsSinceEpoch.toString(),
+        // 幂等键盐（一审 B-2 返修）：**每次提案意图**一盐——同键重试
+        // （网络失败后重试、confirming 回 diffReview 重试）保持同键，
+        // 服务端 X-09 恰一次；显式取消一份提案（终态）后重建 = 新意图，
+        // 必换新键——否则服务端 `_resume_or_replay` 原样重放终态提案，
+        // 客户端拿到 CANCELLED 投影，真实新建从未发生（重放死端）。
+        _createKeySalt = _newCreateKeySalt(),
         super(RecoveryCalibrationState(baselineMinutes: baselineMinutes)) {
     if (baselineMinutes != null) {
       state = state.copyWith(adjustedMinutes: baselineMinutes);
@@ -225,7 +237,15 @@ class RecoveryCalibrationController
 
   final Ref _ref;
   final String _taskId;
-  final String _createKeySalt;
+  String _createKeySalt;
+
+  /// 新盐（毫秒级时钟 + 微秒位；同 sheet 内多次重建不撞键）。
+  static String _newCreateKeySalt() => DateTime.now().microsecondsSinceEpoch.toString();
+
+  /// 终态之后重建 = 新意图 → 换键（重试绝不走到这里：重试不经过取消）。
+  void _rotateCreateKeySalt() {
+    _createKeySalt = _newCreateKeySalt();
+  }
 
   static const int _minutesMin = 5;
   static const int _minutesMax = 240;
@@ -344,6 +364,15 @@ class RecoveryCalibrationController
         state = state.copyWith(busy: false, transientError: true);
         return;
       }
+      if (_kTerminalProposalStatuses.contains(view.status)) {
+        // 一审 B-2 防线：create 重放命中终态（CANCELLED/REJECTED/EXPIRED）
+        // = 这份幂等键指向的提案已死，真实新建没有发生——绝不把死提案
+        // 当作可确认对照渲染（fail-closed）。换新键，如实一行报错留在
+        // 调整相（输入不清），用户可立即重试（重试用新键 = 真新建）。
+        _rotateCreateKeySalt();
+        state = state.copyWith(busy: false, transientError: true);
+        return;
+      }
       state = state.copyWith(
         phase: RecoveryCalibrationPhase.diffReview,
         proposal: view,
@@ -445,6 +474,9 @@ class RecoveryCalibrationController
         proposal.proposalId,
         proposalActionIdempotencyKey(proposal.proposalId, 'cancel'),
       );
+      // 一审 B-2：这份提案已终态（user_cancelled）——重建换新键，
+      // 否则同值重建被服务端按幂等键重放成 CANCELLED 死提案。
+      _rotateCreateKeySalt();
       state = state.copyWith(
         phase: RecoveryCalibrationPhase.adjusting,
         proposal: null,
@@ -477,6 +509,9 @@ class RecoveryCalibrationController
         proposal.proposalId,
         proposalActionIdempotencyKey(proposal.proposalId, 'cancel'),
       );
+      // 一审 B-2：显式取消 = 这份提案终态——之后重建同值提案必须换新键
+      //（重放终态死端防线，见 buildAdjustment 内终态守卫）。
+      _rotateCreateKeySalt();
       state = state.copyWith(busy: false);
       resetToInput();
     } on Exception catch (error) {

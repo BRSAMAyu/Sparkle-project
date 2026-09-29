@@ -28,7 +28,7 @@
       "exit_code": 0
     },
     {
-      "purpose": "l10n 再生成（arb 45 新键纯增量 → 生成 dart ×3）",
+      "purpose": "l10n 再生成（arb 42 值键 + 6 占位元数据 = 48 条目纯增量 → 生成 dart ×3；一审 N-1 计数勘误）",
       "command": "flutter gen-l10n",
       "cwd": "mobile",
       "exit_code": 0,
@@ -103,5 +103,28 @@
     "u02_committed_360x800.png（+semantics）——回执到场后的唯一成功面孔（PixelSuccessBadge + 回执号）",
     "u02_conflict_360x800.png（+semantics）——409 冲突恢复面（零成功视觉）"
   ],
-  "screenshot_note": "测试环境字体下中文渲染为占位方块（Ahem 族）——与 U01/U03 证据同款先例；真实文案以同目录 *_semantics.txt 语义树 dump 为准（逐字可查）"
+  "screenshot_note": "测试环境字体下中文渲染为占位方块（Ahem 族）——与 U01/U03 证据同款先例；真实文案以同目录 *_semantics.txt 语义树 dump 为准（逐字可查）",
+  "rework_r1": {
+    "note": "一审 FAIL 返修（B-1/B-2）随附 manifest 增量；返修 SHA 注记见 review_receipt.json rework 块",
+    "commands": [
+      {
+        "purpose": "返修后 recovery 套件（+5 新测）",
+        "command": "flutter test test/features/recovery",
+        "cwd": "mobile",
+        "exit_code": 0,
+        "result": "+32 全绿（27 → 32；既有 27 零回归）"
+      },
+      {
+        "purpose": "B-1 直调服务探针（临时 pytest，用后已删；sqlite 测试库）",
+        "command": "SECRET_KEY=… python -m pytest tests/unit/test_zz_b1_rework_probe_tmp.py（已删，结果记录于 test_results.json rework_r1.probe_direct_service）",
+        "exit_code": 0,
+        "result": "词表镜像 + 负探针 ValueError + 正探针 created/PENDING/diff/重放/approve COMMITTED+receipt 全过"
+      },
+      {
+        "purpose": "mutation 自验 ×2（B-1 source 拨回词表外 / B-2 注释盐轮换）",
+        "result": "各一测转红（:1080 / :1187）后还原全绿；工作树无探针残留"
+      }
+    ],
+    "source_decision": "B-1 裁决：客户端改用词表内 source=task（理由见 diff_or_evidence_only.md 返修节）；不擅改服务端封闭词表"
+  }
 }

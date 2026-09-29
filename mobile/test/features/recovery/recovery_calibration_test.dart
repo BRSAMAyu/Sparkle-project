@@ -48,6 +48,9 @@ class _FakeProposalRepository implements ActionProposalRepository {
   /// create 的返回（与真仓库同契约：**原始投影**，非 mutation 信封）。
   Map<String, dynamic> createResponse = _pendingProjection('p1');
 
+  /// create 的失败注入（网络/服务错）。
+  Exception? createError;
+
   /// approve 的返回（可挂 Completer 做在途时序钉）。
   Completer<Map<String, dynamic>?>? approveGate;
   Object? approveResult;
@@ -55,6 +58,14 @@ class _FakeProposalRepository implements ActionProposalRepository {
 
   /// getProposal（重看权威面）的返回。
   Map<String, dynamic>? proposalDetail;
+
+  /// 一审 B-2 契约镜像（opt-in）：模拟服务端 X-09 (user, idempotency_key)
+  /// 幂等——同键 create **原样重放**首次响应（`_resume_or_replay` 语义，
+  /// 零新写、状态不复活）；cancel 把已存提案置 CANCELLED（终态封闭）。
+  /// 默认 off：既有行为测试只钉调用记录，不受模拟语义影响。
+  bool emulateServerIdempotency = false;
+  final Map<String, Map<String, dynamic>> _proposalsByKey =
+      <String, Map<String, dynamic>>{};
 
   @override
   Future<Map<String, dynamic>> createAdjustmentProposal({
@@ -69,6 +80,13 @@ class _FakeProposalRepository implements ActionProposalRepository {
       'idempotency_key': idempotencyKey,
       'summary': summary,
     });
+    final error = createError;
+    if (error != null) throw error;
+    if (emulateServerIdempotency) {
+      final replay = _proposalsByKey[idempotencyKey];
+      if (replay != null) return replay;
+      _proposalsByKey[idempotencyKey] = Map<String, dynamic>.from(createResponse);
+    }
     return createResponse;
   }
 
@@ -97,6 +115,15 @@ class _FakeProposalRepository implements ActionProposalRepository {
     String idempotencyKey,
   ) async {
     cancelCalls.add('$proposalId:$idempotencyKey');
+    if (emulateServerIdempotency) {
+      // 终态封闭：该提案名下所有幂等键的存档同置 CANCELLED（重放不复活）。
+      _proposalsByKey.updateAll((key, proposal) {
+        if (proposal['proposal_id'] == proposalId) {
+          return <String, dynamic>{...proposal, 'status': 'CANCELLED'};
+        }
+        return proposal;
+      });
+    }
     return <String, dynamic>{
       'proposal': _pendingProjection(proposalId)
         ..['status'] = 'CANCELLED',
@@ -214,7 +241,9 @@ Map<String, dynamic> _pendingProjection(String id) => <String, dynamic>{
       'proposal_id': id,
       'status': 'PENDING',
       'command_type': 'task.update_fields',
-      'source': 'recovery_sheet',
+      // 服务端投影回显 source（X-03 ProposalSource 词表内值；一审 B-1 后
+      // 客户端创建恒发 'task'，fake 与真实回显对齐）。
+      'source': 'task',
       'summary': '仅本次：今天只有十五分钟',
       'diff': <String, dynamic>{
         'before': <String, dynamic>{'estimated_minutes': 40},
@@ -1015,6 +1044,243 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('没有收到回执'), findsOneWidget);
       expect(find.byType(PixelSuccessBadge), findsNothing);
+    });
+  });
+
+  group('一审 B-1 契约穿透：请求侧对服务端封闭词表的真实校验', () {
+    // 一审 FAIL 根因：fake 仓库不经 HTTP，请求侧契约（source 词表）不可见，
+    // `source: 'recovery_sheet'` 被服务端 `ProposalSource` 封闭词表拒
+    //（ValueError → 400），「仅本次」链路真实环境每次必 400。本组用**真
+    // 仓库** + 记录型 ApiClient 打到 HTTP 边界，断言请求体与 X-03 契约
+    // 逐字段咬合——同型回归（词表外 source/command_type）在这里红。
+    test('正：POST /action-proposals 请求体——source 在 ProposalSource '
+        '封闭词表内（钉 task），command_type 在词表内，payload 逐字段透传',
+        () async {
+      final api = _RecordingApiClient()
+        ..postResponse = () => <String, dynamic>{
+              'proposal': _pendingProjection('p1'),
+              'applied': true,
+              'created': true,
+            };
+      final repository = ActionProposalRepository(api);
+
+      final projection = await repository.createAdjustmentProposal(
+        taskId: 't1',
+        fields: <String, dynamic>{'estimated_minutes': 15},
+        idempotencyKey: 'u02:t1:est:15:salt',
+        summary: '仅本次：今天只有十五分钟',
+      );
+
+      expect(api.posts, hasLength(1));
+      expect(api.posts.single['path'], '/action-proposals');
+      final body = api.posts.single['data'] as Map<String, dynamic>;
+
+      // B-1 主钉：source 必须取服务端封闭词表内值（词表外 → 服务端
+      // `unknown proposal source (closed vocabulary)` → 400，端到端不可达）。
+      expect(body['source'], 'task');
+      expect(
+        kProposalSourceVocabularyMirror,
+        contains(body['source']),
+        reason: 'source 在 X-03 ProposalSource 词表镜像内'
+            '（真源 backend app/core/action_command.py）',
+      );
+      // schema 面：路由 `source: Field(max_length=16)`——防退回拼接长值。
+      expect((body['source'] as String).length, lessThanOrEqualTo(16));
+
+      // 同型防再犯：command_type 同为封闭词表（ActionCommandType 冻结）。
+      expect(body['command_type'], 'task.update_fields');
+      expect(kActionCommandTypeVocabularyMirror, contains(body['command_type']));
+
+      expect(
+        body['payload'],
+        <String, dynamic>{
+          'task_id': 't1',
+          'fields': <String, dynamic>{'estimated_minutes': 15},
+        },
+      );
+      expect(body['idempotency_key'], 'u02:t1:est:15:salt');
+      expect(body['summary'], '仅本次：今天只有十五分钟');
+
+      // 响应侧：真仓库信封 → 投影解包（含权威 receipt 本体的原始投影）。
+      expect(projection['proposal_id'], 'p1');
+      expect(projection['status'], 'PENDING');
+    });
+
+    test('反：信封缺 proposal 投影 → fail-loud（StateError，不渲染半份）',
+        () async {
+      final api = _RecordingApiClient()
+        ..postResponse = () => <String, dynamic>{'unexpected': true};
+      final repository = ActionProposalRepository(api);
+      await expectLater(
+        repository.createAdjustmentProposal(
+          taskId: 't1',
+          fields: <String, dynamic>{'estimated_minutes': 15},
+          idempotencyKey: 'u02:t1:est:15:salt',
+        ),
+        throwsStateError,
+      );
+    });
+  });
+
+  group('一审 B-2：终态后重建换新幂等键（重放死端不可再入）', () {
+    testWidgets('正：取消后重建同值提案——新键、新对照可用、确认落账走出死端',
+        (tester) async {
+      // opt-in 服务端幂等镜像：同键 create 原样重放首响，cancel 终态封闭
+      //（`_resume_or_replay` 语义）——旧实现（同会话同键）在此必红。
+      final proposalRepo = _FakeProposalRepository()
+        ..emulateServerIdempotency = true;
+      await _pumpSheet(
+        tester,
+        surface: 'action',
+        journeyRepo: _AbstainJourneyRepository(),
+        proposalRepo: proposalRepo,
+        api: _RecordingApiClient(),
+      );
+
+      // 第一份提案：40 → 15，生成对照。
+      await _submitConstraint(tester, '今天只有十五分钟');
+      await _tapVisible(tester, find.text('调整这次行动'));
+      for (var i = 0; i < 5; i++) {
+        await _tapVisible(
+          tester,
+          find.byKey(const Key('recovery-calibration-minutes-down')),
+        );
+      }
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('recovery-calibration-create-proposal')),
+      );
+      await tester.pumpAndSettle();
+      expect(proposalRepo.createCalls, hasLength(1));
+      expect(find.text('40 → 15'), findsOneWidget);
+
+      // 「不调了」= 显式取消（终态 user_cancelled）→ 回输入相。
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('recovery-calibration-cancel-proposal')),
+      );
+      await tester.pumpAndSettle();
+      expect(proposalRepo.cancelCalls, hasLength(1));
+      expect(
+        find.byKey(const Key('recovery-calibration-input-field')),
+        findsOneWidget,
+      );
+
+      // 同会话重建**同值**提案（高概率路径）。
+      await _submitConstraint(tester, '今天只有十五分钟');
+      await _tapVisible(tester, find.text('调整这次行动'));
+      for (var i = 0; i < 5; i++) {
+        await _tapVisible(
+          tester,
+          find.byKey(const Key('recovery-calibration-minutes-down')),
+        );
+      }
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('recovery-calibration-create-proposal')),
+      );
+      await tester.pumpAndSettle();
+
+      // 主钉：终态后重建 = 新意图 = 新幂等键（同键会被服务端按
+      // `_resume_or_replay` 原样重放 CANCELLED 死提案——真实新建从未发生）。
+      expect(proposalRepo.createCalls, hasLength(2));
+      expect(
+        proposalRepo.createCalls[1]['idempotency_key'],
+        isNot(proposalRepo.createCalls[0]['idempotency_key']),
+        reason: '取消后重建同值提案必须换新键',
+      );
+      // 新对照真实可用（镜像里新键 = 新建 PENDING，可渲染可确认）。
+      expect(find.text('40 → 15'), findsOneWidget);
+      proposalRepo.approveResult = committedMutationResponse(
+        receiptId: 'r-after-cancel',
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('recovery-calibration-confirm')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('回执 r-after-cancel'), findsOneWidget);
+      expect(find.byType(PixelSuccessBadge), findsOneWidget);
+    });
+
+    testWidgets('反（防线）：create 重放命中终态投影 → 不渲染死对照，'
+        '如实报错留在调整相（fail-closed）', (tester) async {
+      final proposalRepo = _FakeProposalRepository()
+        ..createResponse = (_pendingProjection('p1')..['status'] = 'CANCELLED');
+      await _pumpSheet(
+        tester,
+        surface: 'action',
+        journeyRepo: _AbstainJourneyRepository(),
+        proposalRepo: proposalRepo,
+        api: _RecordingApiClient(),
+      );
+      await _submitConstraint(tester, '今天只有十五分钟');
+      await _tapVisible(tester, find.text('调整这次行动'));
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('recovery-calibration-create-proposal')),
+      );
+      await tester.pumpAndSettle();
+
+      // 死提案绝不当作可确认对照渲染。
+      expect(find.text('40 → 15'), findsNothing);
+      expect(find.textContaining('已按本次约束落账'), findsNothing);
+      expect(find.byType(PixelSuccessBadge), findsNothing);
+      // 如实一行错误 + 留在调整相（输入不清，可立即重试）。
+      expect(find.textContaining('没有连上'), findsOneWidget);
+      expect(
+        find.byKey(const Key('recovery-calibration-create-proposal')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('recovery-calibration-confirm')),
+        findsNothing,
+        reason: '未进 diffReview（终态投影不是待确认对照）',
+      );
+    });
+
+    testWidgets('正（不伤恰一次）：创建失败后的重试复用同键（换键只发生在终态后）',
+        (tester) async {
+      final proposalRepo = _FakeProposalRepository()
+        ..createError = Exception('network down');
+      await _pumpSheet(
+        tester,
+        surface: 'action',
+        journeyRepo: _AbstainJourneyRepository(),
+        proposalRepo: proposalRepo,
+        api: _RecordingApiClient(),
+      );
+      await _submitConstraint(tester, '今天只有十五分钟');
+      await _tapVisible(tester, find.text('调整这次行动'));
+      for (var i = 0; i < 5; i++) {
+        await _tapVisible(
+          tester,
+          find.byKey(const Key('recovery-calibration-minutes-down')),
+        );
+      }
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('recovery-calibration-create-proposal')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('没有连上'), findsOneWidget);
+      expect(proposalRepo.createCalls, hasLength(1));
+
+      // 网络恢复后重试：同键（服务端 X-09 恰一次——首次请求已达时重放，
+      // 不产生第二份 PENDING 提案）。
+      proposalRepo.createError = null;
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('recovery-calibration-create-proposal')),
+      );
+      await tester.pumpAndSettle();
+      expect(proposalRepo.createCalls, hasLength(2));
+      expect(
+        proposalRepo.createCalls[1]['idempotency_key'],
+        proposalRepo.createCalls[0]['idempotency_key'],
+        reason: '失败重试不是新意图：同键重放，不双建提案',
+      );
+      expect(find.text('40 → 15'), findsOneWidget);
     });
   });
 }

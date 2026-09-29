@@ -1,13 +1,13 @@
 {
   "card": "V4-U02",
-  "generated_at": "2026-09-29T08:30:00+08:00",
+  "generated_at": "2026-09-29（一审返修后更新）",
   "new_tests": {
-    "total": 20,
+    "total": 25,
     "files": {
-      "mobile/test/features/recovery/recovery_calibration_test.dart": 18,
+      "mobile/test/features/recovery/recovery_calibration_test.dart": 23,
       "mobile/test/features/recovery/recovery_calibration_evidence_test.dart": 2
     },
-    "note": "每验收面一正一反；两枚指名反例钉（偏好保存≠改任务、回执前零成功反馈时序钉）在 18 测内"
+    "note": "每验收面一正一反；两枚指名反例钉（偏好保存≠改任务、回执前零成功反馈时序钉）在 23 测内；一审返修 +5（B-1 契约穿透 2 + B-2 终态重建 3）"
   },
   "acceptance_mapping": [
     {
@@ -28,7 +28,7 @@
       "acceptance": "保存偏好≠改任务；取消不改变原行动",
       "positive": [
         "正：保存为偏好只写理解纠正面（POST /experience/understanding-snapshot/corrections 恰一次，effect_scope=routing_policy），中性 ack 文案在场",
-        "正：仅本次路径走 X-03 提案（payload 钉：task.update_fields / estimated_minutes / source=recovery_sheet / 幂等键 u02: 前缀），偏好端点零调用",
+        "正：仅本次路径走 X-03 提案（payload 钉：task.update_fields / estimated_minutes / source=task（X-03 ProposalSource 词表内；一审 B-1 返修，契约穿透测试钉词表镜像） / 幂等键 u02: 前缀），偏好端点零调用",
         "正：无任务锚点时「仅本次」如实缺席（不出假入口），偏好路径照常可用",
         "正：取消零写——scopeChoice「先都不用」零端点调用；diffReview「不调了」恰一次 cancel、零 approve、零新增 create、回输入相"
       ],
@@ -66,9 +66,18 @@
     },
     "full_suite": {
       "runs": [
-        {"counter": "+3060 ~23 -3", "attribution": "守卫并行占载下性能/流式抖动；失败集与后续两次运行不重合"},
-        {"counter": "+3064 ~23 -1", "attribution": "唯一失败 widget_bench 16ms 断言（机器负载抖动）"},
-        {"counter": "零 [E]（grep 捕获为空）", "attribution": "干净环境整跑"}
+        {
+          "counter": "+3060 ~23 -3",
+          "attribution": "守卫并行占载下性能/流式抖动；失败集与后续两次运行不重合"
+        },
+        {
+          "counter": "+3064 ~23 -1",
+          "attribution": "唯一失败 widget_bench 16ms 断言（机器负载抖动）"
+        },
+        {
+          "counter": "零 [E]（grep 捕获为空）",
+          "attribution": "干净环境整跑"
+        }
       ],
       "isolation": "chat_notifier_stream_test（main 检出 8/8 绿）、widget_bench（wtU02 隔离 9/9 绿）——三次全量失败均为负载抖动非功能回归，无基线删改"
     }
@@ -78,5 +87,32 @@
     "l10n_parity": "L10N-REGEN-PARITY OK（arb 45 新键纯增量；zh/en 完整）",
     "i18n_guard": "PASS",
     "mypy_openapi_ba_routes": "未触发（零 backend 变更）"
+  },
+  "rework_r1": {
+    "blocking_fixed": [
+      "B-1 source 词表外（客户端改 task + 词表镜像契约穿透测试）",
+      "B-2 终态后重建同键重放死端（意图盐轮换 + 终态重放 fail-closed 守卫）"
+    ],
+    "new_tests_detail": [
+      "B-1 契约穿透 正：真 ActionProposalRepository + 记录型 ApiClient——POST /action-proposals 请求体 source==task ∧ ∈ ProposalSource 词表镜像 ∧ ≤16 字符 ∧ command_type ∈ ActionCommandType 词表镜像 ∧ payload/幂等键/summary 逐字段透传 ∧ 信封→投影解包",
+      "B-1 契约穿透 反：信封缺 proposal 投影 → StateError fail-loud（不渲染半份）",
+      "B-2 正：取消后重建同值提案换新幂等键 + 新对照可渲染可确认落账（fake opt-in 服务端幂等镜像：同键重放首响 + cancel 终态封闭——旧实现同键在此必红；mutation 自验：注释 rotate → 红 @:1187 → 还原绿）",
+      "B-2 反（防线）：create 重放命中终态投影（CANCELLED）→ 不渲染死对照、如实报错留调整相、可换键重试（fail-closed）",
+      "B-2 正（不伤恰一次）：创建失败后的重试复用同键（换键只发生在终态后）"
+    ],
+    "mutation_self_checks": [
+      "B-1：_kAdjustmentProposalSource 拨回 recovery_sheet → 契约测红（:1080 source 钉）→ 还原绿",
+      "B-2：cancelAdjustment 内 _rotateCreateKeySalt() 注释 → 取消后重建正测红（:1187 键差异断言）→ 还原绿"
+    ],
+    "probe_direct_service": {
+      "note": "临时 pytest 直调 ActionCommandService（sqlite 测试库，wtU02 backend 代码，venv=主检出；探针文件用后已删不入库）",
+      "vocabulary": "ProposalSource values: ['api', 'aurora', 'chat', 'system', 'task']",
+      "negative": "source='recovery_sheet' → ValueError: unknown proposal source 'recovery_sheet' (closed vocabulary)（复现一审 400 面）",
+      "positive": "source='task' + task.update_fields(estimated_minutes 40→15) → created=True / status=PENDING / 服务端权威 diff changed_fields=['estimated_minutes'] / source 落库 task；同键重放 created=False；approve → COMMITTED + receipt_id=5f92e961-d241-418c-a582-faa3ec764aa1，task.estimated_minutes 真实变更为 15"
+    },
+    "post_rework_counts": {
+      "recovery_dir": "flutter test test/features/recovery → +32 全绿（27 → 32，+5 新，既有零回归）",
+      "affected_bundle": "见下方 regression（返修后复跑）"
+    }
   }
 }

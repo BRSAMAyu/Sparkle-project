@@ -2,7 +2,7 @@
   "task": "V4-U02",
   "risk": "high",
   "independent_reviewers_required": 2,
-  "status": "NOT_RUN",
+  "status": "R1_FAIL_REWORKED",
   "note": "实现自评不替代独立审查。本卡按高风险卡预登记 6 条审查挑战点（R1-C1..C6），供 R1/R2 优先证伪。",
   "pre_registered_challenges": [
     {
@@ -23,7 +23,7 @@
     {
       "id": "R1-C4",
       "point": "客户端直连 X-03 创建提案是否属「造第二权威」或越权写？",
-      "expected_answer": "X-03 `POST /action-proposals` 即统一 command path（docstring：所有入口共用，chat/task/Aurora 仅 source 不同）；source=recovery_sheet 可审计；授权/白名单/版本校验全在服务端（prepare 阶段 TASK_FIELD_WHITELIST + validate_subject 版本 token + decide 授权），客户端零授权语义。未用 `execute_if_authorized`（恒显式确认）。与 chat U-04 消费同构，非新通道。"
+      "expected_answer": "X-03 `POST /action-proposals` 即统一 command path（docstring：所有入口共用，chat/task/Aurora 仅 source 不同）；**【一审 B-1 证伪并返修】原自述「source=recovery_sheet 可审计」不成立：服务端 `ProposalSource` 封闭词表 = {chat, task, aurora, system, api}（backend app/core/action_command.py），词表外 create 即 ValueError → 400，「仅本次」链路真实环境每次必 400。返修：客户端改用词表内 `source='task'`（产生入口=任务侧挂载 recovery 面，词表内最准确标记）；recovery 面级溯源由随提案持久进审计的 summary（用户纠正原话）承载；词表新增属契约变更，由 X-03 契约 owner 单独卡面登记（本卡无权擅改）。授权/白名单/版本校验全在服务端（prepare 阶段 TASK_FIELD_WHITELIST + validate_subject 版本 token + decide 授权），客户端零授权语义——此半句成立不变。未用 `execute_if_authorized`（恒显式确认）。请求侧契约现由穿透 fake 的真仓库契约测试钉死（词表镜像断言）。"
     },
     {
       "id": "R1-C5",
@@ -35,5 +35,13 @@
       "point": "测试是否用 fake 掩盖了真实端点契约漂移（投影形状/信封差异）？",
       "expected_answer": "假仓库返回形状逐字段对齐后端 `ProposalMutationResponse{proposal: 投影}` 与 `proposal_projection`（status/receipt/diff.changed_fields 均真名）；创建方法在真仓库做 `_unwrapProposal`（信封→投影，缺 proposal 即 StateError fail-loud）——信封/投影混淆曾在开发期被测试抓住并修正（fake 初版误用信封导致全红，修正后绿），证明断言真咬合。l10n 断言用真实 zh 文案逐字对齐 arb。"
     }
-  ]
+  ],
+  "r1_verdict": "FAIL（review_r1.md @4d23cb8a+bc507e32；B-1 source 词表外 + B-2 终态重放死端）",
+  "rework": {
+    "note": "一审 FAIL 返修（B-1/B-2），返修 commit SHA 见本文件 rework.commit_sha（由返修后的注记 commit 填写）",
+    "commit_sha": "PENDING（注记 commit 填写）",
+    "b1_decision": "客户端改用词表内 source=task（裁决与理由见 diff_or_evidence_only.md 返修节）；词表镜像常量 + 穿透 fake 的真仓库契约测试；mutation 自验红→还原绿",
+    "b2_fix": "终态后重建换新键（cancelAdjustment/reAdjustAfterConflict 成功取消后 rotate salt）+ buildAdjustment 终态重放 fail-closed 守卫；正测「取消后重建换新键+新对照可落账」+ mutation 自验红→还原绿",
+    "probe": "直调服务探针（临时 pytest 用后已删）：recovery_sheet → ValueError(closed vocabulary)；task → created=True/PENDING/权威 diff/同键重放 created=False/approve→COMMITTED+receipt+任务字段真实变更"
+  }
 }
