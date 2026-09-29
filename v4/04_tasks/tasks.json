@@ -3512,9 +3512,10 @@
     "V4-I08",
     "V4-U07"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
-   "evidence_verdict": "NOT_RUN",
+   "status": "in_progress",
+   "implementation_state": "REVIEW_READY",
+   "evidence_verdict": "PASS_WITH_CHALLENGES",
+   "review": "PENDING（独立审查未开始；review_receipt.json 已留锚点）。self_note: 测量方法面成立（四时刻分离/分母纪律/成本三源/报红义务）；被测系统面 M04/M05/M06 FAIL、M07 PASS——value 判定以独立审查为准",
    "kind": "verification",
    "required_locks": [
     "qa-latency"
