@@ -40,6 +40,30 @@ const int _frameThresholdUs = int.fromEnvironment(
   defaultValue: 33334, // 2 × 16.67ms（CI 慢机可 -D 放宽，门不删）
 );
 
+/// FIX-579（2026-09-29）：CI 共享 runner 慢机容差系数——显式治理变更，非静默放宽。
+///
+/// 依据三例实测（证据：v4/evidence/FIX-579/）：
+/// ① CI49：galaxy_performance 100 节点布局 244ms（阈值 200ms，红）→ rerun 绿；
+/// ② CI50：本文件 G+ 语义族滚帧 70241μs（阈值 70000μs，+0.3%，红）→ rerun 绿；
+/// ③ CI52：同测试 81496μs（+16.4%，红）。
+/// 本地 M 系 3 连跑 24.7/24.7–29.7ms 全绿（余量 2.4–2.8x）→ CI/本地比实测
+/// 约 2.5–2.9x：绝对阈值落在共享 runner 噪声带内，属环境 flake 非产品回归。
+///
+/// 取 1.5x 的双向边距：G+ CI 放宽界 = 70000×1.5 = 105000μs，实测 runner 噪声
+/// 峰值（81496μs）被吸收，而真回归（本地余量 2.4x+，CI 值将远超放宽界）仍被
+/// 拦截；本地严格口径 ×1.0 逐字节不变。
+/// 仅作用于已证 flaky 的 G+ 断言；同模式其余阈值只登记不修（见证据候选清单）。
+const double kCiPerfTolerance = 1.5;
+
+/// GitHub Actions 托管 runner 注入 `GITHUB_ACTIONS=true`；本地（无该变量）走严格口径。
+bool get _runningOnCi => Platform.environment.containsKey('GITHUB_ACTIONS');
+
+/// 环境感知阈值：CI 环境按 [kCiPerfTolerance] 放宽，本地严格等于原值（×1.0）。
+/// [ciEnvironment] 供测试注入模拟 CI（`Platform.environment` 只读，无法进程内覆写）；
+/// 缺省走真实环境检测——生产断言路径与本地验证均走此缺省。
+int _ciTolerantUs(int baseUs, {bool? ciEnvironment}) =>
+    (baseUs * ((ciEnvironment ?? _runningOnCi) ? kCiPerfTolerance : 1.0)).round();
+
 void main() {
   Widget wrap(Widget child, {bool disableAnimations = false}) => MaterialApp(
         home: MediaQuery(
@@ -441,10 +465,12 @@ void main() {
         frameTimes.add(sw.elapsedMicroseconds);
       }
       final avg = frameTimes.reduce((a, b) => a + b) ~/ frameTimes.length;
+      // FIX-579：CI 慢机容差只在此已证 flaky 断言生效；本地严格口径 = 原阈值逐值不变。
+      final effectiveThresholdUs = _ciTolerantUs(_scrollFrameThresholdUs);
       // ignore: avoid_print
       print('S01 scroll avg frame time: ${avg}us '
-          '(threshold $_scrollFrameThresholdUs us)');
-      expect(avg, lessThan(_scrollFrameThresholdUs));
+          '(threshold $effectiveThresholdUs us)');
+      expect(avg, lessThan(effectiveThresholdUs));
       await tester.pumpAndSettle(); // 已建行的入场动画全部落定
       expect(tester.binding.transientCallbackCount, 0); // 正文不再被锁帧
       await unwindTree(tester);
@@ -471,6 +497,31 @@ void main() {
       expect(tester.binding.transientCallbackCount, greaterThanOrEqualTo(1));
       await unwindTree(tester);
       await tester.pumpAndSettle();
+    });
+  });
+
+  // ═══ G2 组：FIX-579 CI 容差校准（阈值机制一正一反） ═══
+
+  group('G2 CI 容差校准（FIX-579 环境感知阈值）', () {
+    test('G2+ 模拟 CI 环境：放宽界生效 = 70000×1.5 = 105000μs，CI52 实测峰值 81496μs 落入界内',
+        () {
+      final ciBound =
+          _ciTolerantUs(_scrollFrameThresholdUs, ciEnvironment: true);
+      expect(ciBound, 105000);
+      // CI52 实测红值（runner 噪声）被容差吸收——正例非恒真：
+      // 实现 CI 分支被去除时此断言判负（mutation 实证见证据 verification.md）。
+      expect(81496, lessThan(ciBound));
+    });
+
+    test('G2- 本地环境：严格界逐值等于原阈值 70000μs（本地口径一字不动），判别力仍在',
+        () {
+      final strictBound =
+          _ciTolerantUs(_scrollFrameThresholdUs, ciEnvironment: false);
+      expect(strictBound, _scrollFrameThresholdUs);
+      expect(strictBound, 70000);
+      // 反例非恒真：CI50/CI52 实测值越严格界（本地口径下即红，两次 rerun 实证）。
+      expect(70241, greaterThan(strictBound));
+      expect(81496, greaterThan(strictBound));
     });
   });
 
