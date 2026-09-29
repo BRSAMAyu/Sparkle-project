@@ -30282,6 +30282,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatErrorSendFailed => '无法发送此消息。';
 
   @override
+  String get chatJumpToLatest => '回到最新';
+
+  @override
   String unreadNotifications(int count) {
     return '$count 条未读通知';
   }

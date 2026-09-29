@@ -14283,6 +14283,8 @@
     }
   },
   "chatErrorSendFailed": "无法发送此消息。",
+  "chatJumpToLatest": "回到最新",
+  "@chatJumpToLatest": {},
   "unreadNotifications": "{count} 条未读通知",
   "@unreadNotifications": {
     "placeholders": {

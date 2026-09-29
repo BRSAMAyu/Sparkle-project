@@ -14273,6 +14273,8 @@
     }
   },
   "chatErrorSendFailed": "Could not send this message.",
+  "chatJumpToLatest": "Back to latest",
+  "@chatJumpToLatest": {},
   "unreadNotifications": "{count} unread notifications",
   "@unreadNotifications": {
     "placeholders": {

@@ -55142,6 +55142,12 @@ abstract class AppLocalizations {
   /// **'无法发送此消息。'**
   String get chatErrorSendFailed;
 
+  /// No description provided for @chatJumpToLatest.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到最新'**
+  String get chatJumpToLatest;
+
   /// No description provided for @unreadNotifications.
   ///
   /// In zh, this message translates to:

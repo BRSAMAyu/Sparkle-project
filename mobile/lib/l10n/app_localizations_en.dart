@@ -31607,6 +31607,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatErrorSendFailed => 'Could not send this message.';
 
   @override
+  String get chatJumpToLatest => 'Back to latest';
+
+  @override
   String unreadNotifications(int count) {
     return '$count unread notifications';
   }

@@ -190,6 +190,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   // V4-U07「上滑后不自动拉回」：滚动主权锚——用户离开最新端后，到达性
   // 滚动（新消息/新组件）不再拉回；仅用户显式动作（发送/跳最新）恢复跟随。
   final ChatScrollAnchor _scrollAnchor = ChatScrollAnchor();
+  // V4-FIX-566②：「跳最新」入口可见性——滚动主权锚离开跟随态（用户上滑
+  // 阅读历史）时浮现，回 240px 跟随窗即隐藏；由 _handleScroll 随锚同步。
+  bool _showJumpToLatest = false;
   // C-11 填入式草稿：chat 屏持有输入草稿控制器与焦点（传给 ChatInput），
   // 建议话术 chip 点按只填入+聚焦，不直接发送。
   final TextEditingController _draftController = TextEditingController();
@@ -976,6 +979,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _scrollToBottom(force: true);
   }
 
+  /// V4-FIX-566①：重试 = 显式用户动作（与发送/快捷动作同语义，见
+  /// initState 的 messages 监听注释「发送/重试/快捷动作」）。
+  ///
+  /// reuse 重试路径（纯连接失败、用户消息仍居末位）走
+  /// `sendMessage(reuseLastUserMessage: true)` 不追加用户消息，messages
+  /// 监听不触发 force——此处由 screen 侧对「同轮重发」补齐 force 滚动，
+  /// 复用既有 `_scrollToBottom(force: true)` → [ChatScrollAnchor.forceFollow]
+  /// 机制，不另造第二套滚动权威。
+  void _retryLastMessage() {
+    _scrollToBottom(force: true);
+    unawaited(ref.read(chatProvider.notifier).retryLastMessage());
+  }
+
   Future<void> _resumeComebackCoreSession() async {
     final comeback = _comebackContext;
     final resumeToken = comeback?.resumeToken.trim() ?? '';
@@ -1322,6 +1338,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // V4-U07：先更新滚动主权锚（用户上滑离开最新端即解除跟随），再做
     // 历史预载判定。
     _scrollAnchor.updateFromPosition(position);
+    // V4-FIX-566②：「跳最新」入口可见性跟随锚（单一事实）——离开跟随态
+    // 浮现，回贴最新端即隐藏；仅在翻转帧 setState，滚动帧零额外开销。
+    final showJumpToLatest = !_scrollAnchor.shouldFollow;
+    if (mounted && showJumpToLatest != _showJumpToLatest) {
+      setState(() {
+        _showJumpToLatest = showJumpToLatest;
+      });
+    }
     if (position.maxScrollExtent <= 0) {
       return;
     }
@@ -2365,6 +2389,53 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 bottomGap: false,
                               ),
                             ),
+                          // V4-FIX-566②：中段阅读「跳最新」入口——滚动主权
+                          // 锚离开跟随态（上滑阅读历史）时浮现，贴最新端
+                          // （240px 跟随窗）与空态快捷页零面积。点击属显式
+                          // 用户动作，经 _scrollToBottom(force: true) 恢复
+                          // 跟随并回最新端。OVERLAY-SMALL 悬浮 dock 在场时
+                          // 上移让位。
+                          if (!inQuickActionsState && _showJumpToLatest)
+                            Positioned(
+                              right: DS.spacing16,
+                              bottom: dockFloatsOverMessages
+                                  ? DS.spacing64
+                                  : DS.spacing12,
+                              child: Material(
+                                color: DS.surfaceOverlay,
+                                borderRadius: DS.borderRadiusFull,
+                                child: InkWell(
+                                  key: const Key('chatJumpToLatest'),
+                                  borderRadius: DS.borderRadiusFull,
+                                  onTap: () => _scrollToBottom(force: true),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: DS.spacing12,
+                                      vertical: DS.spacing8,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.arrow_downward_rounded,
+                                          size: DS.iconSizeXs,
+                                          color: DS.textSecondary,
+                                        ),
+                                        const SizedBox(width: DS.spacing4),
+                                        Text(
+                                          l10n.chatJumpToLatest,
+                                          style: TextStyle(
+                                            color: DS.textSecondary,
+                                            fontSize: DS.fontSizeSm,
+                                            fontWeight: DS.fontWeightMedium,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -2461,13 +2532,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                 context.go('/login');
                                                 return;
                                               }
-                                              unawaited(
-                                                ref
-                                                    .read(
-                                                      chatProvider.notifier,
-                                                    )
-                                                    .retryLastMessage(),
-                                              );
+                                              _retryLastMessage();
                                             },
                                             variant: ButtonVariant.secondary,
                                           ),
