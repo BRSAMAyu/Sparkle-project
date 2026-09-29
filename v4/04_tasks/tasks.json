@@ -4034,9 +4034,9 @@
       "id": "V4-G04",
       "title": "星图/学习/错题/资料——四风格商业化完备",
       "depends_on": [],
-      "status": "PENDING",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS_WITH_CHALLENGES",
       "kind": "implementation",
       "required_locks": [
         "ui-polish-g04"
@@ -4093,7 +4093,14 @@
       ],
       "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
       "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。",
-      "progress_note": "2026-09-29 wtG04：REVIEW_READY 交付（worktree wtG04，分支 agent/v4/g04，自 27a47d2f 开出，实现头 1d699d83，证据 commit 306b6503，未 push；三程接力——首任/二任配额中断，二任遗留 dirty 全部继承零丢弃，三程顺序接管并收割二任后台全量回归）。走查实修 14 处风格面缺陷（A1-A12：hero 白字白底亮度自适应墨/玻璃面墨同随/文件类型 glyph pastel 浅档语义槽化/状态徽章与掌握度小字墨收敛 textPrimary/学习旅程 chip-warning-error 墨收敛/知识星标领域色亮度取档/星图 11 文件 40+ 匿名字面量收敛 GalaxyCanvasPalette 值逐位保留/触达 44→48dp/PathMetrics 一次性迭代物化/恒暗画布 DS 漂移墨钉死/回退白墨 neutral0；续跑 S1-S7：双插画 onPrimary 墨/掌握度契约钉同步/palette 落位 core/design/tokens_v2 使 ui-tokens 棘轮合法 PASS/E-1 探针改判 CB 档/dusk 库面 golden 重签理由已登记；三程 S8-S9：证据落盘 runAsync 真异步窗口+语义树渲染层口径实锚）。守卫：G04 套 21 测（对比度矩阵 G4-1~10+修前判负探针 3+48dp 四档+星图面语义钉+reduce-motion E±+200% 文本+种子库空态）+ golden 8 张（B04 容差比较器同款，CI 可失败）。验收：家族七模块 Color(0x) 仅 GalaxyCanvasPalette+SectorConfig 两名单源；ui-tokens 棘轮 color=123/275（基线冻结时 225 只降）fontSize=632/727 持平；repeat 棘轮 48 文件/90 调用点零漂移；analyze 零 issue。回归：全量单批 +3408 ~23 全绿（--concurrency=1 全程）+ 家族分批 galaxy 191 / error_book+learning+knowledge+seed_library 68 / core-design 335；2026-09-29 第四程断点复核（终态 306b6503）：core-design+golden +337 全绿、四家族 +68、galaxy+掌握度契约钉 +194 ~1（既有 skip）、analyze 零新增、证据与 golden 资产 sha256 21 项全 OK——邻族复跑守 CI54 教训。证据五件套 v4/evidence/V4-G04/（raw/ 4 PNG 与 golden 基线逐字节同哈希+4 语义树 8515B×4 跨档同构）。锁租约 NOT_RUN（无 coordination remote，G01/S01 同口径）；双会话冲突事实与顺序接管处置见 diff_or_evidence_only 专节。已知边界 7 条+审查挑战预登记 CH-1~CH-6（limitations.md/review_receipt.json）；receipt 恒 PENDING 待独立审查 R1。"
+      "progress_note": "2026-09-29 wtG04：REVIEW_READY 交付（worktree wtG04，分支 agent/v4/g04，自 27a47d2f 开出，实现头 1d699d83，证据 commit 306b6503，未 push；三程接力——首任/二任配额中断，二任遗留 dirty 全部继承零丢弃，三程顺序接管并收割二任后台全量回归）。走查实修 14 处风格面缺陷（A1-A12：hero 白字白底亮度自适应墨/玻璃面墨同随/文件类型 glyph pastel 浅档语义槽化/状态徽章与掌握度小字墨收敛 textPrimary/学习旅程 chip-warning-error 墨收敛/知识星标领域色亮度取档/星图 11 文件 40+ 匿名字面量收敛 GalaxyCanvasPalette 值逐位保留/触达 44→48dp/PathMetrics 一次性迭代物化/恒暗画布 DS 漂移墨钉死/回退白墨 neutral0；续跑 S1-S7：双插画 onPrimary 墨/掌握度契约钉同步/palette 落位 core/design/tokens_v2 使 ui-tokens 棘轮合法 PASS/E-1 探针改判 CB 档/dusk 库面 golden 重签理由已登记；三程 S8-S9：证据落盘 runAsync 真异步窗口+语义树渲染层口径实锚）。守卫：G04 套 21 测（对比度矩阵 G4-1~10+修前判负探针 3+48dp 四档+星图面语义钉+reduce-motion E±+200% 文本+种子库空态）+ golden 8 张（B04 容差比较器同款，CI 可失败）。验收：家族七模块 Color(0x) 仅 GalaxyCanvasPalette+SectorConfig 两名单源；ui-tokens 棘轮 color=123/275（基线冻结时 225 只降）fontSize=632/727 持平；repeat 棘轮 48 文件/90 调用点零漂移；analyze 零 issue。回归：全量单批 +3408 ~23 全绿（--concurrency=1 全程）+ 家族分批 galaxy 191 / error_book+learning+knowledge+seed_library 68 / core-design 335；2026-09-29 第四程断点复核（终态 306b6503）：core-design+golden +337 全绿、四家族 +68、galaxy+掌握度契约钉 +194 ~1（既有 skip）、analyze 零新增、证据与 golden 资产 sha256 21 项全 OK——邻族复跑守 CI54 教训。证据五件套 v4/evidence/V4-G04/（raw/ 4 PNG 与 golden 基线逐字节同哈希+4 语义树 8515B×4 跨档同构）。锁租约 NOT_RUN（无 coordination remote，G01/S01 同口径）；双会话冲突事实与顺序接管处置见 diff_or_evidence_only 专节。已知边界 7 条+审查挑战预登记 CH-1~CH-6（limitations.md/review_receipt.json）；receipt 恒 PENDING 待独立审查 R1。",
+      "relay": {
+        "closed_at": "2026-09-30T39:00",
+        "closure_chain": "四程接力（租约缺失自协调零互写）impl 1d699d83+306b6503 → 第四程复核+REVIEW_READY e5b9b5e7 → R1 29ca4039 八靶全过",
+        "merged_tree_verify": "G04 套+golden/四家族/邻族 g03/双棘轮/analyze 合并态复验（见本轮台账）",
+        "r1_challenges": "R1-C1 LOW=全量整批第二手已 4 批亲跑替代（CI 自然轮兜底）；R1-C2 LOW=vignette dusk 亚感知微差注释过强；C3-C5 INFO",
+        "ch1_lease": "租约 ui-polish-g04 本机不可配置（coordination-v2 远端缺失）——流程风险登记"
+      }
     },
     {
       "id": "V4-G05",
