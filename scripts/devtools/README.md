@@ -35,6 +35,8 @@
 | `count_en_placeholder_keys.py` | wt685/V3-FIX-362：EN 占位翻译债计数口径复现器（EN-DRAFT=Title-Case 词组且以 9 个占位词尾结尾；多词子集=台账 136 计量口径；*Zh CJK 变体另计；只读测量非守卫） |
 | `apply_wt685_en_translations.py` | wt685/V3-FIX-362 实施批：132 键 en 值显式人工翻译映射一次性应用（幂等；留审键不入表，见 `v3-output/WT685-L10NDEBT/REPORT.md`） |
 | `apply_wt685_confidence_qualitative.py` | wt685/V3-FIX-361 实施批：8 键置信度定性化 + 新键 confidenceWithBand 的 arb 值/占位符 schema 一次性应用（幂等；select 语法经 gen-l10n 生成） |
+| `q01_db_evidence.py` | V4-Q01：只读 DB 三证对齐采集器（按 guest/注册用户名拉旅程六环节 SELECT-only 证据：user/memory_goals/tasks/corrections/calibration_runs/agent_runs/hybrid_artifacts/tool_calls/stored_files/chunks/token_usage/event_store → `<prefix>_db_evidence.json/.txt`；不写库） |
+| `q01_synth_video.py` | V4-Q01：验收录像合成（integration_test 引擎 RepaintBoundary 真帧按文件 mtime 真实墙钟 ffmpeg concat 合成 mp4 + 每帧 sha256/停留时长 manifest；出处披露制，不加工帧内容；物理录屏黑帧 probe 实证见 evidence） |
 | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |
 | `demo_start.sh` | Demo 演示启动脚本（历史演示用途） |
 | `TEST_INSTRUCTIONS.sh` | 全功能验收测试操作说明（历史） |
