@@ -52140,6 +52140,258 @@ abstract class AppLocalizations {
   /// **'让 Sparkle 一步步帮我理'**
   String get stuckHelpJourneyCta;
 
+  /// No description provided for @recoveryCalibrationSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'说一句，就能调整'**
+  String get recoveryCalibrationSectionTitle;
+
+  /// No description provided for @recoveryCalibrationHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'比如：不是不会，今天只有十五分钟'**
+  String get recoveryCalibrationHint;
+
+  /// No description provided for @recoveryCalibrationSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'就按这个纠正'**
+  String get recoveryCalibrationSubmit;
+
+  /// No description provided for @recoveryCalibrationConstraintChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的纠正：{text}'**
+  String recoveryCalibrationConstraintChip(String text);
+
+  /// No description provided for @recoveryCalibrationScopeHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'这句话怎么用？两件事分开，互不代替：'**
+  String get recoveryCalibrationScopeHeader;
+
+  /// No description provided for @recoveryCalibrationThisTimeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅本次'**
+  String get recoveryCalibrationThisTimeTitle;
+
+  /// No description provided for @recoveryCalibrationThisTimeDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'只调整这一次行动，不改长期习惯'**
+  String get recoveryCalibrationThisTimeDesc;
+
+  /// No description provided for @recoveryCalibrationThisTimeCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整这次行动'**
+  String get recoveryCalibrationThisTimeCta;
+
+  /// No description provided for @recoveryCalibrationPreferenceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存为偏好'**
+  String get recoveryCalibrationPreferenceTitle;
+
+  /// No description provided for @recoveryCalibrationPreferenceDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'以后相似场景也参考；不改动当前任务'**
+  String get recoveryCalibrationPreferenceDesc;
+
+  /// No description provided for @recoveryCalibrationPreferenceCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存偏好'**
+  String get recoveryCalibrationPreferenceCta;
+
+  /// No description provided for @recoveryCalibrationSkip.
+  ///
+  /// In zh, this message translates to:
+  /// **'先都不用'**
+  String get recoveryCalibrationSkip;
+
+  /// No description provided for @recoveryCalibrationAdjustNeedsTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅本次调整需要一个具体任务作锚点；当前入口没有任务锚点，可以先保存偏好或直接关闭'**
+  String get recoveryCalibrationAdjustNeedsTask;
+
+  /// No description provided for @recoveryCalibrationMinutesLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计时长调整（可读对照）'**
+  String get recoveryCalibrationMinutesLabel;
+
+  /// No description provided for @recoveryCalibrationMinutesValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟'**
+  String recoveryCalibrationMinutesValue(int minutes);
+
+  /// No description provided for @recoveryCalibrationMinutesDecrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'减少五分钟'**
+  String get recoveryCalibrationMinutesDecrease;
+
+  /// No description provided for @recoveryCalibrationMinutesIncrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'增加五分钟'**
+  String get recoveryCalibrationMinutesIncrease;
+
+  /// No description provided for @recoveryCalibrationAdjustNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成对照不会立刻改动任务；确认后才生效'**
+  String get recoveryCalibrationAdjustNote;
+
+  /// No description provided for @recoveryCalibrationCreateProposal.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成调整对照'**
+  String get recoveryCalibrationCreateProposal;
+
+  /// No description provided for @recoveryCalibrationBack.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回'**
+  String get recoveryCalibrationBack;
+
+  /// No description provided for @recoveryCalibrationDiffHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整前 → 调整后'**
+  String get recoveryCalibrationDiffHeader;
+
+  /// No description provided for @recoveryCalibrationDiffEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份对照没有可显示的改动'**
+  String get recoveryCalibrationDiffEmpty;
+
+  /// No description provided for @recoveryCalibrationFieldEstimatedMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计时长（分）'**
+  String get recoveryCalibrationFieldEstimatedMinutes;
+
+  /// No description provided for @recoveryCalibrationDiffFieldLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{field}：'**
+  String recoveryCalibrationDiffFieldLabel(String field);
+
+  /// No description provided for @recoveryCalibrationDiffValues.
+  ///
+  /// In zh, this message translates to:
+  /// **'{before} → {after}'**
+  String recoveryCalibrationDiffValues(String before, String after);
+
+  /// No description provided for @recoveryCalibrationConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认调整'**
+  String get recoveryCalibrationConfirm;
+
+  /// No description provided for @recoveryCalibrationConfirming.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在落账…'**
+  String get recoveryCalibrationConfirming;
+
+  /// No description provided for @recoveryCalibrationConfirmNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认后等待真实回执；回执到之前不提示成功'**
+  String get recoveryCalibrationConfirmNote;
+
+  /// No description provided for @recoveryCalibrationCancelProposal.
+  ///
+  /// In zh, this message translates to:
+  /// **'不调了'**
+  String get recoveryCalibrationCancelProposal;
+
+  /// No description provided for @recoveryCalibrationCommitted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已按本次约束落账'**
+  String get recoveryCalibrationCommitted;
+
+  /// No description provided for @recoveryCalibrationReceipt.
+  ///
+  /// In zh, this message translates to:
+  /// **'回执 {receiptId}'**
+  String recoveryCalibrationReceipt(String receiptId);
+
+  /// No description provided for @recoveryCalibrationDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'知道了'**
+  String get recoveryCalibrationDone;
+
+  /// No description provided for @recoveryCalibrationConflictTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务在这期间有变化，这份对照已过期'**
+  String get recoveryCalibrationConflictTitle;
+
+  /// No description provided for @recoveryCalibrationConflictRecover.
+  ///
+  /// In zh, this message translates to:
+  /// **'按最新状态重新调整'**
+  String get recoveryCalibrationConflictRecover;
+
+  /// No description provided for @recoveryCalibrationConflictCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消这份调整'**
+  String get recoveryCalibrationConflictCancel;
+
+  /// No description provided for @recoveryCalibrationUnknownTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'结果未知——没有收到回执，不当作成功'**
+  String get recoveryCalibrationUnknownTitle;
+
+  /// No description provided for @recoveryCalibrationUnknownRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新查看结果'**
+  String get recoveryCalibrationUnknownRefresh;
+
+  /// No description provided for @recoveryCalibrationPreferenceSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好已保存，只影响以后的建议；当前任务没有改动'**
+  String get recoveryCalibrationPreferenceSaved;
+
+  /// No description provided for @recoveryCalibrationPreferenceFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好没有保存成功，可以重试'**
+  String get recoveryCalibrationPreferenceFailed;
+
+  /// No description provided for @recoveryCalibrationNetworkFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有连上，这次没有生效'**
+  String get recoveryCalibrationNetworkFailed;
+
+  /// No description provided for @recoveryCalibrationDefaultClaim.
+  ///
+  /// In zh, this message translates to:
+  /// **'卡住时的处理方式'**
+  String get recoveryCalibrationDefaultClaim;
+
+  /// No description provided for @recoveryCalibrationClaim.
+  ///
+  /// In zh, this message translates to:
+  /// **'卡点判断：{anchor}'**
+  String recoveryCalibrationClaim(String anchor);
+
   /// No description provided for @goalIntentTitle.
   ///
   /// In zh, this message translates to:

@@ -13254,6 +13254,93 @@
   "stuckJourneyInterventionDelegate": "把机械的部分交给工具",
   "stuckJourneyInterventionCoExecute": "让 Sparkle 陪你一起做",
   "stuckHelpJourneyCta": "让 Sparkle 一步步帮我理",
+  "recoveryCalibrationSectionTitle": "说一句，就能调整",
+  "recoveryCalibrationHint": "比如：不是不会，今天只有十五分钟",
+  "recoveryCalibrationSubmit": "就按这个纠正",
+  "recoveryCalibrationConstraintChip": "你的纠正：{text}",
+  "@recoveryCalibrationConstraintChip": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "recoveryCalibrationScopeHeader": "这句话怎么用？两件事分开，互不代替：",
+  "recoveryCalibrationThisTimeTitle": "仅本次",
+  "recoveryCalibrationThisTimeDesc": "只调整这一次行动，不改长期习惯",
+  "recoveryCalibrationThisTimeCta": "调整这次行动",
+  "recoveryCalibrationPreferenceTitle": "保存为偏好",
+  "recoveryCalibrationPreferenceDesc": "以后相似场景也参考；不改动当前任务",
+  "recoveryCalibrationPreferenceCta": "保存偏好",
+  "recoveryCalibrationSkip": "先都不用",
+  "recoveryCalibrationAdjustNeedsTask": "仅本次调整需要一个具体任务作锚点；当前入口没有任务锚点，可以先保存偏好或直接关闭",
+  "recoveryCalibrationMinutesLabel": "预计时长调整（可读对照）",
+  "recoveryCalibrationMinutesValue": "{minutes} 分钟",
+  "@recoveryCalibrationMinutesValue": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "recoveryCalibrationMinutesDecrease": "减少五分钟",
+  "recoveryCalibrationMinutesIncrease": "增加五分钟",
+  "recoveryCalibrationAdjustNote": "生成对照不会立刻改动任务；确认后才生效",
+  "recoveryCalibrationCreateProposal": "生成调整对照",
+  "recoveryCalibrationBack": "返回",
+  "recoveryCalibrationDiffHeader": "调整前 → 调整后",
+  "recoveryCalibrationDiffEmpty": "这份对照没有可显示的改动",
+  "recoveryCalibrationFieldEstimatedMinutes": "预计时长（分）",
+  "recoveryCalibrationDiffFieldLabel": "{field}：",
+  "@recoveryCalibrationDiffFieldLabel": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "recoveryCalibrationDiffValues": "{before} → {after}",
+  "@recoveryCalibrationDiffValues": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "recoveryCalibrationConfirm": "确认调整",
+  "recoveryCalibrationConfirming": "正在落账…",
+  "recoveryCalibrationConfirmNote": "确认后等待真实回执；回执到之前不提示成功",
+  "recoveryCalibrationCancelProposal": "不调了",
+  "recoveryCalibrationCommitted": "已按本次约束落账",
+  "recoveryCalibrationReceipt": "回执 {receiptId}",
+  "@recoveryCalibrationReceipt": {
+    "placeholders": {
+      "receiptId": {
+        "type": "String"
+      }
+    }
+  },
+  "recoveryCalibrationDone": "知道了",
+  "recoveryCalibrationConflictTitle": "任务在这期间有变化，这份对照已过期",
+  "recoveryCalibrationConflictRecover": "按最新状态重新调整",
+  "recoveryCalibrationConflictCancel": "取消这份调整",
+  "recoveryCalibrationUnknownTitle": "结果未知——没有收到回执，不当作成功",
+  "recoveryCalibrationUnknownRefresh": "重新查看结果",
+  "recoveryCalibrationPreferenceSaved": "偏好已保存，只影响以后的建议；当前任务没有改动",
+  "recoveryCalibrationPreferenceFailed": "偏好没有保存成功，可以重试",
+  "recoveryCalibrationNetworkFailed": "没有连上，这次没有生效",
+  "recoveryCalibrationDefaultClaim": "卡住时的处理方式",
+  "recoveryCalibrationClaim": "卡点判断：{anchor}",
+  "@recoveryCalibrationClaim": {
+    "placeholders": {
+      "anchor": {
+        "type": "String"
+      }
+    }
+  },
   "goalIntentTitle": "告诉我你想达成什么",
   "goalIntentHint": "一句话就好，比如「7天后计网考试基本没学想先别挂」",
   "goalIntentUnderstanding": "正在理解…",

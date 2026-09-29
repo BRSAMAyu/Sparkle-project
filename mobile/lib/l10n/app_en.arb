@@ -13237,6 +13237,93 @@
   "stuckJourneyInterventionDelegate": "Hand the mechanical part to a tool",
   "stuckJourneyInterventionCoExecute": "Let Sparkle work through it with you",
   "stuckHelpJourneyCta": "Let Sparkle walk through it with me",
+  "recoveryCalibrationSectionTitle": "Say it once, adjust this run",
+  "recoveryCalibrationHint": "For example: it's not that I can't do it — I only have fifteen minutes today",
+  "recoveryCalibrationSubmit": "Use this correction",
+  "recoveryCalibrationConstraintChip": "Your correction: {text}",
+  "@recoveryCalibrationConstraintChip": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "recoveryCalibrationScopeHeader": "How should this be used? Two separate things, one cannot replace the other:",
+  "recoveryCalibrationThisTimeTitle": "This time only",
+  "recoveryCalibrationThisTimeDesc": "Adjust this one action only; long-term habits unchanged",
+  "recoveryCalibrationThisTimeCta": "Adjust this action",
+  "recoveryCalibrationPreferenceTitle": "Save as preference",
+  "recoveryCalibrationPreferenceDesc": "Applied to similar situations later; the current task is not modified",
+  "recoveryCalibrationPreferenceCta": "Save preference",
+  "recoveryCalibrationSkip": "Neither for now",
+  "recoveryCalibrationAdjustNeedsTask": "Adjusting this time needs a concrete task as the anchor; this entry has no task anchor — you can still save a preference or just close",
+  "recoveryCalibrationMinutesLabel": "Estimated duration adjustment (readable diff)",
+  "recoveryCalibrationMinutesValue": "{minutes} min",
+  "@recoveryCalibrationMinutesValue": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "recoveryCalibrationMinutesDecrease": "Five minutes less",
+  "recoveryCalibrationMinutesIncrease": "Five minutes more",
+  "recoveryCalibrationAdjustNote": "Creating the diff does not change the task yet; it only takes effect after you confirm",
+  "recoveryCalibrationCreateProposal": "Create the diff",
+  "recoveryCalibrationBack": "Back",
+  "recoveryCalibrationDiffHeader": "Before → After",
+  "recoveryCalibrationDiffEmpty": "This diff has no changes to show",
+  "recoveryCalibrationFieldEstimatedMinutes": "Estimated duration (min)",
+  "recoveryCalibrationDiffFieldLabel": "{field}: ",
+  "@recoveryCalibrationDiffFieldLabel": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "recoveryCalibrationDiffValues": "{before} → {after}",
+  "@recoveryCalibrationDiffValues": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "recoveryCalibrationConfirm": "Confirm adjustment",
+  "recoveryCalibrationConfirming": "Committing…",
+  "recoveryCalibrationConfirmNote": "After confirming we wait for the real receipt; no success notice before it arrives",
+  "recoveryCalibrationCancelProposal": "Don't adjust",
+  "recoveryCalibrationCommitted": "Committed with this constraint",
+  "recoveryCalibrationReceipt": "Receipt {receiptId}",
+  "@recoveryCalibrationReceipt": {
+    "placeholders": {
+      "receiptId": {
+        "type": "String"
+      }
+    }
+  },
+  "recoveryCalibrationDone": "Got it",
+  "recoveryCalibrationConflictTitle": "The task changed meanwhile; this diff is out of date",
+  "recoveryCalibrationConflictRecover": "Re-adjust from the latest state",
+  "recoveryCalibrationConflictCancel": "Cancel this adjustment",
+  "recoveryCalibrationUnknownTitle": "Outcome unknown — no receipt received; not treated as success",
+  "recoveryCalibrationUnknownRefresh": "Check the result again",
+  "recoveryCalibrationPreferenceSaved": "Preference saved; it only affects future suggestions — the current task was not modified",
+  "recoveryCalibrationPreferenceFailed": "The preference was not saved; you can retry",
+  "recoveryCalibrationNetworkFailed": "No connection — nothing took effect this time",
+  "recoveryCalibrationDefaultClaim": "How stuck moments are handled",
+  "recoveryCalibrationClaim": "Stuck-point judgment: {anchor}",
+  "@recoveryCalibrationClaim": {
+    "placeholders": {
+      "anchor": {
+        "type": "String"
+      }
+    }
+  },
   "goalIntentTitle": "Tell me what you want to achieve",
   "goalIntentHint": "One sentence works, e.g. \"Computer Networks final in 7 days, barely studied\"",
   "goalIntentUnderstanding": "Understanding…",

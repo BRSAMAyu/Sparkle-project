@@ -28631,6 +28631,145 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stuckHelpJourneyCta => '让 Sparkle 一步步帮我理';
 
   @override
+  String get recoveryCalibrationSectionTitle => '说一句，就能调整';
+
+  @override
+  String get recoveryCalibrationHint => '比如：不是不会，今天只有十五分钟';
+
+  @override
+  String get recoveryCalibrationSubmit => '就按这个纠正';
+
+  @override
+  String recoveryCalibrationConstraintChip(String text) {
+    return '你的纠正：$text';
+  }
+
+  @override
+  String get recoveryCalibrationScopeHeader => '这句话怎么用？两件事分开，互不代替：';
+
+  @override
+  String get recoveryCalibrationThisTimeTitle => '仅本次';
+
+  @override
+  String get recoveryCalibrationThisTimeDesc => '只调整这一次行动，不改长期习惯';
+
+  @override
+  String get recoveryCalibrationThisTimeCta => '调整这次行动';
+
+  @override
+  String get recoveryCalibrationPreferenceTitle => '保存为偏好';
+
+  @override
+  String get recoveryCalibrationPreferenceDesc => '以后相似场景也参考；不改动当前任务';
+
+  @override
+  String get recoveryCalibrationPreferenceCta => '保存偏好';
+
+  @override
+  String get recoveryCalibrationSkip => '先都不用';
+
+  @override
+  String get recoveryCalibrationAdjustNeedsTask =>
+      '仅本次调整需要一个具体任务作锚点；当前入口没有任务锚点，可以先保存偏好或直接关闭';
+
+  @override
+  String get recoveryCalibrationMinutesLabel => '预计时长调整（可读对照）';
+
+  @override
+  String recoveryCalibrationMinutesValue(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get recoveryCalibrationMinutesDecrease => '减少五分钟';
+
+  @override
+  String get recoveryCalibrationMinutesIncrease => '增加五分钟';
+
+  @override
+  String get recoveryCalibrationAdjustNote => '生成对照不会立刻改动任务；确认后才生效';
+
+  @override
+  String get recoveryCalibrationCreateProposal => '生成调整对照';
+
+  @override
+  String get recoveryCalibrationBack => '返回';
+
+  @override
+  String get recoveryCalibrationDiffHeader => '调整前 → 调整后';
+
+  @override
+  String get recoveryCalibrationDiffEmpty => '这份对照没有可显示的改动';
+
+  @override
+  String get recoveryCalibrationFieldEstimatedMinutes => '预计时长（分）';
+
+  @override
+  String recoveryCalibrationDiffFieldLabel(String field) {
+    return '$field：';
+  }
+
+  @override
+  String recoveryCalibrationDiffValues(String before, String after) {
+    return '$before → $after';
+  }
+
+  @override
+  String get recoveryCalibrationConfirm => '确认调整';
+
+  @override
+  String get recoveryCalibrationConfirming => '正在落账…';
+
+  @override
+  String get recoveryCalibrationConfirmNote => '确认后等待真实回执；回执到之前不提示成功';
+
+  @override
+  String get recoveryCalibrationCancelProposal => '不调了';
+
+  @override
+  String get recoveryCalibrationCommitted => '已按本次约束落账';
+
+  @override
+  String recoveryCalibrationReceipt(String receiptId) {
+    return '回执 $receiptId';
+  }
+
+  @override
+  String get recoveryCalibrationDone => '知道了';
+
+  @override
+  String get recoveryCalibrationConflictTitle => '任务在这期间有变化，这份对照已过期';
+
+  @override
+  String get recoveryCalibrationConflictRecover => '按最新状态重新调整';
+
+  @override
+  String get recoveryCalibrationConflictCancel => '取消这份调整';
+
+  @override
+  String get recoveryCalibrationUnknownTitle => '结果未知——没有收到回执，不当作成功';
+
+  @override
+  String get recoveryCalibrationUnknownRefresh => '重新查看结果';
+
+  @override
+  String get recoveryCalibrationPreferenceSaved => '偏好已保存，只影响以后的建议；当前任务没有改动';
+
+  @override
+  String get recoveryCalibrationPreferenceFailed => '偏好没有保存成功，可以重试';
+
+  @override
+  String get recoveryCalibrationNetworkFailed => '没有连上，这次没有生效';
+
+  @override
+  String get recoveryCalibrationDefaultClaim => '卡住时的处理方式';
+
+  @override
+  String recoveryCalibrationClaim(String anchor) {
+    return '卡点判断：$anchor';
+  }
+
+  @override
   String get goalIntentTitle => '告诉我你想达成什么';
 
   @override

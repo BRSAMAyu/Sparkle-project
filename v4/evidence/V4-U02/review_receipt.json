@@ -1,0 +1,63 @@
+{
+  "task": "V4-U02",
+  "risk": "high",
+  "independent_reviewers_required": 2,
+  "status": "R2_PASS_REVIEWED",
+  "note": "实现自评不替代独立审查。本卡按高风险卡预登记 6 条审查挑战点（R1-C1..C6），供 R1/R2 优先证伪。",
+  "pre_registered_challenges": [
+    {
+      "id": "R1-C1",
+      "point": "「保存偏好 ≠ 改任务」是否真的结构分离，还是只靠测试断言守着？",
+      "expected_answer": "结构面：`RecoveryCalibrationController.savePreference` 方法体只有 apiClient.post 到 `understandingSnapshotCorrections` 一个调用，无任何 repository/proposal 引用路径（可变异测试：删掉行为测试中的 createCalls isEmpty 断言，方法体本身也不可能触达 X-03）。反向同样：`buildAdjustment`/`confirmAdjustment` 不触偏好端点。变异建议：在 savePreference 中注入 repository 调用 → 反例测试必红。"
+    },
+    {
+      "id": "R1-C2",
+      "point": "回执门是否可能被绕过——approve 返回 committed 但回执本体缺席时会不会仍显示成功？",
+      "expected_answer": "双门：`_parseProjection` 要求 `status == 'COMMITTED'` **且** `receipt map 非空` 才出 committed 相，否则 unknown（反例测试「状态 committed 但回执缺席 → 诚实 unknown」钉死）。时序钉：approve 在途（Completer 挂起）断言成功文案/成功徽章/SnackBar 三重 findsNothing。变异建议：把 receipt 门短路成只看 status → 该反例必红。"
+    },
+    {
+      "id": "R1-C3",
+      "point": "abstain 恒可达是否真实——是否存在隐藏的渲染门（如 autoDispose provider 在无载荷时异常）？",
+      "expected_answer": "校准区挂载在 `StuckJourneySheetBody.build` 的 Column 尾部，不读 `state.payload`（journey 仅用于偏好 claim 语境，null 安全带缺省）；loading/error/ready 三态均在场（反例钉覆盖 abstain + error 两态）。无任务锚点时仅「仅本次」入口缺席（诚实说明在场），偏好与输入不受影响。"
+    },
+    {
+      "id": "R1-C4",
+      "point": "客户端直连 X-03 创建提案是否属「造第二权威」或越权写？",
+      "expected_answer": "X-03 `POST /action-proposals` 即统一 command path（docstring：所有入口共用，chat/task/Aurora 仅 source 不同）；**【一审 B-1 证伪并返修】原自述「source=recovery_sheet 可审计」不成立：服务端 `ProposalSource` 封闭词表 = {chat, task, aurora, system, api}（backend app/core/action_command.py），词表外 create 即 ValueError → 400，「仅本次」链路真实环境每次必 400。返修：客户端改用词表内 `source='task'`（产生入口=任务侧挂载 recovery 面，词表内最准确标记）；recovery 面级溯源由随提案持久进审计的 summary（用户纠正原话）承载；词表新增属契约变更，由 X-03 契约 owner 单独卡面登记（本卡无权擅改）。授权/白名单/版本校验全在服务端（prepare 阶段 TASK_FIELD_WHITELIST + validate_subject 版本 token + decide 授权），客户端零授权语义——此半句成立不变。未用 `execute_if_authorized`（恒显式确认）。请求侧契约现由穿透 fake 的真仓库契约测试钉死（词表镜像断言）。"
+    },
+    {
+      "id": "R1-C5",
+      "point": "409 冲突后「按最新状态重新调整」先取消旧提案——取消失败会不会出现两个并存 PENDING 提案被先后确认造成双重落账？",
+      "expected_answer": "取消失败 → 留在冲突相（不出半恢复态），不进入重调（`reAdjustAfterConflict` 的 catch 分支回 conflict + 如实错误行）；存在性竞态下即使两张 PENDING 并存，第二次 approve 也会被服务端版本 token 校验拒（validate_subject 在 confirm 时读最新 updated_at）——双重落账结构性被 X-03 拦截。并发确认同一提案幂等（X-09 重放返回原 receipt）。"
+    },
+    {
+      "id": "R1-C6",
+      "point": "测试是否用 fake 掩盖了真实端点契约漂移（投影形状/信封差异）？",
+      "expected_answer": "假仓库返回形状逐字段对齐后端 `ProposalMutationResponse{proposal: 投影}` 与 `proposal_projection`（status/receipt/diff.changed_fields 均真名）；创建方法在真仓库做 `_unwrapProposal`（信封→投影，缺 proposal 即 StateError fail-loud）——信封/投影混淆曾在开发期被测试抓住并修正（fake 初版误用信封导致全红，修正后绿），证明断言真咬合。l10n 断言用真实 zh 文案逐字对齐 arb。"
+    }
+  ],
+  "r1_verdict": "FAIL（review_r1.md @4d23cb8a+bc507e32；B-1 source 词表外 + B-2 终态重放死端）",
+  "rework": {
+    "note": "一审 FAIL 返修（B-1/B-2）；本注记 commit 为返修 commit 的后继（SHA 不可自指，注记其后继提交）",
+    "commit_sha": "1384a1fe（fix(v4): U02 一审 B-1/B-2——source 入词表+终态后换键）",
+    "b1_decision": "客户端改用词表内 source=task（裁决与理由见 diff_or_evidence_only.md 返修节）；词表镜像常量 + 穿透 fake 的真仓库契约测试；mutation 自验红→还原绿",
+    "b2_fix": "终态后重建换新键（cancelAdjustment/reAdjustAfterConflict 成功取消后 rotate salt）+ buildAdjustment 终态重放 fail-closed 守卫；正测「取消后重建换新键+新对照可落账」+ mutation 自验红→还原绿",
+    "probe": "直调服务探针（临时 pytest 用后已删）：recovery_sheet → ValueError(closed vocabulary)；task → created=True/PENDING/权威 diff/同键重放 created=False/approve→COMMITTED+receipt+任务字段真实变更"
+  },
+  "r2_verdict": "PASS（review_r2.md @1384a1fe+f4a1b30b；一审 B-1/B-2 均判定彻底关闭，无新增阻断；3 条非阻断观察 O-1..O-3 登记）",
+  "r2": {
+    "reviewer": "wtU02R2（独立会话，未参与实现/一审/返修）",
+    "date": "2026-09-29",
+    "method": "只读审查 + 独立后端直调探针（4/4 过，用后即删）+ mutation 亲放×3（逐一还原）+ 全部回归数字亲跑",
+    "b1_resolution": "关闭：词表镜像逐值一致（ProposalSource/ActionCommandType/终态子集 vs action_command.py:91-111/:65-76）；source='task' 独立端到端探针全通（创建→权威 diff→同键恰一次→approve→COMMITTED+receipt→任务字段真实变更 15）；recovery_sheet 400 面独立复现；镜像机制裁决=活钉（mutation 亲证词表外即红；服务端 bump 镜像不随动为无害静默，残余缺口 O-3 由注释纪律+X-04 e2e 兜底）",
+    "b2_resolution": "关闭：取消后重建换新键正测/终态重放 fail-closed 反钉/失败重试同键恰一次正测三测亲跑绿；mutation 亲放（注释 cancelAdjustment 内 rotate → 键差异断言红 @:1187 → 还原绿）；边界亲证：cancel→同键重放 CANCELLED 死端（服务端侧复现）、换键真新建、3 轮取消循环全通、409 取消失败不换键（cancel 键 proposalId 基安全）、漏 rotate 时 buildAdjustment 终态守卫兜底",
+    "facade_maintenance": "回执门时序钉 mutation 亲放红（C2 同法短路 receipt 检查→反例红→还原绿）；两写分离/零 toast 在 32 绿套件内（生产文件零调用）；C4 证伪自述已更正",
+    "numbers_verified": "recovery 32（+5 恰为新测）；受影响面 396+bench 9=405；analyze 零；X-03 契约 45/45（U14 零回退）；88 守卫全过；arb 勘误核 42 值键+6 占位=48 条目 0 删除 zh/en 同构；分支零 backend/gateway/proto/routes 越界（30 文件）；merge-tree --write-tree vs f59ffe56 与 origin/main(c5978b29) 均 NO-CONFLICT（三段式输出的 2 处 <<<<<<< 为证据 md 引用文本非冲突，逐文件核 0 真冲突）",
+    "non_blocking_observations": [
+      "O-1 buildAdjustment 对 COMMITTED 重放投影（实际不可达路径）会渲染 diffReview——服务端幂等兜底无双写无假成功，留观",
+      "O-2 服务端 test_vocabularies_frozen 未含 ProposalSource 冻结断言——建议 X-03 owner 一行补钉（非本卡）",
+      "O-3 词表镜像与真源无跨仓自动同步测试——由活钉 contains 断言+单一消费值 task+X-04 e2e 兜底，可接受"
+    ],
+    "probe_residue": "无（后端直调探针文件与 __pycache__ 已删；mutation 全部还原；git status 干净）"
+  }
+}

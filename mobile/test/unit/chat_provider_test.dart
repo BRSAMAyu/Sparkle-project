@@ -83,6 +83,19 @@ class _RecordingProposalRepository implements ActionProposalRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> createAdjustmentProposal({
+    required String taskId,
+    required Map<String, dynamic> fields,
+    required String idempotencyKey,
+    String? summary,
+  }) =>
+      throw UnimplementedError('not used by this fixture');
+
+  @override
+  Future<Map<String, dynamic>?> getProposal(String proposalId) =>
+      throw UnimplementedError('not used by this fixture');
+
+  @override
   Future<Map<String, dynamic>?> approve(
     String proposalId,
     String idempotencyKey,
