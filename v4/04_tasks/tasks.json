@@ -2922,9 +2922,9 @@
     "V4-U14",
     "V4-S04"
    ],
-   "status": "in_progress",
-   "implementation_state": "REVIEW_READY",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "APPROVE_CLOSED",
    "kind": "implementation",
    "required_locks": [
     "audio-policy"
@@ -2974,7 +2974,13 @@
     "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+   "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+   "review": {
+    "r1": "6f8009a7 APPROVE_WITH_CONDITIONS（C1-C6 全过+三 mutation 红+账本恰等；D1 耳机残留吞重选/D2 先写 prefs 后拒状态分裂/C6 登记）",
+    "remediation": "ef0901a5 D1 只清运行态/D2 提交点后移拒绝零残留+mutation 3 红逐一映射一审探针+C6=L10+duck 值锚",
+    "r2": "d1c02de3 APPROVE（三条件清偿亲验：D1 探针复放 played=true 消除/D2 全链一致+O-1 澄清自愈/账本独立重数 33 双向差集空；受影响面 77 绿超集+8/8+88 守卫；merge-tree 0 冲突+与 S03 零交集结构性成立）",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑"
+   }
   },
   {
    "id": "V4-S03",
