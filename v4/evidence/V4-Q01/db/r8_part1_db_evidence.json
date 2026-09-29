@@ -1,0 +1,139 @@
+{
+  "username": "q01up981034",
+  "user_id": "3447a4ad-01e8-480f-b8e5-90d4b780df68",
+  "collected_at__utc": null,
+  "readonly": true,
+  "user": [
+    {
+      "id": "3447a4ad-01e8-480f-b8e5-90d4b780df68",
+      "username": "q01up981034",
+      "registration_source": "email",
+      "created_at": "2026-09-29T11:23:06.726824"
+    }
+  ],
+  "memory_goals": [
+    {
+      "id": "1a1047db-9b1e-4614-94af-d7a9d86cc04c",
+      "title": "两周内掌握线性代数矩阵特征值，能独立做完一套期末真题",
+      "status": "active",
+      "created_at": "2026-09-29T11:23:23.885945",
+      "archived_at": null
+    }
+  ],
+  "tasks": [
+    {
+      "id": "65512a92-5bcc-466c-8dc8-510fb366cd4d",
+      "title": "二叉树遍历",
+      "status": "STUCK",
+      "estimated_minutes": 15,
+      "updated_at": "2026-09-29T11:26:14.126784"
+    }
+  ],
+  "memory_corrections": [],
+  "calibration_runs": [],
+  "agent_runs": [
+    {
+      "id": "20770aed-e33f-4681-af90-9dcabdeff52b",
+      "kind": "system",
+      "status": "RUNNING",
+      "current_stage": "prep",
+      "trace_id": "hybrid_journey",
+      "task_id": "65512a92-5bcc-466c-8dc8-510fb366cd4d",
+      "session_id": null,
+      "created_at": "2026-09-29T11:26:27.978073",
+      "updated_at": "2026-09-29T11:26:27.998615"
+    }
+  ],
+  "hybrid_artifacts": [],
+  "agent_tool_calls": [],
+  "stored_files": [
+    {
+      "id": "a353934e-39f8-4dd5-be9f-9c455bb99d1b",
+      "file_name": "线性代数特征值与矩阵对角化学习笔记.md",
+      "mime_type": "text/markdown",
+      "status": "processed",
+      "created_at": "2026-09-29T11:23:49.474344"
+    }
+  ],
+  "document_chunks": [
+    {
+      "id": "905a8007-6752-4814-9916-12527da48dbf",
+      "file_id": "a353934e-39f8-4dd5-be9f-9c455bb99d1b",
+      "chunk_index": 0,
+      "content_head": "设 A 是 n 阶方阵，若存在数 λ 和非零列向量 x，使得 Ax = λx，则称 λ 为 A 的特征值，x 为对应的特征向量。"
+    },
+    {
+      "id": "2a65eccc-c18f-41ca-82a8-9f90e2279a86",
+      "file_id": "a353934e-39f8-4dd5-be9f-9c455bb99d1b",
+      "chunk_index": 1,
+      "content_head": "求法：解特征方程 det(A − λE) = 0。特征多项式的根即全部特征值；对每个 λ，解齐次方程组 (A − λE)x = 0，其非零解即特征向量。"
+    },
+    {
+      "id": "a76ecf6b-2fea-46fc-834c-eb78d29ff0ff",
+      "file_id": "a353934e-39f8-4dd5-be9f-9c455bb99d1b",
+      "chunk_index": 2,
+      "content_head": "全部特征值之和 = 迹 tr(A) = 主对角线元素之和。\n全部特征值之积 = 行列式 det(A)。\n不同特征值对应的特征向量线性无关。\n若 A 满足 f(A)=0（如 A²=A 幂等、A²=E 对合），特征值只能取 f 的根。"
+    },
+    {
+      "id": "efc18c44-419b-4bdf-95d8-dc0c384e2102",
+      "file_id": "a353934e-39f8-4dd5-be9f-9c455bb99d1b",
+      "chunk_index": 3,
+      "content_head": "若 n 阶矩阵 A 有 n 个线性无关的特征向量，则 A 可相似对角化：存在可逆 P，使 P⁻¹AP = Λ（对角阵，对角元为特征值）。"
+    },
+    {
+      "id": "486130d0-5468-4544-85a9-86c0c4c011bb",
+      "file_id": "a353934e-39f8-4dd5-be9f-9c455bb99d1b",
+      "chunk_index": 4,
+      "content_head": "充要条件：每个 k 重特征值恰有 k 个线性无关的特征向量（几何重数 = 代数重数）。"
+    },
+    {
+      "id": "c6e10aa3-f328-4e35-b5e3-041689b9e9ac",
+      "file_id": "a353934e-39f8-4dd5-be9f-9c455bb99d1b",
+      "chunk_index": 5,
+      "content_head": "步骤：①求全部特征值；②对每个特征值求特征向量；③n 个无关向量拼成 P；④写出 Λ。"
+    },
+    {
+      "id": "81f7dfad-d76a-413f-a06a-9650e735d86b",
+      "file_id": "a353934e-39f8-4dd5-be9f-9c455bb99d1b",
+      "chunk_index": 6,
+      "content_head": "实对称矩阵必可正交相似对角化：不同特征值的特征向量正交；重根对应的特征向量可施密特正交化。Q⁻¹AQ = QᵀAQ = Λ。"
+    },
+    {
+      "id": "444dbcce-967c-4dbc-9766-a9cfd4e4d309",
+      "file_id": "a353934e-39f8-4dd5-be9f-9c455bb99d1b",
+      "chunk_index": 7,
+      "content_head": "已知特征值反求参数：用 |A − λE| = 0 或 tr/det 联立。\n判断能否对角化：先数重数，再看无关特征向量个数。\n由 A 的特征值求 A⁻¹、A、A^k、f(A) 的特征值：同一特征向量，特征值做同样运算。\n二次型标准化与正负惯"
+    },
+    {
+      "id": "72622768-1b32-4aea-a807-c9c82449c89e",
+      "file_id": "a353934e-39f8-4dd5-be9f-9c455bb99d1b",
+      "chunk_index": 8,
+      "content_head": "特征向量必须非零；λ=0 可以是特征值（此时 A 不可逆）。\n对角化时 P 的列与 Λ 的对角元顺序必须对应。\n实对称重根的正交化不能忘记施密特补足。\n相似矩阵有相同特征值，但有相同特征值不一定相似。"
+    }
+  ],
+  "token_usage": [
+    {
+      "id": "7b215df2-cb3f-4215-9d03-008d870d08a5",
+      "model": "dashscope_fast",
+      "model_tier": "fast",
+      "prompt_tokens": 1359,
+      "completion_tokens": 127,
+      "total_tokens": 1486,
+      "created_at": "2026-09-29T11:23:35.617587"
+    },
+    {
+      "id": "f555b81d-8953-427f-9a57-23779f888500",
+      "model": "dashscope_fast",
+      "model_tier": "fast",
+      "prompt_tokens": 1286,
+      "completion_tokens": 45,
+      "total_tokens": 1331,
+      "created_at": "2026-09-29T11:23:52.992059"
+    }
+  ],
+  "event_store": [
+    {
+      "__error__": "ERROR:  operator does not exist: uuid = text\nLINE 3:         FROM event_store WHERE aggregate_id = '3447a4ad-01e8...\n                                                    ^\nHINT:  No operator matches the given name and argument types. You might need to add explicit type casts.\n"
+    }
+  ]
+}

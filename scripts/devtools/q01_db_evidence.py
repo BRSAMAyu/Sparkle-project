@@ -28,12 +28,12 @@ Q = {
         FROM tasks WHERE user_id = %(uid)s ORDER BY created_at
     """,
     "memory_corrections": """
-        SELECT id, created_at, LEFT(payload::text, 500) AS payload_head
-        FROM memory_corrections WHERE user_id = %(uid)s ORDER BY created_at
+        SELECT id, memory_type, memory_id, action, LEFT(reason, 200) AS reason_head, created_at
+        FROM memory_corrections WHERE user_id = %(uid)s AND deleted_at IS NULL ORDER BY created_at
     """,
     "calibration_runs": """
-        SELECT id, status, created_at, updated_at
-        FROM understanding_calibration_runs WHERE user_id = %(uid)s ORDER BY created_at
+        SELECT id, overall_status, ran_at, window_days, schema_version, created_at
+        FROM understanding_calibration_runs WHERE user_id = %(uid)s AND deleted_at IS NULL ORDER BY created_at
     """,
     "agent_runs": """
         SELECT id, kind, status, current_stage, trace_id, task_id, session_id, created_at, updated_at
@@ -61,9 +61,9 @@ Q = {
         WHERE f.user_id = %(uid)s ORDER BY c.file_id, c.chunk_index
     """,
     "token_usage": """
-        SELECT id, model, LEFT(purpose, 60) AS purpose, prompt_tokens,
+        SELECT id, model, model_tier, prompt_tokens,
                completion_tokens, total_tokens, created_at
-        FROM token_usage WHERE user_id = %(uid)s ORDER BY created_at
+        FROM token_usage WHERE user_id = %(uid)s AND deleted_at IS NULL ORDER BY created_at
     """,
     "event_store": """
         SELECT event_type, COUNT(*) AS n
