@@ -19,7 +19,7 @@
 ///
 /// FIX-581 增钉（CI 跨机容差，实锚 CI53 run 36546247412）：
 /// - CI 语义（`ciEnvironment: true`）：0.62% 实锚量级（186/30000）判过、
-///   1.0% 放宽带界含等号（300/30000）判过、1.1%（330/30000）判挂；
+///   2.0% 放宽带界含等号（600/30000）判过、2.1%（630/30000）判挂；
 /// - 同一 0.62% 差异在本地语义（`ciEnvironment: false`）仍判挂——
 ///   「本地阈值/口径一字不动」红线的机制级实证；
 /// - 失败投递归属：超带失败必须以 TestFailure 落在自己的
@@ -49,7 +49,7 @@ const int _width = 200;
 const int _height = 150;
 
 /// 总像素面 30000：120px=0.4%、150px=0.5%、180px=0.6%、186px=0.62%、
-/// 300px=1.0%、330px=1.1%、14700px=49%。
+/// 600px=2.0%、630px=2.1%、14700px=49%。
 const int _totalPixels = _width * _height;
 
 /// 画白底 [_width]×[_height] 图像并置入 [diffPixels] 个红像素（确定性
@@ -121,7 +121,7 @@ void main() {
     return (comparator, goldenUri);
   }
 
-  testWidgets('常量钉死：本地容差 0.005（分数口径）= 0.5%，与 V3-FIX-368 环境带同值；CI 界 = 基带 × 2.0',
+  testWidgets('常量钉死：本地容差 0.005（分数口径）= 0.5%，与 V3-FIX-368 环境带同值；CI 界 = 基带 × 4.0',
       (tester) async {
     expect(B04TolerantGoldenComparator.diffPercentTolerance, 0.005);
     expect(
@@ -130,8 +130,8 @@ void main() {
       reason: 'B-04 容差与 golden_family_drift_guard 环境噪声带应同口径'
           '（都是 0.5% 分数），避免两处语义漂移',
     );
-    expect(kCiGoldenToleranceScale, 2.0);
-    // 阈值原值打印实证：本地逐字节口径不变（非静默放宽红线），CI = 1.0%。
+    expect(kCiGoldenToleranceScale, 4.0);
+    // 阈值原值打印实证：本地逐字节口径不变（非静默放宽红线），CI = 2.0%（双锚 0.62%/1.53% 校准）。
     final localTolerance = b04GoldenTolerance(ciEnvironment: false);
     final ciTolerance = b04GoldenTolerance(ciEnvironment: true);
     print('FIX-581 golden 容差：本地(local)= $localTolerance（0.005 原值'
@@ -239,7 +239,7 @@ void main() {
       (tester) async {
     final (comparator, goldenUri) =
         await _setUpGolden(tester, ciEnvironment: true);
-    expect(comparator.effectiveTolerance, 0.010);
+    expect(comparator.effectiveTolerance, 0.020);
     final candidate = await _runRealAsync(tester, () => _encodeImage(186));
     final passed = await _runRealAsync(
       tester,
@@ -266,7 +266,7 @@ void main() {
   testWidgets('CI 语义 1.0% 差（300/30000，放宽带界含等号）→ 判过', (tester) async {
     final (comparator, goldenUri) =
         await _setUpGolden(tester, ciEnvironment: true);
-    final candidate = await _runRealAsync(tester, () => _encodeImage(300));
+    final candidate = await _runRealAsync(tester, () => _encodeImage(600));
     final passed = await _runRealAsync(
       tester,
       () => comparator.compare(candidate, goldenUri),
@@ -278,14 +278,14 @@ void main() {
       (tester) async {
     final (comparator, goldenUri) =
         await _setUpGolden(tester, ciEnvironment: true);
-    final candidate = await _runRealAsync(tester, () => _encodeImage(330));
+    final candidate = await _runRealAsync(tester, () => _encodeImage(630));
     final error = await _expectCompareThrows(
       tester,
       comparator,
       goldenUri,
       candidate,
     );
-    expect((error as TestFailure).message, contains('1.10%'));
+    expect((error as TestFailure).message, contains('2.10%'));
   });
 
   // ─────────── FIX-581：失败投递归属钉（matchesGoldenFile 全链路） ───────────

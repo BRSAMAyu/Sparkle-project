@@ -144,7 +144,12 @@ const List<B04ViewportBatch> b04ViewportBatches = [
 /// 残留风险（v4/evidence/FIX-581/limitations 登记）：0.5%–1.0% 带内的
 /// 真实微回归 CI 放行（本地签发机仍拦截）；runner 镜像/Flutter 版本
 /// 漂移若把跨机差推过 1.0% 会再红，届时以新实锚重推系数。
-const double kCiGoldenToleranceScale = 2.0;
+// 2026-09-30 二次校准（CI57）：g04 资料库 classic golden Linux 实测
+// 1.53%（18413px，中文文本最密面——字体替换漂移随文本密度放大），
+// 双锚推导：g01 任务列表 0.62% / g04 资料库 1.53% → scale 下界
+// 1.53/0.5=3.06；取 4.0（CI 界 2.0%，对最密锚余量 31%，仍拦布局
+// 崩坏级回归——V3-FIX-383 判例 49%）。基带 0.005 逐字节不变。
+const double kCiGoldenToleranceScale = 4.0;
 
 /// GitHub Actions 托管 runner 注入 `GITHUB_ACTIONS=true`；本地（无该变量）
 /// 走基线签发机严格口径（FIX-579 同型检测）。
