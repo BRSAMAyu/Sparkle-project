@@ -149,8 +149,11 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         onTap: () {},
         child: Row(
           children: [
-            Icon(Icons.auto_awesome_outlined,
-                size: 16, color: DS.textTertiary,),
+            Icon(
+              Icons.auto_awesome_outlined,
+              size: 16,
+              color: DS.textTertiary,
+            ),
             const SizedBox(width: DS.spacing8),
             Expanded(
               child: Text(
@@ -238,13 +241,19 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                     const SizedBox(width: DS.spacing6),
                     Text(
                       '${snapshot.readyCount}/${snapshot.totalCount}',
-                      style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
+                      style: TextStyle(
+                        color: DS.textSecondary,
+                        fontSize: DS.fontSizeXs,
+                      ),
                     ),
                     const SizedBox(width: DS.spacing4),
                     GestureDetector(
                       onTap: () => setState(() => _dismissed = true),
-                      child: Icon(Icons.close_rounded,
-                          size: 14, color: DS.textTertiary,),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 14,
+                        color: DS.textTertiary,
+                      ),
                     ),
                     const SizedBox(width: DS.spacing4),
                     Icon(
@@ -265,7 +274,8 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                   const EdgeInsets.only(top: DS.spacing4, left: DS.spacing20),
               child: Text(
                 contextLabel,
-                style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
+                style:
+                    TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -323,7 +333,9 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
   }
 
   Widget _buildExpansionContent(
-      AuroraControlSurfaceSnapshot snapshot, Color tone,) {
+    AuroraControlSurfaceSnapshot snapshot,
+    Color tone,
+  ) {
     if (_expansion == _AuroraExpansion.deep) {
       final availableHeight = MediaQuery.sizeOf(context).height * 0.45;
       final maxHeight = availableHeight.clamp(220.0, 360.0);
@@ -341,7 +353,9 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
   // ── Layer 2: Light expansion ──────────────────────────────────
 
   Widget _buildLightExpansion(
-      AuroraControlSurfaceSnapshot snapshot, Color tone,) {
+    AuroraControlSurfaceSnapshot snapshot,
+    Color tone,
+  ) {
     final primaryFacet = _mostActionableFacet(snapshot.facets);
     final wake = snapshot.wakeEligibility;
     final l10n = context.l10n;
@@ -361,7 +375,10 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         Text(
           _lightJudgmentText(snapshot, evidence),
           style: TextStyle(
-              color: DS.textPrimary, fontSize: DS.fontSizeXs, height: 1.4,),
+            color: DS.textPrimary,
+            fontSize: DS.fontSizeXs,
+            height: 1.4,
+          ),
         ),
 
         // Evidence
@@ -371,24 +388,32 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
             spacing: DS.spacing6,
             runSpacing: DS.spacing4,
             children: [
-              Text(l10n.auroraEvidence,
-                  style: TextStyle(
-                      color: DS.textSecondary, fontSize: DS.fontSizeXs,),),
-              ...evidence.take(3).map((s) => Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing6, vertical: DS.spacing2,),
-                    decoration: BoxDecoration(
-                      color: tone.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      s,
-                      style: TextStyle(
-                        color: DS.toneOnTint(tone),
-                        fontSize: DS.fontSizeXs,
+              Text(
+                l10n.auroraEvidence,
+                style: TextStyle(
+                  color: DS.textSecondary,
+                  fontSize: DS.fontSizeXs,
+                ),
+              ),
+              ...evidence.take(3).map(
+                    (s) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing6,
+                        vertical: DS.spacing2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: tone.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        s,
+                        style: TextStyle(
+                          color: DS.toneOnTint(tone),
+                          fontSize: DS.fontSizeXs,
+                        ),
                       ),
                     ),
-                  ),),
+                  ),
             ],
           ),
         ],
@@ -412,51 +437,58 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
             spacing: DS.spacing6,
             runSpacing: DS.spacing6,
             children: [
-              ...topGroup.primaryOptions.take(4).map((option) =>
-                  _PredictedOptionChip(
-                    option: option,
-                    bandStatus: snapshot.overallStatus,
-                    groupId: topGroup.groupId,
-                    conversationId: widget.conversationId,
-                    onTap: () {
-                      final payload = AuroraCorrectionPayload.chip(
-                        surface: AuroraCorrectionSurface.statusBand,
-                        semanticValue: option.semanticValue,
-                        label: auroraCorrectionPresentationFor(
-                          context,
-                          option,
-                        ).label,
-                        isDisconfirming: option.isDisconfirming,
-                        bandStatus: snapshot.overallStatus,
-                        telemetryId: option.telemetryId,
-                        groupId: topGroup.groupId,
-                        conversationId: widget.conversationId ?? '',
-                      );
-                      // Record telemetry
-                      final telemetry =
-                          AuroraTelemetryService(ref.read(apiClientProvider));
-                      unawaited(telemetry.recordChipSelected(
-                        option: option,
-                        groupId: payload.groupId,
-                        bandStatus: payload.bandStatus,
-                        conversationId: payload.conversationId,
-                      ),);
-                      // Collapse bar after selection
-                      _setExpansion(_AuroraExpansion.collapsed);
-                      unawaited(SensoryFeedbackService.emitAuroraEvent(
-                        AuroraSensoryEvent.correctionCompleted,
-                      ),);
-                      ref
-                          .read(auroraStatusProvider.notifier)
-                          .markCorrectionEffective(
-                            semanticValue: option.semanticValue,
-                          );
-                      // Refresh status
-                      unawaited(ref.read(auroraStatusProvider.notifier).refresh(
-                            conversationId: widget.conversationId,
-                          ),);
-                    },
-                  ),),
+              ...topGroup.primaryOptions.take(4).map(
+                    (option) => _PredictedOptionChip(
+                      option: option,
+                      bandStatus: snapshot.overallStatus,
+                      groupId: topGroup.groupId,
+                      conversationId: widget.conversationId,
+                      onTap: () {
+                        final payload = AuroraCorrectionPayload.chip(
+                          surface: AuroraCorrectionSurface.statusBand,
+                          semanticValue: option.semanticValue,
+                          label: auroraCorrectionPresentationFor(
+                            context,
+                            option,
+                          ).label,
+                          isDisconfirming: option.isDisconfirming,
+                          bandStatus: snapshot.overallStatus,
+                          telemetryId: option.telemetryId,
+                          groupId: topGroup.groupId,
+                          conversationId: widget.conversationId ?? '',
+                        );
+                        // Record telemetry
+                        final telemetry =
+                            AuroraTelemetryService(ref.read(apiClientProvider));
+                        unawaited(
+                          telemetry.recordChipSelected(
+                            option: option,
+                            groupId: payload.groupId,
+                            bandStatus: payload.bandStatus,
+                            conversationId: payload.conversationId,
+                          ),
+                        );
+                        // Collapse bar after selection
+                        _setExpansion(_AuroraExpansion.collapsed);
+                        unawaited(
+                          SensoryFeedbackService.emitAuroraEvent(
+                            AuroraSensoryEvent.correctionCompleted,
+                          ),
+                        );
+                        ref
+                            .read(auroraStatusProvider.notifier)
+                            .markCorrectionEffective(
+                              semanticValue: option.semanticValue,
+                            );
+                        // Refresh status
+                        unawaited(
+                          ref.read(auroraStatusProvider.notifier).refresh(
+                                conversationId: widget.conversationId,
+                              ),
+                        );
+                      },
+                    ),
+                  ),
               // Freeform correction chip
               if (topGroup.freeformOption != null)
                 _PredictedOptionChip(
@@ -521,71 +553,94 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     );
   }
 
-  List<Widget> _buildActions(AuroraControlSurfaceSnapshot snapshot,
-      AuroraWakeEligibility wake, AppLocalizations l10n,) {
+  List<Widget> _buildActions(
+    AuroraControlSurfaceSnapshot snapshot,
+    AuroraWakeEligibility wake,
+    AppLocalizations l10n,
+  ) {
     final actions = <Widget>[];
 
     if (snapshot.timeContext.hasConflict) {
-      actions.add(_ActionChip(
-        label: l10n.chatStatusQuickCalibrate,
-        onTap: () => _triggerCalibration(snapshot),
-        isPrimary: true,
-      ),);
+      actions.add(
+        _ActionChip(
+          label: l10n.chatStatusQuickCalibrate,
+          onTap: () => _triggerCalibration(snapshot),
+          isPrimary: true,
+        ),
+      );
     }
 
     switch (snapshot.overallStatus) {
       case 'risk_found':
         if (wake.canUserWake) {
           // Primary: enter Core Session for deep recalibration
-          actions.add(_ActionChip(
-            label: l10n.auroraActionDeepConversation,
-            onTap: () => _triggerCoreSession(snapshot),
-            isPrimary: true,
-          ),);
+          actions.add(
+            _ActionChip(
+              label: l10n.auroraActionDeepConversation,
+              onTap: () => _triggerCoreSession(snapshot),
+              isPrimary: true,
+            ),
+          );
         }
-        actions.add(_ActionChip(
-          label: l10n.auroraActionViewDetails,
-          onTap: () => _setExpansion(_AuroraExpansion.deep),
-        ),);
+        actions.add(
+          _ActionChip(
+            label: l10n.auroraActionViewDetails,
+            onTap: () => _setExpansion(_AuroraExpansion.deep),
+          ),
+        );
       case 'needs_confirm':
         if (wake.canUserWake) {
-          actions.add(_ActionChip(
-            label: l10n.auroraActionDeepConversation,
-            onTap: () => _triggerCoreSession(snapshot),
-            isPrimary: true,
-          ),);
+          actions.add(
+            _ActionChip(
+              label: l10n.auroraActionDeepConversation,
+              onTap: () => _triggerCoreSession(snapshot),
+              isPrimary: true,
+            ),
+          );
         }
-        actions.add(_ActionChip(
-          label: l10n.auroraActionViewDetails,
-          onTap: () => _setExpansion(_AuroraExpansion.deep),
-        ),);
+        actions.add(
+          _ActionChip(
+            label: l10n.auroraActionViewDetails,
+            onTap: () => _setExpansion(_AuroraExpansion.deep),
+          ),
+        );
       case 'calibration_available':
         if (wake.canUserWake) {
           // Full L3 session — most impactful action
-          actions.add(_ActionChip(
-            label: l10n.auroraWakeAvailable(wake.userQuotaRemaining),
-            onTap: () => _triggerCoreSession(snapshot),
-            isPrimary: true,
-          ),);
+          actions.add(
+            _ActionChip(
+              label: l10n.auroraWakeAvailable(wake.userQuotaRemaining),
+              onTap: () => _triggerCoreSession(snapshot),
+              isPrimary: true,
+            ),
+          );
         }
         // Fallback: light calibration panel
-        actions.add(_ActionChip(
-          label: context.l10n.chatStatusQuickCalibrate,
-          onTap: () => _triggerCalibration(snapshot),
-        ),);
+        actions.add(
+          _ActionChip(
+            label: context.l10n.chatStatusQuickCalibrate,
+            onTap: () => _triggerCalibration(snapshot),
+          ),
+        );
       case 'cooling_down':
-        actions.add(_ActionChip(
-          label: l10n.auroraWakeCooling(wake.cooldownRemainingMin),
-        ),);
-        actions.add(_ActionChip(
-          label: l10n.auroraWakeQuickFallback,
-          onTap: () => _triggerCalibration(snapshot),
-        ),);
+        actions.add(
+          _ActionChip(
+            label: l10n.auroraWakeCooling(wake.cooldownRemainingMin),
+          ),
+        );
+        actions.add(
+          _ActionChip(
+            label: l10n.auroraWakeQuickFallback,
+            onTap: () => _triggerCalibration(snapshot),
+          ),
+        );
       default:
-        actions.add(_ActionChip(
-          label: l10n.auroraActionViewDetails,
-          onTap: () => _setExpansion(_AuroraExpansion.deep),
-        ),);
+        actions.add(
+          _ActionChip(
+            label: l10n.auroraActionViewDetails,
+            onTap: () => _setExpansion(_AuroraExpansion.deep),
+          ),
+        );
     }
 
     return actions;
@@ -658,87 +713,105 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
   /// Light calibration — bottom sheet with observation/judgment/options.
   void _triggerCalibration(AuroraControlSurfaceSnapshot snapshot) {
     final primaryFacet = _mostActionableFacet(snapshot.facets);
-    unawaited(showAuroraCalibration(
-      context: context,
-      observation: primaryFacet?.summary ?? snapshot.summary,
-      judgment: snapshot.summary,
-      confirmQuestion: context.l10n.auroraCalibrationConfirm,
-      confirmOptions: [
-        context.l10n.chatMinutes30,
-        context.l10n.chatMinutes45,
-        context.l10n.chatMinutes60,
-      ],
-      onConfirm: (option) {
-        unawaited(SensoryFeedbackService.emitAuroraEvent(
-          AuroraSensoryEvent.correctionCompleted,
-        ),);
-        unawaited(ref.read(auroraStatusProvider.notifier).refresh(
-              conversationId: widget.conversationId,
-            ),);
-      },
-    ),);
+    unawaited(
+      showAuroraCalibration(
+        context: context,
+        observation: primaryFacet?.summary ?? snapshot.summary,
+        judgment: snapshot.summary,
+        confirmQuestion: context.l10n.auroraCalibrationConfirm,
+        confirmOptions: [
+          context.l10n.chatMinutes30,
+          context.l10n.chatMinutes45,
+          context.l10n.chatMinutes60,
+        ],
+        onConfirm: (option) {
+          unawaited(
+            SensoryFeedbackService.emitAuroraEvent(
+              AuroraSensoryEvent.correctionCompleted,
+            ),
+          );
+          unawaited(
+            ref.read(auroraStatusProvider.notifier).refresh(
+                  conversationId: widget.conversationId,
+                ),
+          );
+        },
+      ),
+    );
   }
 
   /// L3 Core Session — full multi-message interactive modeling session.
   void _triggerCoreSession(AuroraControlSurfaceSnapshot snapshot) {
     final wake = snapshot.wakeEligibility;
     _setExpansion(_AuroraExpansion.collapsed);
-    unawaited(SensoryFeedbackService.emitAuroraEvent(
-      AuroraSensoryEvent.coreSessionOpen,
-    ),);
-    unawaited(showAuroraCoreSession(
-      context: context,
-      bandStatus: snapshot.overallStatus,
-      wakeReasons: wake.wakeReasons,
-      entryReason: AuroraCoreSessionEntryReason.fromSnapshot(
-        snapshot: snapshot,
-        triggerSource: 'status_bar',
-        agendaPreview: [
-          context.l10n.chatAgendaConfirmStatusBarJudgmentShort,
-          context.l10n.chatAgendaDecideAdjustPlan,
-        ],
+    unawaited(
+      SensoryFeedbackService.emitAuroraEvent(
+        AuroraSensoryEvent.coreSessionOpen,
       ),
-      conversationId: widget.conversationId,
-      scope: wake.suggestedScope.isNotEmpty ? wake.suggestedScope : null,
-    ).then((_) {
-      // After session exits, refresh the status bar
-      unawaited(ref.read(auroraStatusProvider.notifier).refresh(
-            conversationId: widget.conversationId,
-          ),);
-    }),);
+    );
+    unawaited(
+      showAuroraCoreSession(
+        context: context,
+        bandStatus: snapshot.overallStatus,
+        wakeReasons: wake.wakeReasons,
+        entryReason: AuroraCoreSessionEntryReason.fromSnapshot(
+          snapshot: snapshot,
+          triggerSource: 'status_bar',
+          agendaPreview: [
+            context.l10n.chatAgendaConfirmStatusBarJudgmentShort,
+            context.l10n.chatAgendaDecideAdjustPlan,
+          ],
+        ),
+        conversationId: widget.conversationId,
+        scope: wake.suggestedScope.isNotEmpty ? wake.suggestedScope : null,
+      ).then((_) {
+        // After session exits, refresh the status bar
+        unawaited(
+          ref.read(auroraStatusProvider.notifier).refresh(
+                conversationId: widget.conversationId,
+              ),
+        );
+      }),
+    );
   }
 
   void _triggerTaskStuckCoreSession(AuroraControlSurfaceSnapshot snapshot) {
     final health = snapshot.taskHealth;
     _setExpansion(_AuroraExpansion.collapsed);
-    unawaited(SensoryFeedbackService.emitAuroraEvent(
-      AuroraSensoryEvent.coreSessionOpen,
-    ),);
-    unawaited(showAuroraCoreSession(
-      context: context,
-      bandStatus: 'calibration_available',
-      wakeReasons: const ['task_stuck_pattern'],
-      entryReason: AuroraCoreSessionEntryReason(
-        triggerSource: 'task_health_status_bar',
-        observedSignals: [
-          health.label,
-          if (health.subtitle.trim().isNotEmpty) health.subtitle,
-        ],
-        suggestedAgendaPreview: [
-          context.l10n.chatAgendaConfirmTaskBlockMain,
-          context.l10n.chatAgendaMakeNextTaskSmaller,
-        ],
-        whyNow: context.l10n.auroraTaskStuckWhyNow,
-        estimatedMinutes: 2,
+    unawaited(
+      SensoryFeedbackService.emitAuroraEvent(
+        AuroraSensoryEvent.coreSessionOpen,
       ),
-      conversationId: widget.conversationId,
-      scope: health.label,
-      sessionType: 'task_stuck_light',
-    ).then((_) {
-      unawaited(ref.read(auroraStatusProvider.notifier).refresh(
-            conversationId: widget.conversationId,
-          ),);
-    }),);
+    );
+    unawaited(
+      showAuroraCoreSession(
+        context: context,
+        bandStatus: 'calibration_available',
+        wakeReasons: const ['task_stuck_pattern'],
+        entryReason: AuroraCoreSessionEntryReason(
+          triggerSource: 'task_health_status_bar',
+          observedSignals: [
+            health.label,
+            if (health.subtitle.trim().isNotEmpty) health.subtitle,
+          ],
+          suggestedAgendaPreview: [
+            context.l10n.chatAgendaConfirmTaskBlockMain,
+            context.l10n.chatAgendaMakeNextTaskSmaller,
+          ],
+          whyNow: context.l10n.auroraTaskStuckWhyNow,
+          estimatedMinutes: 2,
+        ),
+        conversationId: widget.conversationId,
+        scope: health.label,
+        sessionType: 'task_stuck_light',
+      ).then((_) {
+        unawaited(
+          ref.read(auroraStatusProvider.notifier).refresh(
+                conversationId: widget.conversationId,
+              ),
+        );
+      }),
+    );
   }
 
   void _syncAuroraSensoryState(AuroraControlSurfaceSnapshot? snapshot) {
@@ -874,14 +947,18 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
 
     snapshot.statusEvidenceChain.forEach(add);
     if (snapshot.timeContext.visible && snapshot.timeContext.label.isNotEmpty) {
-      add(snapshot.timeContext.subtitle.trim().isEmpty
-          ? snapshot.timeContext.label
-          : '${snapshot.timeContext.label} · ${snapshot.timeContext.subtitle}',);
+      add(
+        snapshot.timeContext.subtitle.trim().isEmpty
+            ? snapshot.timeContext.label
+            : '${snapshot.timeContext.label} · ${snapshot.timeContext.subtitle}',
+      );
     }
     if (snapshot.taskHealth.visible && snapshot.taskHealth.label.isNotEmpty) {
-      add(snapshot.taskHealth.subtitle.trim().isEmpty
-          ? snapshot.taskHealth.label
-          : '${snapshot.taskHealth.label} · ${snapshot.taskHealth.subtitle}',);
+      add(
+        snapshot.taskHealth.subtitle.trim().isEmpty
+            ? snapshot.taskHealth.label
+            : '${snapshot.taskHealth.label} · ${snapshot.taskHealth.subtitle}',
+      );
     }
     for (final facet in snapshot.facets) {
       facet.signals.forEach(add);
@@ -1005,9 +1082,11 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     _StatusCorrectionOption option,
   ) {
     setState(() => _selectedCorrectionSemantic = option.semanticValue);
-    unawaited(SensoryFeedbackService.emitAuroraEvent(
-      AuroraSensoryEvent.correctionCompleted,
-    ),);
+    unawaited(
+      SensoryFeedbackService.emitAuroraEvent(
+        AuroraSensoryEvent.correctionCompleted,
+      ),
+    );
     final payload = AuroraCorrectionPayload.chip(
       surface: AuroraCorrectionSurface.statusBand,
       semanticValue: option.semanticValue,
@@ -1018,21 +1097,25 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
       conversationId: widget.conversationId ?? '',
     );
     final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
-    unawaited(telemetry.recordStatusBandCorrection(
-      label: payload.label,
-      semanticValue: payload.semanticValue,
-      isDisconfirming: payload.isDisconfirming,
-      bandStatus: payload.bandStatus,
-      telemetryId: payload.telemetryId,
-      groupId: payload.groupId,
-      conversationId: payload.conversationId,
-    ),);
+    unawaited(
+      telemetry.recordStatusBandCorrection(
+        label: payload.label,
+        semanticValue: payload.semanticValue,
+        isDisconfirming: payload.isDisconfirming,
+        bandStatus: payload.bandStatus,
+        telemetryId: payload.telemetryId,
+        groupId: payload.groupId,
+        conversationId: payload.conversationId,
+      ),
+    );
     ref.read(auroraStatusProvider.notifier).markCorrectionEffective(
           semanticValue: option.semanticValue,
         );
-    unawaited(ref.read(auroraStatusProvider.notifier).refresh(
-          conversationId: widget.conversationId,
-        ),);
+    unawaited(
+      ref.read(auroraStatusProvider.notifier).refresh(
+            conversationId: widget.conversationId,
+          ),
+    );
   }
 }
 
@@ -1062,12 +1145,18 @@ class _BarContainer extends StatelessWidget {
         liveRegion: true,
         label: semanticLabel,
         child: AnimatedContainer(
-          duration: context.reduceMotion ? Duration.zero : const Duration(milliseconds: 300),
+          duration: context.reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 300),
           curve: Curves.easeInOutCubic,
           margin: const EdgeInsets.symmetric(
-              horizontal: DS.spacing16, vertical: DS.spacing4,),
+            horizontal: DS.spacing16,
+            vertical: DS.spacing4,
+          ),
           padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12, vertical: DS.spacing10,),
+            horizontal: DS.spacing12,
+            vertical: DS.spacing10,
+          ),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -1097,7 +1186,9 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing8, vertical: DS.spacing4,),
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(999),
@@ -1105,11 +1196,12 @@ class _StatusPill extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-              // G02：tone 文本叠自体 tint 面走收敛槽（classic 浅档
-              // tone@tint 实测 4.30-4.35:1 → ≥4.9:1；深档恒等）。
-              color: DS.toneOnTint(color),
-              fontSize: DS.fontSizeXs,
-              fontWeight: DS.fontWeightSemibold,),
+            // G02：tone 文本叠自体 tint 面走收敛槽（classic 浅档
+            // tone@tint 实测 4.30-4.35:1 → ≥4.9:1；深档恒等）。
+            color: DS.toneOnTint(color),
+            fontSize: DS.fontSizeXs,
+            fontWeight: DS.fontWeightSemibold,
+          ),
         ),
       );
 }
@@ -1143,7 +1235,9 @@ class _TimeContextPill extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 28),
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing8, vertical: DS.spacing4,),
+              horizontal: DS.spacing8,
+              vertical: DS.spacing4,
+            ),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(999),
@@ -1206,7 +1300,9 @@ class _TaskHealthPill extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 28),
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing8, vertical: DS.spacing4,),
+              horizontal: DS.spacing8,
+              vertical: DS.spacing4,
+            ),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(999),
@@ -1310,13 +1406,17 @@ class _ActionChip extends StatelessWidget {
     if (onTap == null) {
       return Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing10, vertical: DS.spacing6,),
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
         decoration: BoxDecoration(
           color: DS.surfaceSecondary.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(999),
         ),
-        child: Text(label,
-            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),),
+        child: Text(
+          label,
+          style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
+        ),
       );
     }
     final foreground = isPrimary ? DS.brandPrimary : DS.textSecondary;
@@ -1332,7 +1432,9 @@ class _ActionChip extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing10, vertical: DS.spacing6,),
+              horizontal: DS.spacing10,
+              vertical: DS.spacing6,
+            ),
             decoration: BoxDecoration(
               color: isPrimary
                   ? DS.brandPrimary.withValues(alpha: 0.1)
@@ -1402,7 +1504,9 @@ class _StatusCorrectionChip extends StatelessWidget {
             curve: Curves.easeOutCubic,
             constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing10, vertical: DS.spacing6,),
+              horizontal: DS.spacing10,
+              vertical: DS.spacing6,
+            ),
             decoration: BoxDecoration(
               color: color.withValues(alpha: selected ? 0.14 : 0.08),
               borderRadius: BorderRadius.circular(999),
@@ -1459,7 +1563,9 @@ class _PredictedOptionChip extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing10, vertical: DS.spacing6,),
+              horizontal: DS.spacing10,
+              vertical: DS.spacing6,
+            ),
             decoration: BoxDecoration(
               color: isSpecial
                   ? Colors.transparent
@@ -1519,7 +1625,9 @@ class _ShimmerDotState extends State<_ShimmerDot>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200),);
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
     unawaited(_controller.repeat());
   }
 
@@ -1532,25 +1640,18 @@ class _ShimmerDotState extends State<_ShimmerDot>
   @override
   Widget build(BuildContext context) {
     // G02 reduce-motion 等价（S01 判例：不装动画壳、直落终态）：
-    // disableAnimations/accessibleNavigation 下停表并渲染静态点列
-    // （最暗档不透明度），呼吸脉动整体缺席；恢复正常后重新起表。
+    // disableAnimations/accessibleNavigation 下停表并渲染静态单点
+    // （最暗档不透明度；本组件即单点槽，外层 _ShimmerRow 负责四点排布
+    // 与 Padding），呼吸脉动整体缺席；恢复正常后重新起表。
     if (context.reduceMotion) {
       _controller.stop();
-      return Row(
-        children: [
-          for (var i = 0; i < 4; i++)
-            Padding(
-              padding: const EdgeInsets.only(right: DS.spacing6),
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: DS.neutral400.withValues(alpha: 0.25),
-                ),
-              ),
-            ),
-        ],
+      return Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: DS.neutral400.withValues(alpha: 0.25),
+        ),
       );
     }
     return AnimatedBuilder(

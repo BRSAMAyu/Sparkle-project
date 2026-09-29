@@ -14,15 +14,20 @@ import 'package:sparkle/features/chat/presentation/providers/aurora_status_provi
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
-final auroraCoreSessionServiceProvider =
-    Provider<AuroraCoreSessionClient>((ref) => AuroraCoreSessionService(ref.read(apiClientProvider)));
+final auroraCoreSessionServiceProvider = Provider<AuroraCoreSessionClient>(
+  (ref) => AuroraCoreSessionService(ref.read(apiClientProvider)),
+);
 
-final _telemetryServiceProvider = Provider<AuroraTelemetryService>((ref) => AuroraTelemetryService(ref.read(apiClientProvider)));
+final _telemetryServiceProvider = Provider<AuroraTelemetryService>(
+  (ref) => AuroraTelemetryService(ref.read(apiClientProvider)),
+);
 
 final auroraCoreSessionStateProvider = StateNotifierProvider<
-    AuroraCoreSessionStateNotifier, AuroraCoreSessionResumeState>((ref) => AuroraCoreSessionStateNotifier(
+    AuroraCoreSessionStateNotifier, AuroraCoreSessionResumeState>(
+  (ref) => AuroraCoreSessionStateNotifier(
     ref.read(auroraCoreSessionServiceProvider),
-  ),);
+  ),
+);
 
 enum AuroraCoreSessionSheetSize { half, expanded, full }
 
@@ -36,7 +41,8 @@ class AuroraCoreSessionResumeState {
           ? AuroraCoreSession.fromJson(rawSession)
           : rawSession is Map
               ? AuroraCoreSession.fromJson(
-                  Map<String, dynamic>.from(rawSession),)
+                  Map<String, dynamic>.from(rawSession),
+                )
               : null,
       restored: json['restored'] as bool? ?? true,
     );
@@ -264,8 +270,11 @@ class AuroraCoreSessionResumeBanner extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: DS.spacing8),
-                  Icon(Icons.chevron_right_rounded,
-                      size: 20, color: DS.textSecondary,),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: DS.textSecondary,
+                  ),
                 ],
               ),
             ),
@@ -440,13 +449,15 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
 
     // Record telemetry for chip selections
     if (option != null) {
-      unawaited(ref.read(_telemetryServiceProvider).recordChipSelected(
-            option: option,
-            groupId: groupId ?? '',
-            bandStatus: widget.bandStatus,
-            conversationId: widget.conversationId,
-            sessionId: _session!.sessionId,
-          ),);
+      unawaited(
+        ref.read(_telemetryServiceProvider).recordChipSelected(
+              option: option,
+              groupId: groupId ?? '',
+              bandStatus: widget.bandStatus,
+              conversationId: widget.conversationId,
+              sessionId: _session!.sessionId,
+            ),
+      );
     }
 
     setState(() => _sending = true);
@@ -617,7 +628,11 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
     final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          DS.spacing20, DS.spacing12, DS.spacing12, 0,),
+        DS.spacing20,
+        DS.spacing12,
+        DS.spacing12,
+        0,
+      ),
       child: Row(
         children: [
           Container(
@@ -627,8 +642,11 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
               color: DS.brandPrimary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.auto_fix_high_rounded,
-                size: 18, color: DS.brandPrimary,),
+            child: Icon(
+              Icons.auto_fix_high_rounded,
+              size: 18,
+              color: DS.brandPrimary,
+            ),
           ),
           const SizedBox(width: DS.spacing10),
           Expanded(
@@ -648,7 +666,9 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
                   Text(
                     session.scope,
                     style: TextStyle(
-                        color: DS.textSecondary, fontSize: DS.fontSizeXs,),
+                      color: DS.textSecondary,
+                      fontSize: DS.fontSizeXs,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -663,7 +683,9 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
             // ≥8.33:1，12sp 字阶下限对齐。
             Container(
               padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing8, vertical: DS.spacing4,),
+                horizontal: DS.spacing8,
+                vertical: DS.spacing4,
+              ),
               decoration: BoxDecoration(
                 color: DS.surfaceTertiary,
                 borderRadius: BorderRadius.circular(999),
@@ -735,7 +757,11 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
       child: ListView(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(
-            DS.spacing16, DS.spacing16, DS.spacing16, DS.spacing8,),
+          DS.spacing16,
+          DS.spacing16,
+          DS.spacing16,
+          DS.spacing8,
+        ),
         children: [
           if (_openedFromResumeState && session.isActive)
             _buildResumeNotice(context.l10n.auroraCoreSessionResumed),
@@ -866,8 +892,10 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
             children: [
               const CircularProgressIndicator(strokeWidth: 2),
               const SizedBox(height: DS.spacing12),
-              Text(context.l10n.auroraPreparing,
-                  style: TextStyle(color: DS.textSecondary),),
+              Text(
+                context.l10n.auroraPreparing,
+                style: TextStyle(color: DS.textSecondary),
+              ),
             ],
           ),
         ),
@@ -882,13 +910,16 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
             const SizedBox(height: DS.spacing12),
             // N15（A-SPEC3 EE-G1）内容契约：_error 全部写入点均为人话
             // arb 文案（auroraStartFailed，见 :429），异常文本不入 state。
-            Text(_error!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: DS.textSecondary),),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: DS.textSecondary),
+            ),
             const SizedBox(height: DS.spacing16),
             TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(context.l10n.auroraClose),),
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(context.l10n.auroraClose),
+            ),
           ],
         ),
       );
@@ -912,8 +943,11 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
                 color: DS.brandPrimary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.auto_fix_high_rounded,
-                  size: 16, color: DS.brandPrimary,),
+              child: Icon(
+                Icons.auto_fix_high_rounded,
+                size: 16,
+                color: DS.brandPrimary,
+              ),
             ),
             const SizedBox(width: DS.spacing10),
             const _TypingDots(),
@@ -942,13 +976,18 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
         children: [
           Row(
             children: [
-              Icon(Icons.check_circle_outline_rounded,
-                  size: 16, color: DS.success,),
+              Icon(
+                Icons.check_circle_outline_rounded,
+                size: 16,
+                color: DS.success,
+              ),
               const SizedBox(width: DS.spacing8),
               Text(
                 l10n.auroraCalibrationComplete,
                 style: DS.bodySmall.copyWith(
-                    color: DS.success, fontWeight: DS.fontWeightSemibold,),
+                  color: DS.success,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
               ),
             ],
           ),
@@ -1025,36 +1064,36 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
   }
 
   Widget _buildResumeNotice(String text) => Padding(
-      padding: const EdgeInsets.only(bottom: DS.spacing12),
-      child: Semantics(
-        label: text,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: DS.info.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(DS.radius12),
-            border: Border.all(color: DS.info.withValues(alpha: 0.18)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(DS.spacing12),
-            child: Row(
-              children: [
-                Icon(Icons.restore_rounded, size: 18, color: DS.info),
-                const SizedBox(width: DS.spacing8),
-                Expanded(
-                  child: Text(
-                    text,
-                    style: DS.bodySmall.copyWith(
-                      color: DS.textPrimary,
-                      height: 1.35,
+        padding: const EdgeInsets.only(bottom: DS.spacing12),
+        child: Semantics(
+          label: text,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: DS.info.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(DS.radius12),
+              border: Border.all(color: DS.info.withValues(alpha: 0.18)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(DS.spacing12),
+              child: Row(
+                children: [
+                  Icon(Icons.restore_rounded, size: 18, color: DS.info),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: Text(
+                      text,
+                      style: DS.bodySmall.copyWith(
+                        color: DS.textPrimary,
+                        height: 1.35,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
   Widget _buildPausedResumeCard() {
     final l10n = context.l10n;
@@ -1071,8 +1110,11 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
         children: [
           Row(
             children: [
-              Icon(Icons.play_circle_outline_rounded,
-                  size: 18, color: DS.brandPrimary,),
+              Icon(
+                Icons.play_circle_outline_rounded,
+                size: 18,
+                color: DS.brandPrimary,
+              ),
               const SizedBox(width: DS.spacing8),
               Expanded(
                 child: Text(
@@ -1119,7 +1161,11 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
       child: ListView(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(
-            DS.spacing16, DS.spacing16, DS.spacing16, DS.spacing16,),
+          DS.spacing16,
+          DS.spacing16,
+          DS.spacing16,
+          DS.spacing16,
+        ),
         children: [
           Container(
             padding: const EdgeInsets.all(DS.spacing16),
@@ -1227,35 +1273,43 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
   }
 
   Widget _buildOptionChips(
-      AuroraPredictedReplyGroup group, AuroraCoreSession session,) => Container(
-      padding: const EdgeInsets.fromLTRB(
-          DS.spacing16, DS.spacing12, DS.spacing16, 0,),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (group.question.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing10),
-              child: Text(
-                group.question,
-                style: DS.bodyMedium.copyWith(color: DS.textPrimary),
+    AuroraPredictedReplyGroup group,
+    AuroraCoreSession session,
+  ) =>
+      Container(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing12,
+          DS.spacing16,
+          0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (group.question.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing10),
+                child: Text(
+                  group.question,
+                  style: DS.bodyMedium.copyWith(color: DS.textPrimary),
+                ),
               ),
-            ),
-          if (group.contextNote.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing8),
-              child: Text(
-                group.contextNote,
-                style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            if (group.contextNote.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing8),
+                child: Text(
+                  group.contextNote,
+                  style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                ),
               ),
-            ),
-          Wrap(
-            spacing: DS.spacing8,
-            runSpacing: DS.spacing8,
-            children: [
-              // Primary options
-              ...group.primaryOptions.map((option) => _SessionOptionChip(
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: [
+                // Primary options
+                ...group.primaryOptions.map(
+                  (option) => _SessionOptionChip(
                     option: option,
                     onTap: _sending
                         ? null
@@ -1268,101 +1322,108 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
                               option: option,
                               groupId: group.groupId,
                             ),
-                  ),),
-              // Freeform correction chip
-              if (group.freeformOption != null)
-                _SessionOptionChip(
-                  option: group.freeformOption!,
-                  onTap: _sending
-                      ? null
-                      : () => setState(() => _showFreeformInput = true),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-
-  Widget _buildFreeformInput(AuroraCoreSession session) => Container(
-      padding: const EdgeInsets.fromLTRB(
-          DS.spacing16, DS.spacing12, DS.spacing16, 0,),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            context.l10n.auroraExplainPrompt,
-            style: DS.bodyMedium.copyWith(
-                color: DS.textPrimary, fontWeight: DS.fontWeightSemibold,),
-          ),
-          const SizedBox(height: DS.spacing8),
-          TextField(
-            controller: _freeformController,
-            autofocus: true,
-            maxLines: 3,
-            minLines: 1,
-            style: DS.bodyMedium.copyWith(color: DS.textPrimary),
-            decoration: InputDecoration(
-              hintText: context.l10n.auroraWhatDoYouThink,
-              hintStyle: TextStyle(color: DS.textSecondary),
-              filled: true,
-              fillColor: DS.surfaceSecondary,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(DS.radius12),
-                borderSide: BorderSide(color: DS.borderSubtle),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(DS.radius12),
-                borderSide: BorderSide(color: DS.borderSubtle),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(DS.radius12),
-                borderSide: BorderSide(color: DS.brandPrimary, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.all(DS.spacing12),
-            ),
-          ),
-          const SizedBox(height: DS.spacing10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: () => setState(() {
-                  _showFreeformInput = false;
-                  _freeformController.clear();
-                }),
-                child: Text(context.l10n.toolsWbCancel),
-              ),
-              const SizedBox(width: DS.spacing8),
-              FilledButton(
-                onPressed: _sending
-                    ? null
-                    : () {
-                        final text = _freeformController.text.trim();
-                        if (text.isEmpty) return;
-                        unawaited(
-                          _respond(
-                            content: text,
-                            optionId: 'freeform_correction',
-                            semanticValue: 'freeform_correction',
-                            isFreeform: true,
-                          ),
-                        );
-                      },
-                style: FilledButton.styleFrom(
-                  backgroundColor: DS.brandPrimary,
-                  foregroundColor: DS.textOnPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(DS.radius8),
                   ),
                 ),
-                child: Text(context.l10n.auroraSend),
+                // Freeform correction chip
+                if (group.freeformOption != null)
+                  _SessionOptionChip(
+                    option: group.freeformOption!,
+                    onTap: _sending
+                        ? null
+                        : () => setState(() => _showFreeformInput = true),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildFreeformInput(AuroraCoreSession session) => Container(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing12,
+          DS.spacing16,
+          0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              context.l10n.auroraExplainPrompt,
+              style: DS.bodyMedium.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightSemibold,
               ),
-            ],
-          ),
-        ],
-      ),
-    );
+            ),
+            const SizedBox(height: DS.spacing8),
+            TextField(
+              controller: _freeformController,
+              autofocus: true,
+              maxLines: 3,
+              minLines: 1,
+              style: DS.bodyMedium.copyWith(color: DS.textPrimary),
+              decoration: InputDecoration(
+                hintText: context.l10n.auroraWhatDoYouThink,
+                hintStyle: TextStyle(color: DS.textSecondary),
+                filled: true,
+                fillColor: DS.surfaceSecondary,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(DS.radius12),
+                  borderSide: BorderSide(color: DS.borderSubtle),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(DS.radius12),
+                  borderSide: BorderSide(color: DS.borderSubtle),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(DS.radius12),
+                  borderSide: BorderSide(color: DS.brandPrimary, width: 1.5),
+                ),
+                contentPadding: const EdgeInsets.all(DS.spacing12),
+              ),
+            ),
+            const SizedBox(height: DS.spacing10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => setState(() {
+                    _showFreeformInput = false;
+                    _freeformController.clear();
+                  }),
+                  child: Text(context.l10n.toolsWbCancel),
+                ),
+                const SizedBox(width: DS.spacing8),
+                FilledButton(
+                  onPressed: _sending
+                      ? null
+                      : () {
+                          final text = _freeformController.text.trim();
+                          if (text.isEmpty) return;
+                          unawaited(
+                            _respond(
+                              content: text,
+                              optionId: 'freeform_correction',
+                              semanticValue: 'freeform_correction',
+                              isFreeform: true,
+                            ),
+                          );
+                        },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: DS.brandPrimary,
+                    foregroundColor: DS.textOnPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(DS.radius8),
+                    ),
+                  ),
+                  child: Text(context.l10n.auroraSend),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
 }
 
 class _ResultBullet extends StatelessWidget {
@@ -1499,53 +1560,54 @@ class _AuroraMessageBubbleState extends State<_AuroraMessageBubble>
 
   @override
   Widget build(BuildContext context) => FadeTransition(
-      opacity: _fadeAnim,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: DS.spacing12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: DS.brandPrimary.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.auto_fix_high_rounded,
-                size: 14,
-                color: DS.brandPrimary,
-              ),
-            ),
-            const SizedBox(width: DS.spacing10),
-            Flexible(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing12,
-                  vertical: DS.spacing10,
-                ),
+        opacity: _fadeAnim,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: DS.spacing12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  color: DS.brandPrimary.withValues(alpha: 0.05),
-                  borderRadius: const BorderRadius.only(
-                    topRight: Radius.circular(DS.radius12),
-                    bottomLeft: Radius.circular(DS.radius12),
-                    bottomRight: Radius.circular(DS.radius12),
-                  ),
-                  border: Border.all(
-                      color: DS.brandPrimary.withValues(alpha: 0.12),),
+                  color: DS.brandPrimary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
                 ),
-                child: Text(
-                  widget.message.content,
-                  style: DS.bodyMedium
-                      .copyWith(color: DS.textPrimary, height: 1.5),
+                child: Icon(
+                  Icons.auto_fix_high_rounded,
+                  size: 14,
+                  color: DS.brandPrimary,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: DS.spacing10),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing12,
+                    vertical: DS.spacing10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.brandPrimary.withValues(alpha: 0.05),
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(DS.radius12),
+                      bottomLeft: Radius.circular(DS.radius12),
+                      bottomRight: Radius.circular(DS.radius12),
+                    ),
+                    border: Border.all(
+                      color: DS.brandPrimary.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  child: Text(
+                    widget.message.content,
+                    style: DS.bodyMedium
+                        .copyWith(color: DS.textPrimary, height: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }
 
 class _UserMessageBubble extends StatelessWidget {
@@ -1554,46 +1616,46 @@ class _UserMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.only(bottom: DS.spacing12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing12,
-                vertical: DS.spacing10,
-              ),
-              decoration: BoxDecoration(
-                color: DS.info.withValues(alpha: 0.08),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(DS.radius12),
-                  topRight: Radius.circular(DS.radius12),
-                  bottomLeft: Radius.circular(DS.radius12),
+        padding: const EdgeInsets.only(bottom: DS.spacing12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing12,
+                  vertical: DS.spacing10,
+                ),
+                decoration: BoxDecoration(
+                  color: DS.info.withValues(alpha: 0.08),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(DS.radius12),
+                    topRight: Radius.circular(DS.radius12),
+                    bottomLeft: Radius.circular(DS.radius12),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      message.content,
+                      style: DS.bodyMedium.copyWith(color: DS.textPrimary),
+                    ),
+                    if (message.isFreeform)
+                      Padding(
+                        padding: const EdgeInsets.only(top: DS.spacing4),
+                        child: Text(
+                          context.l10n.auroraFreeformLabel,
+                          style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    message.content,
-                    style: DS.bodyMedium.copyWith(color: DS.textPrimary),
-                  ),
-                  if (message.isFreeform)
-                    Padding(
-                      padding: const EdgeInsets.only(top: DS.spacing4),
-                      child: Text(
-                        context.l10n.auroraFreeformLabel,
-                        style: DS.bodySmall.copyWith(color: DS.textSecondary),
-                      ),
-                    ),
-                ],
-              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 }
 
 // ── Option chip ────────────────────────────────────────────────────────────────
