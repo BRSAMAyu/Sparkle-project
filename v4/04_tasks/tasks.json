@@ -4094,9 +4094,9 @@
       "id": "V4-G05",
       "title": "洞察/复盘/报告——四风格商业化完备",
       "depends_on": [],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS_WITH_CHALLENGES",
       "kind": "implementation",
       "required_locks": [
         "ui-polish-g05"
@@ -4149,7 +4149,8 @@
         "preview 通道外发现需发布面决策项→登记 Q08 待裁"
       ],
       "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
-      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。"
+      "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。",
+      "progress_note": "2026-09-30 wtG05：断点续跑交付（前任 9+1 脏文件全保留；实现 e4df7419，base 00d1543a）。13 修全呈现层（U13 契约零 diff）+图表区分度三层防御（趋势虚线双编码/雷达实色/tab tint+描边）+透明度压文字禁式清除；+41 对四风格公式守卫+6 对照探针。R1=PASS_WITH_CHALLENGES（receipt 81ed2e80）：九靶全过（独立复算 5 对逐位一致、宿主 3 修判装置合理化非掩盖、豁免 3 处正当含审查员自算纠错存照）；C1 公式声明收窄/C2 tab 描边零回退保护→leader 补 widget 钉闭口（mutation 删描边红/还原绿双向实证）；集成复验 22/22+analyze 零。"
     },
     {
       "id": "V4-G06",

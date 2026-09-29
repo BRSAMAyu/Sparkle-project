@@ -18,3 +18,8 @@
 - 三读面×四风格证据为 widget 级宿主截图（360×800 逻辑，2x PNG）+ 文本语义树，非真机截图；卡片为 normal 档，HEAVY 截图矩阵归 Q05。
 - 图表区分度专项为 token 公式层数值复算（F06 判例公式）+ 虚线形状双编码钉，未做感知实验。
 - 复盘 hub 仅 quiet 抽查 + hero 渐变钉；其余三风格由 A 组 token 对覆盖。
+
+## Errata (leader, 2026-09-30, R1 C1/C2 收口)
+- C1：A 组 41 对系公式级守卫，产品码回退保护由 B/E widget 钉承载（测试头「修复点回退都会在此失败」声明收窄为公式面）。
+- C2 已闭：tab 选中指示补 widget 回退钉 curiosity_capsule_tab_border_f569style_test.dart（断言 TabBar.indicator BoxDecoration tint@0.14+全强度描边；mutation 删描边→红/还原→绿双向实证）；jobs pill 面由 B 组公式钉+后续 Q05 视觉面兜底。
+- O1-O3 注释数值偏宽处（overview pill 四风格口径/jobs ≥4.85→4.76）按本勘误为准。
