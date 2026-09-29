@@ -1,0 +1,21 @@
+{
+  "task": "FIX-566",
+  "status": "REVIEW_READY",
+  "reviewer": null,
+  "reviewer_session": null,
+  "review_date": null,
+  "verdict": null,
+  "reviewed_commit": null,
+  "base_commit": "dd4de05a",
+  "branch": "fix/v4/f566-retry-scroll-jump-latest",
+  "worktree": "/Users/brsama/code/GitHub/wtF566",
+  "risk": "P3 微卡（普通任务：1 份独立未参与会话审查 + 当前集成 SHA 可失败测试）",
+  "review_scope_hint": [
+    "验收 1：①新路径测试有牙（mutation M-① 精准红 580.0≠0.0；M-全量 4 红）+ reuse 语义 provider 侧钉",
+    "验收 2：②入口中段可见/最新端隐藏/点击回底 三态 widget 钉",
+    "红线：ChatScrollAnchor 零改动、到达性门控表达式逐字未动、①反 offset 逐位钉",
+    "需复核裁决：L1 l10n 格式器代差处置（键集合相等已验、行级待同格式器机器复验）；L2 环境性测试面收缩（失败态播种 vs 真实 send 流）；fix_adjudication（screen 侧补 force vs 豁免案）",
+    "l10n 复验：若审查机格式器与入库一致，flutter gen-l10n && git status 应零漂移"
+  ],
+  "placeholders_note": "reviewer 字段由独立审查会话覆写（V4-B04 判例：占位 reviewer 字段由审查会话覆写）"
+}

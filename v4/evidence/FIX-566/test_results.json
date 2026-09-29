@@ -1,0 +1,58 @@
+{
+  "task": "FIX-566",
+  "captured_at": "2026-09-29 +0800",
+  "worktree": "/Users/brsama/code/GitHub/wtF566",
+  "flutter": "3.41.3 stable",
+  "new_tests": {
+    "files": [
+      "mobile/test/widget/chat_f566_retry_force_scroll_jump_latest_test.dart",
+      "mobile/test/unit/chat_f566_retry_reuse_path_test.dart"
+    ],
+    "count": 5,
+    "breakdown": {
+      "widget_F566①_正_retry_force_scroll": 1,
+      "widget_F566①_反_arrival_no_pull": 1,
+      "widget_F566②_jump_latest_visibility": 1,
+      "widget_F566②_jump_latest_tap": 1,
+      "unit_F566①_reuse_retry_provider": 1
+    },
+    "result": "5 passed / 0 failed",
+    "command": "flutter test test/unit/chat_f566_retry_reuse_path_test.dart test/widget/chat_f566_retry_force_scroll_jump_latest_test.dart --concurrency=1",
+    "raw_tail": "00:04 +5: All tests passed!"
+  },
+  "regression": {
+    "command": "flutter test test/features/chat test/unit test/core/widgets test/widget/chat_scroll_test.dart test/widget/chat_review_banner_test.dart test/widget/chat_long_suggestion_reparent_test.dart test/widget/chat_area_budget_test.dart --concurrency=4",
+    "result": "606 passed + 1 skipped (skip 环境性，与 U07 基线同源)",
+    "raw_tail": "01:52 +606 ~1: All tests passed!",
+    "note": "scope 含本卡新增 unit 测（+1）；其余为 chat/滚动相邻面与 U07 回归口径同域。U07 交付时同口径 595+1，main 自此增长（含他卡新测）",
+    "existing_test_files_modified": 0
+  },
+  "analyze": {
+    "command": "flutter analyze --no-pub",
+    "result": "No issues found! (ran in 20.1s)"
+  },
+  "rule_guards": {
+    "command": "bash scripts/run_all_rule_guards.sh --rule UI-TOKENS",
+    "result": "PASS — ratchet holds at color=225/275, fontSize=632/727 (183 files with hardcoded tokens)",
+    "note": "零新增硬编码（新增 UI 全走 DS 令牌）"
+  },
+  "l10n": {
+    "gen_l10n": "exit 0；arb 中英键集合相等（10267）；入库 gen 产物与完整再生输出键集合逐文件相等（3/3）；既有键零删改",
+    "detail": "见 run_manifest.json l10n_verification（本机格式器代差处置）"
+  },
+  "mutation_self_check": [
+    {
+      "name": "M-①（精准）",
+      "mutation": "_retryLastMessage() 去掉 _scrollToBottom(force: true) 行（临时，已还原）",
+      "result": "4 测中仅 F566① 正红：Expected: <0.0> Actual: <580.0>（恰为 U07 C-2 原始缺陷形态：点重试不回最新端）；F566①反/②×2 保持绿",
+      "raw": "exit=1 / 00:02 +3 -1: Some tests failed. / Expected: <0.0>  Actual: <580.0>"
+    },
+    {
+      "name": "M-全量",
+      "mutation": "git stash 整个产品 diff（chat_screen.dart）",
+      "result": "4 widget 测全红（各自在场性断言触发：入口 Key findsNothing/force 失效）；git stash pop 还原后 5/5 绿",
+      "raw": "exit=1 / 00:03 +0 -4: Some tests failed.（4 处 Found 0 widgets with key [<'chatJumpToLatest'>]）"
+    }
+  ],
+  "conclusion": "新测 5/5 绿、回归 606+1skip 全绿、analyze 零 issue、UI-TOKENS PASS、l10n 键集合相等、mutation 双向有牙"
+}

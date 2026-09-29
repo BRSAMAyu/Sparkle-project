@@ -1,0 +1,69 @@
+{
+  "task": "FIX-566",
+  "title": "U07 遗留两缺陷闭环：①reuse 重试路径补 force-scroll ②中段阅读「跳最新」入口（P3 微卡）",
+  "kind": "fix",
+  "branch": "fix/v4/f566-retry-scroll-jump-latest",
+  "worktree": "/Users/brsama/code/GitHub/wtF566",
+  "base_commit": "dd4de05a（main 最新；建 worktree 时即此）",
+  "source_sha": "ea55abb7（fix/v4/f566-retry-scroll-jump-latest 头，含修复+测试+新测；本 manifest 与台账行更新属其后的 evidence commit，分支头=台账 FIXED 引用的交付头）",
+  "captured_at": "2026-09-28 ~ 2026-09-29 +0800",
+  "timezone": "Asia/Shanghai (+0800)",
+  "evidence_source": "v3/06_agent_fleet/DYNAMIC_ISSUES.md V3-FIX-566 行 + v4/evidence/V4-U07/review_r1.md R-2/R-1 节（U07 已并入 main c1f4f007）",
+  "environment": {
+    "platform": "darwin 25.6.0 arm64",
+    "flutter": "3.41.3 stable（homebrew，本机唯一安装；48c32af034）",
+    "dart_style": "2.3.2+（gen-l10n 产物 tall-style；入库 gen 产物为旧 short-style，见 l10n_verification）",
+    "note": "worktree 缺 gitignored mobile/lib/gen（proto 产物），自主仓检出拷入（不入库）后 analyze/test 全通——FIX-561 同款环境处置"
+  },
+  "defect": {
+    "name": "U07 C-2 reuse 重试不触发 force 滚动 + U07 R-1 中段阅读无回底入口",
+    "u07r1_shape": "①retryLastMessage→sendMessage(reuseLastUserMessage:true) 在用户消息居末位（纯连接失败）时不追加用户消息→messages 监听不触发 force（chat_provider.dart:2334/2349/1049）；②基线本无跳最新入口（U07R1 裁不属 U07 卡面，立微卡）",
+    "root_cause_locations": [
+      "mobile/lib/features/chat/presentation/screens/chat_screen.dart 错误横幅重试按钮 onPressed——只调 notifier.retryLastMessage()，reuse 分支（chat_provider.dart:1055 _beginRun 无 userMessage）不产生 messages 追加→initState 监听（next.length>previous.length→force）不触发",
+      "mobile/lib/features/chat/presentation/screens/chat_screen.dart 消息区 Stack——无任何回底入口；ChatScrollAnchor 解除跟随后用户无显式恢复通道（U07 有意留白，本卡补齐）"
+    ],
+    "fix_adjudication": "台账给两案：「reuse 重试路径补 force-scroll（复用既有机制）」或「豁免+注明」。**选补 force-scroll（screen 侧）**，理由：(a) U07 自己的语义注释即「用户自己的消息（发送/重试/快捷动作）= 显式用户动作，恢复跟随并滚到最新」——重试被点时是显式用户动作，force 是既立语义的直接推论，豁免反而违背；(b) 审查人 R-2 也给过同方向修法（screen 侧对同轮重发补 force）；(c) 影响有界性论证（「重试按钮在最新端、用户大概率在 240px 窗内」）不成立为豁免依据：错误横幅固定于列表下方常驻可见，用户可在任意滚动位点它，此时不 force 则重试应答永不可见——豁免案在横幅入口面上语义为假。实现上不取 provider 侧（provider 无滚动通道，造跨层信号=新机制），由 screen 在唯一调用点（chat_screen.dart 错误横幅 onPressed）先 force 再 retry，复用 _scrollToBottom(force:true)→ChatScrollAnchor.forceFollow() 既有机制，零第二套滚动权威。"
+  },
+  "fix": {
+    "fix_locations": [
+      "mobile/lib/features/chat/presentation/screens/chat_screen.dart::_retryLastMessage（新）——force 滚动+retryLastMessage 收拢，唯一产品调用点为错误横幅重试按钮（grep 全仓仅 1 处）",
+      "mobile/lib/features/chat/presentation/screens/chat_screen.dart::_showJumpToLatest + _handleScroll 翻转帧同步 + 消息区 Stack 尾 Positioned 胶囊入口（Key('chatJumpToLatest')，onTap=_scrollToBottom(force:true)）",
+      "mobile/lib/l10n/app_en.arb / app_zh.arb —— chatJumpToLatest 双语纯增量键；gen 产物三文件纯增量同步（处置见 l10n_verification）"
+    ],
+    "semantics_preserved": [
+      "ChatScrollAnchor 零改动：阈值语义、240px 常量、forceFollow 语义原样",
+      "_scrollToBottom/_handleScroll 既有逻辑零改动（仅新增读取锚状态的可见性镜像与注释）",
+      "到达性滚动门控（assistant 到达/组件到达）表达式逐字未动——①反测钉住 offset 逐位不变",
+      "provider reuse 语义零改动（B-01 反重复计费保持）——unit 测钉住用户消息恰 1 条+新 run 开启",
+      "arb 零删改、既有键零漂移（键集合相等校验 3/3 + 中英 10267=10267）"
+    ]
+  },
+  "l10n_verification": {
+    "gen_l10n_run": "flutter gen-l10n 实跑两轮（裸 main 对照 + 带增量），exit 0",
+    "bare_main_regeneration": "对既有 gen 产物 144+/50− 纯格式重排、键集合零差——本机 dart_style 与入库 gen 产物存在格式器代差（多机车队入库出自旧格式器机器），行级零漂移在本机不可判",
+    "disposition": "gen 产物恢复 HEAD 后按再生输出摘取纯增量三处入库（+6/+3/+3），零删改既有行",
+    "key_set_equality": {
+      "app_localizations.dart_vs_full_regeneration": true,
+      "app_localizations_en.dart_vs_full_regeneration": true,
+      "app_localizations_zh.dart_vs_full_regeneration": true,
+      "arb_en_vs_zh_key_sets": true,
+      "total_keys": 10267,
+      "new_key": "chatJumpToLatest（zh=回到最新 / en=Back to latest）"
+    },
+    "owner_review_note": "若 R1 审查机格式器与入库一致，flutter gen-l10n && git status 即可复验行级零漂移"
+  },
+  "scope_and_denominator": {
+    "mobile_product_diff": "6 文件 +88/−7（chat_screen +72/−7；arb×2 各+2；gen 产物 +6/+3/+3）",
+    "new_tests": "2 文件 +874 行、5 测（widget 4 + unit 1），零既有测试修改",
+    "evidence_files": "v4/evidence/FIX-566/ 五件套（本 manifest、diff_or_evidence_only、limitations、test_results、review_receipt 占位）",
+    "ledger": "v3/06_agent_fleet/DYNAMIC_ISSUES.md V3-FIX-566 行 OPEN→FIXED@<交付 commit>"
+  },
+  "verification_commands": [
+    "flutter test test/unit/chat_f566_retry_reuse_path_test.dart test/widget/chat_f566_retry_force_scroll_jump_latest_test.dart --concurrency=1 → +5: All tests passed!",
+    "flutter test test/features/chat test/unit test/core/widgets test/widget/chat_scroll_test.dart test/widget/chat_review_banner_test.dart test/widget/chat_long_suggestion_reparent_test.dart test/widget/chat_area_budget_test.dart --concurrency=4 → +606 ~1: All tests passed!",
+    "flutter analyze --no-pub → No issues found!",
+    "bash scripts/run_all_rule_guards.sh --rule UI-TOKENS → PASS color=225/275 fontSize=632/727",
+    "mutation M-①（_retryLastMessage 去 force 行）→ 仅①正红 Expected:<0.0> Actual:<580.0>，余 3 测绿；还原 5/5 绿",
+    "mutation M-全量（stash 产品 diff）→ 4 widget 测全红；pop 还原 5/5 绿"
+  ]
+}
