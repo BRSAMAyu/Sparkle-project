@@ -16342,7 +16342,7 @@
   "eicUnderstandingIncompleteBoth": "证据不足：{censored} 条结果未到期、{missing} 条来源已不可定位，先不下充分结论",
   "eicUnderstandingQualitativeOnly": "以下只是基于现有记录的定性观察，不是充分结论",
   "eicNextStepRejectable": "这条建议可以忽略，忽略不会有任何影响",
-  "cogPatternTierRepeated": "多次观察到（{count} 次）",
+  "cogPatternTierRepeated": "多次观察到",
   "cogPatternTierTwice": "观察到 2 次",
   "cogPatternTierSingle": "单次观察",
   "cogPatternTierNone": "暂无观察记录",
@@ -16404,13 +16404,7 @@
       }
     }
   },
-  "@cogPatternTierRepeated": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@cogPatternTierRepeated": {},
   "@reportMasteryDefinition": {
     "placeholders": {
       "count": {

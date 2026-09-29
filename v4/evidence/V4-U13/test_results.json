@@ -1,0 +1,81 @@
+{
+  "card": "V4-U13",
+  "generated_at": "2026-09-29T09:45:00+08:00",
+  "framework": "flutter_test (Flutter 3.41.3) + pytest (backend 3.11.15)",
+  "backend": {
+    "new_tests_by_this_card": {
+      "total": 3,
+      "file": "backend/tests/services/test_evidence_insight_withdrawn_exclusion.py",
+      "cases": {
+        "test_no_withdrawal_reports_explicit_zero": "正例（零撤回基线）：无软删行 → withdrawn_refs_excluded 显式 0，不缺键；fact 分子分母零改动",
+        "test_soft_deleted_exposure_counted_as_withdrawn_not_silent": "撤回显式在册：软删 1 条 exposure → 计数=1 如实随行；剩余 2 条仍出卡（不连坐）；软删身份不进呈现 refs",
+        "test_all_withdrawn_no_card_no_claim": "全部来源撤回 → 无卡（无数据）+ meta.note 诚实空态；绝不复活已删内容"
+      }
+    },
+    "regression": {
+      "command": "pytest tests/services/test_evidence_insight_withdrawn_exclusion.py tests/services/test_evidence_insight_presentation.py tests/api/test_insights_evidence_cards_api.py",
+      "passed": 18,
+      "failed": 0,
+      "note": "D05 呈现契约 9 测 + evidence-cards API 6 测全绿——本卡 backend 增量零破坏"
+    },
+    "static": {
+      "ruff": "0 issues（exit 0）",
+      "black": "2 files unchanged（exit 0）",
+      "mypy_ratchet": "59 ≤ 77（与基线逐值持平，零新增）"
+    }
+  },
+  "mobile": {
+    "new_tests_by_this_card": {
+      "total": 37,
+      "files": {
+        "mobile/test/features/insights/data/evidence_insight_u13_feed_test.dart": {
+          "count": 12,
+          "covers": "feed 版本门 fail-closed（合法 ready / 缺失未知 unsupported / 零卡 no_data 互斥）；夸大门继承反例钉（gate_dropped 绝不进 cards）；理解档三档解析+词表外 unknown；样本/撤回计数解析+契约缺失缺省；信封零惩罚 freeze 常量核验+契约漂移不成立；回访七态+unknown fail-closed+proves_relevance 透传"
+        },
+        "mobile/test/features/insights/presentation/widgets/evidence_insight_u13_presentation_test.dart": {
+          "count": 12,
+          "covers": "验收②撤回行正反；理解档三态分呈现（no_data/incomplete 双口径/allowed 定性/词表外无行）；验收①样本量定义行正反；信封零惩罚行正反（fail-closed）；夸大门继承反例钉（2/3 关联卡整树无 % 无因果措辞族）；DS 令牌消费（GraphiteCardSurface）"
+        },
+        "mobile/test/features/cognitive/pattern_observation_tier_u13_test.dart": {
+          "count": 4,
+          "covers": "frequency 3/2/1/0 → 四档观察档正例；反例钉：confidence 值再高也不得上屏为百分比（整树无「置信」无 %）"
+        },
+        "mobile/test/features/report/learning_report_u13_definition_test.dart": {
+          "count": 6,
+          "covers": "模型：node_id/related_error_count 解析+空串 null 反例；雷达：定义行+图例真实读数+低刺激档等价（bodySmall 非像素字族）；报告面：关键指标定义行+样本数（证据落盘钩子常态零副作用）；明细 sheet：定义随行+关联错题计数+node_id 深链直达 /galaxy/node/<id>（跳原始记录）"
+        },
+        "mobile/test/features/insights/presentation/widgets/u13_evidence_capture_test.dart": {
+          "count": 2,
+          "covers": "证据采集：洞察卡三态行 + 认知观察档真实渲染断言（常态执行零副作用）；U13_EVIDENCE_DIR 设置时落盘 PNG+语义树（本卡证据 PNG/txt 由其与 report 定义测共同产出）"
+        },
+        "mobile/test/features/insights/presentation/widgets/evidence_insight_card_test.dart（改）": {
+          "count_new": 1,
+          "covers": "unsupported 契约门与 no-data 互斥钉（新）；原「空=隐藏」测改写为「空=no_data 显式行」（语义升级：无数据分呈现，不再静默隐藏）"
+        }
+      }
+    },
+    "affected_suite": {
+      "command": "flutter test test/features/insights test/features/cognitive/presentation test/features/cognitive/pattern_observation_tier_u13_test.dart test/features/report/learning_report_u13_definition_test.dart",
+      "passed": 52,
+      "failed": 0
+    },
+    "static": {
+      "analyze": "flutter analyze → No issues found（全仓，exit 0）"
+    }
+  },
+  "l10n": {
+    "keys_added": "zh/en 各 22（eicEmptyNoData、eicUniqWithdrawnExcluded、eicUniqSamplesDefinition、eicUniqSamplesDedup、eicUnderstandingNoData/Incomplete/IncompleteCensored/IncompleteMissing/IncompleteBoth/QualitativeOnly、eicNextStepRejectable、cogPatternTierRepeated/Twice/Single/None、reportMasteryDefinition、reportDimensionTapHint、reportMasteryNodeDefinition/WithErrors、reportOpenGalaxyNode、reportRadarDefinition、reportTrendDeltaPoints）",
+    "regen": "gen-l10n 再生 diff 纯追加（app_localizations.dart +132 / _en +95 / _zh +89，0 既有键改动）；中途唯一一次既有键值修订（cogPatternTierRepeated 去重复计数占位）发生在同卡实现窗口内并同步 l10n 与双语 arb",
+    "placeholders": "int 计数占位 + sign:String（reportTrendDeltaPoints）"
+  },
+  "failures_seen_and_resolved": [
+    "360dp 观察档首版溢出（RenderFlex overflow 34px）→ 档位文案去重复计数（真实修复，非测试放宽）",
+    "证据泵浦真异步窗口触平台通道（secure_storage/shared_preferences）→ noop ApiClient + 通道 mock（测试面隔离，实现面零改动）",
+    "首份报告庆祝对话框在 prefs mock 下真实弹出吸收拖拽 → getAll 预置里程碑已解锁（测试不触弹窗链）",
+    "默认 800 宽视口下拖拽起点落到 360 内容列外（hit-test miss）→ 视口锁 360x800 + 垂直 Scrollable 谓词 + 有界滚动循环"
+  ],
+  "final_full_suite": {
+    "command": "flutter test",
+    "result": "见 run_manifest.json commands（本卡收口轮全量绿；23 skip 为既有跳过项非本卡引入）"
+  }
+}

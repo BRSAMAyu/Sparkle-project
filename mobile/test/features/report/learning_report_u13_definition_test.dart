@@ -1,16 +1,85 @@
+import 'dart:io' as io;
+import 'dart:ui' show ImageByteFormat;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
-import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/presentation/screens/learning_report_screen.dart';
 import 'package:sparkle/features/report/presentation/widgets/mastery_radar_chart.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+
+/// 首份报告会触发成就庆祝对话框（真实产品行为；SharedPreferences mock 使
+/// 其真实完成并弹出）——先关闭再滚动，否则拖拽被对话框吸收。
+Future<void> _dismissCelebrationIfAny(WidgetTester tester) async {
+  // 首份报告庆祝对话框 barrierDismissible=true——点 barrier 关闭
+  // （对话框自带入场动画，'关闭' 文本无 hit-test 目标）。
+  final barrier = find.byType(ModalBarrier);
+  if (barrier.evaluate().isNotEmpty) {
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(barrier.last, warnIfMissed: false);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+}
+
+/// 报告面较长：有界循环滚动直到目标出现（360dp 小屏视口；默认 800 宽
+/// 视口下拖拽起点会落到内容列外导致 hit-test miss，故先锁视口再滚）。
+Future<void> dragTo(WidgetTester tester, Finder finder) async {
+  final vertical = find.byWidgetPredicate(
+    (widget) =>
+        widget is Scrollable && widget.axisDirection == AxisDirection.down,
+  ).first;
+  for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
+    await tester.drag(vertical, const Offset(0, -300));
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
+/// U13_EVIDENCE_DIR 设置时落盘报告面截图+文本树（v4/evidence/V4-U13）。
+Future<void> _writeEvidence(
+  WidgetTester tester,
+  GlobalKey repaintKey,
+  String basename,
+) async {
+  final dir = io.Platform.environment['U13_EVIDENCE_DIR'];
+  if (dir == null || dir.isEmpty) {
+    return;
+  }
+  final rootElement = tester.binding.rootElement;
+  await tester.runAsync(() async {
+    final outDir = io.Directory(dir);
+    if (!outDir.existsSync()) {
+      outDir.createSync(recursive: true);
+    }
+    final boundary = tester.renderObject<RenderRepaintBoundary>(
+      find.byKey(repaintKey),
+    );
+    final image = await boundary.toImage(pixelRatio: 2.0);
+    final bytes = await image.toByteData(format: ImageByteFormat.png);
+    io.File('${outDir.path}/$basename.png')
+        .writeAsBytesSync(bytes!.buffer.asUint8List());
+    final buffer = StringBuffer();
+    void visit(Element element) {
+      final widget = element.widget;
+      if (widget is Text) {
+        buffer.writeln(widget.data ?? widget.textSpan?.toPlainText());
+      }
+      element.visitChildren(visit);
+    }
+
+    visit(rootElement!);
+    io.File('${outDir.path}/$basename${'_semantics.txt'}')
+        .writeAsStringSync(buffer.toString());
+  });
+}
 
 /// V4-U13 · 学习报告面守卫：百分比/样本/时间窗有真实定义 + 跳原始记录 +
 /// 图表标签现代读数（低刺激等价）。
@@ -21,6 +90,26 @@ import 'package:sparkle/l10n/app_localizations.dart';
 /// - 雷达图定义行 + 标签 bodySmall（非像素字）；低刺激档同构渲染（等价）。
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() {
+    // runAsync 真异步窗口（证据落盘）内不触平台通道：secure_storage 返回空、
+    // SharedPreferences 返回空库（历史缓存/鉴权读取 fail-closed 降级）。
+    TestWidgetsFlutterBinding.ensureInitialized().defaultBinaryMessenger
+      ..setMockMethodCallHandler(
+        const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+        (call) async => null,
+      )
+      ..setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/shared_preferences'),
+        (call) async => switch (call.method) {
+          // 预置「首份报告」里程碑已解锁：庆祝对话框不弹（真实弹窗链
+          // 依赖平台通道动画，测试面只需要报告内容本身）。
+          'getAll' => <String, Object>{
+            'flutter.mirofish_milestone_v1:firstReport': true,
+          },
+          _ => true,
+        },
+      );
+  });
 
   LearningReport reportWithNodes({bool withNodeId = true}) => LearningReport(
         reportId: 'report-u13',
@@ -100,11 +189,11 @@ void main() {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
+          home: const Scaffold(
             body: SingleChildScrollView(
               child: MasteryRadarChart(
-                labels: const ['特征值', '特征向量', '行列式'],
-                values: const [0.82, 0.76, 0.58],
+                labels: ['特征值', '特征向量', '行列式'],
+                values: [0.82, 0.76, 0.58],
               ),
             ),
           ),
@@ -149,25 +238,37 @@ void main() {
       WidgetTester tester,
       LearningReport report, {
       required GoRouter router,
+      GlobalKey? repaintKey,
     }) async {
+      tester.view.devicePixelRatio = 2.0;
+      tester.view.physicalSize = const Size(360, 800) * 2.0;
+      tester.view.platformDispatcher.textScaleFactorTestValue = 1.0;
+      addTearDown(() {
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPhysicalSize();
+        tester.view.platformDispatcher.clearTextScaleFactorTestValue();
+      });
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            apiClientProvider.overrideWithValue(_NoopApiClient()),
-          ],
-          child: MaterialApp.router(
-            routerConfig: router,
-            theme: ThemeData.light().copyWith(
-              extensions: [SparkleThemeExtension.light()],
-            ),
-            locale: const Locale('zh'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
+        RepaintBoundary(
+          key: repaintKey,
+          child: ProviderScope(
+            overrides: [
+              apiClientProvider.overrideWithValue(_NoopApiClient()),
             ],
-            supportedLocales: AppLocalizations.supportedLocales,
+            child: MaterialApp.router(
+              routerConfig: router,
+              theme: ThemeData.light().copyWith(
+                extensions: [SparkleThemeExtension.light()],
+              ),
+              locale: const Locale('zh'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
           ),
         ),
       );
@@ -176,7 +277,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 350));
     }
 
-    testWidgets('关键指标定义行随行（掌握度定义 + 样本＝4 个能力节点）', (tester) async {
+    testWidgets('关键指标定义行随行（掌握度定义 + 样本＝4 个能力节点）+ 证据落盘钩子',
+        (tester) async {
+      final repaintKey = GlobalKey();
       final router = GoRouter(
         initialLocation: '/learning-report',
         routes: [
@@ -195,14 +298,26 @@ void main() {
           ),
         ],
       );
-      await pumpReport(tester, reportWithNodes(), router: router);
-
-      await tester.scrollUntilVisible(
-        find.textContaining('掌握度＝星图能力节点的证据融合值'),
-        120,
-        scrollable: find.byType(Scrollable).first,
+      await pumpReport(
+        tester,
+        reportWithNodes(),
+        router: router,
+        repaintKey: repaintKey,
       );
+
+      await _dismissCelebrationIfAny(tester);
+
+      // 360dp 小屏视口（内容列宽 360，默认 800 宽视口下拖拽起点会落到
+      // 内容列外导致 hit-test miss）；报告面较长，用有界循环滚到定义行。
+      await dragTo(tester, find.textContaining('掌握度＝星图能力节点的证据融合值'));
       expect(find.textContaining('样本＝4 个能力节点'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await _writeEvidence(
+        tester,
+        repaintKey,
+        'u13_report_definition_360x800',
+      );
     });
 
     testWidgets('节点明细 sheet：定义随行 + 直达该节点原始记录（跳原始记录）', (tester) async {
@@ -228,11 +343,7 @@ void main() {
       );
       await pumpReport(tester, reportWithNodes(), router: router);
 
-      await tester.scrollUntilVisible(
-        find.text('重点知识维度'),
-        160,
-        scrollable: find.byType(Scrollable).first,
-      );
+      await dragTo(tester, find.text('重点知识维度'));
       // 「特征值 82%」同时出现在雷达图例与维度 chips（同一真实读数两处
       // 渲染）；此处点维度 chip（ActionChip）进明细 sheet。
       await tester.tap(find.text('特征值 82%').first);

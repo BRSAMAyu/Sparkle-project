@@ -33911,9 +33911,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eicNextStepRejectable => '这条建议可以忽略，忽略不会有任何影响';
 
   @override
-  String cogPatternTierRepeated(int count) {
-    return '多次观察到（$count 次）';
-  }
+  String get cogPatternTierRepeated => '多次观察到';
 
   @override
   String get cogPatternTierTwice => '观察到 2 次';

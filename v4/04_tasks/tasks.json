@@ -2673,8 +2673,8 @@
     "V4-F02",
     "V4-D05"
    ],
-   "status": "PENDING",
-   "implementation_state": "NOT_STARTED",
+   "status": "DONE",
+   "implementation_state": "REVIEW_READY",
    "evidence_verdict": "NOT_RUN",
    "kind": "implementation",
    "required_locks": [

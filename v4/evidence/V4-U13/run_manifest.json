@@ -1,0 +1,106 @@
+{
+  "card": "V4-U13",
+  "title": "洞察报告：让分析可理解",
+  "generated_at": "2026-09-29T09:40:00+08:00",
+  "implementation_branch": "agent/v4/u13",
+  "base_sha": "799e145e",
+  "commits": [
+    "d3ec17ad backend：撤回排除显式在册（消费 D05 契约 exclude_withdrawn_refs）",
+    "2138a121 mobile：三读面原始数值与推断拆开 + l10n 双语 22 键纯增量",
+    "（本提交）证据五件套 + tasks.json 状态 + 采集测试入库"
+  ],
+  "worktree": "../wtU13",
+  "pushed": false,
+  "environment": {
+    "platform": "darwin arm64 (macOS 25.6.0)",
+    "python": "3.11.15 (homebrew, via Sparkle-project/backend/.venv/bin/python，worktree 无自有 venv)",
+    "pytest": "9.0.2 (asyncio_mode=auto)",
+    "flutter": "3.41.3 stable (revision 48c32af034)",
+    "dart": "3.11.1",
+    "ruff": "0.15.x",
+    "black": "26.3.1",
+    "mypy": "1.20.2",
+    "env_discipline": ".env 零触碰：backend 测试以进程级 SECRET_KEY 运行（未读写任何 env 文件）；mobile 测试无网络（noop ApiClient + 平台通道 mock）；worktree gitignored 生成物 mobile/lib/gen、backend/app/gen 自主检出同源复制（未入库、未手改）",
+    "generated_code_note": "gen-l10n 产物（mobile/lib/l10n/app_localizations*.dart）按仓库现行约定随分支入库；本卡再生 diff 纯追加（+132/+95/+89，零既有键改动；languageVersion 3.0 旧式排版与存量一致）"
+  },
+  "model_usage": {
+    "llm_calls": 0,
+    "llm_cost_usd": 0.0,
+    "actual_model_and_usage": "NOT_APPLICABLE（纯确定性 backend 面 + 纯呈现 mobile 面；测试 sqlite/假异步隔离，不触模型）"
+  },
+  "commands_and_exit_codes": [
+    {
+      "purpose": "backend 新测（撤回排除三面：显式零基线/撤回计数/全撤回无卡）",
+      "cmd": "cd backend && SECRET_KEY=<proc-env> .venv/bin/python -m pytest tests/services/test_evidence_insight_withdrawn_exclusion.py -q --tb=short",
+      "exit_code": 0,
+      "summary": "3 passed"
+    },
+    {
+      "purpose": "backend 受影响面回归（D05 呈现契约 9 + evidence-cards API 6 + 本卡 3）",
+      "cmd": "cd backend && SECRET_KEY=<proc-env> .venv/bin/python -m pytest tests/services/test_evidence_insight_withdrawn_exclusion.py tests/services/test_evidence_insight_presentation.py tests/api/test_insights_evidence_cards_api.py -q --tb=short",
+      "exit_code": 0,
+      "summary": "18 passed"
+    },
+    {
+      "purpose": "ruff（零新增）",
+      "cmd": "cd backend && .venv/bin/python -m ruff check app/services/evidence_insight_service.py tests/services/test_evidence_insight_withdrawn_exclusion.py",
+      "exit_code": 0,
+      "summary": "All checks passed"
+    },
+    {
+      "purpose": "black（零新增）",
+      "cmd": "cd backend && .venv/bin/python -m black --check app/services/evidence_insight_service.py tests/services/test_evidence_insight_withdrawn_exclusion.py",
+      "exit_code": 0,
+      "summary": "2 files would be left unchanged"
+    },
+    {
+      "purpose": "mypy 棘轮（基线 59≤77，零新增）",
+      "cmd": "cd backend && SECRET_KEY=<proc-env> .venv/bin/python -m mypy app --ignore-missing-imports --no-error-summary | grep 'error:' | wc -l",
+      "exit_code": 0,
+      "summary": "59（=基线；本卡两文件零新增）"
+    },
+    {
+      "purpose": "mobile 静态检查",
+      "cmd": "cd mobile && flutter analyze",
+      "exit_code": 0,
+      "summary": "No issues found!（全仓，含 gen 产物同源复制后）"
+    },
+    {
+      "purpose": "mobile 本卡新测/受影响面",
+      "cmd": "cd mobile && flutter test test/features/insights test/features/cognitive/pattern_observation_tier_u13_test.dart test/features/cognitive/presentation test/features/report/learning_report_u13_definition_test.dart",
+      "exit_code": 0,
+      "summary": "52 passed（feed 12 + 呈现 12 + 认知既有 + tier 4 + 报告定义 6 + capture 2 + 既有 card 6 + overview/forecast/cognitive 既有）"
+    },
+    {
+      "purpose": "mobile 全量回归",
+      "cmd": "cd mobile && flutter test",
+      "exit_code": 0,
+      "summary": "见 test_results.json final_full_suite（基线 3124+~23；末轮终验数字以该文件为准）"
+    },
+    {
+      "purpose": "证据采集（截图+语义树落盘）",
+      "cmd": "cd mobile && U13_EVIDENCE_DIR=<abs>/v4/evidence/V4-U13 flutter test test/features/insights/presentation/widgets/u13_evidence_capture_test.dart test/features/report/learning_report_u13_definition_test.dart",
+      "exit_code": 0,
+      "summary": "8 passed；三张 360x800 PNG + 语义树 txt 落盘（常规无 env 运行零副作用全绿）"
+    }
+  ],
+  "scope_and_denominator": {
+    "backend": "app/services/evidence_insight_service.py（唯一实现文件）+ tests/services/test_evidence_insight_withdrawn_exclusion.py（新）；api/proto/migrations 零改动",
+    "mobile_lib": "insights(5)/report(3)/cognitive(1)/l10n(5) 共 14 文件",
+    "mobile_test": "新 5 文件 + 改 1 文件",
+    "untouched_by_design": "backend/app/api/（无 OpenAPI/BA-ROUTES 面）、proto/、迁移、gateway/、RF-06 三冲突面（dashboard_screen/compact_status_bar/task_execution_screen 零 diff）、insight_presentation.py（D05 冻结契约零改动）"
+  },
+  "artifacts_sha256": {
+    "v4/evidence/V4-U13/u13_evidence_card_360x800.png": "a830afe1009d01bd1a44f1fcec573c51bc73aaf6424342869fca772750d8a60c",
+    "v4/evidence/V4-U13/u13_evidence_card_360x800_semantics.txt": "cccb669ee79d1c8171e4c7bc5fb6c5b4edb7b45a9d27e0cb4b6f009009d3e448",
+    "v4/evidence/V4-U13/u13_report_definition_360x800.png": "597e3d0477006e6080dbeac09cc07c162a317ebd1b7f3ec10b928cb5cc48017b",
+    "v4/evidence/V4-U13/u13_report_definition_360x800_semantics.txt": "819c47697378ae8066a32a60fab915a8539582ea215df0e7eaedf5f4f454c92b",
+    "v4/evidence/V4-U13/u13_pattern_tier_360x800.png": "665d801c3f221bee5c06fddfbf6233e130d503a2d8e215742071054f01c0552f",
+    "v4/evidence/V4-U13/u13_pattern_tier_360x800_semantics.txt": "7be0e60e97a901c0c7d2faa7244a07cf9522be104e2bfab6ea39e69d8c442410"
+  },
+  "screenshots_semantics": {
+    "u13_evidence_card_360x800.png": "D-07 证据洞察卡（有帮助的应对）360x800 顶层渲染：事实行（真实计数）→ 解读（定性档）→ 不确定性（相关非因果/小样本/未到期/撤回排除行/样本量定义行/理解档行）→ 证据（可点深链）→ 行动含义 + 可忽略零惩罚行；语义树 txt 含全部用户可见文案（Ahem 方块字形为测试环境无 CJK 字体先例，语义以 txt 为准）",
+    "u13_report_definition_360x800.png": "学习报告面滚动至图表与关键指标区：雷达图（矢量线 + bodySmall 现代标签）+ 图内定义行 + 关键指标卡 + 掌握度定义行（样本＝4 个能力节点）",
+    "u13_pattern_tier_360x800.png": "认知定式卡：观察档徽章（多次观察到/出现 3 次）替代原「置信 73%」假精确徽章，360dp 无溢出"
+  }
+}

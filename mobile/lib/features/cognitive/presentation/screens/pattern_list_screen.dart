@@ -446,11 +446,12 @@ class _PatternCard extends StatelessWidget {
   }
 
   /// V4-U13 观察档（真实计数派生的定性词，M-10 同律）：样本 = frequency
-  /// （真实出现次数）；不做任何置信百分比换算。
+  /// （真实出现次数，由相邻「出现 N 次」徽章如实承载）；不做任何置信
+  /// 百分比换算。
   String _observationTierLabel(BuildContext context, int frequency) {
     final l10n = context.l10n;
     if (frequency >= 3) {
-      return l10n.cogPatternTierRepeated(frequency);
+      return l10n.cogPatternTierRepeated;
     }
     if (frequency == 2) {
       return l10n.cogPatternTierTwice;

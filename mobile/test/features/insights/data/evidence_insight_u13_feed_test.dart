@@ -120,8 +120,10 @@ void main() {
       );
       expect(feed.gateDroppedCount, 1);
       // 后端已扣下的卡不在 cards 里；模型面不提供任何复活路径。
-      expect(feed.cards.map((c) => c.id),
-          everyElement(isNot('fabricated:causal_percentage')));
+      expect(
+        feed.cards.map((c) => c.id),
+        everyElement(isNot('fabricated:causal_percentage')),
+      );
     });
   });
 

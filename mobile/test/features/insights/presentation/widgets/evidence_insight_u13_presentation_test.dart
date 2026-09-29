@@ -93,7 +93,7 @@ void main() {
     });
 
     testWidgets('撤回为 0 → 无撤回行（不编造撤回）', (tester) async {
-      await pumpCard(tester, helpedCard(withdrawn: 0));
+      await pumpCard(tester, helpedCard());
       expect(find.textContaining('已排除'), findsNothing);
     });
   });
@@ -110,7 +110,7 @@ void main() {
     });
 
     testWidgets('allowed 档 → 「定性观察」措辞，绝不出「充分理解」宣称', (tester) async {
-      await pumpCard(tester, helpedCard(band: 'qualitative_only'));
+      await pumpCard(tester, helpedCard());
       expect(find.textContaining('定性观察'), findsOneWidget);
       expect(find.textContaining('充分理解'), findsNothing);
     });
@@ -136,7 +136,7 @@ void main() {
     });
 
     testWidgets('无方向观察 → 无样本定义行（不虚构样本）', (tester) async {
-      await pumpCard(tester, helpedCard(samples: 0, raw: 0, dropped: 0));
+      await pumpCard(tester, helpedCard());
       expect(find.textContaining('样本＝去重后方向观察'), findsNothing);
     });
   });
@@ -224,11 +224,17 @@ void main() {
           .join('\n');
       // 因果/成效措辞 × 百分比 双通道都不出现。
       expect(renderedTexts.contains('67%'), isFalse);
-      expect(renderedTexts.contains('%'), isFalse,
-          reason: 'D-07 卡契约禁百分比；呈现面不得引入');
+      expect(
+        renderedTexts.contains('%'),
+        isFalse,
+        reason: 'D-07 卡契约禁百分比；呈现面不得引入',
+      );
       for (final banned in const ['提升', '有效', '因此', '导致']) {
-        expect(renderedTexts.contains(banned), isFalse,
-            reason: '因果措辞「$banned」不得出现在计数卡');
+        expect(
+          renderedTexts.contains(banned),
+          isFalse,
+          reason: '因果措辞「$banned」不得出现在计数卡',
+        );
       }
     });
   });

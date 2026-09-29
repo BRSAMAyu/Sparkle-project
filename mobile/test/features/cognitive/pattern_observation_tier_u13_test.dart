@@ -17,7 +17,8 @@ import 'package:sparkle/l10n/app_localizations_zh.dart';
 ///
 /// 「AI 置信 N%」没有真实定义（无法核对的百分比），从卡面移除；观察档从
 /// 真实计数（frequency=出现次数）派生——原始数值与推断拆开：
-/// - 正例：frequency 1/2/3+ 分别渲染 单次观察 / 观察到 2 次 / 多次观察到；
+/// - 正例：frequency 1/2/3+ 分别渲染 单次观察 / 观察到 2 次 / 多次观察到
+///   （计数由相邻「出现 N 次」徽章如实承载，档位不重复计数）；
 /// - 反例钉：整树不出现「置信」字样与无定义百分比徽章。
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -42,8 +43,8 @@ void main() {
         confidenceScore: confidence,
         frequency: frequency,
         isArchived: false,
-        createdAt: DateTime(2026, 9, 1),
-        updatedAt: DateTime(2026, 9, 20),
+        createdAt: DateTime(2026, 3, 15),
+        updatedAt: DateTime(2026, 3, 20),
       );
 
   Future<void> pumpPatterns(
@@ -91,7 +92,7 @@ void main() {
 
   testWidgets('frequency=3 → 「多次观察到（3 次）」，无置信百分比', (tester) async {
     await pumpPatterns(tester, [pattern('计划乐观偏差', 3)]);
-    expect(find.text('多次观察到（3 次）'), findsOneWidget);
+    expect(find.text('多次观察到'), findsOneWidget);
     expect(find.textContaining('置信'), findsNothing);
   });
 

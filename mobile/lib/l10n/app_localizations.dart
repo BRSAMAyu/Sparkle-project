@@ -61667,8 +61667,8 @@ abstract class AppLocalizations {
   /// No description provided for @cogPatternTierRepeated.
   ///
   /// In zh, this message translates to:
-  /// **'多次观察到（{count} 次）'**
-  String cogPatternTierRepeated(int count);
+  /// **'多次观察到'**
+  String get cogPatternTierRepeated;
 
   /// No description provided for @cogPatternTierTwice.
   ///

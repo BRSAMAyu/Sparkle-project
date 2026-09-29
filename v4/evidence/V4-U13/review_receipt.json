@@ -1,0 +1,40 @@
+{
+  "card": "V4-U13",
+  "risk": "normal",
+  "independent_reviewers_required": 1,
+  "implementation_state": "REVIEW_READY",
+  "evidence_verdict": "NOT_RUN",
+  "reviewer_instructions": "以卡面三条验收为准（必须可失败）：①所有百分比/样本/时间窗有真实定义 ②无数据/不足/撤回分别呈现 ③图表标签不像素糊化、低刺激色觉模式等价。逐条独立复跑（可失败性亲验：反转任一断言应红），命令与 exit code 见 run_manifest.json，红线清单见 diff_or_evidence_only.md 红线自查节，限制与口径见 limitations.md。",
+  "status": "PENDING",
+  "pre_registered_challenges": [
+    {
+      "id": "CH-1",
+      "challenge": "withdrawn_refs_excluded 与 D03 撤回引擎的关系边界：本计数只覆盖软删来源（lifecycle deleted_at / 软删 Task），不覆盖「D03 登记撤回但行未软删」的场景（该引擎 insight 面执行体按债务台账归后续卡）。请审查者验证：本卡没有任何「复活已删内容」路径（backend 正反三测 + refs 恒洁净钉），并裁决「撤回呈现」在本卡的口径（呈现面诚实计数）是否满足验收②「撤回分别呈现」，还是要求升级为 D03 接线（若然应转 D03 线卡而非本卡扩权）。"
+    },
+    {
+      "id": "CH-2",
+      "challenge": "版本门 unsupported = 静默隐藏（与 no_data 显式行互斥，测试钉死两态）：旧后端下用户看不到区块也无解释。请审查者裁决该 fail-closed 降级是否符合「无数据/不足/撤回分别呈现」的语义边界——unsupported 是第四态（契约态），本卡未给它用户文案（仪表盘噪音 vs 状态可辨识的权衡）；若裁决需显式文案，增量面 = 1 l10n 键 + 1 分支。"
+    },
+    {
+      "id": "CH-3",
+      "challenge": "「样本量真实定义」的覆盖率边界：D-07 卡的样本定义行只在 outcome_samples_raw>0 时渲染（helped 卡）；friction 卡样本=exposures（事实行已带「最近 N 天记录到 M 次」= 窗口+样本定义）、goal 卡样本=ledger total（「已完成 X / 共 Y 项」即定义）。请审查者按卡面验收①逐卡核对三类卡的百分比/样本/时间窗是否全部有真实定义（或本就不呈现百分比），并抽验移动端不会从任何路径引入无定义百分比（整树无 % 断言只钉了 helped 卡形——摩擦卡 fact 行模板是否恒无 %，请独立扫模板）。"
+    },
+    {
+      "id": "CH-4",
+      "challenge": "报告面掌握度定义文案的「真实定义」资格：'掌握度＝星图能力节点的证据融合值（0–100）' 是对 UserNodeStatus.mastery_score（G-01 证据融合）的忠实转述，但「0–100」与「撤回已剔除」未在文案中区分数据来源层级。请审查者验证：(a) 该定义与 G-01/D03 语义无出入；(b) mastery_score 契约上确为 0-100（浮点截断显示 round() 是否引入 ±0.5 偏差呈现——masteryPercent 用 round，与后端未取整值的偏差是否可接受）。"
+    },
+    {
+      "id": "CH-5",
+      "challenge": "低刺激等价的验证强度：本卡以「同构渲染 + 图标/文字双编码 + 语义令牌槽颜色」widget 测试钉等价，未做真实色觉缺陷滤镜矩阵（仓库无该基建）。请审查者裁决该验证口径对验收③「低刺激色觉模式等价」是否充分，或要求登记基建缺口并指定后续卡；同时抽验雷达图例 chip（文字承载读数）与掌握度行（图标+文字承载档位）确无颜色唯一载体。"
+    },
+    {
+      "id": "CH-6",
+      "challenge": "认知卡「置信 N%」移除是减信息：观察档（frequency 派生）替代了原 AI confidence 徽章。请审查者验证：(a) M-10/SCREEN_FAMILIES（不给 AI 推断盖认证章）确实支持移除而非保留加定义；(b) confidence_score 仍在模型与后端保留（本卡只清呈现面，无数据丢失）；(c) 360dp 溢出修复后的四档文案在 200% 字体下不再溢出（本卡只钉了 100% 缩放——200% 字体抽验属既有 Q03-VISUAL 探针域，其 text_widget_count 因本卡 l10n 增量 ±2 已登记 limitations）。"
+    },
+    {
+      "id": "CH-7",
+      "challenge": "l10n 键与 gen-l10n 产物：22 键双语纯增量 + gen 再生纯追加（languageVersion 3.0 旧式排版）。请审查者核对 arb diff 无既有键漂移、en/zh 语义同步（尤其 eicUnderstandingIncomplete* 四变体的计数占位一一对应），以及证据采集对平台通道的 mock 只存在于测试文件（实现面零改动）。"
+    }
+  ],
+  "integration_reverify": "合并后需在集成 SHA 复跑：flutter test（全量）+ flutter analyze（零 issue）+ backend pytest tests/services/test_evidence_insight_withdrawn_exclusion.py tests/services/test_evidence_insight_presentation.py tests/api/test_insights_evidence_cards_api.py + mypy 棘轮（59≤77）+ ruff/black；v3-output/WT401-Q03-VISUAL 探针如被全量套件重写（±2 计数）归 Q03-VISUAL 卡主裁决"
+}

@@ -16530,7 +16530,7 @@
   "eicUnderstandingIncompleteBoth": "Not enough evidence: {censored} outcomes not yet due and {missing} sources no longer locatable; no firm conclusion for now",
   "eicUnderstandingQualitativeOnly": "Below is a qualitative reading of current records, not a firm conclusion",
   "eicNextStepRejectable": "You can ignore this suggestion; ignoring has no effect whatsoever",
-  "cogPatternTierRepeated": "Observed multiple times ({count})",
+  "cogPatternTierRepeated": "Observed multiple times",
   "cogPatternTierTwice": "Observed twice",
   "cogPatternTierSingle": "Single observation",
   "cogPatternTierNone": "No observations yet",
@@ -16592,13 +16592,7 @@
       }
     }
   },
-  "@cogPatternTierRepeated": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@cogPatternTierRepeated": {},
   "@reportMasteryDefinition": {
     "placeholders": {
       "count": {

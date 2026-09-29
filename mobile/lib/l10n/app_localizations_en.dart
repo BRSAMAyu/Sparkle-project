@@ -35433,9 +35433,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'You can ignore this suggestion; ignoring has no effect whatsoever';
 
   @override
-  String cogPatternTierRepeated(int count) {
-    return 'Observed multiple times ($count)';
-  }
+  String get cogPatternTierRepeated => 'Observed multiple times';
 
   @override
   String get cogPatternTierTwice => 'Observed twice';
