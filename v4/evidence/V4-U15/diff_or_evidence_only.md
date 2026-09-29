@@ -180,3 +180,8 @@ galaxy/home/task 多为已收口他卡面，逐面会签后推进）；每清一
 seed_library 8 + tools 6 + learning 31 + full_route 25 + rewards 边界 6；
 core/design 261/261；UI-TOKENS PASS；L10N-REGEN-PARITY OK；
 i18n-coverage PASS；repeat 复跑 `grep -rln "\.repeat(" mobile/lib` = 49。
+
+
+## 一审勘误（receipt 762b2792）
+- E-1：§2「U07 已摘」的状态账归属实为 **V3 wt356 卡 U-07（8ac6bad5）**，非 V4-U07（其实现未触这些文件）；实质断言不受影响。
+- E-2：门控关键词文档写 kebab「reduce-motion」，复现谓词为驼峰 `reduceMotion`；数字真实，仅转录注记。
