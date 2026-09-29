@@ -21,6 +21,12 @@
 #     make celery-up          # worker + glm_batch + beat (FLOWER_ENABLE=1 adds flower)
 #     make celery-status / make celery-stop / make celery-logs-worker
 #     docker compose -f docker-compose.celery.yml up -d   # compose path
+#
+# FIX-578 (2026-09-29) caveat: the replacement paths above are NOW USABLE —
+# their env URLs were corrected from the dangling `sparkle_redis:6379` /
+# `sparkle_tempo:4317` to the compose service names `redis:6379` / `tempo:4317`
+# (db stays `sparkle_db:5432`, itself a service name). This script's own body
+# below remains unrepaired dead debt per the FIX-577 adjudication.
 
 # Quick start script for Celery services
 

@@ -73,6 +73,8 @@ open http://localhost:5555
 
 `scripts/devtools/start_celery.sh` 自 FIX-563（项目名/容器名分化）后不可用：`--network sparkle-flutter_default` 为已消亡项目名，全程 fail-loud；其能力面是方式 A `make celery-up` 的严格子集（少 glm_batch worker、硬编码 change-me 凭据），故标弃用不再修复。请使用方式 A。
 
+> FIX-578（2026-09-29）注：方式 A 与 compose celery 路径的 env URL 已由本卡修正为可解析服务名（`sparkle_redis:6379`→`redis:6379`、`sparkle_tempo:4317`→`tempo:4317`；`sparkle_db:5432` 本就是服务键），替代路径自此可用；本脚本体内死债维持 FIX-577 裁决不修。
+
 ```bash
 # 弃用写法（仅史录，勿用）：
 # bash scripts/devtools/start_celery.sh
