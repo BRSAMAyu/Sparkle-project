@@ -24,6 +24,7 @@ import 'package:sparkle/features/home/presentation/providers/spine_status_band_p
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
 import 'package:sparkle/features/journey/data/repositories/first_action_repository.dart';
+import 'package:sparkle/features/memory/presentation/providers/context_receipt_provider.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -60,6 +61,11 @@ final sessionBoundProvidersProvider = Provider<List<ProviderOrFamily>>(
     understandingSnapshotProvider,
     // N-4 / V3-FIX-540：J-04 first-action 投影持有用户 goal（用户态数据面）
     firstActionStateProvider,
+    // V4-U06：回执读面（I06 latest）持有上一身份的 selection receipt——
+    // 身份切换不清算会让 guest 回执泄漏进真实账号的首程面（更糟：W2
+    // bootstrap 会把 guest 的 receipt ref 携进新账号的 I01 调用）。与
+    // firstActionStateProvider 同库同责（接续环的两大读面一起翻转）。
+    contextReceiptProvider,
     // N-4：驾驶舱增长/预测/考试冲刺/脊柱状态带（用户态数据面）
     homeGrowthDashboardSnapshotProvider,
     homeDailyContextLineProvider,
