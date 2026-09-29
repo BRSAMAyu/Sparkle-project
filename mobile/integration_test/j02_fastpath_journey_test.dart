@@ -707,19 +707,27 @@ Future<void> legRRegistered({
     // SUCCEEDED but landed elsewhere" — the profile-tab landing (V3-FIX-541
     // family; px1_rerun2 measured it live: registered user session on 我的,
     // TEXTDUMP all-profile) left the register form and must NOT be recorded
-    // as a bounce. Walk the real-user 驾驶舱 tab (same recovery as Leg G),
-    // record the divergence as a finding, and continue to the soft wall.
+    // as a bounce. V4-U06 裁决后语义升级：纯 UI 注册无待发请求 → 落点必须
+    // = /home（今天）；落「我的」/其他 = 落点规则违规（不再只"recorded as
+    // measured"——移动端两腿已修，guest_upgrade 1617feb1；此断言捕获回归）。
+    // 恢复路径保留：walk the real-user 驾驶舱 tab and continue to the soft
+    // wall, but the divergence now counts as a failure finding.
     final offRegister = find.text('确认密码').evaluate().isEmpty &&
         find.byType(LoginScreen).evaluate().isEmpty &&
         find.byType(RegisterScreen).evaluate().isEmpty;
     if (offRegister) {
       passData['post_register_landing'] = 'elsewhere';
       passData['pure_ui_register'] = true;
+      passData['post_register_rule_ok'] = false;
       // ignore: avoid_print
       print(
           'J02_FINDING pass=$passId UI register submitted and session is up, '
-          'but landing is NOT the dashboard (V3-FIX-541 family divergence, '
-          'recorded as measured) — walking the 驾驶舱 tab like a real user');
+          'but landing is NOT the dashboard (V4-U06 landing-rule violation: '
+          'no pending request → must land /home today) — walking the 驾驶舱 '
+          'tab like a real user');
+      failures.add(
+          'pass $passId: post-register landing violates V4-U06 rule '
+          '(no pending request → expected /home dashboard)');
       final homeTab = textAny(['驾驶舱', 'Home']);
       if (homeTab != null) {
         clicks[0]++;
@@ -736,9 +744,11 @@ Future<void> legRRegistered({
         'R',
         'r3_register_submit',
         registeredToDashboard,
-        'pure-UI register ok; landing=profile-tab (541 family); '
-            'dashboard_walked=$registeredToDashboard',
+        'pure-UI register ok; landing=elsewhere (V4-U06 rule VIOLATION, '
+            'was 541 family); dashboard_walked=$registeredToDashboard',
       );
+    } else {
+      passData['post_register_rule_ok'] = true;
     }
   }
   if (!registeredToDashboard) {
@@ -927,11 +937,12 @@ Future<void> legRRegistered({
   );
 
   // ---- R7: modeling AppBar skip (userSkip「跳过」) → onboardingCompleted
-  // =true. CODE FACT (modeling_chat_screen.dart _finish): when the fast path
-  // delivered a post-onboarding message the landing is /chat, else /home.
-  // The runbook table expects /home; the driver records the REAL landing and,
-  // if it is not the dashboard, walks the shell home tab (a real user path)
-  // to reach the FirstActionCard surface. ----
+  // =true. V4-U06 裁决（FIX-536/541 合并裁量，卡面 objective）：
+  // 「携带用户待发请求到目标对话，否则到该目标今天」——Leg R 走快车道
+  // （goal-only payload → post_onboarding_message 已交付），待发请求存在
+  // → 期望落点 = /chat（请求随行到目标对话）；无待发请求的建模完成
+  // → /home（今天）。落点不符 = 规则违规，计入 failures——runbook §3 R7
+  // 已按此裁决回填，不再是"如实记录与表格不符"。----
   final skipBtn = sparkleButtonFinder('跳过');
   if (skipBtn.evaluate().isEmpty) {
     failures.add('pass $passId: modeling skip button not found');
@@ -951,14 +962,27 @@ Future<void> legRRegistered({
   passData['post_skip_route'] =
       landedChat ? 'chat' : (landedHome ? 'home' : 'unknown');
   passData['post_skip_landed'] = landedSomewhere;
+  // V4-U06 裁决断言收紧：快车道（有待发请求）→ 必须落 chat。
+  final expectedPostSkipRoute =
+      passData['t_fastpath_submitted_ms'] != null ? 'chat' : 'home';
+  passData['post_skip_expected_route'] = expectedPostSkipRoute;
+  final postSkipRuleOk = passData['post_skip_route'] == expectedPostSkipRoute;
+  passData['post_skip_rule_ok'] = postSkipRuleOk;
   markFn(passId, 'R', 'r7_modeling_skip', passT0);
   recordStep(
     'R',
     'r7_modeling_skip',
-    landedSomewhere,
-    'landing=${passData['post_skip_route']} (code: chat when post-onboarding '
-        'message present; runbook table said home — recorded as measured)',
+    landedSomewhere && postSkipRuleOk,
+    'landing=${passData['post_skip_route']} expected=$expectedPostSkipRoute '
+        '(V4-U06 rule: pending request→target conversation, else today) '
+        'rule_ok=$postSkipRuleOk',
   );
+  if (!postSkipRuleOk) {
+    failures.add(
+      'pass $passId: post-skip landing ${passData['post_skip_route']} '
+      'violates V4-U06 landing rule (expected $expectedPostSkipRoute)',
+    );
+  }
   await safeSettle(tester);
   await shot('$passId/07b-post-skip-${passData['post_skip_route']}.png');
 
