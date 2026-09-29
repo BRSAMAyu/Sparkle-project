@@ -141,7 +141,7 @@ class _FileMessageBubbleWithThumbnailState
                 child: Text(
                   context.l10n.chatFileLearningMaterial,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: DS.fontSizeXs,
                     fontWeight: DS.fontWeightSemiBold,
                     color: accentColor,
                   ),

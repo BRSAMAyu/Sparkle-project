@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -253,7 +254,8 @@ class _PulsingIconState extends State<_PulsingIcon>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    unawaited(_controller.repeat(reverse: true));
+    // G02：起表权收敛至 build（DL-SPEC persistentRepeatLoop 棘轮：每文件
+    // 唯一 .repeat 调用点）；build 首帧即达（同帧起表，无视觉差）。
 
     _scaleAnimation = Tween<double>(
       begin: 0.9,
@@ -273,14 +275,32 @@ class _PulsingIconState extends State<_PulsingIcon>
   }
 
   @override
-  Widget build(BuildContext context) => ScaleTransition(
-        scale: _scaleAnimation,
-        child: Icon(
-          widget.icon,
-          color: widget.color,
-          size: 16,
-        ),
+  Widget build(BuildContext context) {
+    // G02 reduce-motion 等价（S01 判例）：脉动缺席（停表回中间值=scale 1.0
+    // 静态终态）；恢复正常后重挂。
+    if (context.reduceMotion) {
+      if (_controller.isAnimating) {
+        _controller.stop();
+      }
+      _controller.value = 0.5;
+      return Icon(
+        widget.icon,
+        color: widget.color,
+        size: 16,
       );
+    }
+    if (!_controller.isAnimating) {
+      unawaited(_controller.repeat(reverse: true));
+    }
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: Icon(
+        widget.icon,
+        color: widget.color,
+        size: 16,
+      ),
+    );
+  }
 }
 
 /// Agent状态指示器 - 带动画的完整状态显示

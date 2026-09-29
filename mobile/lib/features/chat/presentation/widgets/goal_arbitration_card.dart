@@ -345,7 +345,7 @@ class _ConflictPill extends StatelessWidget {
           label,
           style: DS.labelSmall.copyWith(
             color: DS.warning,
-            fontSize: 10,
+            fontSize: DS.fontSizeXs,
             fontWeight: FontWeight.w500,
           ),
         ),

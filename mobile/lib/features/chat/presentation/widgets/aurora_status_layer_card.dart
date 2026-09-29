@@ -94,7 +94,7 @@ class _AuroraStatusLayerCardState extends State<AuroraStatusLayerCard> {
                           widget.confidenceLabel!,
                           style: TextStyle(
                             color: widget.accentColor,
-                            fontSize: 11,
+                            fontSize: DS.fontSizeXs,
                             fontWeight: DS.fontWeightMedium,
                           ),
                         ),
@@ -194,7 +194,7 @@ class _ExpandedCardBody extends StatelessWidget {
                               item,
                               style: TextStyle(
                                 color: DS.textSecondary,
-                                fontSize: 11,
+                                fontSize: DS.fontSizeXs,
                                 height: 1.35,
                               ),
                             ),

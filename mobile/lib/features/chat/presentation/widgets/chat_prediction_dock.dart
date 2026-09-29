@@ -503,7 +503,7 @@ class _DockActionChipState extends State<_DockActionChip> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: DS.labelSmall.copyWith(
-                      fontSize: 11,
+                      fontSize: DS.fontSizeXs,
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightMedium,
                     ),

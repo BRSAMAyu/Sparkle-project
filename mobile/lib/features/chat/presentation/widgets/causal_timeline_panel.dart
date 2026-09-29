@@ -587,7 +587,7 @@ class _EvidenceStep extends StatelessWidget {
                   Text(
                     detail,
                     style: DS.labelSmall
-                        .copyWith(color: DS.textTertiary, fontSize: 10),
+                        .copyWith(color: DS.textTertiary, fontSize: DS.fontSizeXs),
                   ),
               ],
             ),

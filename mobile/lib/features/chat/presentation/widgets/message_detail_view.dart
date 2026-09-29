@@ -279,7 +279,7 @@ class _MessageDetailViewState extends State<MessageDetailView> {
               '${widget.message.content.length} ${context.l10n.chatCharacters}',
               style: TextStyle(
                 color: DS.textTertiary,
-                fontSize: 11,
+                fontSize: DS.fontSizeXs,
               ),
             ),
           ),

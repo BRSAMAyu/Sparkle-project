@@ -291,14 +291,14 @@ class SourceBadge extends StatelessWidget {
                         Icon(
                           Icons.info_outline_rounded,
                           size: 12,
-                          color: DS.textSecondary.withValues(alpha: 0.8),
+                          color: DS.textSecondary,
                         ),
                         const SizedBox(width: DS.spacing4),
                         Text(
                           l10n.auroraSourceBadge(source),
                           style: TextStyle(
                             color: DS.textSecondary,
-                            fontSize: 11,
+                            fontSize: DS.fontSizeXs,
                             height: 1.2,
                           ),
                         ),
@@ -620,7 +620,7 @@ class _CorrectionChip extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: color,
-                              fontSize: 11,
+                              fontSize: DS.fontSizeXs,
                               fontWeight: isAccent
                                   ? DS.fontWeightMedium
                                   : DS.fontWeightRegular,
@@ -632,7 +632,7 @@ class _CorrectionChip extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: color.withValues(alpha: 0.72),
-                              fontSize: 10,
+                              fontSize: DS.fontSizeXs,
                               height: 1.1,
                             ),
                           ),
@@ -690,7 +690,7 @@ class _CorrectionAcknowledgement extends StatelessWidget {
                   l10n.auroraCorrectionReceivedTitle,
                   style: TextStyle(
                     color: DS.textPrimary,
-                    fontSize: 11,
+                    fontSize: DS.fontSizeXs,
                     fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
@@ -698,7 +698,7 @@ class _CorrectionAcknowledgement extends StatelessWidget {
                   l10n.auroraCorrectionReceivedSubtitle,
                   style: TextStyle(
                     color: DS.textSecondary,
-                    fontSize: 10,
+                    fontSize: DS.fontSizeXs,
                     height: 1.1,
                   ),
                 ),

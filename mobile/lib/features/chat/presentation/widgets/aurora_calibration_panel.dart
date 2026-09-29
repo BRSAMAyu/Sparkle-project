@@ -342,7 +342,7 @@ class _CalibrationStep extends StatelessWidget {
                 label,
                 style: TextStyle(
                   color: contentColor.withValues(alpha: 0.7),
-                  fontSize: 11,
+                  fontSize: DS.fontSizeXs,
                   fontWeight: DS.fontWeightSemibold,
                 ),
               ),

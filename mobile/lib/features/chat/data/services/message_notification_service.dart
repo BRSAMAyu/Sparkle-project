@@ -249,7 +249,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                           ? context.l10n.chatNotificationMention
                                           : context.l10n.chatNotificationGroupMessage,
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: DS.fontSizeXs,
                                         color: DS.brandPrimaryConst,
                                       ),
                                     ),
@@ -267,7 +267,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                     .bodyMedium
                                     ?.color
                                     ?.withValues(alpha: 0.7),
-                                fontSize: 13,
+                                fontSize: DS.fontSizeXs,
                               ),
                             ),
                           ],
@@ -319,7 +319,7 @@ class MessageBadge extends ConsumerWidget {
                 unreadCount > 99 ? '99+' : '$unreadCount',
                 style: TextStyle(
                   color: DS.brandPrimaryConst,
-                  fontSize: 10,
+                  fontSize: DS.fontSizeXs,
                   fontWeight: DS.fontWeightBold,
                 ),
                 textAlign: TextAlign.center,

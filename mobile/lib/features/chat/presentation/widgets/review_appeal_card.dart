@@ -13,6 +13,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -141,8 +142,33 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
       duration: const Duration(milliseconds: 1500),
     );
 
+    _syncPulse(started: false);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // G02 reduce-motion 等价（S01 判例）：disableAnimations/accessibleNavigation
+    // 下状态徽章呼吸脉动缺席（停表静态）；待审语义由状态色/文案承载，
+    // 恢复正常后重挂。起/停收敛单点（DL-SPEC persistentRepeatLoop 棘轮：
+    // 每文件唯一 .repeat 调用点）。
+    _syncPulse(started: true);
+  }
+
+  /// 脉动起/停唯一收敛点：reduce-motion 停表静态；待审（isPending）且未在
+  /// 动画中则起表。[started]=false 限 initState（MediaQuery 依赖未就绪，
+  /// 仅做待审起表，不停表）。
+  void _syncPulse({required bool started}) {
+    if (started && context.reduceMotion) {
+      if (_pulseController.isAnimating) {
+        _pulseController.stop();
+      }
+      return;
+    }
     if (widget.appealData?.isPending ?? false) {
-      unawaited(_pulseController.repeat(reverse: true));
+      if (!_pulseController.isAnimating) {
+        unawaited(_pulseController.repeat(reverse: true));
+      }
     }
   }
 
@@ -313,7 +339,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                                   .bodySmall
                                   ?.copyWith(
                                     color: DS.neutral500,
-                                    fontSize: 11,
+                                    fontSize: DS.fontSizeXs,
                                   ),
                             ),
                           ],
@@ -443,7 +469,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                 subtitle,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: DS.neutral500,
-                      fontSize: 10,
+                      fontSize: DS.fontSizeXs,
                     ),
               ),
               if (!isLast) const SizedBox(height: DS.spacing4),
@@ -678,7 +704,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                                                    SparkleButton(
+                          SparkleButton(
                             label: context.l10n.contentReviewCancel,
                             size: ButtonSize.small,
                             variant: ButtonVariant.text,
@@ -686,13 +712,14 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                             minHeight: 32,
                           ),
                           const SizedBox(width: DS.spacing8),
-                                                    SparkleButton(
+                          SparkleButton(
                             label: widget.isSubmitting
                                 ? context.l10n.commonSubmitting
                                 : context.l10n.contentReviewAppealSubmit,
                             size: ButtonSize.small,
                             icon: const Icon(Icons.send_rounded),
-                            onPressed: widget.isSubmitting ? null : _handleSubmit,
+                            onPressed:
+                                widget.isSubmitting ? null : _handleSubmit,
                             minHeight: 32,
                           ),
                         ],

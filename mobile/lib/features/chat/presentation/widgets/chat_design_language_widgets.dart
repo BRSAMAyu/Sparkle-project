@@ -283,9 +283,8 @@ class DailyStartupRetryBanner extends StatelessWidget {
                 icon: Icon(
                   Icons.refresh_rounded,
                   size: DS.iconSizeSm,
-                  color: isRetrying
-                      ? DS.textSecondary.withValues(alpha: 0.45)
-                      : DS.warning,
+                  // G02：禁用态走离散 textDisabled 槽（禁透明度压第四级）。
+                  color: isRetrying ? DS.textDisabled : DS.warning,
                 ),
               ),
             ],

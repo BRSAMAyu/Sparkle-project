@@ -374,7 +374,7 @@ class _LegendDot extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: DS.labelSmall.copyWith(color: DS.textTertiary, fontSize: 11),
+            style: DS.labelSmall.copyWith(color: DS.textTertiary, fontSize: DS.fontSizeXs),
           ),
         ],
       );
@@ -487,7 +487,7 @@ class _SourceRow extends StatelessWidget {
                             _relevanceLabel,
                             style: DS.labelSmall.copyWith(
                               color: _relevanceColor,
-                              fontSize: 11,
+                              fontSize: DS.fontSizeXs,
                             ),
                           ),
                           if (nodeCount > 0) ...[
@@ -496,7 +496,7 @@ class _SourceRow extends StatelessWidget {
                               context.l10n.chatStudyNodeCount(nodeCount),
                               style: DS.labelSmall.copyWith(
                                 color: DS.textTertiary,
-                                fontSize: 11,
+                                fontSize: DS.fontSizeXs,
                               ),
                             ),
                           ],
@@ -507,7 +507,7 @@ class _SourceRow extends StatelessWidget {
                                   document.citationInsight.totalReferences,),
                               style: DS.labelSmall.copyWith(
                                 color: DS.textTertiary,
-                                fontSize: 11,
+                                fontSize: DS.fontSizeXs,
                               ),
                             ),
                           ],

@@ -556,7 +556,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                           style:
                               Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: color,
-                                    fontSize: 10,
+                                    fontSize: DS.fontSizeXs,
                                   ),
                         ),
                       ),
@@ -840,7 +840,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: DS.neutral600,
                             fontStyle: FontStyle.italic,
-                            fontSize: 11,
+                            fontSize: DS.fontSizeXs,
                           ),
                     ),
                   ),

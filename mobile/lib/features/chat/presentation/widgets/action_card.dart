@@ -125,6 +125,34 @@ class _ActionCardState extends ConsumerState<ActionCard>
     );
 
     if (widget.onConfirm != null || widget.onDismiss != null) {
+      _syncPulse(started: false);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // G02 reduce-motion 等价（S01 判例）：disableAnimations/accessibleNavigation
+    // 下图标呼吸脉动缺席（停表回 0 = scale 1.0 静态终态）；恢复正常后重挂。
+    // 起/停收敛单点（DL-SPEC persistentRepeatLoop 棘轮：每文件唯一
+    // .repeat 调用点）。
+    if (widget.onConfirm != null || widget.onDismiss != null) {
+      _syncPulse(started: true);
+    }
+  }
+
+  /// 脉动起/停唯一收敛点。reduce-motion 停表回 0（静态 scale 1.0）；
+  /// 非 reduce-motion 且未在动画中则起表。[started]=false 限 initState
+  /// （MediaQuery 依赖未就绪，仅起表不停表）。
+  void _syncPulse({required bool started}) {
+    if (started && context.reduceMotion) {
+      if (_pulseController.isAnimating) {
+        _pulseController.stop();
+      }
+      _pulseController.value = 0;
+      return;
+    }
+    if (!_pulseController.isAnimating) {
       unawaited(_pulseController.repeat(reverse: true));
     }
   }
@@ -258,8 +286,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
             'idempotency_key': idempotencyKey,
           });
         },
-        onReview: () =>
-            widget.onWidgetAction?.call('action_proposal_review', {
+        onReview: () => widget.onWidgetAction?.call('action_proposal_review', {
           ...widget.action.data,
         }),
         onRefresh: () =>
@@ -392,7 +419,8 @@ class _ActionCardState extends ConsumerState<ActionCard>
             : hasAction
                 ? () => unawaited(
                       SensoryFeedbackService.emit(
-                          SensoryFeedbackEvent.selection,),
+                        SensoryFeedbackEvent.selection,
+                      ),
                     )
                 : null,
         child: SparkleMotion.pressScale(
@@ -554,7 +582,8 @@ class _ActionCardState extends ConsumerState<ActionCard>
                                   icon: const Icon(Icons.check_rounded),
                                   size: ButtonSize.small,
                                   minHeight: 32,
-                                  backgroundGradient: _getActionGradientFor(widget.action),
+                                  backgroundGradient:
+                                      _getActionGradientFor(widget.action),
                                   foregroundColor: DS.onBrandPrimary,
                                   onPressed: () => unawaited(
                                     _handleGenericConfirm(widget.action),
@@ -645,8 +674,10 @@ class _ActionCardState extends ConsumerState<ActionCard>
           end: Alignment.bottomRight,
         );
       case 'profile_front_door':
-        return const LinearGradient(
-          colors: [Color(0xFF0EA5A4), Color(0xFF4F46E5)],
+        // G02 四风格令牌化：classic-only 双色字面量（0FF0EA5A4/4F46E5）
+        // 退役，走语义槽渐变（info×primary 两枚深浅随档）。
+        return LinearGradient(
+          colors: [DS.info, DS.primaryBase],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
@@ -674,8 +705,9 @@ class _ActionCardState extends ConsumerState<ActionCard>
         return DS.infoGradient;
       case 'aurora_nudge_entry':
       case 'aurora_runtime_follow_up':
-        return const LinearGradient(
-          colors: [Color(0xFF0EA5A4), Color(0xFF4F46E5)],
+        // G02 四风格令牌化：同上（原 classic-only 0FF0EA5A4/4F46E5）。
+        return LinearGradient(
+          colors: [DS.info, DS.primaryBase],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
@@ -730,7 +762,8 @@ class _ActionCardState extends ConsumerState<ActionCard>
       case 'adaptation_summary':
         return DS.info;
       case 'profile_front_door':
-        return const Color(0xFF0EA5A4);
+        // G02 令牌化：原 classic-only 0FF0EA5A4 → 语义 info 槽。
+        return DS.info;
       case 'continuity_banner':
       case 'mode_explanation':
         return DS.neutral700;
@@ -744,7 +777,8 @@ class _ActionCardState extends ConsumerState<ActionCard>
         return DS.info;
       case 'aurora_nudge_entry':
       case 'aurora_runtime_follow_up':
-        return const Color(0xFF0EA5A4);
+        // G02 令牌化：原 classic-only 0FF0EA5A4 → 语义 info 槽。
+        return DS.info;
       case 'task_stuck_card':
         return DS.warning;
       case 'low_yield_gentle_block':
@@ -1500,8 +1534,8 @@ class _ActionCardState extends ConsumerState<ActionCard>
         _asString(action.data['checkpoint_description']);
     final nextTask = _asString(renderAction['next_task_title']) ??
         _asString(action.data['next_task_title']);
-    final ctaLabel = _asString(renderAction['cta_label']) ??
-        (S.chatActionContinue);
+    final ctaLabel =
+        _asString(renderAction['cta_label']) ?? (S.chatActionContinue);
     final wakeId =
         _asString(renderAction['wake_id']) ?? _asString(action.data['wake_id']);
     final conversationId = _asString(renderAction['conversation_id']) ??
@@ -2205,22 +2239,26 @@ class _ActionCardState extends ConsumerState<ActionCard>
                 _buildMetaChip(
                   icon: Icons.rule_rounded,
                   label: context.l10n.chatActionValidationSteps(
-                      validationPassed, validationTotal,),
+                    validationPassed,
+                    validationTotal,
+                  ),
                 ),
               if (qualityScore > 0)
                 _buildMetaChip(
                   icon: Icons.fact_check_rounded,
                   label: context.l10n.chatActionQualityScore(
-                      (qualityScore * 100).round().toString(),),
+                    (qualityScore * 100).round().toString(),
+                  ),
                 ),
               if (selfVerification != null &&
                   (selfVerification['score'] as num?) != null)
                 _buildMetaChip(
                   icon: Icons.verified_user_rounded,
                   label: context.l10n.chatActionSelfCheck(
-                      (((selfVerification['score'] as num?) ?? 0) * 100)
-                          .round()
-                          .toString(),),
+                    (((selfVerification['score'] as num?) ?? 0) * 100)
+                        .round()
+                        .toString(),
+                  ),
                 ),
             ],
           ),
@@ -2416,7 +2454,8 @@ class _ActionCardState extends ConsumerState<ActionCard>
                     color: DS.primaryBase.withValues(alpha: 0.1),
                     borderRadius: DS.borderRadius20,
                     border: Border.all(
-                        color: DS.primaryBase.withValues(alpha: 0.18),),
+                      color: DS.primaryBase.withValues(alpha: 0.18),
+                    ),
                   ),
                   child: Text(
                     retryAction['label'].toString(),
@@ -2584,8 +2623,9 @@ class _ActionCardState extends ConsumerState<ActionCard>
               _buildMetaChip(
                 icon: Icons.favorite_border_rounded,
                 label: context.l10n.chatActionTrust(
-                    (double.tryParse('$delegatePreference') ?? 0)
-                        .toStringAsFixed(2),),
+                  (double.tryParse('$delegatePreference') ?? 0)
+                      .toStringAsFixed(2),
+                ),
               ),
           ],
         ),
@@ -3221,7 +3261,8 @@ class _ActionCardState extends ConsumerState<ActionCard>
         if (recommendedAction != null) ...[
           const SizedBox(height: DS.spacing12),
           SparkleButton(
-            label: recommendedAction['label']?.toString() ?? l10n.commonContinue,
+            label:
+                recommendedAction['label']?.toString() ?? l10n.commonContinue,
             size: ButtonSize.small,
             minHeight: 32,
             onPressed: () => unawaited(

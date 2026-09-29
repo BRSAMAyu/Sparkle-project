@@ -1442,7 +1442,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                   // U-02 F1 修复（RUBRIC_VERDICT 建议）：neutral500(#958A80)
                   // 最优背景 3.91:1 < AA 4.5，时间戳改用 textTertiary
                   // （校准 token，scaffold 上 ≥4.5，双档 rubric 锁验证）。
-                  style: TextStyle(fontSize: 10, color: DS.textTertiary),
+                  style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textTertiary),
                 ),
               ],
             ),
@@ -2186,7 +2186,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           Text(
             _formatDurationBadge(durationMs),
             style: TextStyle(
-              fontSize: 10,
+              fontSize: DS.fontSizeXs,
               color: isDark ? DS.textPrimary : accent.withValues(alpha: 0.96),
               fontWeight: DS.fontWeightBold,
               fontFeatures: const [FontFeature.tabularFigures()],
@@ -2340,7 +2340,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           Text(
             msg.sender.displayName,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: DS.fontSizeXs,
               fontWeight: DS.fontWeightBold,
               color: senderColor,
             ),
@@ -2422,7 +2422,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             child: Text(
               context.l10n.chatRead,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: DS.fontSizeXs,
                 color: DS.info,
               ),
             ),
@@ -2991,7 +2991,7 @@ class _DeliveryBadge extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: DS.fontSizeXs,
                 fontWeight: FontWeight.w600,
                 color: color,
               ),
@@ -3012,7 +3012,7 @@ class _DeliveryBadge extends StatelessWidget {
                     child: Text(
                       actionLabel!,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: DS.fontSizeXs,
                         fontWeight: FontWeight.w700,
                         color: color,
                         decoration: TextDecoration.underline,
@@ -3123,7 +3123,7 @@ class _InsightLinkCard extends StatelessWidget {
                         title,
                         style: const TextStyle(
                           fontWeight: DS.fontWeightBold,
-                          fontSize: 13,
+                          fontSize: DS.fontSizeXs,
                         ),
                       ),
                     ),
@@ -3145,7 +3145,7 @@ class _InsightLinkCard extends StatelessWidget {
                       caption!,
                       style: TextStyle(
                         color: DS.info,
-                        fontSize: 11.5,
+                        fontSize: DS.fontSizeXs,
                         fontWeight: DS.fontWeightBold,
                       ),
                     ),
@@ -3166,7 +3166,7 @@ class _InsightLinkCard extends StatelessWidget {
                       badgeLabel!,
                       style: TextStyle(
                         color: DS.brandPrimary,
-                        fontSize: 11.5,
+                        fontSize: DS.fontSizeXs,
                         fontWeight: DS.fontWeightBold,
                       ),
                     ),
@@ -3191,7 +3191,7 @@ class _InsightLinkCard extends StatelessWidget {
                             '• $line',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11.5),
+                            style: const TextStyle(fontSize: DS.fontSizeXs),
                           ),
                         ),
                       ),
@@ -3221,7 +3221,7 @@ class _InsightLinkCard extends StatelessWidget {
                     context.l10n.chatContinueInChat,
                     style: TextStyle(
                       color: DS.textSecondary,
-                      fontSize: 11.5,
+                      fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
@@ -3452,7 +3452,7 @@ class _CollaborationSignatureCard extends StatelessWidget {
             Text(
               narrative!,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: DS.fontSizeXs,
                 height: 1.45,
                 color: theme.colorScheme.onSurface,
               ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 多智能体协作时间线组件
@@ -164,49 +165,59 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
         ),
       );
 
-  Widget _buildTimelineNode(AgentTimelineStep step) => Column(
-        children: [
+  Widget _buildTimelineNode(AgentTimelineStep step) {
+    // G02 reduce-motion 等价（S01 判例）：运行节点的 shimmer 扫光缺席，
+    // 节点本体（色环+图标）静态在场；恢复正常后 shimmer 重挂。
+    final Widget node = Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: step.agentColor,
+        border: Border.all(color: DS.brandPrimaryConst, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: step.agentColor.withValues(alpha: 0.4),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Icon(
+        step.agentIcon,
+        color: DS.brandPrimaryConst,
+        size: 20,
+      ),
+    );
+    final animatedNode = context.reduceMotion
+        ? node
+        : node
+            .animate(onPlay: (controller) => controller.repeat())
+            .shimmer(
+              duration: 2.seconds,
+              color: DS.brandPrimary.withValues(alpha: 0.3),
+            );
+    return Column(
+      children: [
+        animatedNode,
+        if (!isLast)
           Container(
-            width: 40,
+            width: 2,
             height: 40,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: step.agentColor,
-              border: Border.all(color: DS.brandPrimaryConst, width: 3),
-              boxShadow: [
-                BoxShadow(
-                  color: step.agentColor.withValues(alpha: 0.4),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: Icon(
-              step.agentIcon,
-              color: DS.brandPrimaryConst,
-              size: 20,
-            ),
-          ).animate(onPlay: (controller) => controller.repeat()).shimmer(
-                duration: 2.seconds,
-                color: DS.brandPrimary.withValues(alpha: 0.3),
-              ),
-          if (!isLast)
-            Container(
-              width: 2,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    step.agentColor,
-                    step.agentColor.withValues(alpha: 0.3),
-                  ],
-                ),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  step.agentColor,
+                  step.agentColor.withValues(alpha: 0.3),
+                ],
               ),
             ),
-        ],
-      );
+          ),
+      ],
+    );
+  }
 
   Widget _buildStepCard(AgentTimelineStep step) => Container(
         padding: const EdgeInsets.all(DS.spacing8 + DS.spacing6),
@@ -250,7 +261,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                     child: Text(
                       '${step.timestamp!.toStringAsFixed(2)}s',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: DS.fontSizeXs,
                         color: step.agentColor.withValues(alpha: 0.8),
                         fontWeight: DS.fontWeightSemibold,
                       ),
@@ -262,7 +273,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
             Text(
               step.action,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: DS.fontSizeXs,
                 color: DS.brandPrimary.shade700,
                 height: 1.4,
               ),

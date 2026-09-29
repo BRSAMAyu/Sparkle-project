@@ -351,6 +351,7 @@ class _PatternCard extends StatelessWidget {
                               height: 1.4,
                             ),
                           ),
+                        ),
                       ],
                     ),
                   ),

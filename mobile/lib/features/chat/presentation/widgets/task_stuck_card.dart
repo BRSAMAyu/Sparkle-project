@@ -172,7 +172,13 @@ class _QuietChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: DS.surfaceSecondary.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: DS.borderSubtle),
+          // G02 四风格走查（G02-D3）：胶囊面=卡面同源（surfaceSecondary@0.7
+          // 叠 surfaceSecondary），描边是唯一辨识边界 → 非文字关键部件阈
+          // 3.0（ACCESSIBILITY_ASSETS.md）。borderSubtle/border/neutral500
+          // 在 classic 对胶囊面实测 1.22-2.85:1（borderStrong/neutralOutline
+          // 亦不足）——升级 neutral600 槽（classic 5.18:1，四档由对比度
+          // 守卫 v4_g02_family_contrast_guard_test 钉死）。
+          border: Border.all(color: DS.neutral600),
         ),
         child: Text(
           label,

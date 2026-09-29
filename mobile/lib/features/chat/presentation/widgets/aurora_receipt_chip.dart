@@ -452,7 +452,7 @@ class _AuroraReceiptDetailSheet extends StatelessWidget {
                       retrievalMode,
                       style: DS.labelSmall.copyWith(
                         color: DS.brandPrimary,
-                        fontSize: 10,
+                        fontSize: DS.fontSizeXs,
                       ),
                     ),
                   ),
@@ -1077,7 +1077,8 @@ class _SourceRow extends StatelessWidget {
               size: 13,
               color: isUsed
                   ? DS.textSecondary
-                  : DS.textTertiary.withValues(alpha: 0.6),
+                  // G02：不可用源走离散 textDisabled 槽（禁透明度压第四级）。
+                  : DS.textDisabled,
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -1158,7 +1159,7 @@ class _CountBadge extends StatelessWidget {
         ),
         child: Text(
           '$count',
-          style: DS.labelSmall.copyWith(color: DS.brandPrimary, fontSize: 10),
+          style: DS.labelSmall.copyWith(color: DS.brandPrimary, fontSize: DS.fontSizeXs),
         ),
       );
 }

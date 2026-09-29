@@ -33,9 +33,10 @@ class ChatAccessoryPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = accentColor ?? DS.primaryBase;
+    // G02：禁用态走离散 textDisabled 槽（禁「透明度压文字」第四级）。
     final foreground = enabled
-        ? (selected ? accent : DS.textSecondary)
-        : DS.textSecondary.withValues(alpha: 0.45);
+        ? (selected ? DS.toneOnTint(accent) : DS.textSecondary)
+        : DS.textDisabled;
     final background = selected
         ? accent.withValues(alpha: 0.14)
         : emphasize

@@ -214,7 +214,7 @@ class _SingleAgentBadge extends StatelessWidget {
             Text(
               _formatDuration(entry.durationMs!),
               style: TextStyle(
-                fontSize: 11,
+                fontSize: DS.fontSizeXs,
                 color: agentColor.withValues(alpha: 0.7),
               ),
             ),
@@ -277,7 +277,7 @@ class _WorkflowShell extends StatelessWidget {
                 Text(
                   _formatDuration(totalDuration!),
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: DS.fontSizeXs,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -288,7 +288,7 @@ class _WorkflowShell extends StatelessWidget {
             Text(
               subtitle!,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: DS.fontSizeXs,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -310,7 +310,7 @@ class _WorkflowShell extends StatelessWidget {
             Text(
               narrative!,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: DS.fontSizeXs,
                 height: 1.45,
                 color: theme.colorScheme.onSurface,
                 fontWeight: DS.fontWeightMedium,
@@ -541,7 +541,7 @@ class _AgentIdentityChip extends StatelessWidget {
           Text(
             identity.label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: DS.fontSizeXs,
               fontWeight: DS.fontWeightSemibold,
               color: chipColor,
             ),
@@ -601,7 +601,7 @@ class _ParallelAgentCard extends StatelessWidget {
             Text(
               context.l10n.chatWorkflowPhaseLabel(entry.phase!),
               style: TextStyle(
-                fontSize: 10,
+                fontSize: DS.fontSizeXs,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -614,7 +614,7 @@ class _ParallelAgentCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: DS.fontSizeXs,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -624,7 +624,7 @@ class _ParallelAgentCard extends StatelessWidget {
             Text(
               _formatDuration(entry.durationMs!),
               style: TextStyle(
-                fontSize: 10,
+                fontSize: DS.fontSizeXs,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -696,7 +696,7 @@ class _AgentTimelineRow extends StatelessWidget {
                         Text(
                           _formatDuration(entry.durationMs!),
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: DS.fontSizeXs,
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
@@ -711,7 +711,7 @@ class _AgentTimelineRow extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: DS.fontSizeXs,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -753,7 +753,7 @@ class _FooterBanner extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: DS.fontSizeXs,
                 color: theme.colorScheme.primary,
                 fontWeight: DS.fontWeightMedium,
               ),
@@ -835,9 +835,12 @@ class _StatusLabel extends StatelessWidget {
         child: Text(
           _label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: DS.fontSizeXs,
             fontWeight: DS.fontWeightMedium,
-            color: status == 'error' ? DS.error : color,
+            // G02：tone-on-tint 收敛槽（classic 浅档 tint 面 4.45:1 → ≥4.9）。
+            color: status == 'error'
+                ? DS.toneOnTint(DS.error)
+                : DS.toneOnTint(color),
           ),
         ),
       );

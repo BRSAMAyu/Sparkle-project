@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 多智能体头像堆叠组件
@@ -41,10 +42,8 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-
-    if (widget.animate) {
-      unawaited(_transitionController.repeat(reverse: true));
-    }
+    // G02：起表权收敛至 build（DL-SPEC persistentRepeatLoop 棘轮：每文件
+    // 唯一 .repeat 调用点）；build 首帧即达（同帧起表，无视觉差）。
   }
 
   @override
@@ -66,6 +65,16 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
   Widget build(BuildContext context) {
     if (widget.activeAgents.isEmpty) {
       return const SizedBox.shrink();
+    }
+
+    // G02 reduce-motion 等价（S01 判例）：呼吸/入场动效缺席（停表静态）；
+    // 头像栈的在场信息（活跃 agent 集合）不受影响，恢复正常后重挂。
+    if (context.reduceMotion) {
+      if (_transitionController.isAnimating) {
+        _transitionController.stop();
+      }
+    } else if (widget.animate && !_transitionController.isAnimating) {
+      unawaited(_transitionController.repeat(reverse: true));
     }
 
     return SizedBox(
@@ -295,7 +304,7 @@ class _AgentHandoffAnimationState extends State<AgentHandoffAnimation>
     );
 
     unawaited(
-  _controller.forward().then((_) {
+      _controller.forward().then((_) {
         widget.onComplete?.call();
       }),
     );

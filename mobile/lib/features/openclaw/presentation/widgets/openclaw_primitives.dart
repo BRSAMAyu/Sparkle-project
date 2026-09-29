@@ -58,7 +58,8 @@ class OpenClawMetricPill extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: DS.bodySmall.copyWith(
-                color: color,
+                // G02：tone-on-tint 收敛槽（对比度四风格复算）。
+                color: DS.toneOnTint(color),
                 fontWeight:
                     emphasized ? DS.fontWeightBold : DS.fontWeightSemiBold,
               ),
@@ -126,7 +127,8 @@ class OpenClawIdentityStrip extends StatelessWidget {
                 Text(
                   label,
                   style: DS.bodySmall.copyWith(
-                    color: color,
+                    // G02：tone-on-tint 收敛槽（对比度四风格复算）。
+                    color: DS.toneOnTint(color),
                     fontWeight: DS.fontWeightBold,
                   ),
                 ),
@@ -225,7 +227,8 @@ class OpenClawStatusCapsule extends StatelessWidget {
                     Text(
                       title,
                       style: DS.bodyMedium.copyWith(
-                        color: color,
+                        // G02：tone-on-tint 收敛槽（对比度四风格复算）。
+                        color: DS.toneOnTint(color),
                         fontWeight: DS.fontWeightBold,
                       ),
                     ),
@@ -293,7 +296,9 @@ class OpenClawStatusCapsule extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(DS.spacing10),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.5),
+                // G02 四风格令牌化：Colors.white 半透面在 dusk 变「白纱」
+                // （展开内容对比塌陷）→ 主题面半透，暗档收暗、浅档近白。
+                color: DS.surfacePrimary.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: color.withValues(alpha: 0.1)),
               ),

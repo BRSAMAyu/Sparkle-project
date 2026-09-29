@@ -4035,9 +4035,60 @@ class _StreamingBubbleState extends State<_StreamingBubble> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bubbleColor = DS.chatBubbleOther;
     final textColor = DS.chatBubbleOtherText;
+    // G02 四风格走查（G02-D1/G02-D2）：码面/描边不再按亮度分叉取灰——
+    // 旧深档码面 neutral700（亮灰绿）叠浅墨文本在 classic-dark/dusk 对比
+    // 塌陷（实测 <1.6:1），现与落定路径（chat_bubble）同源 surfaceTertiary；
+    // 描边统一走主题描边槽。
+    final codeBackgroundColor = DS.surfaceTertiary;
+    final borderColor = DS.border;
+
+    // reduce-motion 静态分支（S01 判例：不装动画壳、直落终态）：入场
+    // 平移+淡入壳整体缺席，气泡直接以落定形态在场。
+    if (context.reduceMotion) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: _bubbleMaxWidth(context),
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing12,
+          ),
+          decoration: BoxDecoration(
+            color: bubbleColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(DS.spacing20),
+              topRight: Radius.circular(DS.spacing20),
+              bottomRight: Radius.circular(DS.spacing20),
+              bottomLeft: Radius.circular(DS.spacing4),
+            ),
+            boxShadow: DS.shadowSm,
+            border: Border.all(color: borderColor),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Flexible(
+                child: SparkleMarkdown(
+                  content: widget.content,
+                  isStreaming: true,
+                  textColor: textColor,
+                  codeBackgroundColor: codeBackgroundColor,
+                  linkColor: DS.brandPrimary,
+                  contentRole: SparkleMarkdownRole.chatBubble,
+                ),
+              ),
+              const SizedBox(width: DS.xs),
+              _BlinkingCursor(color: textColor),
+            ],
+          ),
+        ),
+      );
+    }
 
     return TweenAnimationBuilder<Offset>(
       tween: Tween<Offset>(
@@ -4079,7 +4130,7 @@ class _StreamingBubbleState extends State<_StreamingBubble> {
               ),
               boxShadow: DS.shadowSm,
               border: Border.all(
-                color: isDark ? DS.neutral700 : DS.borderSubtle,
+                color: borderColor,
               ),
             ),
             child: Row(
@@ -4091,9 +4142,7 @@ class _StreamingBubbleState extends State<_StreamingBubble> {
                     content: widget.content,
                     isStreaming: true,
                     textColor: textColor,
-                    codeBackgroundColor: isDark
-                        ? DS.neutral700
-                        : DS.chatBubbleOtherText.withValues(alpha: 0.06),
+                    codeBackgroundColor: codeBackgroundColor,
                     linkColor: DS.brandPrimary,
                     contentRole: SparkleMarkdownRole.chatBubble,
                   ),

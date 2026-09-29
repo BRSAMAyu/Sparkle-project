@@ -295,7 +295,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                     '${(intent.confidence * 100).toInt()}%',
                     style: TextStyle(
                       color: DS.onBrandPrimary,
-                      fontSize: 11,
+                      fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightMedium,
                     ),
                   ),
@@ -327,7 +327,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                         _getAgentRoleLabel(intent.agentRole!),
                       ),
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: DS.fontSizeXs,
                         color: DS.textSecondary,
                       ),
                     ),

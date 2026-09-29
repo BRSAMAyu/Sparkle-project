@@ -150,7 +150,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         child: Row(
           children: [
             Icon(Icons.auto_awesome_outlined,
-                size: 16, color: DS.textSecondary.withValues(alpha: 0.7),),
+                size: 16, color: DS.textTertiary,),
             const SizedBox(width: DS.spacing8),
             Expanded(
               child: Text(
@@ -238,7 +238,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                     const SizedBox(width: DS.spacing6),
                     Text(
                       '${snapshot.readyCount}/${snapshot.totalCount}',
-                      style: TextStyle(color: DS.textSecondary, fontSize: 11),
+                      style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
                     ),
                     const SizedBox(width: DS.spacing4),
                     GestureDetector(
@@ -265,7 +265,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                   const EdgeInsets.only(top: DS.spacing4, left: DS.spacing20),
               child: Text(
                 contextLabel,
-                style: TextStyle(color: DS.textSecondary, fontSize: 11),
+                style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -381,7 +381,13 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                       color: tone.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(999),
                     ),
-                    child: Text(s, style: TextStyle(color: tone, fontSize: 11)),
+                    child: Text(
+                      s,
+                      style: TextStyle(
+                        color: DS.toneOnTint(tone),
+                        fontSize: DS.fontSizeXs,
+                      ),
+                    ),
                   ),),
             ],
           ),
@@ -497,7 +503,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
             l10n.auroraCorrectionRecorded,
             style: TextStyle(
               color: DS.success,
-              fontSize: 11,
+              fontSize: DS.fontSizeXs,
               fontWeight: DS.fontWeightMedium,
             ),
           ),
@@ -1099,7 +1105,9 @@ class _StatusPill extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-              color: color,
+              // G02：tone 文本叠自体 tint 面走收敛槽（classic 浅档
+              // tone@tint 实测 4.30-4.35:1 → ≥4.9:1；深档恒等）。
+              color: DS.toneOnTint(color),
               fontSize: DS.fontSizeXs,
               fontWeight: DS.fontWeightSemibold,),
         ),
@@ -1153,8 +1161,9 @@ class _TimeContextPill extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: color,
-                      fontSize: 11,
+                      // G02：tone-on-tint 收敛槽（对比度四风格复算）。
+                      color: DS.toneOnTint(color),
+                      fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightMedium,
                     ),
                   ),
@@ -1217,8 +1226,9 @@ class _TaskHealthPill extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: color,
-                      fontSize: 11,
+                      // G02：tone-on-tint 收敛槽（对比度四风格复算）。
+                      color: DS.toneOnTint(color),
+                      fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightMedium,
                     ),
                   ),
@@ -1271,8 +1281,9 @@ class _CorrectionEffectPill extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: DS.semanticSuccess,
-                      fontSize: 11,
+                      // G02：tone-on-tint 收敛槽（对比度四风格复算）。
+                      color: DS.toneOnTint(DS.semanticSuccess),
+                      fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightMedium,
                     ),
                   ),
@@ -1305,7 +1316,7 @@ class _ActionChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(label,
-            style: TextStyle(color: DS.textSecondary, fontSize: 11),),
+            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),),
       );
     }
     final foreground = isPrimary ? DS.brandPrimary : DS.textSecondary;
@@ -1336,7 +1347,7 @@ class _ActionChip extends StatelessWidget {
               label,
               style: TextStyle(
                 color: foreground,
-                fontSize: 11,
+                fontSize: DS.fontSizeXs,
                 fontWeight:
                     isPrimary ? DS.fontWeightMedium : DS.fontWeightRegular,
               ),
@@ -1401,8 +1412,9 @@ class _StatusCorrectionChip extends StatelessWidget {
             child: Text(
               option.label,
               style: TextStyle(
-                color: color,
-                fontSize: 11,
+                // G02：tone-on-tint 收敛槽（对比度四风格复算）。
+                color: DS.toneOnTint(color),
+                fontSize: DS.fontSizeXs,
                 fontWeight:
                     selected ? DS.fontWeightSemibold : DS.fontWeightMedium,
               ),
@@ -1465,7 +1477,7 @@ class _PredictedOptionChip extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: isSpecial ? DS.textSecondary : color,
-                fontSize: 11,
+                fontSize: DS.fontSizeXs,
                 fontWeight:
                     isSpecial ? DS.fontWeightRegular : DS.fontWeightMedium,
               ),
@@ -1518,18 +1530,42 @@ class _ShimmerDotState extends State<_ShimmerDot>
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          final opacity = 0.25 + 0.25 * (_controller.value * 2 - 1).abs();
-          return Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: DS.textSecondary.withValues(alpha: opacity),
+  Widget build(BuildContext context) {
+    // G02 reduce-motion 等价（S01 判例：不装动画壳、直落终态）：
+    // disableAnimations/accessibleNavigation 下停表并渲染静态点列
+    // （最暗档不透明度），呼吸脉动整体缺席；恢复正常后重新起表。
+    if (context.reduceMotion) {
+      _controller.stop();
+      return Row(
+        children: [
+          for (var i = 0; i < 4; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: DS.spacing6),
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: DS.neutral400.withValues(alpha: 0.25),
+                ),
+              ),
             ),
-          );
-        },
+        ],
       );
+    }
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final opacity = 0.25 + 0.25 * (_controller.value * 2 - 1).abs();
+        return Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: DS.neutral400.withValues(alpha: opacity),
+          ),
+        );
+      },
+    );
+  }
 }

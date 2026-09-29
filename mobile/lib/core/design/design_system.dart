@@ -677,8 +677,14 @@ class DS {
   // Text colors
   static Color get textPrimary => _theme.colors.textPrimary;
   static Color get textSecondary => _theme.colors.textSecondary;
-  static Color get textTertiary =>
-      _theme.colors.textSecondary.withValues(alpha: 0.6); // Derived
+  /// 三级文字槽（B2-3a 定标槽转发，V4-G02 闭口）。
+  ///
+  /// 此前本 getter 以 `textSecondary.withValues(alpha: 0.6)` 派生——即 SPEC
+  /// v1.0 §1.3.1 明令禁止的「透明度压文字作第四级」，且无视 `SparkleColors
+  /// .textTertiary` 已定标槽（classic light #736F62 于 S0/S1 ≥4.5:1，四档
+  /// 全部自动测覆盖）。现按 sparkle_context_extension 既有口径转发定标槽，
+  /// 值源唯一：tokens_v2/theme_manager.dart。
+  static Color get textTertiary => _theme.colors.textTertiary;
   static Color get textDisabled => _theme.colors.textDisabled;
   static Color get textOnPrimary => ThemeUtils.getContrastSafeText(
         brandPrimary,
@@ -686,6 +692,18 @@ class DS {
       );
   static Color onColor(Color background) =>
       ThemeUtils.getContrastSafeText(background);
+
+  /// 低透 tint 胶囊上的 tone 文本（V4-G02 家族四风格走查产物）。
+  ///
+  /// 家族状态行/徽章的既有配对是「tone 原值文本 叠 tone@10-12% tint 面」；
+  /// classic 浅档在 S1/S2 系宿主上实测 4.30-4.48:1（低于正文阈 4.5）。
+  /// 浅档把 tone 向 textPrimary 收敛 12%（最弱档抬到 ≥4.9:1，tone 色相
+  /// 保持可辨——状态辨识度不受损）；深档 tone 本身是亮色、深底余量充足，
+  /// 恒等返回。派生公式挂本层（与 brandPrimaryDeep 同律），不建第二真源；
+  /// 这是 ACCESSIBILITY batch2「container-pair token」的家族过渡口径。
+  static Color toneOnTint(Color tone) =>
+      _isDark ? tone : _blend(tone, textPrimary, 0.12);
+
   static Color get onBrandPrimary => textOnPrimary;
   // batch3 四件套收敛：边框/容器面派生公式上收至 SparkleColors（值恒等），
   // DS 仅做转发。唯一事实源：tokens_v2/theme_manager.dart。

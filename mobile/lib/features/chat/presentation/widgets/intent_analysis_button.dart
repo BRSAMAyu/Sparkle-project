@@ -51,7 +51,7 @@ class IntentAnalysisButton extends ConsumerWidget {
                   context.l10n.intentAnalysisLabel,
                   style: TextStyle(
                     color: Theme.of(context).primaryColor,
-                    fontSize: 13,
+                    fontSize: DS.fontSizeXs,
                     fontWeight: DS.fontWeightMedium,
                   ),
                 ),

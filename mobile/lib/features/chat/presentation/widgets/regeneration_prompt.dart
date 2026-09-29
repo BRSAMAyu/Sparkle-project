@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -171,9 +172,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
-    if (widget.status == RegenerationStatus.inProgress) {
-      unawaited(_animationController.repeat());
-    }
+    _syncProgressAnimation(fromInit: true);
   }
 
   @override
@@ -182,12 +181,38 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
 
     if (widget.status == RegenerationStatus.inProgress &&
         oldWidget.status != RegenerationStatus.inProgress) {
-      unawaited(_animationController.repeat());
+      _syncProgressAnimation(fromInit: false);
     } else if (widget.status != RegenerationStatus.inProgress &&
         oldWidget.status == RegenerationStatus.inProgress) {
       _animationController
         ..stop()
         ..reset();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // G02 reduce-motion 等价（S01 判例）：disableAnimations/accessibleNavigation
+    // 下本卡控制器停表（进度条静态、无帧churn）；inProgress 语义不变——
+    // 进行中指示的可见性/文案照旧，只去脉动。起/停收敛单点（DL-SPEC
+    // persistentRepeatLoop 棘轮：每文件唯一 .repeat 调用点）。
+    _syncProgressAnimation(fromInit: false);
+  }
+
+  /// 进度脉动起/停唯一收敛点：reduce-motion 停表静态；inProgress 且未在
+  /// 动画中则起表。[fromInit]=true 限 initState（MediaQuery 依赖未就绪，
+  /// 仅起表不停表）。
+  void _syncProgressAnimation({required bool fromInit}) {
+    if (!fromInit && context.reduceMotion) {
+      if (_animationController.isAnimating) {
+        _animationController.stop();
+      }
+      return;
+    }
+    if (widget.status == RegenerationStatus.inProgress &&
+        !_animationController.isAnimating) {
+      unawaited(_animationController.repeat());
     }
   }
 
@@ -312,10 +337,10 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 LoadingIndicator.circular(
-                    size: 16,
-                    strokeWidth: 2,
-                    color: theme.colorScheme.primary,
-                    liveRegion: false,
+                  size: 16,
+                  strokeWidth: 2,
+                  color: theme.colorScheme.primary,
+                  liveRegion: false,
                 ),
                 const SizedBox(width: 8),
                 Text(

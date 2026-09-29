@@ -41,9 +41,11 @@ class ProfileFrontDoorCard extends StatelessWidget {
           const SizedBox(height: DS.spacing12),
         ],
         if (confirmation.isNotEmpty) ...[
+          // G02 四风格令牌化：classic-only 薄荷糖字面量（E8F5EF/B5DDC8）
+          // 退役 → 语义 success 低透 tint 对（confirm 语义）。
           _SectionCard(
-            color: const Color(0xFFE8F5EF),
-            borderColor: const Color(0xFFB5DDC8),
+            color: DS.semanticSuccess.withValues(alpha: 0.10),
+            borderColor: DS.semanticSuccess.withValues(alpha: 0.32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -412,8 +414,10 @@ class _PredictionTile extends StatelessWidget {
               _Badge(
                 label: item['evidence_label']?.toString() ??
                     context.l10n.chatProfileInferencePrediction,
-                color: const Color(0xFF7C3AED),
-                background: const Color(0xFFF2EAFE),
+                // G02 四风格令牌化：预测/推断徽章走柔紫 reflection 槽
+                // （原 classic-only 7C3AED/F2EAFE；dusk 亮紫随档）。
+                color: DS.taskReflection,
+                background: DS.taskReflection.withValues(alpha: 0.08),
               ),
             ],
           ),
@@ -513,7 +517,9 @@ class _Badge extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
+              // G02：tone-on-tint 收敛槽（classic 浅档 tint 面实测
+              // 4.45-4.48:1 → ≥4.9:1；深档恒等）。
+              color: DS.toneOnTint(color),
               fontWeight: DS.fontWeightSemibold,
             ),
       ),

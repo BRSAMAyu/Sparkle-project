@@ -265,7 +265,7 @@ class _BeliefSummaryRow extends ConsumerWidget {
                     );
                   },
                   child:
-                      Text(optionLabel, style: const TextStyle(fontSize: 11)),
+                      Text(optionLabel, style: const TextStyle(fontSize: DS.fontSizeXs)),
                 );
               }).toList(),
             ),

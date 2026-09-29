@@ -408,7 +408,7 @@ class _CountBadge extends StatelessWidget {
         ),
         child: Text(
           '$count',
-          style: DS.labelSmall.copyWith(color: DS.brandPrimary, fontSize: 10),
+          style: DS.labelSmall.copyWith(color: DS.brandPrimary, fontSize: DS.fontSizeXs),
         ),
       );
 }

@@ -265,17 +265,15 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
     final hiddenTurns = turns.length - previewTurns.length;
 
     return Container(
-      padding: EdgeInsets.all(compact ? 12 : 14),
+      padding: EdgeInsets.all(compact ? DS.spacing12 : 14),
       decoration: BoxDecoration(
+        // G02 四风格令牌化：浅档 classic-only 蓝灰字面量（F7F9FC/D8E1EF）
+        // 退役 → 语义面板/弱描边槽（深档既有 surfacePrimaryElevated 同律）。
         color: Theme.of(context).brightness == Brightness.dark
             ? DS.surfacePrimaryElevated
-            : const Color(0xFFF7F9FC),
+            : DS.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? DS.borderSubtle
-              : const Color(0xFFD8E1EF),
-        ),
+        border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,7 +397,7 @@ class _TurnCard extends StatelessWidget {
               style: TextStyle(
                 color: DS.textPrimary,
                 height: 1.45,
-                fontSize: 12.5,
+                fontSize: DS.fontSizeXs,
               ),
             ),
           ],

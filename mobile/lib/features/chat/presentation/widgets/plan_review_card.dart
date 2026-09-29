@@ -218,6 +218,13 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     );
     unawaited(_slideInController.forward());
     _delegateApprovedTasks = _resolveInitialDelegateToggle(widget.review);
+    // G02：起表同步挪 didChangeDependencies——_syncHighlightAnimation 现读
+    // context.reduceMotion（MediaQuery 依赖，initState 期断言禁读）。
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _syncHighlightAnimation();
   }
 
@@ -282,6 +289,14 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   }
 
   void _syncHighlightAnimation() {
+    // G02 reduce-motion 等价（S01 判例）：disableAnimations/accessibleNavigation
+    // 下高亮扫光脉动缺席（停表回 0 = 静态纯卡面），待批语义由边框/按钮承载。
+    if (context.reduceMotion) {
+      _highlightController
+        ..stop()
+        ..value = 0;
+      return;
+    }
     if (_showActions && !_isSubmitting) {
       if (!_highlightController.isAnimating) {
         unawaited(_highlightController.repeat(reverse: true));

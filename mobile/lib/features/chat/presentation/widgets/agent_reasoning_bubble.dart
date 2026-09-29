@@ -213,7 +213,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: DS.fontSizeXs,
                               color: DS.brandPrimary.shade700,
                             ),
                           ),

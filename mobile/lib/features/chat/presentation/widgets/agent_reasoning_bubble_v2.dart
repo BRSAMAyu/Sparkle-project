@@ -425,7 +425,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontFamilyFallback: sparkleFontFallback,
-                            fontSize: 11,
+                            fontSize: DS.fontSizeXs,
                             color: DS.success,
                             height: 1.4,
                           ),
@@ -473,7 +473,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                             context.l10n
                                                 .chatCitationLabel(citation),
                                             style: TextStyle(
-                                              fontSize: 11,
+                                              fontSize: DS.fontSizeXs,
                                               color: DS.brandPrimary,
                                               fontWeight: DS.fontWeightMedium,
                                             ),
@@ -496,7 +496,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           '${step.durationMs}ms',
                           style: context.typo.labelSmall.copyWith(
                             color: DS.textSecondary,
-                            fontSize: 10,
+                            fontSize: DS.fontSizeXs,
                           ),
                         ),
                       ),
