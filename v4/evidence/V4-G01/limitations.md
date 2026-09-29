@@ -73,3 +73,8 @@
   隔离可直接逐像素断言的成本/脆性；正方 = 位置+在场+零异常三重探针且
   E- 控制组证明判别力，widget 级 RGBA 判例已有 SparkleConfetti 面
   （A10）钉住。
+
+## Errata (leader, 2026-09-30, R1 LOW-1/2/4)
+- LOW-1：§1.1 屏数口径修正——实点 `*_screen.dart`=27（非 30），长尾 18~20（非 17）；分母结论不变。
+- LOW-2：C1 不修理由②修正——等值令牌混入并非全部破坏（rimLight.withValues(alpha:1.0) 即等值）；正确依据=无语义正确的既有不透明白槽（chatBubbleUserText 在 dusk 为深墨）。
+- LOW-4：contrast 测试注释色值笔误 textDisabled=#999999（非 #A49B90），断言不受影响。LOW-3 的 G01_GOLDEN_CAPTURE 环境变量为装饰性无读取方。

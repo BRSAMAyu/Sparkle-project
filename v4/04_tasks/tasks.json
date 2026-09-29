@@ -3847,9 +3847,9 @@
       "id": "V4-G01",
       "title": "首页/目标/任务/日历——四风格商业化完备",
       "depends_on": [],
-      "status": "PENDING",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS_WITH_CHALLENGES",
       "kind": "implementation",
       "required_locks": [
         "ui-polish-g01"
@@ -3904,7 +3904,7 @@
       ],
       "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
       "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。",
-      "progress_note": "2026-09-29 wtG01：REVIEW_READY 交付（worktree wtG01，分支 agent/v4/g01，自 57edc4e4 开出，实现头 c276bbef，未 push；前任会话宿主机重启中断，dirty=11 全部继承盘点零丢弃）。走查实修 13 处风格面缺陷（前任 A1-A10：档案 15 枚 classic-only 字面量令牌化/纸屑六槽角色色+黑纱 ink 派生/星标 onColor≥3:1/onPrimary×2/task_card rimLight+200% 溢出 Expanded(Wrap) 判例/里程碑卡 warning 派生/SparkleConfetti+复盘覆盖层 reduce-motion 静态分支；续跑 B1-B2：predicted_intent_card 三处暗分支 Colors.white→rimLight+alpha 覆盖（输出字节等值，golden 零漂移实证）+ post_exam_review 复盘 reduce-motion screen 级钉 E±）。验收：家族五模块 Color(0x)=0，内容面 Colors.* 残余 4 处登记不修（weather lerp 派生基料，修则破坏 classic 零差量）+7 处范围外（layers/ 唯一消费点 visual_elements 预览对话框，非家族触达）；contrast 15 对 ≥4.5:1 + 大字线 ≥3:1 + E- 探针判别力；sweep 六面×四档语义钉/空加载部分失败/200% 零溢出；golden 8 张 B04 容差 CI 可失败且零漂移；analyze 零 issue（清 2 info）；回归分批 home+goal 133/task+calendar 106/plan 66/design 281 + 全量单批 3344 全绿（--concurrency=1 全程，资源双红线遵守）；repeat 棘轮 48→48（调用点 90）；RF-06 三文件零触碰（diff 自证，task_detail 注释误标已修正）。证据五件套 v4/evidence/V4-G01/。锁租约 NOT_RUN（无 coordination remote，diff 自证）。已知边界 5 条 + 审查挑战预登记 6 条（CH-1 走查分母/CH-2 等值令牌化读法/CH-3 C1 不修裁决/CH-4 棘轮 48vs49 口径/CH-5 golden 基线量/CH-6 reduce-motion 证据层级）——见 v4/evidence/V4-G01/limitations.md 与 review_receipt.json。"
+      "progress_note": "2026-09-30 wtG01：断点续跑交付（前任重启阵亡 11 脏文件全继承；实现 c276bbef+证据 76e8a095，base 57edc4e4）。13 修（15 枚 classic-only 字面量令牌化+纸屑角色色+rimLight+200% 适配+reduce-motion 静态分支）+4 登记（weather lerp 基料待 Q08 类裁决）+7 范围外（layers 预览面）；22 新钉+8 golden（B04 容差）；全量单批 3344 绿（--concurrency=1 错峰）；棘轮 48；RF-06 三文件零触碰。R1=PASS_WITH_CHALLENGES（receipt f0b90f2f）：九靶全过，CH-2 等值令牌化字节级决定性证实（回退重签 cmp 全同），mutation 2正1负全实证，contrast 独立复算 10 对最紧 4.68；CH-1 分母按登记口径成立（17-20 长尾屏 200%/布局破碎逐屏证明归 Q05 HEAVY 矩阵兜底）；LOW-1/2/3/4 口径注释级已勘误入 limitations.md。集成复验@合并树 22/22+analyze 零。"
     },
     {
       "id": "V4-G02",
