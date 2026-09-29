@@ -912,14 +912,18 @@ void main() {
         find.text('计划耗时经常低于实际耗时。'),
       );
       expect(description.style?.color, DS.textSecondary);
-      // 方案文本 = 全强度 success（非浅色档变亮的 successLight）。
+      // 方案文本 = textPrimary（G03 四风格对比度复算升位：success 轻档
+      // 合成底仅 2.12-2.88:1，关键正文走 textPrimary 全档 ≥8.07:1；
+      // 语义色保留在灯泡图标——取代 G05 首版 success 全强度钉）。
       final solution = tester.widget<Text>(
         find.textContaining('把估算乘以 1.5'),
       );
-      expect(solution.style?.color, DS.success);
-      // 页脚时间戳 = textTertiary 定标槽（非 brand@100）。
+      expect(solution.style?.color, DS.textPrimary);
+      // 页脚时间戳 = textSecondary（G03 复算升位：brandPrimary@0.392 衰减
+      // 文字五档 1.71-2.38:1 全崩，脚注走 textSecondary 全档 ≥4.85:1——
+      // 取代 G05 首版 textTertiary 定标槽）。
       final footer = tester.widget<Text>(find.textContaining('发现于'));
-      expect(footer.style?.color, DS.textTertiary);
+      expect(footer.style?.color, DS.textSecondary);
       // 类型标签 = textSecondary（类型色只承载图标）。
       final typeLabel = tester.widget<Text>(
         find.text(S.patternTypeCognitive),

@@ -23,3 +23,6 @@
 - C1：A 组 41 对系公式级守卫，产品码回退保护由 B/E widget 钉承载（测试头「修复点回退都会在此失败」声明收窄为公式面）。
 - C2 已闭：tab 选中指示补 widget 回退钉 curiosity_capsule_tab_border_f569style_test.dart（断言 TabBar.indicator BoxDecoration tint@0.14+全强度描边；mutation 删描边→红/还原→绿双向实证）；jobs pill 面由 B 组公式钉+后续 Q05 视觉面兜底。
 - O1-O3 注释数值偏宽处（overview pill 四风格口径/jobs ≥4.85→4.76）按本勘误为准。
+
+## Errata（leader，2026-09-30，CI54 事后追记）
+- B 组修复点 widget 级钉两枚被 G03 后续复算升位取代（合并态才暴露的跨卡语义演进）：方案文本 success→textPrimary（G03：success 轻档合成底 2.12-2.88:1，关键正文 ≥8.07:1，语义色留图标）；页脚 textTertiary→textSecondary（G03：brandPrimary@0.392 五档 1.71-2.38:1 全崩，脚注 ≥4.85:1）。测试钉已对齐真源（CI54 红修），G05 卡面结论不受影响——其「透明度压文字禁式清除」的本意由 G03 版更强达成。

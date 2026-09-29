@@ -63,7 +63,11 @@ async def _make_user(db_session: AsyncSession) -> User:
     return user
 
 
-_NOW = datetime(2026, 9, 25, 10, 0, 0)
+# FIX-585：动态基点——服务端 recent_failures 用真实时钟 utcnow() 开
+# RECENT_FAILURE_WINDOW_DAYS 窗（stuck_journey_service.py:275），冻结
+# _NOW 会让「新鲜失败」随真实日期漂出窗口（CI53 绿→CI54 红=Sep 29
+# 10:00 UTC 边界穿越实证）。模块导入时取真实时钟即可（测试分钟级跑完）。
+_NOW = datetime.utcnow()
 
 
 async def _seed_goal_with_plan(
