@@ -21,6 +21,22 @@ import '../../../../shared/i18n_test_helper.dart';
 /// 「Simulator 能理解 3 条 insight」的 headless 口径：三类洞察（摩擦模式/
 /// 有帮助的应对/目标进展）在真实渲染管线中各出一张卡，每张卡五要素标签
 /// 与内容齐备、不确定性有诚实措辞、证据可点——结构断言，不引真模型。
+
+/// V4-U13：旧 cards provider 已升级为 feed（带 schema 版本门）。测试用
+/// 合法契约字段构造 feed；零卡 = no_data 显式态（不再是静默隐藏）。
+EvidenceInsightFeedData _feedFor(List<EvidenceInsightCardData> cards) =>
+    EvidenceInsightFeedData(
+    status: cards.isEmpty ? 'no_data' : 'ready',
+    cards: cards,
+    emptyNote: cards.isEmpty ? 'no evidence in window' : null,
+        revisit: const EvidenceRevisitRecord(
+          relevance: EvidenceRevisitRelevance.noPrior,
+          provesRelevance: false,
+          nOutcomeSamplesUnique: 0,
+          rewardConsequence: 'none',
+        ),
+      );
+
 void main() {
   setUp(setUpI18nForTesting);
   tearDown(tearDownI18n);
@@ -205,12 +221,14 @@ void main() {
             weeklyGrowthNarrativeProvider.overrideWith(
               (ref) async => WeeklyGrowthNarrative.placeholder(),
             ),
-            evidenceInsightCardsProvider.overrideWith(
-              (ref) async => <EvidenceInsightCardData>[
-                frictionCard,
-                helpedCard,
-                goalCard,
-              ],
+            evidenceInsightFeedProvider.overrideWith(
+              (ref) => Future.value(
+                _feedFor(<EvidenceInsightCardData>[
+                  frictionCard,
+                  helpedCard,
+                  goalCard,
+                ]),
+              ),
             ),
           ],
           child: testMaterialApp(
@@ -345,8 +363,9 @@ void main() {
   );
 
   testWidgets(
-    'insights overview hides the evidence section when there is no data '
-    '(no persona conclusions without evidence)',
+    'insights overview shows the explicit no-data line when the feed is '
+    'empty (V4-U13: no-data presented distinctly, not hidden, and never a '
+    'fabricated conclusion)',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -360,8 +379,9 @@ void main() {
             weeklyGrowthNarrativeProvider.overrideWith(
               (ref) async => WeeklyGrowthNarrative.placeholder(),
             ),
-            evidenceInsightCardsProvider
-                .overrideWith((ref) async => const <EvidenceInsightCardData>[]),
+            evidenceInsightFeedProvider.overrideWith(
+              (ref) => Future.value(_feedFor(const <EvidenceInsightCardData>[])),
+            ),
           ],
           child: testMaterialApp(
             theme: AppThemes.lightTheme,
@@ -372,7 +392,57 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
+      // V4-U13 三态分呈现：无数据显式成行（不再是静默隐藏）。
+      expect(find.text('证据洞察'), findsOneWidget);
+      expect(
+        find.text('这个窗口还没有可分析的行为记录，尚未形成任何结论。'),
+        findsOneWidget,
+      );
+      expect(find.text('阻力模式'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'insights overview hides the section entirely on unsupported contract '
+    'version (fail-closed version gate is a different state from no-data)',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            simulationProvider.overrideWith(
+              (ref) => _StaticSimulationNotifier(const SimulationState()),
+            ),
+            systemUpdatesProvider.overrideWith(
+              (ref) async => const <Map<String, dynamic>>[],
+            ),
+            weeklyGrowthNarrativeProvider.overrideWith(
+              (ref) async => WeeklyGrowthNarrative.placeholder(),
+            ),
+            evidenceInsightFeedProvider.overrideWith(
+              (ref) => Future.value(
+                const EvidenceInsightFeedData(
+                  status: 'unsupported',
+                  cards: <EvidenceInsightCardData>[],
+                ),
+              ),
+            ),
+          ],
+          child: testMaterialApp(
+            theme: AppThemes.lightTheme,
+            home: const LearningInsightsOverviewScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // 版本门 fail-closed：unsupported 与 no-data 互斥——既不渲染卡，
+      // 也不冒充无数据行。
       expect(find.text('证据洞察'), findsNothing);
+      expect(
+        find.text('这个窗口还没有可分析的行为记录，尚未形成任何结论。'),
+        findsNothing,
+      );
     },
   );
 }

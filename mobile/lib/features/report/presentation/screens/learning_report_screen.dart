@@ -533,6 +533,18 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 10),
+                    // V4-U13 百分比真实定义（原始数值与推断拆开）：掌握度是
+                    // 什么、样本多大、时间口径，随行如实声明；不派生增长率。
+                    Text(
+                      context.l10n.reportMasteryDefinition(
+                        report.mastery.length,
+                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: DS.textSecondary, height: 1.52),
+                    ),
                   ],
                 ),
               ),
@@ -605,6 +617,16 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                             ),
                           )
                           .toList(),
+                    ),
+                    const SizedBox(height: 10),
+                    // V4-U13：数值（掌握度分）与推断（档位/建议）拆开；
+                    // 点开节点行可回到星图原始记录核对来源。
+                    Text(
+                      context.l10n.reportDimensionTapHint,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: DS.textSecondary, height: 1.52),
                     ),
                   ],
                 ),
@@ -814,7 +836,12 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       metrics.add(
         MirofishStageMetric(
           label: context.l10n.reportMetricTrendChange,
-          value: '${delta >= 0 ? '+' : ''}${delta.round()}%',
+          // V4-U13 真实定义：与上一份报告相比的平均掌握度分差（百分点口径，
+          // 非增长率），不伪装成「提升/下降 X%」的增长断言。
+          value: context.l10n.reportTrendDeltaPoints(
+            delta >= 0 ? '+' : '-',
+            delta.abs().round(),
+          ),
           accent: delta >= 0 ? DS.success : DS.warning,
           icon: delta >= 0
               ? Icons.trending_up_rounded
@@ -1032,6 +1059,20 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                         height: 1.5,
                       ),
                 ),
+                const SizedBox(height: 14),
+                // V4-U13 数值真实定义随行：掌握度=证据融合值，不是出勤/
+                // 时长统计；关联错题数是真实计数（可核对）。
+                Text(
+                  item.relatedErrorCount > 0
+                      ? sheetContext.l10n.reportMasteryNodeDefinitionWithErrors(
+                          item.relatedErrorCount,
+                        )
+                      : sheetContext.l10n.reportMasteryNodeDefinition,
+                  style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.52,
+                      ),
+                ),
                 const SizedBox(height: 18),
                 Wrap(
                   spacing: 12,
@@ -1040,10 +1081,25 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     FilledButton.tonalIcon(
                       onPressed: () {
                         Navigator.of(sheetContext).pop();
-                        unawaited(_openReportDeepLink(GalaxyRoutes.home));
+                        // V4-U13 跳原始记录：节点 id 在册时经既有深链解析
+                        // （node_id query → /galaxy/node/<id>，U-07 语义）
+                        // 直达该节点的星图原始记录；否则回星图首页（不编造
+                        // 节点地址）。
+                        final nodeId = item.nodeId;
+                        unawaited(
+                          _openReportDeepLink(
+                            nodeId == null || nodeId.isEmpty
+                                ? GalaxyRoutes.home
+                                : '${GalaxyRoutes.home}?node_id=$nodeId',
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.auto_graph_rounded),
-                      label: Text(context.l10n.reportOpenGalaxy),
+                      label: Text(
+                        (item.nodeId?.isNotEmpty ?? false)
+                            ? context.l10n.reportOpenGalaxyNode
+                            : context.l10n.reportOpenGalaxy,
+                      ),
                     ),
                     OutlinedButton.icon(
                       onPressed: () => Navigator.of(sheetContext).pop(),

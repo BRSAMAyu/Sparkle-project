@@ -249,10 +249,13 @@ class _PatternCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: DS.spacing8),
+                    // V4-U13 假精确清理（M-10 置信黑话清除同律）：无真实
+                    // 定义的「AI 置信 N%」不上屏；观察档从真实计数
+                    // （frequency）派生——原始数值（次数）与推断（定式名）
+                    // 拆开，样本有真实定义。
                     _buildMetaBadge(
                       icon: Icons.show_chart_rounded,
-                      label:
-                          '置信 ${(pattern.confidenceScore * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                      label: _observationTierLabel(context, pattern.frequency),
                       color: DS.prismBlue,
                     ),
                     const SizedBox(width: DS.spacing8),
@@ -440,5 +443,21 @@ class _PatternCard extends StatelessWidget {
       default:
         return I18nService.instance.l10n.patternTypeDefault;
     }
+  }
+
+  /// V4-U13 观察档（真实计数派生的定性词，M-10 同律）：样本 = frequency
+  /// （真实出现次数）；不做任何置信百分比换算。
+  String _observationTierLabel(BuildContext context, int frequency) {
+    final l10n = context.l10n;
+    if (frequency >= 3) {
+      return l10n.cogPatternTierRepeated(frequency);
+    }
+    if (frequency == 2) {
+      return l10n.cogPatternTierTwice;
+    }
+    if (frequency == 1) {
+      return l10n.cogPatternTierSingle;
+    }
+    return l10n.cogPatternTierNone;
   }
 }

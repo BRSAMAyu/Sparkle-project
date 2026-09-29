@@ -33864,4 +33864,93 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get objectUnavailableBackHome => '回到首页';
+
+  @override
+  String get eicEmptyNoData => '这个窗口还没有可分析的行为记录，尚未形成任何结论。';
+
+  @override
+  String eicUniqWithdrawnExcluded(int count) {
+    return '已排除 $count 条已删除或撤回的来源记录，它们不计入上面的数字';
+  }
+
+  @override
+  String eicUniqSamplesDefinition(int count) {
+    return '样本＝去重后的方向观察 $count 条';
+  }
+
+  @override
+  String eicUniqSamplesDedup(int unique, int raw, int dropped) {
+    return '样本＝去重后方向观察 $unique 条（原始投递 $raw 条，重放重复 $dropped 条不计入样本量）';
+  }
+
+  @override
+  String get eicUnderstandingNoData => '还没有可分析的数据，无法得出结论';
+
+  @override
+  String get eicUnderstandingIncomplete => '证据不足，先不下充分结论';
+
+  @override
+  String eicUnderstandingIncompleteCensored(int count) {
+    return '证据不足：$count 条结果未到期或无法判定，先不下充分结论';
+  }
+
+  @override
+  String eicUnderstandingIncompleteMissing(int count) {
+    return '证据不足：$count 条来源已不可定位，先不下充分结论';
+  }
+
+  @override
+  String eicUnderstandingIncompleteBoth(int censored, int missing) {
+    return '证据不足：$censored 条结果未到期、$missing 条来源已不可定位，先不下充分结论';
+  }
+
+  @override
+  String get eicUnderstandingQualitativeOnly => '以下只是基于现有记录的定性观察，不是充分结论';
+
+  @override
+  String get eicNextStepRejectable => '这条建议可以忽略，忽略不会有任何影响';
+
+  @override
+  String cogPatternTierRepeated(int count) {
+    return '多次观察到（$count 次）';
+  }
+
+  @override
+  String get cogPatternTierTwice => '观察到 2 次';
+
+  @override
+  String get cogPatternTierSingle => '单次观察';
+
+  @override
+  String get cogPatternTierNone => '暂无观察记录';
+
+  @override
+  String reportMasteryDefinition(int count) {
+    return '掌握度＝星图能力节点的证据融合值（0–100），不是出勤或时长统计；样本＝$count 个能力节点；与上次报告相比的变化按掌握度分（百分点）计';
+  }
+
+  @override
+  String get reportDimensionTapHint => '点按节点可查看明细，并回到星图原始记录核对来源。';
+
+  @override
+  String get reportMasteryNodeDefinition =>
+      '掌握度＝这个能力节点的证据融合值（0–100），不是出勤或时长统计。';
+
+  @override
+  String reportMasteryNodeDefinitionWithErrors(int count) {
+    return '掌握度＝这个能力节点的证据融合值（0–100）；当前关联 $count 条可核对的错题记录。';
+  }
+
+  @override
+  String get reportOpenGalaxyNode => '查看星图原始记录';
+
+  @override
+  String reportRadarDefinition(int count) {
+    return '图上每个轴是一条 0–100 的证据融合掌握度读数；样本＝当前绘制的 $count 个能力节点。';
+  }
+
+  @override
+  String reportTrendDeltaPoints(String sign, int value) {
+    return '$sign$value 分';
+  }
 }

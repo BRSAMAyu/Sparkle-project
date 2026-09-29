@@ -2,20 +2,42 @@ class LearningMasteryDatum {
   const LearningMasteryDatum({
     required this.nodeName,
     required this.masteryScore,
+    this.nodeId,
+    this.relatedErrorCount = 0,
   });
 
   factory LearningMasteryDatum.fromJson(Map<String, dynamic> json) =>
       LearningMasteryDatum(
         nodeName: json['node_name']?.toString() ?? '',
         masteryScore: (json['mastery_score'] as num?)?.toDouble() ?? 0,
+        nodeId: _nonEmptyString(json['node_id']),
+        relatedErrorCount:
+            (json['related_error_count'] as num?)?.toInt() ?? 0,
       );
 
   final String nodeName;
   final double masteryScore;
 
+  /// 星图能力节点 id（后端 `report_tools.query_mastery_scores` 真源随行）；
+  /// 非空时节点行可深链回星图原始记录（V4-U13「跳原始记录」）。
+  final String? nodeId;
+
+  /// 该节点关联错题数（真实计数，样本口径随行）。
+  final int relatedErrorCount;
+
+  /// 掌握度百分比（真实定义：星图能力节点的证据融合值 0–100 取整显示）。
+  int get masteryPercent => masteryScore.round();
+
+  static String? _nonEmptyString(Object? raw) {
+    final value = raw?.toString() ?? '';
+    return value.isEmpty ? null : value;
+  }
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'node_name': nodeName,
         'mastery_score': masteryScore,
+        if (nodeId != null) 'node_id': nodeId,
+        'related_error_count': relatedErrorCount,
       };
 }
 

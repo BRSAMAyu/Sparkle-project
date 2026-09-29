@@ -16330,5 +16330,116 @@
   "objectUnavailableOfflineTitle": "暂时无法确认",
   "objectUnavailableOfflineBody": "网络不可用或服务暂时无法访问，还不能打开这个对象。可以稍后重试。",
   "objectUnavailableGoTasks": "查看任务列表",
-  "objectUnavailableBackHome": "回到首页"
+  "objectUnavailableBackHome": "回到首页",
+  "eicEmptyNoData": "这个窗口还没有可分析的行为记录，尚未形成任何结论。",
+  "eicUniqWithdrawnExcluded": "已排除 {count} 条已删除或撤回的来源记录，它们不计入上面的数字",
+  "eicUniqSamplesDefinition": "样本＝去重后的方向观察 {count} 条",
+  "eicUniqSamplesDedup": "样本＝去重后方向观察 {unique} 条（原始投递 {raw} 条，重放重复 {dropped} 条不计入样本量）",
+  "eicUnderstandingNoData": "还没有可分析的数据，无法得出结论",
+  "eicUnderstandingIncomplete": "证据不足，先不下充分结论",
+  "eicUnderstandingIncompleteCensored": "证据不足：{count} 条结果未到期或无法判定，先不下充分结论",
+  "eicUnderstandingIncompleteMissing": "证据不足：{count} 条来源已不可定位，先不下充分结论",
+  "eicUnderstandingIncompleteBoth": "证据不足：{censored} 条结果未到期、{missing} 条来源已不可定位，先不下充分结论",
+  "eicUnderstandingQualitativeOnly": "以下只是基于现有记录的定性观察，不是充分结论",
+  "eicNextStepRejectable": "这条建议可以忽略，忽略不会有任何影响",
+  "cogPatternTierRepeated": "多次观察到（{count} 次）",
+  "cogPatternTierTwice": "观察到 2 次",
+  "cogPatternTierSingle": "单次观察",
+  "cogPatternTierNone": "暂无观察记录",
+  "reportMasteryDefinition": "掌握度＝星图能力节点的证据融合值（0–100），不是出勤或时长统计；样本＝{count} 个能力节点；与上次报告相比的变化按掌握度分（百分点）计",
+  "reportDimensionTapHint": "点按节点可查看明细，并回到星图原始记录核对来源。",
+  "reportMasteryNodeDefinition": "掌握度＝这个能力节点的证据融合值（0–100），不是出勤或时长统计。",
+  "reportMasteryNodeDefinitionWithErrors": "掌握度＝这个能力节点的证据融合值（0–100）；当前关联 {count} 条可核对的错题记录。",
+  "reportOpenGalaxyNode": "查看星图原始记录",
+  "reportRadarDefinition": "图上每个轴是一条 0–100 的证据融合掌握度读数；样本＝当前绘制的 {count} 个能力节点。",
+  "reportTrendDeltaPoints": "{sign}{value} 分",
+  "@eicUniqWithdrawnExcluded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@eicUniqSamplesDefinition": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@eicUniqSamplesDedup": {
+    "placeholders": {
+      "unique": {
+        "type": "int"
+      },
+      "raw": {
+        "type": "int"
+      },
+      "dropped": {
+        "type": "int"
+      }
+    }
+  },
+  "@eicUnderstandingIncompleteCensored": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@eicUnderstandingIncompleteMissing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@eicUnderstandingIncompleteBoth": {
+    "placeholders": {
+      "censored": {
+        "type": "int"
+      },
+      "missing": {
+        "type": "int"
+      }
+    }
+  },
+  "@cogPatternTierRepeated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@reportMasteryDefinition": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@reportMasteryNodeDefinitionWithErrors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@reportRadarDefinition": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@reportTrendDeltaPoints": {
+    "placeholders": {
+      "sign": {
+        "type": "String"
+      },
+      "value": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -16518,5 +16518,116 @@
   "objectUnavailableOfflineTitle": "Can't verify right now",
   "objectUnavailableOfflineBody": "The network is unavailable or the service can't be reached, so this item can't be opened yet. Try again later.",
   "objectUnavailableGoTasks": "Open task list",
-  "objectUnavailableBackHome": "Back to home"
+  "objectUnavailableBackHome": "Back to home",
+  "eicEmptyNoData": "No analyzable activity in this window yet, so no conclusions have been drawn.",
+  "eicUniqWithdrawnExcluded": "{count} deleted or withdrawn source records excluded; they are not counted above",
+  "eicUniqSamplesDefinition": "Sample = {count} direction observations after deduplication",
+  "eicUniqSamplesDedup": "Sample = {unique} direction observations after deduplication ({raw} raw deliveries; {dropped} replay duplicates not counted)",
+  "eicUnderstandingNoData": "No data to analyze yet, so no conclusion can be drawn",
+  "eicUnderstandingIncomplete": "Not enough evidence yet; no firm conclusion for now",
+  "eicUnderstandingIncompleteCensored": "Not enough evidence: {count} outcomes not yet due or undeterminable; no firm conclusion for now",
+  "eicUnderstandingIncompleteMissing": "Not enough evidence: {count} sources can no longer be located; no firm conclusion for now",
+  "eicUnderstandingIncompleteBoth": "Not enough evidence: {censored} outcomes not yet due and {missing} sources no longer locatable; no firm conclusion for now",
+  "eicUnderstandingQualitativeOnly": "Below is a qualitative reading of current records, not a firm conclusion",
+  "eicNextStepRejectable": "You can ignore this suggestion; ignoring has no effect whatsoever",
+  "cogPatternTierRepeated": "Observed multiple times ({count})",
+  "cogPatternTierTwice": "Observed twice",
+  "cogPatternTierSingle": "Single observation",
+  "cogPatternTierNone": "No observations yet",
+  "reportMasteryDefinition": "Mastery = evidence-fused score (0-100) of galaxy capability nodes, not attendance or time spent; sample = {count} nodes; changes vs. your previous report are in mastery points (percentage points)",
+  "reportDimensionTapHint": "Tap a node for details and to open its original record on the galaxy map.",
+  "reportMasteryNodeDefinition": "Mastery = the evidence-fused score (0-100) of this capability node, not attendance or time spent.",
+  "reportMasteryNodeDefinitionWithErrors": "Mastery = the evidence-fused score (0-100) of this capability node; {count} checkable error-book records currently linked.",
+  "reportOpenGalaxyNode": "Open original record on galaxy",
+  "reportRadarDefinition": "Each axis is a 0-100 evidence-fused mastery reading; sample = the {count} nodes currently drawn.",
+  "reportTrendDeltaPoints": "{sign}{value} pts",
+  "@eicUniqWithdrawnExcluded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@eicUniqSamplesDefinition": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@eicUniqSamplesDedup": {
+    "placeholders": {
+      "unique": {
+        "type": "int"
+      },
+      "raw": {
+        "type": "int"
+      },
+      "dropped": {
+        "type": "int"
+      }
+    }
+  },
+  "@eicUnderstandingIncompleteCensored": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@eicUnderstandingIncompleteMissing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@eicUnderstandingIncompleteBoth": {
+    "placeholders": {
+      "censored": {
+        "type": "int"
+      },
+      "missing": {
+        "type": "int"
+      }
+    }
+  },
+  "@cogPatternTierRepeated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@reportMasteryDefinition": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@reportMasteryNodeDefinitionWithErrors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@reportRadarDefinition": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@reportTrendDeltaPoints": {
+    "placeholders": {
+      "sign": {
+        "type": "String"
+      },
+      "value": {
+        "type": "int"
+      }
+    }
+  }
 }

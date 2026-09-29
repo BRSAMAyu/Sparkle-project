@@ -61597,6 +61597,138 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'回到首页'**
   String get objectUnavailableBackHome;
+
+  /// No description provided for @eicEmptyNoData.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个窗口还没有可分析的行为记录，尚未形成任何结论。'**
+  String get eicEmptyNoData;
+
+  /// No description provided for @eicUniqWithdrawnExcluded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已排除 {count} 条已删除或撤回的来源记录，它们不计入上面的数字'**
+  String eicUniqWithdrawnExcluded(int count);
+
+  /// No description provided for @eicUniqSamplesDefinition.
+  ///
+  /// In zh, this message translates to:
+  /// **'样本＝去重后的方向观察 {count} 条'**
+  String eicUniqSamplesDefinition(int count);
+
+  /// No description provided for @eicUniqSamplesDedup.
+  ///
+  /// In zh, this message translates to:
+  /// **'样本＝去重后方向观察 {unique} 条（原始投递 {raw} 条，重放重复 {dropped} 条不计入样本量）'**
+  String eicUniqSamplesDedup(int unique, int raw, int dropped);
+
+  /// No description provided for @eicUnderstandingNoData.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有可分析的数据，无法得出结论'**
+  String get eicUnderstandingNoData;
+
+  /// No description provided for @eicUnderstandingIncomplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据不足，先不下充分结论'**
+  String get eicUnderstandingIncomplete;
+
+  /// No description provided for @eicUnderstandingIncompleteCensored.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据不足：{count} 条结果未到期或无法判定，先不下充分结论'**
+  String eicUnderstandingIncompleteCensored(int count);
+
+  /// No description provided for @eicUnderstandingIncompleteMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据不足：{count} 条来源已不可定位，先不下充分结论'**
+  String eicUnderstandingIncompleteMissing(int count);
+
+  /// No description provided for @eicUnderstandingIncompleteBoth.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据不足：{censored} 条结果未到期、{missing} 条来源已不可定位，先不下充分结论'**
+  String eicUnderstandingIncompleteBoth(int censored, int missing);
+
+  /// No description provided for @eicUnderstandingQualitativeOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'以下只是基于现有记录的定性观察，不是充分结论'**
+  String get eicUnderstandingQualitativeOnly;
+
+  /// No description provided for @eicNextStepRejectable.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条建议可以忽略，忽略不会有任何影响'**
+  String get eicNextStepRejectable;
+
+  /// No description provided for @cogPatternTierRepeated.
+  ///
+  /// In zh, this message translates to:
+  /// **'多次观察到（{count} 次）'**
+  String cogPatternTierRepeated(int count);
+
+  /// No description provided for @cogPatternTierTwice.
+  ///
+  /// In zh, this message translates to:
+  /// **'观察到 2 次'**
+  String get cogPatternTierTwice;
+
+  /// No description provided for @cogPatternTierSingle.
+  ///
+  /// In zh, this message translates to:
+  /// **'单次观察'**
+  String get cogPatternTierSingle;
+
+  /// No description provided for @cogPatternTierNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无观察记录'**
+  String get cogPatternTierNone;
+
+  /// No description provided for @reportMasteryDefinition.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度＝星图能力节点的证据融合值（0–100），不是出勤或时长统计；样本＝{count} 个能力节点；与上次报告相比的变化按掌握度分（百分点）计'**
+  String reportMasteryDefinition(int count);
+
+  /// No description provided for @reportDimensionTapHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点按节点可查看明细，并回到星图原始记录核对来源。'**
+  String get reportDimensionTapHint;
+
+  /// No description provided for @reportMasteryNodeDefinition.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度＝这个能力节点的证据融合值（0–100），不是出勤或时长统计。'**
+  String get reportMasteryNodeDefinition;
+
+  /// No description provided for @reportMasteryNodeDefinitionWithErrors.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度＝这个能力节点的证据融合值（0–100）；当前关联 {count} 条可核对的错题记录。'**
+  String reportMasteryNodeDefinitionWithErrors(int count);
+
+  /// No description provided for @reportOpenGalaxyNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看星图原始记录'**
+  String get reportOpenGalaxyNode;
+
+  /// No description provided for @reportRadarDefinition.
+  ///
+  /// In zh, this message translates to:
+  /// **'图上每个轴是一条 0–100 的证据融合掌握度读数；样本＝当前绘制的 {count} 个能力节点。'**
+  String reportRadarDefinition(int count);
+
+  /// No description provided for @reportTrendDeltaPoints.
+  ///
+  /// In zh, this message translates to:
+  /// **'{sign}{value} 分'**
+  String reportTrendDeltaPoints(String sign, int value);
 }
 
 class _AppLocalizationsDelegate

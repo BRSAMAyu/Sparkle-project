@@ -35381,4 +35381,99 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get objectUnavailableBackHome => 'Back to home';
+
+  @override
+  String get eicEmptyNoData =>
+      'No analyzable activity in this window yet, so no conclusions have been drawn.';
+
+  @override
+  String eicUniqWithdrawnExcluded(int count) {
+    return '$count deleted or withdrawn source records excluded; they are not counted above';
+  }
+
+  @override
+  String eicUniqSamplesDefinition(int count) {
+    return 'Sample = $count direction observations after deduplication';
+  }
+
+  @override
+  String eicUniqSamplesDedup(int unique, int raw, int dropped) {
+    return 'Sample = $unique direction observations after deduplication ($raw raw deliveries; $dropped replay duplicates not counted)';
+  }
+
+  @override
+  String get eicUnderstandingNoData =>
+      'No data to analyze yet, so no conclusion can be drawn';
+
+  @override
+  String get eicUnderstandingIncomplete =>
+      'Not enough evidence yet; no firm conclusion for now';
+
+  @override
+  String eicUnderstandingIncompleteCensored(int count) {
+    return 'Not enough evidence: $count outcomes not yet due or undeterminable; no firm conclusion for now';
+  }
+
+  @override
+  String eicUnderstandingIncompleteMissing(int count) {
+    return 'Not enough evidence: $count sources can no longer be located; no firm conclusion for now';
+  }
+
+  @override
+  String eicUnderstandingIncompleteBoth(int censored, int missing) {
+    return 'Not enough evidence: $censored outcomes not yet due and $missing sources no longer locatable; no firm conclusion for now';
+  }
+
+  @override
+  String get eicUnderstandingQualitativeOnly =>
+      'Below is a qualitative reading of current records, not a firm conclusion';
+
+  @override
+  String get eicNextStepRejectable =>
+      'You can ignore this suggestion; ignoring has no effect whatsoever';
+
+  @override
+  String cogPatternTierRepeated(int count) {
+    return 'Observed multiple times ($count)';
+  }
+
+  @override
+  String get cogPatternTierTwice => 'Observed twice';
+
+  @override
+  String get cogPatternTierSingle => 'Single observation';
+
+  @override
+  String get cogPatternTierNone => 'No observations yet';
+
+  @override
+  String reportMasteryDefinition(int count) {
+    return 'Mastery = evidence-fused score (0-100) of galaxy capability nodes, not attendance or time spent; sample = $count nodes; changes vs. your previous report are in mastery points (percentage points)';
+  }
+
+  @override
+  String get reportDimensionTapHint =>
+      'Tap a node for details and to open its original record on the galaxy map.';
+
+  @override
+  String get reportMasteryNodeDefinition =>
+      'Mastery = the evidence-fused score (0-100) of this capability node, not attendance or time spent.';
+
+  @override
+  String reportMasteryNodeDefinitionWithErrors(int count) {
+    return 'Mastery = the evidence-fused score (0-100) of this capability node; $count checkable error-book records currently linked.';
+  }
+
+  @override
+  String get reportOpenGalaxyNode => 'Open original record on galaxy';
+
+  @override
+  String reportRadarDefinition(int count) {
+    return 'Each axis is a 0-100 evidence-fused mastery reading; sample = the $count nodes currently drawn.';
+  }
+
+  @override
+  String reportTrendDeltaPoints(String sign, int value) {
+    return '$sign$value pts';
+  }
 }

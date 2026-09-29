@@ -74,6 +74,17 @@ class EvidenceInsightCardWidget extends StatelessWidget {
                       .bodySmall
                       ?.copyWith(color: DS.textSecondary, height: 1.52),
                 ),
+              if (_understandingLine(l10n) case final understandingLine?)
+                Padding(
+                  padding: const EdgeInsets.only(top: DS.spacing4),
+                  child: Text(
+                    understandingLine,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: DS.textSecondary, height: 1.52),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: DS.spacing8),
@@ -99,7 +110,22 @@ class EvidenceInsightCardWidget extends StatelessWidget {
           const SizedBox(height: DS.spacing8),
           _ElementBlock(
             label: l10n.eicImplicationLabel,
-            children: [Text(_actionText(l10n))],
+            children: [
+              Text(_actionText(l10n)),
+              // V4-U13 单主建议信封（D05 契约）：零惩罚可拒绝只在后端冻结
+              // 常量成立时渲染；契约漂移一律不渲染（绝不替后端承诺）。
+              if (card.nextStep?.zeroPenaltyRejectable ?? false)
+                Padding(
+                  padding: const EdgeInsets.only(top: DS.spacing4),
+                  child: Text(
+                    l10n.eicNextStepRejectable,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: DS.textSecondary, height: 1.52),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -256,10 +282,55 @@ class EvidenceInsightCardWidget extends StatelessWidget {
     if (card.notDeterminable > 0) {
       lines.add(l10n.eicUniqNotDeterminable(card.notDeterminable));
     }
+    // V4-U13 撤回排除显式在册：撤回的来源记录不静默消失（真实计数随行）。
+    if (card.withdrawnRefsExcluded > 0) {
+      lines.add(l10n.eicUniqWithdrawnExcluded(card.withdrawnRefsExcluded));
+    }
+    // V4-U13 样本量真实定义：去重后方向观察数 + 重放投递如实计 raw
+    // （D02-R1 C-3 消费面；原始数值与推断拆开——这里是纯计数行）。
+    if (card.outcomeSamplesRaw > 0) {
+      lines.add(
+        card.duplicateOutcomeSamplesDropped > 0
+            ? l10n.eicUniqSamplesDedup(
+                card.samples,
+                card.outcomeSamplesRaw,
+                card.duplicateOutcomeSamplesDropped,
+              )
+            : l10n.eicUniqSamplesDefinition(card.samples),
+      );
+    }
     if (lines.isEmpty) {
       lines.add(l10n.eicUniqCountsOnly);
     }
     return lines;
+  }
+
+  /// V4-U13 理解档行（推断面显式声明）：无数据/证据不足分开呈现，
+  /// 有资格也只是「定性结论」——绝不出「充分理解」宣称。
+  String? _understandingLine(AppLocalizations l10n) {
+    switch (card.understanding.band) {
+      case EvidenceUnderstandingBand.noData:
+        return l10n.eicUnderstandingNoData;
+      case EvidenceUnderstandingBand.incomplete:
+        return card.understanding.censored > 0 && card.understanding.missing > 0
+            ? l10n.eicUnderstandingIncompleteBoth(
+                card.understanding.censored,
+                card.understanding.missing,
+              )
+            : card.understanding.censored > 0
+                ? l10n.eicUnderstandingIncompleteCensored(
+                    card.understanding.censored,
+                  )
+                : card.understanding.missing > 0
+                    ? l10n.eicUnderstandingIncompleteMissing(
+                        card.understanding.missing,
+                      )
+                    : l10n.eicUnderstandingIncomplete;
+      case EvidenceUnderstandingBand.allowed:
+        return l10n.eicUnderstandingQualitativeOnly;
+      case EvidenceUnderstandingBand.unknown:
+        return null;
+    }
   }
 
   String _evidenceLabel(AppLocalizations l10n, String labelKey) {

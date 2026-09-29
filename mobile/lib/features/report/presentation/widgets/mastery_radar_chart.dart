@@ -130,6 +130,16 @@ class MasteryRadarChart extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          // V4-U13 图表数值真实定义：图上每个轴是一条 0–100 的证据融合
+          // 掌握度读数；样本 = 当前绘制的节点数。标签保持现代排版（不像素化）。
+          Text(
+            context.l10n.reportRadarDefinition(axisCount),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
