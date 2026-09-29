@@ -657,16 +657,23 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
           ),
           // Turn counter
           if (session != null && session.isActive)
+            // V4-G03 四风格对比度复算：borderSubtle 芯片底（border@0.72/0.6
+            // 合成中灰）对 textSecondary 仅 2.03–4.3:1（五档全崩——中灰底
+            // 对浅墨/深墨双向失配）；换 surfaceTertiary + textPrimary 全档
+            // ≥8.33:1，12sp 字阶下限对齐。
             Container(
               padding: const EdgeInsets.symmetric(
                   horizontal: DS.spacing8, vertical: DS.spacing4,),
               decoration: BoxDecoration(
-                color: DS.borderSubtle,
+                color: DS.surfaceTertiary,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
                 l10n.auroraTurnsRemaining(session.turnsRemaining),
-                style: TextStyle(color: DS.textSecondary, fontSize: 11),
+                style: TextStyle(
+                  color: DS.textPrimary,
+                  fontSize: DS.fontSizeXs,
+                ),
               ),
             ),
           const SizedBox(width: DS.spacing8),
@@ -1658,6 +1665,8 @@ class _TypingDots extends StatefulWidget {
 class _TypingDotsState extends State<_TypingDots>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  bool _reduceMotion = false;
+  bool _motionWired = false;
 
   @override
   void initState() {
@@ -1666,7 +1675,27 @@ class _TypingDotsState extends State<_TypingDots>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    unawaited(_controller.repeat());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // V4-G03 reduce-motion 等价（S01 判例「禁动效不装壳」）：OS 减动效/
+    // 辅助导航时不播循环闪烁，直落静态三点——「生成中」语义由伴随文案
+    // 承载，不靠闪烁动画；首帧前即决定启停（前任 build 内 stop 是事后
+    // 补救，首帧仍闪）。didChangeDependencies 里读 MediaQuery 可建立
+    // 依赖：OS 减动效开关切换时实时跟随。
+    final reduceMotion = MediaQuery.disableAnimationsOf(context) ||
+        MediaQuery.accessibleNavigationOf(context);
+    if (!_motionWired || reduceMotion != _reduceMotion) {
+      _motionWired = true;
+      _reduceMotion = reduceMotion;
+      if (reduceMotion) {
+        _controller.stop();
+      } else if (!_controller.isAnimating) {
+        unawaited(_controller.repeat());
+      }
+    }
   }
 
   @override
@@ -1676,14 +1705,25 @@ class _TypingDotsState extends State<_TypingDots>
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
+  Widget build(BuildContext context) {
+    if (_reduceMotion) {
+      return _dots(const [1.0, 0.6, 0.35]);
+    }
+    return AnimatedBuilder(
       animation: _controller,
-      builder: (_, __) {
-        final phase = _controller.value;
-        return Row(
-          children: List.generate(3, (i) {
-            final opacity = ((phase * 3 - i) % 1).clamp(0.2, 1.0);
-            return Padding(
+      builder: (_, __) => _dots(
+        List<double>.generate(
+          3,
+          (i) => ((_controller.value * 3 - i) % 1).clamp(0.2, 1.0),
+        ),
+      ),
+    );
+  }
+
+  Widget _dots(List<double> opacities) => Row(
+        children: [
+          for (final opacity in opacities)
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
               child: Opacity(
                 opacity: opacity,
@@ -1696,9 +1736,7 @@ class _TypingDotsState extends State<_TypingDots>
                   ),
                 ),
               ),
-            );
-          }),
-        );
-      },
-    );
+            ),
+        ],
+      );
 }

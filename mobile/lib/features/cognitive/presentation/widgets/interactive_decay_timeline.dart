@@ -305,7 +305,8 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
             description,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
-              fontSize: 10,
+              // V4-G03：10sp 低于 12sp 辅助字号下限（DESIGN_SYSTEM 字阶合同）。
+              fontSize: DS.fontSizeXs,
             ),
           ),
         ],

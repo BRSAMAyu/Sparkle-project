@@ -10146,6 +10146,27 @@
   "auroraConfirm": "确认",
   "auroraNotRight": "不对",
   "auroraDontJudge": "以后别这样判断",
+  "auroraCalibrationConfirmToast": "Aurora 会把这条判断当成已确认",
+  "auroraCalibrationIncorrectToast": "Aurora 会收回这条判断并重新学习",
+  "auroraCalibrationMuteToast": "Aurora 不会再用这种方式打扰你",
+  "auroraCalibrationAwaitingCount": "{count} 条关键假设待你校准",
+  "@auroraCalibrationAwaitingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "evidenceDrawerEmpty": "暂无证据记录",
+  "evidenceDrawerInsufficient": "证据不足",
+  "evidenceDrawerStrong": "强",
+  "evidenceDrawerWeak": "弱",
+  "evidenceDrawerMissing": "缺",
+  "evidenceDrawerAll": "全部",
+  "evidenceDrawerNoMatch": "没有匹配的证据",
+  "memoryEvidenceStatusOk": "OK",
+  "memoryEvidenceStatusRedacted": "已隐藏",
+  "memoryEvidenceStatusMissing": "缺失",
   "auroraStartFailed": "启动 Aurora 校准失败，请稍后重试。",
   "auroraSendFailed": "发送失败，请稍后重试。",
   "auroraExitCalibration": "退出校准",

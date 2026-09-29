@@ -22553,6 +22553,50 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraDontJudge => '以后别这样判断';
 
   @override
+  String get auroraCalibrationConfirmToast => 'Aurora 会把这条判断当成已确认';
+
+  @override
+  String get auroraCalibrationIncorrectToast => 'Aurora 会收回这条判断并重新学习';
+
+  @override
+  String get auroraCalibrationMuteToast => 'Aurora 不会再用这种方式打扰你';
+
+  @override
+  String auroraCalibrationAwaitingCount(int count) {
+    return '$count 条关键假设待你校准';
+  }
+
+  @override
+  String get evidenceDrawerEmpty => '暂无证据记录';
+
+  @override
+  String get evidenceDrawerInsufficient => '证据不足';
+
+  @override
+  String get evidenceDrawerStrong => '强';
+
+  @override
+  String get evidenceDrawerWeak => '弱';
+
+  @override
+  String get evidenceDrawerMissing => '缺';
+
+  @override
+  String get evidenceDrawerAll => '全部';
+
+  @override
+  String get evidenceDrawerNoMatch => '没有匹配的证据';
+
+  @override
+  String get memoryEvidenceStatusOk => 'OK';
+
+  @override
+  String get memoryEvidenceStatusRedacted => '已隐藏';
+
+  @override
+  String get memoryEvidenceStatusMissing => '缺失';
+
+  @override
   String get auroraStartFailed => '启动 Aurora 校准失败，请稍后重试。';
 
   @override

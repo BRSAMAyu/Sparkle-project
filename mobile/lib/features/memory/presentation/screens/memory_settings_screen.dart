@@ -423,12 +423,15 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                         label: _enabled
                             ? context.l10n.memEnabled
                             : context.l10n.memPaused,
-                        color: _enabled ? DS.primaryBase : DS.textSecondary,
+                        // V4-G03：classic-only 令牌外取色清零——状态语义走
+                        // 语义令牌（success=启用/info=可控），四风格对比度
+                        // 复算 ≥4.5:1（paperDay/dusk/quiet 全档，tint 0.06）。
+                        color: _enabled ? DS.semanticSuccess : DS.textSecondary,
                       ),
                       _buildStatusChip(
                         icon: Icons.privacy_tip_outlined,
                         label: context.l10n.memPrefControlled,
-                        color: const Color(0xFF71917D),
+                        color: DS.info,
                       ),
                     ],
                   ),
@@ -771,7 +774,9 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
           vertical: DS.spacing6,
         ),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          // V4-G03 四风格对比度复算：0.10 tint 在 classic 两档对 12sp 标签
+          // 只有 4.08–4.45:1；0.06 全档 ≥4.53:1（classic-light 4.53 最窄）。
+          color: color.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: color.withValues(alpha: 0.16)),
         ),
@@ -1009,12 +1014,13 @@ class _MemoryChoiceChip extends StatelessWidget {
         label: Text(label),
         selected: selected,
         onSelected: enabled ? (_) => onSelected() : null,
-        selectedColor: DS.primaryBase.withValues(alpha: 0.14),
+        // V4-G03 四风格对比度复算：选中态 tint 0.14 对 brandPrimary 12sp
+        // 标签在 classic 两档仅 3.97–4.22:1；0.05 全档 ≥4.52:1。选中辨识度
+        // 由实色描边（对相邻面 ≥4.79:1）+ 加粗标签承担，不靠 tint 深浅。
+        selectedColor: DS.primaryBase.withValues(alpha: 0.05),
         backgroundColor: DS.surfaceSecondary,
         side: BorderSide(
-          color: selected
-              ? DS.primaryBase.withValues(alpha: 0.28)
-              : DS.borderSubtle,
+          color: selected ? DS.primaryBase : DS.borderSubtle,
         ),
         labelStyle: DS.bodySmall.copyWith(
           color: selected ? DS.primaryBase : DS.textSecondary,
@@ -1041,13 +1047,13 @@ class _MemoryFilterChip extends StatelessWidget {
         label: Text(label),
         selected: selected,
         onSelected: enabled ? onSelected : null,
-        selectedColor: DS.primaryBase.withValues(alpha: 0.12),
+        // V4-G03 四风格对比度复算：同 _MemoryChoiceChip——选中 tint 0.12→0.05
+        // （classic 两档 4.06→≥4.52:1），选中态辨识度走实色描边+checkmark。
+        selectedColor: DS.primaryBase.withValues(alpha: 0.05),
         backgroundColor: DS.surfaceSecondary,
         disabledColor: DS.surfaceSecondary.withValues(alpha: 0.8),
         side: BorderSide(
-          color: selected
-              ? DS.primaryBase.withValues(alpha: 0.22)
-              : DS.borderSubtle,
+          color: selected ? DS.primaryBase : DS.borderSubtle,
         ),
         labelStyle: DS.bodySmall.copyWith(
           color: enabled

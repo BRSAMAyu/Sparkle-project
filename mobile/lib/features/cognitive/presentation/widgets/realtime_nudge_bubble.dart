@@ -53,7 +53,10 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
         margin: const EdgeInsets.symmetric(horizontal: DS.spacing16),
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
-          color: isDark ? DS.neutral800 : DS.info.withValues(alpha: 0.1),
+          // V4-G03：dark 侧 neutral800（浅灰泡）对 info 图标仅 ~2.2:1、
+          // 对 neutral200 文字反向倒挂；dark 侧换 surfaceTertiary + textPrimary
+          // （全档 ≥4.3:1），light 侧 info tint 面不动（文字/图标均达标）。
+          color: isDark ? DS.surfaceTertiary : DS.info.withValues(alpha: 0.1),
           borderRadius: DS.borderRadius16,
           boxShadow: isDark ? null : DS.shadowSm,
           border: Border.all(color: DS.info.withValues(alpha: 0.3)),
@@ -66,7 +69,7 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
               child: Text(
                 '💡 ${latestPatternWithSolution.patternName}: ${latestPatternWithSolution.solutionText}',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? DS.neutral200 : DS.neutral800,
+                  color: isDark ? DS.textPrimary : DS.neutral800,
                   fontWeight: DS.fontWeightMedium,
                 ),
                 maxLines: 2,
@@ -74,8 +77,12 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
               ),
             ),
             const SizedBox(width: DS.spacing8),
-            Icon(Icons.arrow_forward_ios_rounded,
-                color: DS.neutral400, size: 16,),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              // V4-G03：neutral400 在 dark 侧 tertiary 面上 <3:1，随面切换。
+              color: isDark ? DS.textSecondary : DS.neutral400,
+              size: 16,
+            ),
           ],
         ),
       ),

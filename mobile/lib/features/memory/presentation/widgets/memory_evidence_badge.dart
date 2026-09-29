@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 
 enum MemoryEvidenceStatus {
@@ -29,11 +28,12 @@ class MemoryEvidenceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
+    // V4-G03：I18nService 双语三元转 l10n arb（双语纯增量，与
+    // evidence_drawer 同批收口；EN 发布面同语义）。
     final label = switch (status) {
-      MemoryEvidenceStatus.ok => 'OK',
-      MemoryEvidenceStatus.redacted => zh ? '已隐藏' : 'Redacted',
-      MemoryEvidenceStatus.missing => zh ? '缺失' : 'Missing',
+      MemoryEvidenceStatus.ok => context.l10n.memoryEvidenceStatusOk,
+      MemoryEvidenceStatus.redacted => context.l10n.memoryEvidenceStatusRedacted,
+      MemoryEvidenceStatus.missing => context.l10n.memoryEvidenceStatusMissing,
     };
     final count = evidenceCount;
 

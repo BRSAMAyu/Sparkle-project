@@ -730,10 +730,11 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
                       selected ? DS.fontWeightSemibold : FontWeight.normal,
                 ),
                 side: BorderSide(
-                  color: selected
-                      ? DS.brandPrimary.withValues(alpha: 0.4)
-                      : DS.border,
-                  width: 0.5,
+                  // V4-G03：选中态实色描边（对相邻面 ≥4.79:1）承担辨识度；
+                  // 0.12 tint 对 12sp brandPrimary 标签在 classic 两档
+                  // 仅 4.06–4.22:1，降 0.05 后全档 ≥4.52:1。
+                  color: selected ? DS.brandPrimary : DS.border,
+                  width: selected ? 1 : 0.5,
                 ),
                 backgroundColor: DS.surfaceSecondary,
                 padding: const EdgeInsets.symmetric(
@@ -770,7 +771,11 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
                 borderSide: BorderSide(color: DS.brandPrimary),
               ),
               contentPadding: const EdgeInsets.all(DS.spacing12),
-              counterStyle: TextStyle(color: DS.textSecondary, fontSize: 11),
+              // V4-G03：11sp 低于 12sp 辅助字号下限（DESIGN_SYSTEM 字阶合同）。
+              counterStyle: TextStyle(
+                color: DS.textSecondary,
+                fontSize: DS.fontSizeXs,
+              ),
             ),
           ),
           const SizedBox(height: DS.spacing16),

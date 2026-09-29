@@ -3,7 +3,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_cards.dart';
 
 enum _EvidenceFilter { all, strong, weak, missing }
@@ -37,13 +36,11 @@ class EvidenceDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
-
     if (items.isEmpty && refs.isEmpty && !evidenceMissing) {
       return Padding(
         padding: const EdgeInsets.all(DS.md),
         child: Text(
-          zh ? '暂无证据记录' : 'No evidence records yet',
+          context.l10n.evidenceDrawerEmpty,
           style: DS.bodySmall.copyWith(color: DS.textSecondary),
         ),
       );
@@ -64,7 +61,7 @@ class EvidenceDrawer extends StatelessWidget {
             ),
             const SizedBox(width: DS.spacing8),
             Text(
-              zh ? '证据不足' : 'Insufficient evidence',
+              context.l10n.evidenceDrawerInsufficient,
               style: DS.bodySmall.copyWith(color: DS.semanticWarning),
             ),
           ],
@@ -162,7 +159,6 @@ class _EvidenceDrawerSheetState extends State<_EvidenceDrawerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
 
     final resolvedItems = _resolveItems();
     final strongCount = resolvedItems.where((i) => _itemTier(i) == 'strong').length;
@@ -207,19 +203,19 @@ class _EvidenceDrawerSheetState extends State<_EvidenceDrawerSheet> {
             child: Row(
               children: [
                 _SummaryChip(
-                  label: zh ? '强' : 'Strong',
+                  label: context.l10n.evidenceDrawerStrong,
                   count: strongCount,
                   color: DS.semanticSuccess,
                 ),
                 const SizedBox(width: DS.spacing6),
                 _SummaryChip(
-                  label: zh ? '弱' : 'Weak',
+                  label: context.l10n.evidenceDrawerWeak,
                   count: weakCount,
                   color: DS.semanticWarning,
                 ),
                 const SizedBox(width: DS.spacing6),
                 _SummaryChip(
-                  label: zh ? '缺' : 'Missing',
+                  label: context.l10n.evidenceDrawerMissing,
                   count: missingCount,
                   color: DS.semanticError,
                 ),
@@ -237,28 +233,28 @@ class _EvidenceDrawerSheetState extends State<_EvidenceDrawerSheet> {
                   ButtonSegment<_EvidenceFilter>(
                     value: _EvidenceFilter.all,
                     label: Text(
-                      zh ? '全部' : 'All',
+                      context.l10n.evidenceDrawerAll,
                       style: DS.labelSmall,
                     ),
                   ),
                   ButtonSegment<_EvidenceFilter>(
                     value: _EvidenceFilter.strong,
                     label: Text(
-                      zh ? '强' : 'Strong',
+                      context.l10n.evidenceDrawerStrong,
                       style: DS.labelSmall,
                     ),
                   ),
                   ButtonSegment<_EvidenceFilter>(
                     value: _EvidenceFilter.weak,
                     label: Text(
-                      zh ? '弱' : 'Weak',
+                      context.l10n.evidenceDrawerWeak,
                       style: DS.labelSmall,
                     ),
                   ),
                   ButtonSegment<_EvidenceFilter>(
                     value: _EvidenceFilter.missing,
                     label: Text(
-                      zh ? '缺' : 'Missing',
+                      context.l10n.evidenceDrawerMissing,
                       style: DS.labelSmall,
                     ),
                   ),
@@ -291,7 +287,7 @@ class _EvidenceDrawerSheetState extends State<_EvidenceDrawerSheet> {
                 ? Padding(
                     padding: const EdgeInsets.all(DS.md),
                     child: Text(
-                      zh ? '证据不足' : 'Insufficient evidence',
+                      context.l10n.evidenceDrawerInsufficient,
                       style: DS.bodySmall.copyWith(color: DS.semanticWarning),
                     ),
                   )
@@ -299,7 +295,7 @@ class _EvidenceDrawerSheetState extends State<_EvidenceDrawerSheet> {
                     ? Padding(
                         padding: const EdgeInsets.all(DS.lg),
                         child: Text(
-                          zh ? '没有匹配的证据' : 'No matching evidence',
+                          context.l10n.evidenceDrawerNoMatch,
                           style: DS.bodySmall.copyWith(color: DS.textSecondary),
                         ),
                       )
@@ -360,7 +356,10 @@ class _SummaryChip extends StatelessWidget {
           vertical: DS.spacing4,
         ),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          // V4-G03 四风格对比度复算：彩色 12sp 标签对 0.1 tint 合成底在
+          // classic-dark 仅 ~4.3:1；标签改 textPrimary（≥7:1），tint 0.06
+          // 保色点 ≥3:1，语义色由圆点与 tint 承载。
+          color: color.withValues(alpha: 0.06),
           borderRadius: DS.borderRadius6,
         ),
         child: Row(
@@ -375,7 +374,12 @@ class _SummaryChip extends StatelessWidget {
               ),
             ),
             const SizedBox(width: DS.spacing4),
-            Text('$label $count', style: DS.labelSmall.copyWith(color: color)),
+            Text(
+              '$label $count',
+              // V4-G03：语义色 12sp 标签在 classic 两档 tint 面上 <4.5:1，
+              // 改 textPrimary；色相辨识由圆点承担。
+              style: DS.labelSmall.copyWith(color: DS.textPrimary),
+            ),
           ],
         ),
       );

@@ -35,7 +35,12 @@ class SemanticPill extends StatelessWidget {
   final VoidCallback? onDeleted;
 
   Color _getBackgroundColor(PillTone tone, BuildContext context) {
-    final alpha = selected ? 0.18 : 0.1;
+    // V4-G03 四风格对比度复算（memory/aurora/cognitive 家族走查）：
+    // tone 色 12sp 标签对 0.10 tint 合成底在 classic 两档只有 4.26–4.45:1
+    // （labelSmall 需 ≥4.5:1）；0.05 后全四档（classic/paperDay/dusk/quiet）
+    // × 常见面（card/panel/secondary）≥4.51:1。选中态仍 0.18（登记项：
+    // 家族面未用 selected，选中态对比度归 DS 收敛卡统一处理）。
+    final alpha = selected ? 0.18 : 0.05;
     switch (tone) {
       case PillTone.info:
         return DS.info.withValues(alpha: alpha);

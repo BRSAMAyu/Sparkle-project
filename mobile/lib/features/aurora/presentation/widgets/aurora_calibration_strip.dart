@@ -60,13 +60,14 @@ class _AuroraCalibrationStripState
   }
 
   String _successMessage(AuroraCalibrationResponse response) {
+    // V4-G03：四处硬编码中文转 l10n（双语纯增量，EN 发布面同语义）。
     switch (response) {
       case AuroraCalibrationResponse.confirm:
-        return 'Aurora 会把这条判断当成已确认';
+        return context.l10n.auroraCalibrationConfirmToast;
       case AuroraCalibrationResponse.incorrect:
-        return 'Aurora 会收回这条判断并重新学习';
+        return context.l10n.auroraCalibrationIncorrectToast;
       case AuroraCalibrationResponse.mute:
-        return 'Aurora 不会再用这种方式打扰你';
+        return context.l10n.auroraCalibrationMuteToast;
     }
   }
 
@@ -189,7 +190,10 @@ class _AuroraCalibrationStripState
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${surface.items.length} 条关键假设待你校准',
+                                // V4-G03：硬编码中文转 l10n（双语纯增量）。
+                                context.l10n.auroraCalibrationAwaitingCount(
+                                  surface.items.length,
+                                ),
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -362,7 +366,9 @@ class _ConfidenceBadge extends StatelessWidget {
         vertical: DS.spacing6,
       ),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.12),
+        // V4-G03 四风格对比度复算：0.12 tint 对 12sp 徽章标签在
+        // classic-dark 对 brandPrimary 仅 4.11:1；0.06 全档 ≥4.50:1。
+        color: accent.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: accent.withValues(alpha: 0.18)),
       ),

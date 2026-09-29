@@ -23509,6 +23509,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auroraDontJudge => 'Don\'t Judge Like This';
 
   @override
+  String get auroraCalibrationConfirmToast =>
+      'Aurora will treat this judgment as confirmed';
+
+  @override
+  String get auroraCalibrationIncorrectToast =>
+      'Aurora will withdraw this judgment and relearn';
+
+  @override
+  String get auroraCalibrationMuteToast =>
+      'Aurora will stop nudging you this way';
+
+  @override
+  String auroraCalibrationAwaitingCount(int count) {
+    return '$count key assumptions await your calibration';
+  }
+
+  @override
+  String get evidenceDrawerEmpty => 'No evidence records yet';
+
+  @override
+  String get evidenceDrawerInsufficient => 'Insufficient evidence';
+
+  @override
+  String get evidenceDrawerStrong => 'Strong';
+
+  @override
+  String get evidenceDrawerWeak => 'Weak';
+
+  @override
+  String get evidenceDrawerMissing => 'Missing';
+
+  @override
+  String get evidenceDrawerAll => 'All';
+
+  @override
+  String get evidenceDrawerNoMatch => 'No matching evidence';
+
+  @override
+  String get memoryEvidenceStatusOk => 'OK';
+
+  @override
+  String get memoryEvidenceStatusRedacted => 'Redacted';
+
+  @override
+  String get memoryEvidenceStatusMissing => 'Missing';
+
+  @override
   String get auroraStartFailed =>
       'Failed to start Aurora calibration. Please retry later.';
 

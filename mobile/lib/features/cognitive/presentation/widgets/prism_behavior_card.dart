@@ -74,7 +74,10 @@ class PrismBehaviorCard extends StatelessWidget {
                 context,
                 context.l10n.prismEmotionalPatterns,
                 emotional,
-                DS.prismPurple,
+                // V4-G03：prismPurple（=退役别名槽 brandSecondary）作文字/
+                // 图标在 classic-light 玻璃/卡面仅 2.72–3.05:1；改
+                // taskReflection 柔紫语义槽（B2-3a 定标，四档达标）。
+                DS.taskReflection,
                 Icons.sentiment_neutral,
               ),
             ],
@@ -105,7 +108,11 @@ class PrismBehaviorCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.psychology_outlined, color: DS.prismPurple),
+                  Icon(
+                    Icons.psychology_outlined,
+                    // V4-G03：柔紫语义槽替换 brandSecondary（图形 ≥3:1）。
+                    color: DS.taskReflection,
+                  ),
                   const SizedBox(width: DS.sm),
                   Text(
                     context.l10n.prismTitle,
@@ -124,7 +131,7 @@ class PrismBehaviorCard extends StatelessWidget {
               Text(
                 context.l10n.prismHint,
                 style: TextStyle(
-                  color: DS.textTertiary,
+                  color: DS.textSecondary,
                   fontSize: DS.fontSizeSm,
                   fontStyle: FontStyle.italic,
                 ),
@@ -164,13 +171,15 @@ class PrismBehaviorCard extends StatelessWidget {
               vertical: DS.xs,
             ),
             decoration: BoxDecoration(
-              color: DS.prismPurple.withValues(alpha: 0.1),
+              // V4-G03 四风格复算：12sp 彩色标签对 0.1 tint 合成底在
+              // classic 两档 ≤4.3:1；0.06 全档 ≥4.5:1（label 文字随色）。
+              color: DS.taskReflection.withValues(alpha: 0.06),
               borderRadius: DS.borderRadius4,
             ),
             child: Text(
               context.l10n.prismTotalPatterns(count),
               style: TextStyle(
-                color: DS.prismPurple,
+                color: DS.taskReflection,
                 fontSize: DS.fontSizeXs,
               ),
             ),
@@ -194,8 +203,10 @@ class PrismBehaviorCard extends StatelessWidget {
               const SizedBox(width: DS.xs),
               Text(
                 title,
+                // V4-G03：分区标题文字走 textPrimary（classic-dark 下
+                // success 系彩字对卡面仅 4.42:1 <4.5）；色相辨识由图标承担。
                 style: TextStyle(
-                  color: color,
+                  color: DS.textPrimary,
                   fontWeight: DS.fontWeightSemibold,
                   fontSize: DS.fontSizeSm,
                 ),
@@ -207,14 +218,15 @@ class PrismBehaviorCard extends StatelessWidget {
                   vertical: DS.spacing4 / 2,
                 ),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  // V4-G03：0.1→0.06（全档文字 ≥4.5），计数文字 textPrimary。
+                  color: color.withValues(alpha: 0.06),
                   borderRadius: DS.borderRadius4,
                 ),
                 child: Text(
                   '${patterns.length}',
                   style: TextStyle(
                     fontSize: DS.fontSizeXs,
-                    color: color,
+                    color: DS.textPrimary,
                   ),
                 ),
               ),
@@ -265,14 +277,16 @@ class PrismBehaviorCard extends StatelessWidget {
                     vertical: DS.spacing4 / 2,
                   ),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
+                    // V4-G03：0.12→0.06 + textPrimary（彩色 10sp 对 tint
+                    // 合成底在 classic 两档 <4.2:1 且低于 12sp 字号下限）。
+                    color: color.withValues(alpha: 0.06),
                     borderRadius: DS.borderRadius4,
                   ),
                   child: Text(
                     '${(confidenceScore * 100).toInt()}%',
                     style: TextStyle(
-                      fontSize: 10,
-                      color: color,
+                      fontSize: DS.fontSizeXs,
+                      color: DS.textPrimary,
                       fontWeight: DS.fontWeightMedium,
                     ),
                   ),
@@ -297,14 +311,18 @@ class PrismBehaviorCard extends StatelessWidget {
                 Icon(
                   Icons.lightbulb_outline,
                   size: 14,
-                  color: color.withValues(alpha: 0.8),
+                  // V4-G03：去 0.8 透明衰减（classic-light 对 tint 面图形
+                  // 对比 <3:1），全色图标 ≥3:1。
+                  color: color,
                 ),
                 const SizedBox(width: DS.spacing4),
                 Expanded(
                   child: Text(
                     solutionText,
                     style: TextStyle(
-                      fontSize: 11,
+                      // V4-G03：10/11sp 低于 12sp 辅助字号下限（DESIGN_SYSTEM
+                      // 字阶合同），收敛 DS.fontSizeXs。
+                      fontSize: DS.fontSizeXs,
                       color: DS.textSecondary,
                       fontStyle: FontStyle.italic,
                     ),

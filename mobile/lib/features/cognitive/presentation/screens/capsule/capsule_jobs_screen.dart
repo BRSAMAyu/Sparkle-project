@@ -146,10 +146,12 @@ class _JobCard extends ConsumerWidget {
                   vertical: DS.spacing4,
                 ),
                 decoration: BoxDecoration(
-                  // V4-G05 状态 pill 底 0.15→0.05：状态色文本于自身 0.15
-                  // tint 在 classic 4.02–4.16:1（<4.5:1，dusk error 4.46）；
-                  // 0.05 起四风格 4.85–7.05:1（同家族 pill 0.05 约定）。
-                  color: _getStatusColor().withValues(alpha: 0.05),
+                  // V4-G03 四风格对比度复算：状态色 12sp 标签对 0.15 tint
+                  // 合成底在 classic 两档仅 3.61–4.16:1（classic-dark 的
+                  // success/error 对 tertiary 容器裸比也 <4.5）；标签改
+                  // textPrimary（全档 ≥7.3:1），状态色由 emoji+描边承载，
+                  // tint 0.06 保证色点/图标 ≥3:1 图形对比。
+                  color: _getStatusColor().withValues(alpha: 0.06),
                   borderRadius: DS.borderRadius8,
                 ),
                 child: Row(
@@ -160,9 +162,9 @@ class _JobCard extends ConsumerWidget {
                     Text(
                       job.statusLabel,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: DS.fontSizeXs,
                         fontWeight: DS.fontWeightSemibold,
-                        color: _getStatusColor(),
+                        color: DS.textPrimary,
                       ),
                     ),
                   ],
@@ -175,21 +177,24 @@ class _JobCard extends ConsumerWidget {
                   vertical: DS.spacing4,
                 ),
                 decoration: BoxDecoration(
-                  color: isDark ? DS.neutral700 : DS.neutral200,
+                  // V4-G03：dark 侧 neutral700 是浅灰，对 textSecondary/textPrimary
+                  // 均 <2.5:1（dusk 1.61 实测口径）；dark 侧换 surfaceTertiary，
+                  // 标签 textPrimary（全档 ≥8:1）。
+                  color: isDark ? DS.surfaceTertiary : DS.neutral200,
                   borderRadius: DS.borderRadius8,
                 ),
                 child: Text(
                   job.generationTypeLabel,
                   style: TextStyle(
-                    fontSize: 12,
-                    color: DS.textSecondary,
+                    fontSize: DS.fontSizeXs,
+                    color: DS.textPrimary,
                   ),
                 ),
               ),
               const Spacer(),
               Text(
                 Formatters.formatRelativeTime(job.createdAt),
-                style: TextStyle(fontSize: 12, color: DS.textSecondary),
+                style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textSecondary),
               ),
             ],
           ),
@@ -199,13 +204,16 @@ class _JobCard extends ConsumerWidget {
           if (job.isGenerating) ...[
             LinearProgressIndicator(
               value: job.progress,
-              backgroundColor: isDark ? DS.neutral700 : DS.neutral200,
+              // V4-G03：dark 侧轨道 neutral700（浅灰）对 brandPrimary 填充
+              // 仅 1.68–1.86:1（进度条非文字部件需 ≥3:1）；换 surfaceTertiary
+              // 后全档 ≥3.4:1。
+              backgroundColor: isDark ? DS.surfaceTertiary : DS.neutral200,
               valueColor: AlwaysStoppedAnimation<Color>(DS.primaryBase),
             ),
             const SizedBox(height: DS.spacing8),
             Text(
               l10n.capsuleGeneratingProgress(job.progressPercent),
-              style: TextStyle(fontSize: 12, color: DS.textSecondary),
+              style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing12),
           ],
@@ -217,7 +225,7 @@ class _JobCard extends ConsumerWidget {
               const SizedBox(width: 4),
               Text(
                 l10n.capsuleDepthPercent((job.depthPreference * 100).toInt()),
-                style: TextStyle(fontSize: 12, color: DS.textSecondary),
+                style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textSecondary),
               ),
               const SizedBox(width: DS.spacing16),
               Icon(Icons.lightbulb_outline, size: 14, color: DS.warning),
@@ -226,7 +234,7 @@ class _JobCard extends ConsumerWidget {
                 l10n.capsuleCuriosityPercent(
                   (job.curiosityPreference * 100).toInt(),
                 ),
-                style: TextStyle(fontSize: 12, color: DS.textSecondary),
+                style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textSecondary),
               ),
             ],
           ),
@@ -237,15 +245,18 @@ class _JobCard extends ConsumerWidget {
             children: [
               Text(
                 l10n.capsuleRequestedCount(job.requestedCount),
-                style: TextStyle(fontSize: 12, color: DS.textSecondary),
+                style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textSecondary),
               ),
               const SizedBox(width: DS.spacing16),
               if (job.actualCount != null)
                 Text(
                   l10n.capsuleActualCount(job.actualCount!),
+                  // V4-G03：success 12sp 在 classic-dark tertiary 容器上裸比
+                  // <4.5:1；数量强调改 textPrimary（全档 ≥9:1），完成态由
+                  // 状态徽章与胶囊 chips 承载。
                   style: TextStyle(
-                    fontSize: 12,
-                    color: job.isCompleted ? DS.success : DS.textSecondary,
+                    fontSize: DS.fontSizeXs,
+                    color: job.isCompleted ? DS.textPrimary : DS.textSecondary,
                   ),
                 ),
             ],
@@ -257,9 +268,10 @@ class _JobCard extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(DS.spacing12),
               decoration: BoxDecoration(
-                // V4-G05 失败框底 0.1→0.05：error 文本于自身 0.1 tint 在
-                // classic 4.45:1（<4.5:1）；0.05 起四风格 ≥4.85:1。
-                color: DS.error.withValues(alpha: 0.05),
+                // V4-G03：错误正文是关键文本——DS.error 12sp 对 0.1 tint
+                // 合成底在 classic-dark 仅 3.6:1；正文改 textPrimary，
+                // error 色保留在图标（≥3:1 图形对比）与描边。
+                color: DS.error.withValues(alpha: 0.06),
                 borderRadius: DS.borderRadius8,
                 border: Border.all(color: DS.error.withValues(alpha: 0.3)),
               ),
@@ -270,7 +282,7 @@ class _JobCard extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       job.errorMessage!,
-                      style: TextStyle(fontSize: 12, color: DS.error),
+                      style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textPrimary),
                     ),
                   ),
                 ],
@@ -289,9 +301,16 @@ class _JobCard extends ConsumerWidget {
               children: job.capsuleIds!
                   .map(
                     (id) => RawChip(
-                      label: Text(l10n.capsuleChipLabel(id)),
+                      label: Text(
+                        l10n.capsuleChipLabel(id),
+                        // V4-G03：dark 侧 neutral700 浅灰底 + 默认浅墨标签
+                        // 对比不足；显式 textPrimary 并把 dark 底换
+                        // surfaceTertiary（同 generationType chip 口径）。
+                        style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textPrimary),
+                      ),
                       avatar: const Icon(Icons.check_circle_outline, size: 16),
-                      backgroundColor: isDark ? DS.neutral700 : DS.neutral200,
+                      backgroundColor:
+                          isDark ? DS.surfaceTertiary : DS.neutral200,
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => CapsuleDetailScreen(capsuleId: id),

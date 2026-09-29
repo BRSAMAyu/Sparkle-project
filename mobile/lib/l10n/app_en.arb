@@ -10717,6 +10717,27 @@
   "auroraConfirm": "Confirm",
   "auroraNotRight": "Not Right",
   "auroraDontJudge": "Don't Judge Like This",
+  "auroraCalibrationConfirmToast": "Aurora will treat this judgment as confirmed",
+  "auroraCalibrationIncorrectToast": "Aurora will withdraw this judgment and relearn",
+  "auroraCalibrationMuteToast": "Aurora will stop nudging you this way",
+  "auroraCalibrationAwaitingCount": "{count} key assumptions await your calibration",
+  "@auroraCalibrationAwaitingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "evidenceDrawerEmpty": "No evidence records yet",
+  "evidenceDrawerInsufficient": "Insufficient evidence",
+  "evidenceDrawerStrong": "Strong",
+  "evidenceDrawerWeak": "Weak",
+  "evidenceDrawerMissing": "Missing",
+  "evidenceDrawerAll": "All",
+  "evidenceDrawerNoMatch": "No matching evidence",
+  "memoryEvidenceStatusOk": "OK",
+  "memoryEvidenceStatusRedacted": "Redacted",
+  "memoryEvidenceStatusMissing": "Missing",
   "auroraStartFailed": "Failed to start Aurora calibration. Please retry later.",
   "auroraSendFailed": "Failed to send. Please try again later.",
   "auroraExitCalibration": "Exit Calibration",

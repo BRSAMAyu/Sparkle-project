@@ -174,7 +174,7 @@ class _WhyThisSheetState extends ConsumerState<_WhyThisSheet> {
           const SizedBox(height: DS.xs),
           Text(
             l10n.whyThisReceiptStale,
-            style: DS.labelSmall.copyWith(color: DS.textTertiary),
+            style: DS.labelSmall.copyWith(color: DS.textSecondary),
           ),
         ],
         const SizedBox(height: DS.md),
@@ -235,7 +235,7 @@ class _WhyThisSheetState extends ConsumerState<_WhyThisSheet> {
               padding: const EdgeInsets.only(top: DS.xs),
               child: Text(
                 govLine,
-                style: DS.labelSmall.copyWith(color: DS.textTertiary),
+                style: DS.labelSmall.copyWith(color: DS.textSecondary),
               ),
             ),
         ],

@@ -1,0 +1,54 @@
+{
+  "task": "V4-G03",
+  "title": "记忆/Aurora理解——四风格商业化完备",
+  "date": "2026-09-29",
+  "executor": "wtG03（worktree /Users/brsama/code/GitHub/wtG03，分支 agent/v4/g03，自 main@9369f0e5 开出；断点续跑——前任 agent 因宿主机强制重启阵亡，dirty=19 盘点后续跑不丢弃）",
+  "source_sha_base": "9369f0e53be21a9ec4e4c7c73533f19fb56936b2",
+  "source_sha_head": "见 commit 本体（本 manifest 于工作树取证，commit 后 SHA 登记进 tasks.json progress_note 与接力日志）",
+  "no_push": true,
+  "heavy_token_required": false,
+  "risk": "normal",
+  "toolchain": {
+    "flutter": "3.41.3 stable（本机；F06 同机同版）",
+    "host": "darwin 25.6.0 arm64",
+    "resource_gates": "大命令前 df -h /=35-44G（>15G 线）；swap 峰值 4.2G/10G 阈值下无需串行化；全量套件错峰后台跑；flutter test 全部 --concurrency=1",
+    "gen_note": "l10n 按 wt729 判例：arb 双语单键增量 + gen×3（app_localizations / _zh / _en）手改同步；L10N-PARITY PASS（10280 template keys == abstract members）。gen/ 目录为 gitignored 实体目录，本 worktree 已自主检出复制"
+  },
+  "locks": {
+    "required": ["ui-polish-g03"],
+    "note": "sparkle-coordination-v2 远端未配置于本机（git remote 无此远端），租约登记 NOT_RUN；冲突面自证：diff 不含 RF-06 三文件（dashboard_screen/compact_status_bar/task_execution_screen）、不含 app/routes.dart、不含 tokens_v2 主题通道结构（仅消费 DS 令牌）；本机并行会话 wtD06（backend knowledge/galaxy）wtU03（memory/user 屏）与卡面无文件交集"
+  },
+  "scope_and_denominator": {
+    "modules": ["memory", "aurora", "cognitive"],
+    "touched_product_files": 16,
+    "touched_test_files_new": 2,
+    "l10n": "arb×2 + gen×3，纯增量（+3 evidenceDrawer 批沿用前任 +10 auroraCalibration/evidenceDrawer 批 + 3 memoryEvidenceStatus 新键）",
+    "rf06_files_touched": 0,
+    "behavior_semantics_touched": "零（纯风格/令牌/等价动效/l10n 面；typing dots reduce-motion 为 S01 判例等价实现，非 reduce 档行为不变）"
+  },
+  "commands": [
+    {"id": 1, "purpose": "家族面四风格对比度复算（205 面×档组合量化）", "command": "python3 /tmp/g03_contrast.py（存档副本 v4/evidence/V4-G03/contrast_recompute_g03.py）", "exit_code": 0, "note": "42 失败全数定位：8 处前任遗漏缺陷（archived 4.01–4.45 / footer 1.71–2.38 / meta-badge 4.27–4.35 / turns-chip 2.03–4.3 全档崩 / desc 3.25–3.90 / solution successLight 2.12–2.88 / capsule counter 字号 / evidence badge I18nService 三元）；修复后 FIX 组全档 ≥4.5（文本）/≥3（图形）"},
+    {"id": 2, "purpose": "静态检查（零 issue 口径）", "command": "cd mobile && flutter analyze --no-pub", "exit_code": 0, "note": "No issues found!（全库；过程中 23 issues 全部为本卡新测试文件 lint，dart fix --apply + dart format 后归零；dart fix 仅触碰本卡 2 个新测试文件）"},
+    {"id": 3, "purpose": "本卡新测试套件（12 用例：四风格语义钉 4+反例 1+证据采集 1 + reduce-motion 钉 2 + turns 芯片四档令牌钉 4）", "command": "cd mobile && flutter test --concurrency=1 test/features/memory/presentation/widgets/g03_family_four_profile_test.dart test/features/aurora/presentation/widgets/g03_aurora_polish_test.dart", "exit_code": 0, "note": "+12 全绿；证据采集 test 常规跑不写文件，G03_EVIDENCE_DIR 门控时写出 4 档 PNG+语义 dump（F05 判例）"},
+    {"id": 4, "purpose": "证据采集（四档整页截图 + 语义 dump，同 build 同冻结 seed）", "command": "cd mobile && G03_EVIDENCE_DIR=<abs> flutter test --concurrency=1 test/features/memory/presentation/widgets/g03_family_four_profile_test.dart", "exit_code": 0, "note": "8 文件落盘 v4/evidence/V4-G03/；语义 dump 头行承载档位身份（surfacePrimary/textPrimary/taskReflection 令牌值四档互异），正文全同=跨档语义不变量实证"},
+    {"id": 5, "purpose": "design 域回归（F01–F06 令牌/像素族/style_preview/semantic_pill）", "command": "cd mobile && flutter test --concurrency=1 test/core/design/", "exit_code": 0, "note": "+271 全绿（含 style_preview 五面四档、golden_family_drift_guard、semantic_pill owner 测试——pill alpha 0.05 收口原样绿）"},
+    {"id": 6, "purpose": "家族三模块 feature 回归", "command": "cd mobile && flutter test --concurrency=1 test/features/memory/ test/features/aurora/ test/features/cognitive/", "exit_code": 0, "note": "+156 全绿（memory_panel/understanding/evidence_cards/capsule/pattern_list/aurora sheet/全 provisioning）"},
+    {"id": 7, "purpose": "widget 目录家族测试回归", "command": "cd mobile && flutter test --concurrency=1 test/widget/aurora_confirm_notification_test.dart test/widget/aurora_daily_startup_retry_test.dart test/widget/aurora_freeform_correction_dialog_test.dart test/widget/memory_auto_memory_panel_test.dart test/widget/memory_correction_test.dart test/widget/memory_explain_view_test.dart test/widget/memory_governance_panel_test.dart test/widget/memory_panel_screen_test.dart test/widget/memory_panel_v2_test.dart test/widget/memory_settings_screen_test.dart test/widget/remediable_patterns_card_test.dart test/widget/working_memory_card_test.dart", "exit_code": 0, "note": "+28 全绿"},
+    {"id": 8, "purpose": "i18n golden + chat 邻接回归（Prism 渲染面/记忆回执）", "command": "cd mobile && flutter test --concurrency=1 test/goldens/i18n_batch_p2_08_golden_test.dart test/goldens/p2_07_i18n_switch_golden_test.dart test/features/chat/presentation/widgets/aurora_receipt_chip_test.dart test/features/chat/presentation/widgets/aurora_runtime_follow_up_test.dart test/features/chat/presentation/widgets/memory_reference_receipt_test.dart test/features/chat/presentation/widgets/working_memory_badge_test.dart test/features/chat/presentation/widgets/working_memory_drawer_test.dart", "exit_code": 0, "note": "+19 全绿 ~1 skip（i18n_batch_p2_08 golden 为 ENABLE_P208_GOLDENS 基线机 env 门，FIX-368 同判例默认关≠失败，与本次改动无关）"},
+    {"id": 9, "purpose": "token 化收口后 cognitive 域复跑", "command": "cd mobile && flutter test --concurrency=1 test/features/cognitive/ test/widget/remediable_patterns_card_test.dart", "exit_code": 0, "note": "+13 全绿"},
+    {"id": 10, "purpose": "治理守卫：L10N-PARITY", "command": "bash scripts/run_all_rule_guards.sh --rule L10N-PARITY", "exit_code": 0, "note": "OK: 10280 template keys == abstract members; zh/en subclasses complete（arb+gen×3 手改同步判例自证）"},
+    {"id": 11, "purpose": "治理守卫：I18N 覆盖", "command": "bash scripts/run_all_rule_guards.sh --rule I18N", "exit_code": 0, "note": "PASS — all presentation files with Chinese strings import i18n infrastructure"},
+    {"id": 12, "purpose": "治理守卫：UI-TOKENS 棘轮", "command": "bash scripts/run_all_rule_guards.sh --rule UI-TOKENS", "exit_code": 0, "note": "首跑 FAIL：capsule_jobs_screen fontSize 计数 10>基线 9（前任给 capsule chips 显式加数字 fontSize:12 的 +1）→ 本卡把该文件 10 处数字 12 全量令牌化为 DS.fontSizeXs（==12.0 语义不变）→ 复跑 PASS 且棘轮只降（fontSize 616→615，color 224/275 持平）"},
+    {"id": 13, "purpose": "repeat 棘轮复点（≤48 移交上限）", "command": "grep -rln \"\\.repeat(\" mobile/lib | wc -l", "exit_code": 0, "note": "=48（基线 48 文件/91 调用点零漂移；家族内唯一 repeat 文件 aurora_core_session_sheet 的 repeat 已在 reduce-motion 下首帧前不启动，文件级集合不变——下调留 motion-policy owner 清尾）"},
+    {"id": 14, "purpose": "advisory 硬编码扫描（非 manifest 守卫）", "command": "bash scripts/check_hardcoded_strings.sh", "exit_code": 0, "note": "exit=0 advisory 告警（命中行全为注释与既有文案，含 predecessor 已 l10n 化文件的注释残留）；权威 I18N 守卫（命令 11）PASS——advisory 与权威口径分离登记，不清注释（不属本卡风格面）"},
+    {"id": 15, "purpose": "全量套件基线分母（错峰后台，--concurrency=1）", "command": "cd mobile && flutter test --concurrency=1", "exit_code": 0, "note": "结果见 test_results.json full_suite 字段（既有失败/新增回归区分登记）"}
+  ],
+  "screenshots_and_semantics": {
+    "form": "F05 判例：env 门控确定性采集，同 build 同冻结 seed（_prismSeed 常量 + zh locale + settlePreview 固定泵）",
+    "files": [
+      "g03_family_classic.png", "g03_family_paperDay.png", "g03_family_dusk.png", "g03_family_quiet.png",
+      "g03_family_classic_semantics.txt", "g03_family_paperDay_semantics.txt", "g03_family_dusk_semantics.txt", "g03_family_quiet_semantics.txt"
+    ],
+    "note": "字形为测试环境 Ahem 块形（F04/F05 同先例）；语义 dump 头行载档位令牌值，正文跨档全同即语义不变量钉成立"
+  }
+}

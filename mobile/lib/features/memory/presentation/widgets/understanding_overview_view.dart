@@ -109,7 +109,7 @@ class _UnderstandingOverviewViewState
             padding: const EdgeInsets.only(bottom: DS.sm),
             child: Text(
               l10n.understandingScanCapped,
-              style: TextStyle(color: DS.textTertiary, fontSize: DS.fontSizeXs),
+              style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
             ),
           ),
         ],

@@ -1,0 +1,49 @@
+{
+  "task": "V4-G03",
+  "date": "2026-09-29",
+  "flutter": "3.41.3 stable",
+  "concurrency": 1,
+  "new_tests": {
+    "suite_files": [
+      "mobile/test/features/memory/presentation/widgets/g03_family_four_profile_test.dart",
+      "mobile/test/features/aurora/presentation/widgets/g03_aurora_polish_test.dart"
+    ],
+    "count": 12,
+    "passed": 12,
+    "failed": 0,
+    "cases": [
+      "[classic/paperDay/dusk/quiet ×4] 家族代表面语义钉：五 tone pill 族+三态证据徽章+Prism 三分区（无人格雷达）+EvidenceDrawer 空/不足/引用三态 + tint 0.05 定值钉 + 分区标题 textPrimary 钉",
+      "反例：四档同 run 切换全锚全勤 + 挂载档核对（classic=null 合同）",
+      "证据采集（G03_EVIDENCE_DIR 门控）：常规跑不写文件；门开写 8 文件",
+      "reduce-motion：typing dots 首帧前不启动，静态三点零漂移",
+      "非 reduce-motion：typing dots 循环动画照常（等价≠摘功能）",
+      "[classic/paperDay/dusk/quiet ×4] turns chip 令牌钉：surfaceTertiary 底 + textPrimary + DS.fontSizeXs（禁 classic-only 硬编码回归）"
+    ]
+  },
+  "regression_batches": [
+    {"scope": "test/core/design/（F01–F06 令牌/像素族/style_preview/semantic_pill owner）", "passed": 271, "failed": 0},
+    {"scope": "test/features/memory/ + test/features/aurora/ + test/features/cognitive/", "passed": 156, "failed": 0},
+    {"scope": "test/widget/ 家族 12 文件", "passed": 28, "failed": 0},
+    {"scope": "i18n golden ×2 + chat 邻接 ×5", "passed": 19, "skipped": 1, "failed": 0, "skip_note": "i18n_batch_p2_08 golden 为 ENABLE_P208_GOLDENS 基线机 env 门（FIX-368 判例，默认关≠失败，先于本卡存在）"},
+    {"scope": "token 化收口复跑 test/features/cognitive/ + remediable_patterns_card", "passed": 13, "failed": 0},
+    {"scope": "FULL mobile suite（错峰 --concurrency=1）", "passed": null, "failed": null, "note": "结果回填于 full_suite 字段；既有失败/新增回归区分登记"}
+  ],
+  "full_suite": {
+    "status": "RUNNING_AT_WRITE_TIME",
+    "result": "TO_BE_BACKFILLED",
+    "method": "cd mobile && flutter test --concurrency=1（后台，错峰）"
+  },
+  "static_checks": {
+    "flutter_analyze": "No issues found!（全库零 issue）",
+    "L10N_PARITY": "OK: 10280 template keys == abstract members; zh/en subclasses complete",
+    "I18N_COVERAGE": "PASS",
+    "UI_TOKENS_RATCHET": "PASS — color 224/275, fontSize 615/727（基线 616→615 只降；首跑红 capsule_jobs 10>9 由 R10 令牌化收口转绿）",
+    "repeat_ratchet": "48 文件（≤48 移交上限零漂移；家族内 1 文件 aurora_core_session_sheet，其 repeat 已 reduce-motion 首帧前门控）",
+    "hardcoded_strings_advisory": "exit=0 advisory（非 manifest 守卫；命中为注释/既有文案，见 limitations L-4）"
+  },
+  "evidence_captures": {
+    "count": 8,
+    "files": "4 profile × (png + semantics.txt)，头行载档位令牌值；同 build 同冻结 seed（dpr=2）",
+    "capture_test": "g03_family_four_profile_test.dart 证据 group（F05 判例）"
+  }
+}

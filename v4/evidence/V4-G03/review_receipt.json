@@ -1,0 +1,64 @@
+{
+  "task": "V4-G03",
+  "status": "PENDING",
+  "required_independent_reviewers": 1,
+  "verdict": "NOT_RUN",
+  "date_written": "2026-09-29",
+  "executor_self_check": "DONE（自称完成不算完成——待独立未参与会话审查 + 集成 SHA 可失败测试复验）",
+  "pre_registered_challenges": [
+    {
+      "id": "CH-1",
+      "point": "断点续跑的 dirty 继承边界",
+      "detail": "前任 dirty=19 未提交改动全数继承；审查须核对其 11 组修复（P1–P11）是否确为「前任已修」而非本卡虚报——取证路径：本页 diff_or_evidence_only.md §1a 逐项标注 + git diff 归属（前任改动无 V4-G03 注释外的新增逻辑、续跑修复（R1–R10）均带本卡注释/新测试钉）。风险：前任部分工作可能属其他会话未收尾内容混入。",
+      "suggested_verdict_path": "逐文件 git diff 与 §1a 表对照；11 组修复全部落在 modules 三目录内且与卡面规格对应"
+    },
+    {
+      "id": "CH-2",
+      "point": "「确定性 golden」形态裁决",
+      "detail": "本卡按 F05 判例交付 env 门控确定性采集 + CI 可失败语义钉，未用 matchesGoldenFile 像素基线（V3-FIX-368 异构渲染假红判例）。若审查方读验收句「四风格各有确定性 golden+语义钉且 CI 可失败」为像素 golden，则形态不符。",
+      "suggested_verdict_path": "裁决 golden 形态口径；如需像素基线须先指定基线签发机（golden_family_drift_guard 机制）"
+    },
+    {
+      "id": "CH-3",
+      "point": "reduce-motion 等价的双向钉强度",
+      "detail": "R6 将前任 build 内 stop 重构为 didChangeDependencies 首帧前门控。非 reduce 档「动画照常」钉以 opacity 逐帧变化为证；审查可挑战『didChangeDependencies 建立 MediaQuery 依赖后 OS 开关实时跟随』在真机上的行为（widget test 只能钉注入管道）。",
+      "suggested_verdict_path": "代码审读 didChangeDependencies 依赖注册语义；真机行为归 sensory 面抽验（本卡 physical_device_scope=false）"
+    },
+    {
+      "id": "CH-4",
+      "point": "UI-TOKENS 棘轮收口方式",
+      "detail": "R10 对前任引入的 +1 数字 fontSize 采用「全文件 10 处数字 12 令牌化」而非仅回退 +1——diff 面超出前任改动行。可挑战：是否应最小化回退。抗辩：数字 12 == DS.fontSizeXs(12.0) 语义零变、棘轮只降（616→615）、与卡面 work『令牌化清零』方向一致。",
+      "suggested_verdict_path": "比对 capsule_jobs_screen diff 与 DS.fontSizeXs 常量值；UI-TOKENS 守卫 PASS 记录"
+    },
+    {
+      "id": "CH-5",
+      "point": "记忆清空进度流缺席的裁决归属",
+      "detail": "L10 规格句「记忆清空有明确说明和可查询进度」在 mobile 无用户流（limitations L-1）。本卡按 stop-condition 登记不顺手修。可挑战：审查是否认为该句属本卡验收面（则本卡不满足该句）——抗辩：卡面 work 为『风格面缺陷就地修（不动行为语义）』，清空流为行为交付，G 卡 no_duplicate_rule 亦禁止重写 U/F 卡面。",
+      "suggested_verdict_path": "裁决清空流交付归属（FIX/Q 卡）；本卡验收按风格面口径"
+    },
+    {
+      "id": "CH-6",
+      "point": "DS 层潜在面对比度（brand tone classic-dark panel 4.40:1）",
+      "detail": "semantic_pill brand tone 在 classic-dark surfacePanel 面 4.40:1 <4.5；全 tone 在 classic surfaceTertiary 面最低 3.94。家族内存档面未触发（全部 ≥4.51）。可挑战：家族『任一风格无对比度失败』验收是否应覆盖 DS 组件的全部可能落面。",
+      "suggested_verdict_path": "按『家族实际落面集』口径复验（走查矩阵）；DS 全面集收口归 DS 收敛卡（前任已登记 selected 态同批）"
+    },
+    {
+      "id": "CH-7",
+      "point": "全量套件分母与既有失败",
+      "detail": "全量 mobile 套件错峰跑（--concurrency=1），结果回填 test_results.json full_suite 字段。若存在既有失败（非本卡引入），按『区分既有失败和新增回归』口径须逐条归因。",
+      "suggested_verdict_path": "对 full_suite 失败集逐条与本卡 diff 面比对；本卡分域回归（core/design 271 + 家族 156 + widget 28 + 邻接 19）全绿为先导证据"
+    }
+  ],
+  "review_inputs": {
+    "diff_scope": "20 文件（16 产品 + 2 新测试 + 2 arb）+ gen×3 + 证据 9 文件",
+    "key_files": [
+      "mobile/lib/core/design/components/atoms/semantic_pill.dart",
+      "mobile/lib/features/aurora/presentation/widgets/aurora_core_session_sheet.dart",
+      "mobile/lib/features/cognitive/presentation/screens/pattern_list_screen.dart",
+      "mobile/lib/features/cognitive/presentation/screens/capsule/capsule_jobs_screen.dart",
+      "mobile/lib/features/memory/presentation/widgets/memory_evidence_badge.dart"
+    ],
+    "contrast_tool": "v4/evidence/V4-G03/contrast_recompute_g03.py（205 组合，42 失败全数闭环）",
+    "evidence_dir": "v4/evidence/V4-G03/"
+  }
+}

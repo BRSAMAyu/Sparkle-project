@@ -131,7 +131,7 @@ class _ContextReceiptPanelState extends ConsumerState<ContextReceiptPanel> {
           // 「这次没有引用」（unknown ≠ 空，合同读侧语义）。
           Text(
             l10n.contextReceiptCandidatesUnknown,
-            style: TextStyle(color: DS.textTertiary, fontSize: DS.fontSizeSm),
+            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
           )
         else if (view.selectedCount == 0)
           Text(
@@ -152,7 +152,7 @@ class _ContextReceiptPanelState extends ConsumerState<ContextReceiptPanel> {
               padding: const EdgeInsets.only(top: DS.xs),
               child: Text(
                 l10n.contextReceiptUnattributedSelected(unresolvedSelected),
-                style: TextStyle(color: DS.textTertiary, fontSize: DS.fontSizeSm),
+                style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
               ),
             ),
           // 可校准行：只绑定 resolved 的 selected 记忆（来源已核对才可操作）。
@@ -190,7 +190,7 @@ class _ContextReceiptPanelState extends ConsumerState<ContextReceiptPanel> {
               child: Text(
                 // 未归因显式呈现——不猜标签、不静默丢弃。
                 l10n.contextReceiptReasonUnknownCount(view.unknownReasonCount),
-                style: TextStyle(color: DS.textTertiary, fontSize: DS.fontSizeSm),
+                style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
               ),
             ),
         ],
@@ -200,7 +200,7 @@ class _ContextReceiptPanelState extends ConsumerState<ContextReceiptPanel> {
             child: Text(
               // 验收③：预算面只作如实说明，绝不禁用更改/忘记。
               l10n.contextReceiptBudgetNote,
-              style: TextStyle(color: DS.textTertiary, fontSize: DS.fontSizeSm),
+              style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
             ),
           ),
         if (_forgetError != null)

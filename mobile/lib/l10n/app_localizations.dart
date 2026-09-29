@@ -41208,6 +41208,90 @@ abstract class AppLocalizations {
   /// **'以后别这样判断'**
   String get auroraDontJudge;
 
+  /// No description provided for @auroraCalibrationConfirmToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 会把这条判断当成已确认'**
+  String get auroraCalibrationConfirmToast;
+
+  /// No description provided for @auroraCalibrationIncorrectToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 会收回这条判断并重新学习'**
+  String get auroraCalibrationIncorrectToast;
+
+  /// No description provided for @auroraCalibrationMuteToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 不会再用这种方式打扰你'**
+  String get auroraCalibrationMuteToast;
+
+  /// No description provided for @auroraCalibrationAwaitingCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条关键假设待你校准'**
+  String auroraCalibrationAwaitingCount(int count);
+
+  /// No description provided for @evidenceDrawerEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无证据记录'**
+  String get evidenceDrawerEmpty;
+
+  /// No description provided for @evidenceDrawerInsufficient.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据不足'**
+  String get evidenceDrawerInsufficient;
+
+  /// No description provided for @evidenceDrawerStrong.
+  ///
+  /// In zh, this message translates to:
+  /// **'强'**
+  String get evidenceDrawerStrong;
+
+  /// No description provided for @evidenceDrawerWeak.
+  ///
+  /// In zh, this message translates to:
+  /// **'弱'**
+  String get evidenceDrawerWeak;
+
+  /// No description provided for @evidenceDrawerMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺'**
+  String get evidenceDrawerMissing;
+
+  /// No description provided for @evidenceDrawerAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get evidenceDrawerAll;
+
+  /// No description provided for @evidenceDrawerNoMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有匹配的证据'**
+  String get evidenceDrawerNoMatch;
+
+  /// No description provided for @memoryEvidenceStatusOk.
+  ///
+  /// In zh, this message translates to:
+  /// **'OK'**
+  String get memoryEvidenceStatusOk;
+
+  /// No description provided for @memoryEvidenceStatusRedacted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已隐藏'**
+  String get memoryEvidenceStatusRedacted;
+
+  /// No description provided for @memoryEvidenceStatusMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺失'**
+  String get memoryEvidenceStatusMissing;
+
   /// No description provided for @auroraStartFailed.
   ///
   /// In zh, this message translates to:

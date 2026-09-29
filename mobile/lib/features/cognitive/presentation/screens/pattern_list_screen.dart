@@ -242,6 +242,9 @@ class _PatternCard extends StatelessWidget {
                           // 颜色承载，文本不做颜色唯一载体）。
                           Text(
                             _getTypeLabel(pattern.patternType),
+                            // V4-G03：彩色 12sp 标签对 tint 合成底在
+                            // classic-light 4.32:1 <4.5；类型文字走
+                            // textSecondary（全档 ≥4.8:1），色相辨识由图标承担。
                             style: TextStyle(
                               fontSize: 12,
                               color: DS.textSecondary,
@@ -267,20 +270,27 @@ class _PatternCard extends StatelessWidget {
                       color: DS.prismGreen,
                     ),
                     if (pattern.isArchived)
+                      // V4-G03 四风格对比度复算：success 10sp 标签对 0.157
+                      // tint 合成底在 classic 两档仅 4.01–4.45:1，且低于
+                      // 12sp 字阶下限；0.06 tint + textPrimary 全档 ≥8.45:1，
+                      // 归档态辨识由 tint 容器 + 实色描边（≥3:1 图形）承担。
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: DS.success.withAlpha(40),
+                          color: DS.success.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: DS.success.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Text(
                           context.l10n.patternArchived,
                           style: TextStyle(
-                            fontSize: 10,
-                            color: DS.success,
+                            fontSize: DS.fontSizeXs,
+                            color: DS.textPrimary,
                             fontWeight: DS.fontWeightBold,
                           ),
                         ),
@@ -296,6 +306,9 @@ class _PatternCard extends StatelessWidget {
                   // 走 textSecondary 语义槽（四风格 ≥5.29:1）。
                   Text(
                     pattern.description!,
+                    // V4-G03 四风格对比度复算：正文 brandPrimary@0.784 衰减
+                    // 在 classic 两档/paperDay 仅 3.25–3.90:1；描述是正文，
+                    // 走 textSecondary（全档 ≥4.85:1），品牌色相不承载正文。
                     style: TextStyle(
                       fontSize: 14,
                       color: DS.textSecondary,
@@ -325,17 +338,17 @@ class _PatternCard extends StatelessWidget {
                           size: 18,
                         ),
                         const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              pattern.solutionText!,
-                              // V4-G05 方案文本 successLight 在浅色档是
-                              // 「变亮方向」（classic 2.56:1）——全强度
-                              // success 四风格 4.86–8.18:1 ≥4.5:1。
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: DS.success,
-                                height: 1.4,
-                              ),
+                        Expanded(
+                          child: Text(
+                            pattern.solutionText!,
+                            // V4-G03 四风格对比度复算：successLight 13sp 对
+                            // 0.078 tint 合成底在浅色三档仅 2.12–2.88:1；
+                            // 方案是关键正文，走 textPrimary（全档 ≥8.07:1），
+                            // 语义色保留在灯泡图标（全档 ≥4.46:1）与 tint 容器。
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: DS.textPrimary,
+                              height: 1.4,
                             ),
                           ),
                       ],
@@ -364,9 +377,12 @@ class _PatternCard extends StatelessWidget {
                 // ≥4.5:1 on S0/S1，四风格实测 4.63–9.33:1）。
                 Text(
                   _buildFooterText(context),
+                  // V4-G03 四风格对比度复算：brandPrimary@0.392 衰减文字在
+                  // 五档仅 1.71–2.38:1（全档崩）；脚注走 textSecondary
+                  // （全档 ≥4.85:1）。
                   style: TextStyle(
-                    fontSize: 11,
-                    color: DS.textTertiary,
+                    fontSize: DS.fontSizeXs,
+                    color: DS.textSecondary,
                   ),
                 ),
               ],
@@ -385,8 +401,12 @@ class _PatternCard extends StatelessWidget {
           horizontal: DS.spacing8,
           vertical: DS.spacing6,
         ),
+        // V4-G03 四风格对比度复算：彩色 11sp 标签对 0.11 tint 合成底在
+        // classic 两档 4.27–4.35:1 且低于 12sp 字阶下限；0.06 tint +
+        // textPrimary 标签全档 ≥8.45:1，色相辨识由图标（0.06 tint 上
+        // 全档 ≥4.55:1）承担。
         decoration: BoxDecoration(
-          color: color.withAlpha(28),
+          color: color.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -397,8 +417,8 @@ class _PatternCard extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
-                color: color,
+                fontSize: DS.fontSizeXs,
+                color: DS.textPrimary,
                 fontWeight: DS.fontWeightSemibold,
               ),
             ),
@@ -417,12 +437,19 @@ class _PatternCard extends StatelessWidget {
     return '$discovered · ${context.l10n.patternLastObserved(lastObserved)}';
   }
 
+  /// 类型色（V4-G03 四风格复算）：
+  /// - emotional 原 brandSecondary（退役别名槽）在 classic-light 玻璃面对
+  ///   图标仅 2.72:1（<3:1 图形门）；改 taskReflection（柔紫语义槽，
+  ///   四档 ≥4.3:1，B2-3a 定标色），紫系辨识度保留。
+  /// - 12sp 类型文字标签一律 textSecondary（彩色 12sp 对 withAlpha(40)
+  ///   tint 在 classic-light 4.32:1 <4.5）；色相辨识由图标与 tint 容器
+  ///   承载（图标全档 ≥3:1）。
   Color _getTypeColor(PatternType type) {
     switch (type) {
       case PatternType.cognitive:
         return DS.prismBlue;
       case PatternType.emotional:
-        return DS.prismPurple;
+        return DS.taskReflection;
       case PatternType.execution:
         return DS.prismGreen;
       default:
