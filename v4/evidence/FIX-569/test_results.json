@@ -1,0 +1,66 @@
+{
+  "card": "FIX-569",
+  "head_sha": "92dc478c18c00632dbb3f73fff1b3f716b2a4f6a（实现头；本文件随 bookkeeping 提交落地）",
+  "runs": [
+    {
+      "suite": "mobile/test/core/design/semantic_motion_wiring_f569_test.dart（本卡新套）",
+      "command": "flutter test test/core/design/semantic_motion_wiring_f569_test.dart",
+      "result": "10/10 PASS",
+      "cases": [
+        "P+ 提案入场：80ms 在航（TweenAnimationBuilder 在场、Opacity∈(0,1)）、落定 opacity==1、卡文本全程在语义树",
+        "P- reduce-motion：静态分支零动画壳零在航（Q06 卡住家族·减少动态格）",
+        "P- abstain 反例：无提案 → SparkleProposalEnter 结构性缺席（不造装饰位）",
+        "R+ 回执到场：首挂载零动画 → confirming 零徽章零动画 → 到场 60ms 淡入在航 → 落定 160ms 壳包裹成功徽章 + 回执号在场",
+        "R- 同回执重建（didUpdateWidget 同 key，容器不变元素原地更新）：40ms 处零在航 → 不重播；文本状态仍恢复",
+        "R- 门拒反例：approve 在途挂起 → 零 PixelSuccessBadge、零 committed 文案、零替换在航；回执到场 → 徽章才出现（时序钉）",
+        "R- 取消反例：cancelAdjustment → 输入相原样在场，零成功徽章零回执",
+        "R- reduce-motion：回执到场即时完成零动画壳（Q06 卡住家族·减少动态格）",
+        "E+ 印章压印：60ms 在航（scale∈(1.00,1.12) + 淡入在航）、落定全尺寸、文字只标类型（「阻力模式」在场；「已掌握/认证」零命中）、动画壳在场",
+        "E- reduce-motion：静态分支零动画壳零在航（Q06 洞察家族·减少动态格）"
+      ]
+    },
+    {
+      "suite": "mutation 自验 ×3（摘除接线 → 对应组必红；验后逐字节还原）",
+      "commands": [
+        "M1：stuck_journey_sheet.dart 摘 SparkleProposalEnter 包裹 → flutter test --name 'P 提案出现接线' → +1 -2 RED（P+/P-1 败于 findsOneWidget）",
+        "M2：recovery_calibration_section.dart 摘 SparkleReceiptSwap 壳 → flutter test --name 'R 回执替换接线' → +4 -1 RED（R+ 败于 160ms 壳包裹成功徽章断言）",
+        "M3：evidence_insight_card.dart 摘 SparkleEvidenceStamp 包裹 → flutter test --name 'E 证据印章接线' → +0 -2 RED（E+/E- 败于 findsOneWidget）",
+        "还原后全量复跑 → 10/10 PASS（探针判别力成立，非恒真）"
+      ],
+      "result": "3/3 必红 + 还原全绿"
+    },
+    {
+      "suite": "S01 既有套件 + core/design 全目录",
+      "command": "flutter test test/core/design/",
+      "result": "271/271 PASS（含 semantic_motion_s01_test、semantic_motion_s01_evidence_test、motion_reduce_motion_test、sparkle_pressable、本卡新套 10 例）"
+    },
+    {
+      "suite": "受影响面回归（recovery + insights）",
+      "command": "flutter test test/features/recovery/ test/features/insights/",
+      "result": "67/67 PASS（stuck_journey_sheet/copy/entry、recovery_calibration(+evidence)、evidence_insight_card/u13 feed/presentation）"
+    },
+    {
+      "suite": "受影响面回归（home，卡住 sheet 三宿主承载域）",
+      "command": "flutter test test/features/home/",
+      "result": "113/113 PASS"
+    },
+    {
+      "suite": "U15 repeat 棘轮",
+      "command": "flutter test test/widget/u15_longtail_closure_guard_test.dart",
+      "result": "14/14 PASS；B+ 实录「U15 repeat 复跑数 = 48（基线 49）」——本次零新增（48 = FIX-565 摘 typing_text 后合法清理值；门 ⊆ 基线且 ≤49 只降不升）"
+    },
+    {
+      "suite": "flutter analyze --no-pub（mobile 全包）",
+      "command": "flutter analyze --no-pub",
+      "result": "exit 0，No issues found（16→4→2 逐轮清零后归零，全部为本卡新测试文件 lint info）"
+    }
+  ],
+  "q06_matrix_sampling": {
+    "claim": "Q06 矩阵抽 2 格（widget 级，派单授权『非重活，不占模拟器』）",
+    "cells": [
+      "对话/卡住家族 × 减少动态态：P-1 + R-4（静态分支语义等价：内容完整在场、零动画壳、零在航）",
+      "洞察家族 × 减少动态态：E-（同口径）"
+    ],
+    "note": "两格为 reduce-motion 轴抽样；全家族 15 态矩阵归 Q06 正卡面（本卡不冒充）"
+  }
+}

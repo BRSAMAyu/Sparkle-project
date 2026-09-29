@@ -48,7 +48,7 @@
   },
   "ledger_row": {
     "row": "V3-FIX-569",
-    "transition": "OPEN → FIXED@<本分支头 sha，见 head_sha 字段回填>",
+    "transition": "OPEN → FIXED@92dc478c（实现头 = 本分支 92dc478c18c00632dbb3f73fff1b3f716b2a4f6a；证据文件随后续 bookkeeping 提交落地，不动实现面）",
     "surface": "coordination 远端 sparkle-coordination-v2 state.json 本机未配置（fleet.py 不可达）——U15 判例同款：diff 自证，状态行变更随本证据与分支交付，由合并闭账方落 state"
   },
   "changed_files": [
