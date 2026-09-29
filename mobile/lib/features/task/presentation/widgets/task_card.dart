@@ -285,9 +285,12 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                   ),
                   foregroundDecoration: BoxDecoration(
                     gradient: LinearGradient(
+                      // V4-G01 令牌化：顶部高光 sheen 原钉 Colors.white 字面
+                      // 量，改 rimLight（令牌高光槽：浅档 white60/深档 white20
+                      // 派生），dusk/quiet 下亮度随档，零字面量。
                       colors: [
-                        Colors.white.withValues(alpha: 0),
-                        Colors.white.withValues(alpha: 0.05),
+                        context.colors.rimLight.withValues(alpha: 0),
+                        context.colors.rimLight.withValues(alpha: 0.05),
                         context.colors.brandPrimary.withValues(alpha: 0),
                       ],
                       stops: const [0.0, 0.5, 1.0],
@@ -495,43 +498,80 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                         ],
                                       ),
                                       const SizedBox(height: 10),
+                                      // V4-G01 200% 文本（G01 走查实证：
+                                      // classic 下溢出 25px）：元数据行
+                                      // Row+Spacer 在大字阶横向溢出。改
+                                      // Expanded(Wrap)：100% 排布不变
+                                      // （左组贴左、日期贴右），200% 元数据
+                                      // 换行展开（更高卡片），不截断不溢出。
                                       Row(
                                         children: [
-                                          Icon(
-                                            Icons.schedule,
-                                            size: 14,
-                                            color: _textDisabled(context),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            context.l10n
-                                                .taskEstimatedMinutesValue(
-                                              widget.task.estimatedMinutes,
+                                          Expanded(
+                                            child: Wrap(
+                                              spacing: 12,
+                                              runSpacing: 4,
+                                              crossAxisAlignment:
+                                                  WrapCrossAlignment.center,
+                                              children: [
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.schedule,
+                                                      size: 14,
+                                                      color: _textDisabled(
+                                                        context,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      context.l10n
+                                                          .taskEstimatedMinutesValue(
+                                                        widget.task
+                                                            .estimatedMinutes,
+                                                      ),
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color:
+                                                                _textDisabled(
+                                                              context,
+                                                            ),
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.flash_on_rounded,
+                                                      size: 14,
+                                                      color: _textDisabled(
+                                                        context,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      '${widget.task.energyCost}',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color:
+                                                                _textDisabled(
+                                                              context,
+                                                            ),
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
                                             ),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.copyWith(
-                                                  color: _textDisabled(context),
-                                                ),
                                           ),
-                                          const SizedBox(width: 12),
-                                          Icon(
-                                            Icons.flash_on_rounded,
-                                            size: 14,
-                                            color: _textDisabled(context),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '${widget.task.energyCost}',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.copyWith(
-                                                  color: _textDisabled(context),
-                                                ),
-                                          ),
-                                          const Spacer(),
                                           if (widget.task.dueDate != null)
                                             Text(
                                               DateFormat('MM/dd').format(

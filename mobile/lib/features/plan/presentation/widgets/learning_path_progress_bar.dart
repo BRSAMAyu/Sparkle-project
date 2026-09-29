@@ -107,7 +107,16 @@ class LearningPathProgressBar extends StatelessWidget {
                         child: Icon(
                           Icons.star,
                           size: 16,
-                          color: Colors.white.withValues(alpha: 0.9),
+                          // V4-G01 对比度修复：目标节点星标原钉 Colors.white
+                          // @90%——quiet/paperDay 浅彩段（低 reveal）与 dusk
+                          // 亮 accent 段上 <3:1。改 DS.onColor 按节点色自动
+                          // 取对侧墨色，四档任意 reveal 段均达 ≥3:1 图形线。
+                          color: DS.onColor(
+                            Color.alphaBlend(
+                              color.withValues(alpha: 0.35 + (0.65 * reveal)),
+                              DS.surfacePrimary,
+                            ),
+                          ).withValues(alpha: 0.9),
                         ),
                       )
                     : null,

@@ -10,22 +10,14 @@ import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 
-// Screen-specific nature-themed decorative colors for learning portfolio.
-const _portfolioMint = Color(0xFFE7F4EA);
-const _portfolioCream = Color(0xFFF7EFE3);
-const _portfolioLavender = Color(0xFFF7F8FC);
-const _portfolioSageBorder = Color(0xFFCED8CE);
-const _portfolioForest = Color(0xFF224434);
-const _portfolioPaleSage = Color(0xFFD7DFD7);
-const _portfolioMistGreen = Color(0xFFF3F5F1);
-const _portfolioPaleMist = Color(0xFFF1F5EF);
-const _portfolioMutedSage = Color(0xFFD8DED3);
-const _portfolioDeepGreen = Color(0xFF355543);
-const _portfolioWarmCream = Color(0xFFF7F4EC);
-const _portfolioBeige = Color(0xFFE2D8C4);
-const _portfolioBrown = Color(0xFF6A5740);
-const _portfolioSageBorderAlt = Color(0xFFD5DED1);
-const _portfolioSageGreen = Color(0xFF5A7563);
+// V4-G01 四风格令牌化：本屏原持 15 枚屏私有自然系字面量（_portfolio*，
+// classic-only），dusk 深底下面板仍钉在浅色纸上、quiet/paperDay 脱档。
+// 全部收敛到 core/design 令牌派生（SparkleColors 唯一真源）：
+//   三色渐变 → success/warning/info 6% 淡彩叠 surfaceSecondary；
+//   鼠尾草描边/浅鼠尾草 → borderSubtle；森林墨 → textPrimary；
+//   掌握度药丸 → successAccent 底 + success 字；细节 chip → warning
+//   8% 淡底 + warning 22% 描边 + warning 字；空态圆 → surfaceTertiary +
+//   border + brandPrimary 图标。四档同语义自适应，零字面量残留。
 
 class LearningPortfolioScreen extends ConsumerStatefulWidget {
   const LearningPortfolioScreen({super.key});
@@ -226,16 +218,25 @@ class _PortfolioSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(DS.spacing20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: <Color>[
-            _portfolioMint,
-            _portfolioCream,
-            _portfolioLavender,
+            Color.alphaBlend(
+              DS.success.withValues(alpha: 0.06),
+              DS.surfaceSecondary,
+            ),
+            Color.alphaBlend(
+              DS.warning.withValues(alpha: 0.06),
+              DS.surfaceSecondary,
+            ),
+            Color.alphaBlend(
+              DS.info.withValues(alpha: 0.06),
+              DS.surfaceSecondary,
+            ),
           ],
         ),
-        border: Border.all(color: _portfolioSageBorder),
+        border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,7 +250,7 @@ class _PortfolioSummaryCard extends StatelessWidget {
             '${portfolio.totalMasteredNodes}',
             style: DS.displayLarge.copyWith(
               fontWeight: DS.fontWeightBold,
-              color: _portfolioForest,
+              color: DS.textPrimary,
             ),
           ),
           const SizedBox(height: DS.spacing12),
@@ -285,9 +286,9 @@ class _SummaryPill extends StatelessWidget {
         vertical: DS.spacing8,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.78),
+        color: DS.surfaceSecondary,
         borderRadius: DS.borderRadiusFull,
-        border: Border.all(color: _portfolioPaleSage),
+        border: Border.all(color: DS.borderSubtle),
       ),
       child: Text(
         label,
@@ -382,15 +383,17 @@ class _PortfolioEntryCard extends StatelessWidget {
               vertical: DS.spacing8,
             ),
             decoration: BoxDecoration(
-              color: _portfolioMistGreen,
+              color: DS.success.withValues(alpha: 0.10),
               borderRadius: DS.borderRadius16,
-              border: Border.all(color: _portfolioMutedSage),
+              border: Border.all(
+                color: DS.success.withValues(alpha: 0.28),
+              ),
             ),
             child: Text(
               context.l10n
                   .planPortfolioMasteryPercent(entry.masteredNodesCount),
               style: DS.labelLarge.copyWith(
-                color: _portfolioDeepGreen,
+                color: DS.success,
                 fontWeight: DS.fontWeightSemibold,
               ),
             ),
@@ -483,14 +486,14 @@ class _DetailChip extends StatelessWidget {
         vertical: DS.spacing8,
       ),
       decoration: BoxDecoration(
-        color: _portfolioWarmCream,
+        color: DS.warning.withValues(alpha: 0.08),
         borderRadius: DS.borderRadiusFull,
-        border: Border.all(color: _portfolioBeige),
+        border: Border.all(color: DS.warning.withValues(alpha: 0.22)),
       ),
       child: Text(
         label,
         style: DS.bodySmall.copyWith(
-          color: _portfolioBrown,
+          color: DS.warning,
           fontWeight: DS.fontWeightSemibold,
         ),
       ),
@@ -542,14 +545,14 @@ class _PortfolioEmptyState extends StatelessWidget {
               width: 88,
               height: 88,
               decoration: BoxDecoration(
-                color: _portfolioPaleMist,
+                color: DS.surfaceTertiary,
                 shape: BoxShape.circle,
-                border: Border.all(color: _portfolioSageBorderAlt),
+                border: Border.all(color: DS.borderSubtle),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.library_books_outlined,
                 size: 34,
-                color: _portfolioSageGreen,
+                color: DS.brandPrimary,
               ),
             ),
             const SizedBox(height: DS.spacing16),

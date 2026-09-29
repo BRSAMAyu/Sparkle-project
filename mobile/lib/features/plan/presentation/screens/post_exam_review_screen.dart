@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
@@ -322,42 +323,56 @@ class _SparkleConfettiOverlay extends StatelessWidget {
   const _SparkleConfettiOverlay();
 
   @override
-  Widget build(BuildContext context) => Positioned.fill(
-        child: IgnorePointer(
-          child: ColoredBox(
-            color: Colors.black.withValues(alpha: 0.08),
-            child: Stack(
-              children: [
-                ...List<Widget>.generate(_pieces.length, (index) {
-                  final piece = _pieces[index];
-                  return TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0, end: 1),
-                    duration: Duration(milliseconds: 620 + (index * 70)),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, child) => Positioned(
+  Widget build(BuildContext context) {
+    // V4-G01 reduce-motion 静态分支（S01/F06 判例：MediaQuery 双源并集
+    // `context.reduceMotion`）：减弱动效下两段隐式动画直落静止终态
+    // （纸屑 settled=1 / 卡片 scale=1），不制造动画帧；常规路径逐字节等价。
+    final reduceMotion = context.reduceMotion;
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: ColoredBox(
+          // V4-G01 令牌化：classic-only `Colors.black@8%` 面纱改 ink 派生
+          // （neutral900=textPrimary），四档自适应（dusk 以浅墨轻提亮）。
+          color: DS.neutral900.withValues(alpha: 0.08),
+          child: Stack(
+            children: [
+              ...List<Widget>.generate(_pieces.length, (index) {
+                final piece = _pieces[index];
+                return TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: 1),
+                  duration: Duration(milliseconds: 620 + (index * 70)),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, child) {
+                    final settled = reduceMotion ? 1.0 : value;
+                    return Positioned(
                       left: MediaQuery.sizeOf(context).width * piece.dx,
-                      top: 48 + (value * piece.fall),
+                      top: 48 + (settled * piece.fall),
                       child: Opacity(
-                        opacity: (1 - (value * 0.4)).clamp(0, 1).toDouble(),
+                        opacity: (1 - (settled * 0.4)).clamp(0, 1).toDouble(),
                         child: Transform.rotate(
-                          angle: value * piece.rotation,
+                          angle: settled * piece.rotation,
                           child: Icon(
                             Icons.auto_awesome_rounded,
-                            color: piece.color,
+                            // V4-G01 令牌化：六枚 classic-only 高饱和字面量
+                            // 改六槽 task 角色色（唯一令牌真源，四档自适应）。
+                            color: _pieceColor(index),
                             size: piece.size,
                           ),
                         ),
                       ),
-                    ),
-                  );
-                }),
-                Center(
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0.92, end: 1),
-                    duration: const Duration(milliseconds: 360),
-                    curve: Curves.easeOutBack,
-                    builder: (context, scale, child) =>
-                        Transform.scale(scale: scale, child: child),
+                    );
+                  },
+                );
+              }),
+              Center(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0.92, end: 1),
+                  duration: const Duration(milliseconds: 360),
+                  curve: Curves.easeOutBack,
+                  builder: (context, value, child) {
+                    final scale = reduceMotion ? 1.0 : value;
+                    return Transform.scale(scale: scale, child: child);
+                  },
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: DS.surfacePrimary.withValues(alpha: 0.94),
@@ -402,6 +417,7 @@ class _SparkleConfettiOverlay extends StatelessWidget {
           ),
         ),
       );
+  }
 }
 
 class _ConfettiPiece {
@@ -410,57 +426,32 @@ class _ConfettiPiece {
     required this.fall,
     required this.rotation,
     required this.size,
-    required this.color,
   });
 
   final double dx;
   final double fall;
   final double rotation;
   final double size;
-  final Color color;
 }
 
+// V4-G01：几何 seed 保持 const；颜色位改函数供给——六枚 classic-only
+// 高饱和字面量（7C3AED/0EA5E9/F59E0B/10B981/EC4899/6366F1）收敛到六槽
+// task 角色色（SparkleColors 唯一真源；reflection 柔紫/learning 灰蓝/
+// training 陶土/social 鼠尾草/errorFix 陶土红/planning 灰青），四档自适应。
 const List<_ConfettiPiece> _pieces = <_ConfettiPiece>[
-  _ConfettiPiece(
-    dx: 0.12,
-    fall: 170,
-    rotation: 3.0,
-    size: 22,
-    color: Color(0xFF7C3AED),
-  ),
-  _ConfettiPiece(
-    dx: 0.24,
-    fall: 230,
-    rotation: 4.2,
-    size: 18,
-    color: Color(0xFF0EA5E9),
-  ),
-  _ConfettiPiece(
-    dx: 0.38,
-    fall: 190,
-    rotation: 3.6,
-    size: 24,
-    color: Color(0xFFF59E0B),
-  ),
-  _ConfettiPiece(
-    dx: 0.56,
-    fall: 220,
-    rotation: 4.8,
-    size: 20,
-    color: Color(0xFF10B981),
-  ),
-  _ConfettiPiece(
-    dx: 0.72,
-    fall: 180,
-    rotation: 3.4,
-    size: 22,
-    color: Color(0xFFEC4899),
-  ),
-  _ConfettiPiece(
-    dx: 0.86,
-    fall: 240,
-    rotation: 5.0,
-    size: 18,
-    color: Color(0xFF6366F1),
-  ),
+  _ConfettiPiece(dx: 0.12, fall: 170, rotation: 3.0, size: 22),
+  _ConfettiPiece(dx: 0.24, fall: 230, rotation: 4.2, size: 18),
+  _ConfettiPiece(dx: 0.38, fall: 190, rotation: 3.6, size: 24),
+  _ConfettiPiece(dx: 0.56, fall: 220, rotation: 4.8, size: 20),
+  _ConfettiPiece(dx: 0.72, fall: 180, rotation: 3.4, size: 22),
+  _ConfettiPiece(dx: 0.86, fall: 240, rotation: 5.0, size: 18),
 ];
+
+Color _pieceColor(int index) => switch (index) {
+      0 => DS.taskReflection,
+      1 => DS.taskLearning,
+      2 => DS.taskTraining,
+      3 => DS.taskSocial,
+      4 => DS.taskErrorFix,
+      _ => DS.taskPlanning,
+    };

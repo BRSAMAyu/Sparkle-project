@@ -102,6 +102,36 @@ void main() {
     },
   );
 
+  testWidgets(
+    'reduce-motion：复盘纸屑覆盖层首帧即静止终态，泵进不位移（G01/S01 判例）',
+    (tester) async {
+      final offsets = await _pumpReviewAndCollectConfetti(
+        tester,
+        disableAnimations: true,
+      );
+      expect(offsets.before, isNotEmpty, reason: '纸屑覆盖层必须挂载');
+      expect(
+        offsets.before,
+        offsets.afterWindow,
+        reason: 'reduce-motion 下纸屑两段隐式动画必须直落静止终态'
+            '（S01 判例：不制造动画帧，视觉等价）',
+      );
+    },
+  );
+
+  testWidgets(
+    '常规路径对照：纸屑随泵进位移（探针有判别力）',
+    (tester) async {
+      final offsets = await _pumpReviewAndCollectConfetti(tester);
+      expect(offsets.before, isNotEmpty);
+      expect(
+        offsets.before,
+        isNot(offsets.afterWindow),
+        reason: '常规路径纸屑必须随泵进位移（控制组证明静态分支有判别力）',
+      );
+    },
+  );
+
   testWidgets('/exam-sprint/review navigates to post-exam review screen',
       (tester) async {
     await _useTallSurface(tester);
@@ -148,6 +178,82 @@ void main() {
 Future<void> _useTallSurface(WidgetTester tester) async {
   await tester.binding.setSurfaceSize(const Size(900, 1800));
   addTearDown(() => tester.binding.setSurfaceSize(null));
+}
+
+/// V4-G01 reduce-motion 判例泵制：填表提交触发纸屑覆盖层，读全部
+/// auto_awesome_rounded 图标（6 纸屑粒 + 1 中心卡）纵向位置——读一次、
+/// 泵进完整动画窗口（最长粒 620+5×70=970ms）再读一次，返回两批位置。
+/// `disableAnimations` 走 S01 双源判例（MediaQuery.disableAnimations）。
+Future<({List<Offset> before, List<Offset> afterWindow})>
+    _pumpReviewAndCollectConfetti(
+  WidgetTester tester, {
+  bool disableAnimations = false,
+}) async {
+  await _useTallSurface(tester);
+  await tester.pumpWidget(
+    _buildApp(
+      repository: _RecordingExamSprintRepository(),
+      child: MediaQuery(
+        data: MediaQueryData(disableAnimations: disableAnimations),
+        child: PostExamReviewScreen(
+          planId: 'plan-g01-rm',
+          subjectName: '高数',
+          // 拉长成功延迟以保持覆盖层挂载供观测；收尾泵过计时器防 pending。
+          successDelay: const Duration(seconds: 30),
+          onSuccess: () {},
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.tap(
+    find.byKey(const ValueKey('post-exam-review-rating-star-4')),
+  );
+  await tester.enterText(
+    find.byKey(const ValueKey('post-exam-review-result-description')),
+    '估计 82 分',
+  );
+  await tester.enterText(
+    find.byKey(const ValueKey('post-exam-review-challenge')),
+    '证明题时间不够',
+  );
+  await tester.enterText(
+    find.byKey(const ValueKey('post-exam-review-strategy')),
+    '真题训练应该更早开始',
+  );
+  await tester.enterText(
+    find.byKey(const ValueKey('post-exam-review-self-advice')),
+    '考前两天只做错题和公式',
+  );
+  await tester.tap(find.byKey(const ValueKey('post-exam-review-submit')));
+  await tester.pump();
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 16));
+
+  List<Offset> collectTops() {
+    final elements = find
+        .byWidgetPredicate(
+          (w) => w is Icon && w.icon == Icons.auto_awesome_rounded,
+        )
+        .evaluate()
+        .toList();
+    return elements
+        .map(
+          (e) => tester.getTopLeft(
+            find.byElementPredicate((other) => identical(other, e)),
+          ),
+        )
+        .toList();
+  }
+
+  final before = collectTops();
+  await tester.pump(const Duration(milliseconds: 1000));
+  final afterWindow = collectTops();
+
+  // 冲掉 successDelay 的 pending timer（onSuccess 空转，不导航）。
+  await tester.pump(const Duration(seconds: 30));
+  await tester.pump();
+  return (before: before, afterWindow: afterWindow);
 }
 
 Widget _buildApp({

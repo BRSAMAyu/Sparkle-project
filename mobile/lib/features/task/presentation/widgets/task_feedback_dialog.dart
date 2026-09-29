@@ -439,27 +439,40 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
                                 if (_hasStreakMilestone) ...[
                                   const SizedBox(height: DS.spacing16),
+                                  // V4-G01 四风格令牌化：连续里程碑卡原为
+                                  // classic-only 橙系字面量（FFF3E0/FFE0B2/
+                                  // FFB74D/FF7043/8D4E1D），dusk 深底下刺眼、
+                                  // quiet/paperDay 脱档。改走 semanticWarning
+                                  // 派生（唯一令牌真源），四档自适应同语义。
                                   Container(
                                     padding: const EdgeInsets.all(DS.spacing12),
                                     decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
+                                      gradient: LinearGradient(
                                         colors: [
-                                          Color(0xFFFFF3E0),
-                                          Color(0xFFFFE0B2),
+                                          Color.alphaBlend(
+                                            DS.warning.withValues(alpha: 0.12),
+                                            DS.surfaceSecondary,
+                                          ),
+                                          Color.alphaBlend(
+                                            DS.warning.withValues(alpha: 0.20),
+                                            DS.surfaceSecondary,
+                                          ),
                                         ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       ),
                                       borderRadius: DS.borderRadius12,
                                       border: Border.all(
-                                        color: const Color(0xFFFFB74D),
+                                        color: DS.warning.withValues(
+                                          alpha: 0.45,
+                                        ),
                                       ),
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(
+                                        Icon(
                                           Icons.local_fire_department_rounded,
-                                          color: Color(0xFFFF7043),
+                                          color: DS.warning,
                                         ),
                                         const SizedBox(width: DS.spacing8),
                                         Expanded(
@@ -468,7 +481,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                             style: theme.textTheme.bodyMedium
                                                 ?.copyWith(
                                               fontWeight: DS.fontWeightBold,
-                                              color: const Color(0xFF8D4E1D),
+                                              color: DS.textPrimary,
                                             ),
                                           ),
                                         ),

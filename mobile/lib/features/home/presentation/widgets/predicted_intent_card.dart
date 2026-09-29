@@ -198,8 +198,11 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(DS.spacing12),
                 decoration: BoxDecoration(
+                  // V4-G01 令牌化：暗分支面纱原钉 Colors.white@4%，改
+                  // rimLight 高光槽 + alpha 覆盖（白 RGB 全档同源，输出
+                  // 字节等值；task_card sheen 同判例），零字面量。
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.04)
+                      ? context.colors.rimLight.withValues(alpha: 0.04)
                       : DS.surfaceOverlay,
                   borderRadius: BorderRadius.circular(DS.radius16),
                   border: Border.all(
@@ -289,8 +292,9 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(DS.spacing12),
                   decoration: BoxDecoration(
+                    // V4-G01 令牌化：同上，rimLight + alpha 覆盖。
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.03)
+                        ? context.colors.rimLight.withValues(alpha: 0.03)
                         : DS.surfaceSecondary,
                     borderRadius: BorderRadius.circular(DS.radius16),
                   ),
@@ -577,8 +581,9 @@ class _WithinCategoryPreferencePanel extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
+        // V4-G01 令牌化：同上，rimLight + alpha 覆盖。
         color: isDark
-            ? Colors.white.withValues(alpha: 0.035)
+            ? context.colors.rimLight.withValues(alpha: 0.035)
             : DS.surfaceSecondary,
         borderRadius: BorderRadius.circular(DS.radius16),
         border: Border.all(color: DS.borderSubtle),

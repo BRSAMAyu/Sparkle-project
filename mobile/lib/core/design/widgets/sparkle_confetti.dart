@@ -4,6 +4,7 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
@@ -164,6 +165,13 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
       return widget.child ?? const SizedBox.shrink();
     }
 
+    // V4-G01 reduce-motion 静态分支（S01/F06 判例：MediaQuery 双源并集
+    // `context.reduceMotion`）。纸屑的静止终态 = 粒子已落出屏（无空中
+    // 残留），故减弱动效下视觉层整体缺席（与终态等价）；控制器生命周期、
+    // 粒子预算记账、感官反馈与 onComplete 时序全部保持既有路径不变——
+    // 只收视觉动效，不改任何行为语义。常规路径逐字节等价。
+    final reduceMotion = context.reduceMotion;
+
     final evidence = widget.evidenceText?.trim();
     final message = widget.messageText?.trim();
     final hasFeedback = (evidence != null && evidence.isNotEmpty) ||
@@ -173,39 +181,40 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
     return Stack(
       children: [
         if (widget.child != null) widget.child!,
-        Align(
-          alignment: widget.alignment,
-          child: RepaintBoundary(
-            child: ConfettiWidget(
-              confettiController: _controller,
-              blastDirectionality: BlastDirectionality.explosive,
-              colors: widget.colors ??
-                  [
-                    DS.primaryBase,
-                    DS.brandSecondary,
-                    DS.success,
-                    DS.info,
-                    DS.warning,
-                  ],
-              gravity: widget.intensity == SparkleCelebrationIntensity.small
-                  ? 0.34
-                  : 0.28,
-              emissionFrequency:
-                  widget.intensity == SparkleCelebrationIntensity.large
-                      ? 0.07
-                      : 0.05,
-              numberOfParticles: _particleCount,
-              maxBlastForce:
-                  widget.intensity == SparkleCelebrationIntensity.large
-                      ? 120
-                      : 100,
-              minBlastForce:
-                  widget.intensity == SparkleCelebrationIntensity.small
-                      ? 60
-                      : 80,
+        if (!reduceMotion)
+          Align(
+            alignment: widget.alignment,
+            child: RepaintBoundary(
+              child: ConfettiWidget(
+                confettiController: _controller,
+                blastDirectionality: BlastDirectionality.explosive,
+                colors: widget.colors ??
+                    [
+                      DS.primaryBase,
+                      DS.brandSecondary,
+                      DS.success,
+                      DS.info,
+                      DS.warning,
+                    ],
+                gravity: widget.intensity == SparkleCelebrationIntensity.small
+                    ? 0.34
+                    : 0.28,
+                emissionFrequency:
+                    widget.intensity == SparkleCelebrationIntensity.large
+                        ? 0.07
+                        : 0.05,
+                numberOfParticles: _particleCount,
+                maxBlastForce:
+                    widget.intensity == SparkleCelebrationIntensity.large
+                        ? 120
+                        : 100,
+                minBlastForce:
+                    widget.intensity == SparkleCelebrationIntensity.small
+                        ? 60
+                        : 80,
+              ),
             ),
           ),
-        ),
         if (hasFeedback)
           Align(
             alignment: Alignment.bottomCenter,

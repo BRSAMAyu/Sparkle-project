@@ -637,9 +637,15 @@ class _TaskDetailView extends ConsumerWidget {
                     gradient: DS.primaryGradient,
                     borderRadius: DS.borderRadius12,
                   ),
-                  child: const Icon(
+                  // V4-G01 令牌级修复（本文件非 RF-06 高危面；RF-06 三
+                  // 文件 dashboard_screen/compact_status_bar/
+                  // task_execution_screen 零触碰）：accent 容器上图标
+                  // 原钉 Colors.white——dusk 亮 accent 渐变上 <3:1。改
+                  // colorScheme.onPrimary（AppThemes 按 pixelAccentInk/
+                  // 对比度安全墨装配的唯一槽），四档自适应。
+                  child: Icon(
                     Icons.route_rounded,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     size: 18,
                   ),
                 ),

@@ -36,7 +36,13 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
               gradient: DS.primaryGradient,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+            // V4-G01 对比度修复：accent 渐变圆上的图标原钉 Colors.white
+            // （dusk 亮 accent 上 <3:1），改 colorScheme.onPrimary 唯一槽。
+            child: Icon(
+              Icons.auto_awesome,
+              color: theme.colorScheme.onPrimary,
+              size: 28,
+            ),
           ),
           const SizedBox(height: DS.spacing16),
           Text(
