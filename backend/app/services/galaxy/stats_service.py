@@ -762,9 +762,24 @@ class GalaxyStatsService:
         V4-D04: 撤回后的行零贡献——effect_kind='retracted'（D-03 墓碑）与
         'projection'（影子行）不再计入证据存在性（与 G-01 重放的存在语义同
         口径：NULL kind=迁移前形状照旧、evidence/set_point 计入）。
+
+        FIX-576: 客户端自报观测行（``evidence:self_report``，FIX-562 写入时
+        kind='evidence' 以保留重放记账）**不是真实证据**——与
+        ``REAL_EVIDENCE_TYPES``/``MasteryBelief.is_legacy_estimate`` 同一裁定，
+        不计入本计数（否则 PG 生产方言下自报一次即清 legacy 旗，与
+        「自报不显示掌握」语义相反）。计数谓词在此排除它；重放面不动
+        （SELF_REPORT 本就在 REAL_EVIDENCE_TYPES 之外，永不融合）。
+
+        GUID-typed bindparams（与 _load_prior_belief 同款纪律）：asyncpg 原生
+        绑 UUID，aiosqlite 绑 str——无类型化绑定时 sqlite 测试方言直接
+        ProgrammingError → except 降级 `{}`，断言真空通过（FIX-576 真空根因）。
+        结果键统一回 UUID（裸 text 查询无结果类型加工：sqlite 行值为 str），
+        图消费方 ``.get(node.id)`` 双方言同键型。
         """
+        from sqlalchemy import String, bindparam
         from sqlalchemy import text as sa_text
 
+        from app.models.base import GUID
         from app.services.galaxy.mastery_evidence import QUIZ_EVIDENCE_REASONS
 
         quiz_reasons = sorted(QUIZ_EVIDENCE_REASONS)
@@ -773,6 +788,7 @@ class GalaxyStatsService:
             "user_id": user_id,
             "evidence_kind": MasteryEffectKind.EVIDENCE.value,
             "set_point_kind": MasteryEffectKind.SET_POINT.value,
+            "self_report_reason": encode_evidence_reason(MasteryEvidenceType.SELF_REPORT),
         }
         for i, reason in enumerate(quiz_reasons):
             params[f"reason_{i}"] = reason
@@ -782,8 +798,13 @@ class GalaxyStatsService:
                     f"SELECT node_id, COUNT(*) AS n FROM mastery_audit_log "
                     f"WHERE user_id = :user_id "
                     f"AND (effect_kind IS NULL OR effect_kind IN (:evidence_kind, :set_point_kind)) "
-                    f"AND (reason LIKE 'evidence:%' OR reason IN ({placeholders})) "
+                    f"AND ((reason LIKE 'evidence:%' AND reason <> :self_report_reason) "
+                    f"OR reason IN ({placeholders})) "
                     f"GROUP BY node_id"
+                )
+                .bindparams(
+                    bindparam("user_id", type_=GUID),
+                    bindparam("self_report_reason", type_=String),
                 ),
                 params,
             )
@@ -791,7 +812,15 @@ class GalaxyStatsService:
         except Exception as e:
             logger.warning(f"Failed to load evidence counts for user {user_id}: {e}")
             return {}
-        return {row[0]: int(row[1]) for row in rows if row[0] is not None}
+        # FIX-576: 裸 text 查询的结果列无类型加工——PG 行值为 UUID、sqlite 为
+        # str；统一归一为 UUID（声明键型），坏键行照旧丢弃。
+        normalized: dict[UUID, int] = {}
+        for row in rows:
+            if row[0] is None:
+                continue
+            key = row[0] if isinstance(row[0], UUID) else UUID(str(row[0]))
+            normalized[key] = int(row[1])
+        return normalized
 
     async def get_verified_evidence_counts_by_node(self, user_id: UUID) -> dict[UUID, int]:
         """V4-D04: per-node count of *verification-grade* evidence rows (graph read path).

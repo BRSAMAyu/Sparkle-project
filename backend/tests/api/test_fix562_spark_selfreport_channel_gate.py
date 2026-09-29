@@ -146,7 +146,10 @@ async def test_self_reported_quiz_claim_never_fuses_mastery(spark_env):
     # 主张留观测溯源：自评独立通道行存在（重放跳过，零掌握度效果）
     self_report_rows = [r for r in rows if r[0] == "evidence:self_report"]
     assert len(self_report_rows) == 1
-    # 真实证据存在性为零——自报不清 legacy 旗（不显示掌握）
+    # FIX-576：该行 kind='evidence'（重放记账面），但 G-01 计数谓词显式排除
+    # evidence:self_report——双方言（sqlite 测试 / PG 生产）下都不计入真实
+    # 证据存在性，自报**不清** legacy 旗（若谓词排除回退，此断言转红）。
+    assert self_report_rows[0][1] == "evidence"
     assert await GalaxyStatsService(db).get_evidence_counts_by_node(user.id) == {}
 
 
@@ -172,6 +175,12 @@ async def test_repeated_self_report_claims_cannot_reach_mastered(spark_env):
         assert body["updated_status"]["status"] != "mastered"
     rows = await _audit_rows(db, node.id)
     assert all(r[0] != "evidence:task_outcome" for r in rows), "自报主张不得以检验名义入账"
+    # 5 条自报观测行确实存在（kind='evidence'，重放记账面）——但 FIX-576 起
+    # G-01 计数谓词显式排除 evidence:self_report：双方言下真实证据计数恒为
+    # 零，自报**不清** legacy 旗（谓词排除回退 → 计数为 {node:5}，此断言转红）。
+    self_report_rows = [r for r in rows if r[0] == "evidence:self_report"]
+    assert len(self_report_rows) == 5
+    assert all(r[1] == "evidence" for r in self_report_rows)
     assert await GalaxyStatsService(db).get_evidence_counts_by_node(user.id) == {}
 
 
@@ -216,3 +225,29 @@ async def test_service_level_verified_outcome_still_fuses(spark_env):
     )
     assert result.updated_status is not None
     assert result.updated_status.mastery_score > 0.0
+
+
+async def test_real_quiz_evidence_counts_in_g01_presence(spark_env):
+    """正例（FIX-576 真空消除）：真实 quiz 证据在 G-01 存在性计数中可见.
+
+    修复前 ``get_evidence_counts_by_node`` 裸 SQL 直绑 UUID 对象——sqlite 测试
+    方言 ProgrammingError 被 ``except`` 吞掉降级 `{}`，本断言（`== {node:1}`）
+    在旧代码下真空转红不可能：计数恒 `{}`。FIX-576 起计数查询用 GUID-typed
+    bindparam（双方言真实执行）+ 结果键归一 UUID——真实证据行双方言下都
+    如实计数，同时自报行被谓词排除（见上两例的 `== {}` 面）。
+    """
+    db, user, node, _ac = spark_env
+    result = await GalaxyStatsService(db).spark_node(
+        user.id,
+        node.id,
+        study_minutes=0,
+        outcome=EvidenceObservation(
+            evidence_type=MasteryEvidenceType.QUIZ,
+            value=90.0,
+            confidence=0.9,
+        ),
+    )
+    assert result.updated_status is not None
+    counts = await GalaxyStatsService(db).get_evidence_counts_by_node(user.id)
+    # 双方言真实执行：quiz 证据行存在即计数 1，键为节点 UUID
+    assert counts == {node.id: 1}

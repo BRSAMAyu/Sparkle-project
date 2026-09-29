@@ -1,0 +1,87 @@
+{
+  "card": "V4-FIX-576",
+  "task": "sqlite 真空断言小修（F562R1 发现，P3）：FIX-562 新测两处 get_evidence_counts_by_node == {} 经 sqlite 异常吞噬真空通过，且 PG 生产方言语义与测试注释相反",
+  "agent": "wtF576",
+  "branch": "fix/v4/f576-vacuum-assert",
+  "base_sha": "062d6666af5eca89ea0f0f931b35f457b68df4cb",
+  "generated_at_local": "2026-09-29",
+  "kind": "fix",
+  "product_code_changed": true,
+  "environment": {
+    "worktree": "wtF576（git worktree add ../wtF576 -b fix/v4/f576-vacuum-assert main，exit 0）",
+    "python": "3.11.15（venv 共享主检出 /Users/brsama/code/GitHub/Sparkle-project/backend/.venv）",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2",
+    "ruff": "0.15.8",
+    "black": "26.3.1（注：该版对 HEAD 既有代码本就报 16 处重排，属仓库既存格式代差，非本次新增；本次新增行仅其一处 .bindparams 链式风格与同函数区既有 _load_prior_belief 写法同款）",
+    "pg": "PostgreSQL 16.15（docker sparkle_db，专属测试库 sparkle_f576_test，验后即删；未触碰演示库 sparkle）",
+    "note": "backend/app/gen 以 symlink 指主检出（gitignored 不入库）；worktree 无 .env（TEST-DBGUARD worktree 隔离场景，sqlite 内存库）"
+  },
+  "defect_location": {
+    "count_fn": "backend/app/services/galaxy/stats_service.py get_evidence_counts_by_node（main@062d6666 :756-794）——裸 sa_text SQL 直绑 UUID 对象（params['user_id']=user_id 无 bindparam 类型）",
+    "vacuum_mechanism": "aiosqlite 无法适配 uuid.UUID → sqlite ProgrammingError → except → return {} ——断言 == {} 真空通过（测试与被测逻辑双双短路，同源 FIX-562 台账第①层）",
+    "semantic_mechanism": "PG 生产方言 asyncpg 原生绑 UUID，SQL 真实执行：计数谓词 reason LIKE 'evidence:%' 过匹配 FIX-562 自报观测行（reason='evidence:self_report'、effect_kind='evidence'）→ {node:1} → 图响应 is_legacy_estimate=not evidence_count=False → 一次自报即清 legacy 旗",
+    "test_comment_contradiction": "test_fix562_spark_selfreport_channel_gate.py :149/:174 注释断言「自报不清 legacy 旗（不显示掌握）」，与 PG 真实语义相反——F562R1 判定测试注释与生产语义相反",
+    "write_path_fact": "spark 自报行写入点 stats_service.py:236-250（FIX-562 语义）：reason=encode_evidence_reason(SELF_REPORT)='evidence:self_report'、effect_kind='evidence'（保重放记账：SELF_REPORT 在 REAL_EVIDENCE_TYPES 外永不融合，但 breakdown/self_report_count 照记）"
+  },
+  "adjudication": {
+    "verdict": "DEFECT_FIX（修，非钉现状）",
+    "option_chosen": "②计数谓词排除 self_report（语义修复）＋③GUID bindparam（真空消除）组合——②是语义缺陷的根修，③的 bindparam 技法是断言真空这一测试缺陷的根修；两者正交、缺一不可",
+    "why_option_1_rejected": "①自报行改 PROJECTION kind 会让账本 loader 在行级整行跳过（stats_service.py _load_prior_belief: 'if kind is PROJECTION: continue'）→ spark 响应面 self_report_count/breakdown 观测溯源归零，削弱 FIX-562 明文保留的「主张留观测溯源」面；且动写路径定性行，波及面大于必要",
+    "why_option_3_alone_rejected": "③单独采用 = sqlite/PG 双方言真实执行「自报清旗」并把它写成断言 {node:1}+注释「PG 下会清」——把生产语义缺陷钉成契约，与既有权威裁定（REAL_EVIDENCE_TYPES、MasteryBelief.is_legacy_estimate、_mastery_evidence_info has_real 全部排除 SELF_REPORT）直接矛盾；G-01 自身契约即「real evidence rows 计数」",
+    "why_option_2_is_root_fix": "缺陷不在行定性（写入 kind='evidence' 为重放记账所需且正确），在计数谓词过匹配。谓词排除 evidence:self_report 与 REAL_EVIDENCE_TYPES 同一裁定，双方言一致生效；写路径/重放/D04 三层封死零改动",
+    "iron_rules_kept": [
+      "FIX-562 三层封死语义零削弱：API 通道门（422 防御面+SELF_REPORT 降级）、融合面（fuse_mastery 权重 0）、账本重放（SELF_REPORT 永不融合）全部未动；自报行仍 kind='evidence' 保重放记账",
+      "D04 契约零削弱：本修复使 PG 生产方言的行为与 D04/G-01「自报不是真实证据」裁定对齐（修复前 PG 下自报清旗恰是 D04 违约面）"
+    ]
+  },
+  "changed_files": [
+    {
+      "path": "backend/app/services/galaxy/stats_service.py",
+      "change": "get_evidence_counts_by_node：计数谓词 ((reason LIKE 'evidence:%' AND reason <> :self_report_reason) OR reason IN quiz级)；GUID-typed bindparam（user_id/self_report_reason，与同文件 _load_prior_belief 同款纪律）；结果键归一 UUID（裸 text 查询 sqlite 行值为 str，图消费方 .get(node.id) 双方言同键型）；docstring 记录 FIX-576 裁定"
+    },
+    {
+      "path": "backend/tests/api/test_fix562_spark_selfreport_channel_gate.py",
+      "change": "两处 == {} 断言注释更正为如实双方言语义（自报行 kind='evidence' 但计数谓词显式排除→双方言都不清 legacy 旗）；新增自报行存在性断言（1/5 条、kind='evidence'）使谓词排除可失败（mutation 敏感）；新增正例 test_real_quiz_evidence_counts_in_g01_presence（真空哨兵：quiz 证据 → {node.id:1}，旧真空代码下恒 {} 必红）"
+    }
+  ],
+  "dual_dialect_assertion_semantics": {
+    "sqlite_测试方言": {
+      "pre_fix": "get_evidence_counts_by_node 真实执行必异常（uuid.UUID 绑定 ProgrammingError）→ except → {} ——断言 == {} 真空通过（探针实测：[1] sqlite + UUID bind (current code path): {}）",
+      "post_fix": "GUID bindparam（aiosqlite 绑 str）真实执行：自报行谓词排除 → {}；quiz 证据 → {UUID(node): 1}（键归一 UUID）。探针实测 [FIXED] sqlite → {UUID('9245aafa-…'): 1}（自报+quiz 双行场景，自报不计）",
+      "assertion_now": "== {} 与 == {node.id:1} 均为真实执行断言，mutation 双向可红（见 mutation_verification）"
+    },
+    "pg_生产方言_PG16.15": {
+      "pre_fix": "SQL 真实执行（asyncpg 原生绑 UUID）：谓词无排除 → 自报行计入。探针实测 [PRE-FIX predicate] PG → {self_report_node: 1, quiz_node: 1} ——一次自报即清 legacy 旗（生产语义缺陷，测试注释相反）",
+      "post_fix": "修复函数真实执行：探针实测 [FIXED] PG get_evidence_counts_by_node → {quiz_node: 1}（自报节点缺席=不计入）。与 sqlite 后修结果语义一致",
+      "assertion_semantics": "两方言下「自报行不清 legacy 旗」均真实成立——注释更正如实"
+    },
+    "pg_probe_setup": "docker sparkle_db（PG 16.15）建专属测试库 sparkle_f576_test（生产表形同 mastery_audit_log 生产定义：node_id/user_id uuid、effect_kind varchar(20)），asyncpg 直连执行修复函数与 pre-fix 谓词对照，验后 DROP"
+  },
+  "mutation_verification": {
+    "mutation_A_语义回退": "谓词排除替换为恒不匹配词（evidence:mutation_never_matches），SQL/bindparam 结构不变 → test_self_reported_quiz_claim_never_fuses_mastery、test_repeated_self_report_claims_cannot_reach_mastered 2 红（计数真实变为 {node:1}/{node:5}），正例 3 绿 ——语义面一反一证",
+    "mutation_B_真空回退": "移除 .bindparams(GUID) → 恒 {} 真空 → 恰 test_real_quiz_evidence_counts_in_g01_presence 1 红（== {node.id:1} 期待 {} 落空），== {} 两断言真空复辟但被哨兵锁定 ——真空面一反一证",
+    "conclusion": "每面一正一反可失败成立：谓词排除由反例锁、真空由正例哨兵锁"
+  },
+  "commands": [
+    "pytest tests/api/test_fix562_spark_selfreport_channel_gate.py → 5 passed（基线 4 passed 真空版；+1 真空哨兵正例）",
+    "pytest tests/services/galaxy tests/api/test_fix562_spark_selfreport_channel_gate.py → 183 passed（改前基线同口径 182 passed；+1 即新增哨兵，零回归）",
+    "pytest tests/api/test_galaxy_graph_shield_invalidation.py tests/api/test_graphrag_monitor_face_removed.py tests/api/test_wt392_r2v3_galaxy_shield_gaps.py → 7 passed（图消费方面回归）",
+    "mypy app → 59 errors in 53 files（≤77 门槛；main@062d6666 隔离全新 cache 同口径亦 59——逐条 diff 仅 orchestrator 行号漂移 2416→2415 与双方共有的 types-PyYAML 环境件，零新增）",
+    "ruff check app/services/galaxy/stats_service.py tests/api/test_fix562_spark_selfreport_channel_gate.py → All checks passed（新增 I001 已修；零新增）",
+    "black --check --diff（26.3.1）：HEAD 既有 16 处重排为仓库既存格式代差；本次新增区唯一提示（.bindparams 链式）与同区既有 _load_prior_belief 在 HEAD 被报同一模式——零新增违规类"
+  ],
+  "test_counts": {
+    "new_tests": 1,
+    "changed_tests": 2,
+    "new_test_files": ["backend/tests/api/test_fix562_spark_selfreport_channel_gate.py（4→5，+1 真空哨兵正例）"],
+    "mutation_red": "A=2 红（语义面）、B=1 红（真空面）",
+    "regression_green": "183（services/galaxy 178 + FIX-562 文件 5）+ 7（图消费 API 面）全部 passed；基线改前同口径 182+7"
+  },
+  "limitations": [
+    "get_verified_evidence_counts_by_node 存在同款 sqlite 真空（UUID 直绑 → {}），但其谓词本就不匹配自报行（仅 evidence:quiz/task_outcome 前缀+quiz 级词），PG 下无语义缺陷——sqlite 降级属测试方言既有行为，超出本卡范围未动（如需另立卡）",
+    "black 26.3.1 与仓库既有格式存在全文件级代差（HEAD 16 处），本次不整文件重排（避免噪声 diff），新增行与局部既有风格一致",
+    "mypy 59 中双方共有 1 条 types-PyYAML stub 环境件（本机 site-packages 无 types-PyYAML），与本次改动无关",
+    "PG 实证用 docker sparkle_db 专属测试库 sparkle_f576_test 完成（验后已 DROP），未复用演示库 sparkle（TEST-DBGUARD 约定）"
+  ]
+}
