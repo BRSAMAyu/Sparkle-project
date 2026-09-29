@@ -21,17 +21,48 @@
     ]
   },
   "regression_batches": [
-    {"scope": "test/core/design/（F01–F06 令牌/像素族/style_preview/semantic_pill owner）", "passed": 271, "failed": 0},
-    {"scope": "test/features/memory/ + test/features/aurora/ + test/features/cognitive/", "passed": 156, "failed": 0},
-    {"scope": "test/widget/ 家族 12 文件", "passed": 28, "failed": 0},
-    {"scope": "i18n golden ×2 + chat 邻接 ×5", "passed": 19, "skipped": 1, "failed": 0, "skip_note": "i18n_batch_p2_08 golden 为 ENABLE_P208_GOLDENS 基线机 env 门（FIX-368 判例，默认关≠失败，先于本卡存在）"},
-    {"scope": "token 化收口复跑 test/features/cognitive/ + remediable_patterns_card", "passed": 13, "failed": 0},
-    {"scope": "FULL mobile suite（错峰 --concurrency=1）", "passed": null, "failed": null, "note": "结果回填于 full_suite 字段；既有失败/新增回归区分登记"}
+    {
+      "scope": "test/core/design/（F01–F06 令牌/像素族/style_preview/semantic_pill owner）",
+      "passed": 271,
+      "failed": 0
+    },
+    {
+      "scope": "test/features/memory/ + test/features/aurora/ + test/features/cognitive/",
+      "passed": 156,
+      "failed": 0
+    },
+    {
+      "scope": "test/widget/ 家族 12 文件",
+      "passed": 28,
+      "failed": 0
+    },
+    {
+      "scope": "i18n golden ×2 + chat 邻接 ×5",
+      "passed": 19,
+      "skipped": 1,
+      "failed": 0,
+      "skip_note": "i18n_batch_p2_08 golden 为 ENABLE_P208_GOLDENS 基线机 env 门（FIX-368 判例，默认关≠失败，先于本卡存在）"
+    },
+    {
+      "scope": "token 化收口复跑 test/features/cognitive/ + remediable_patterns_card",
+      "passed": 13,
+      "failed": 0
+    },
+    {
+      "scope": "FULL mobile suite（错峰 --concurrency=1）",
+      "passed": 3342,
+      "failed": 0,
+      "note": "全量套件 All tests passed（含本卡新套 12）",
+      "skipped": 23
+    }
   ],
   "full_suite": {
-    "status": "RUNNING_AT_WRITE_TIME",
-    "result": "TO_BE_BACKFILLED",
-    "method": "cd mobile && flutter test --concurrency=1（后台，错峰）"
+    "status": "PASS",
+    "passed": 3342,
+    "skipped": 23,
+    "failed": 0,
+    "wall_clock": "约 27.6 分钟（错峰后台 --concurrency=1）",
+    "note": "全量 mobile 套件零失败；23 skip 均为 env 门基线机制（FIX-368 判例族：ENABLE_*_GOLDEN 类，默认关≠失败，先于本卡存在）；分母即『既有功能测试全绿』最强口径"
   },
   "static_checks": {
     "flutter_analyze": "No issues found!（全库零 issue）",
