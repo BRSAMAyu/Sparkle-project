@@ -41,15 +41,15 @@
     {"id": 7, "cmd": "bench run --layers L0,L1,L2,L3 --passes 4 --tag main（416 query，断点续跑支持，实际一次跑完）", "exit_code": 0},
     {"id": 8, "cmd": "bench run --cancel-probe --layers L0,L1,L2,L3 --tag cancel（8 探针）", "exit_code": 0},
     {"id": 9, "cmd": "重启引擎 ENABLE_DETERMINISTIC_FAST_LANE=true 后：bench run --layers L0 --passes 4 --tag fastlane（104）", "exit_code": 0},
-    {"id": 10, "cmd": "recover_q04_billing_deadletter.py --apply（死信恢复 58+1 行；复用 BillingWorker._to_stmt_data 同一列映射）", "exit_code": 0},
+    {"id": 10, "cmd": "recover_q04_billing_deadletter.py --apply（死信恢复：58 行插入落库 + 1 行 duplicate 跳过；复用 BillingWorker._to_stmt_data 同一列映射——一审 C-7 勘误补记：原概称 59 未区分 dup 跳过）", "exit_code": 0},
     {"id": 11, "cmd": "bench summarize --tag main/cancel/fastlane/pilot_a/pilot_b", "exit_code": 0}
   ],
   "model_budget": {
     "authorization_basis": "卡文 objective 明令『每层≥100报告分位』+ 派单指令同口径 + E08 系列同规模真模型基准先例（104q≈$0.127）；本卡实际支出 ≈$0.17（main $0.1567 + fastlane $0.0103 + pilot/cancel ≈$0.003），低于按先例单价折算的规模预期，未触预算暂停线",
     "price_sources": "bench_ai_stack_l0_l3.py 内嵌价表（来源日期逐项注明）：dashscope_fast=qwen3.7-flash ¥0.225/¥0.974 per M（Aliyun 2026-09-10 价）等；本 run 归因子集 100% dashscope_fast",
     "actual_model_and_usage": {
-      "main_run": {"db_attributed": "250 行 / 1,022,536 tok / $0.102185（dashscope_fast 219 + no_generation_model 0tok 24 + no_generation_model_estimated 带 216/216/277tok 3）", "stream_frame_only": "152 行 / 545,200 tok / $0.054525（引擎回执 cost_micro_usd；模型归因因计量持久化丢失不可得，如实标注）", "fully_unmetered_delivered": 14, "total_est_usd": 0.156710},
-      "fastlane_probe": {"db_attributed": "91 行 / 103,336 tok / $0.010334（全部为 model-lane 回退行）", "deterministic_rows": "26 行 0 token（但 0 行账面记录——见红项）", "total_est_usd": 0.010334},
+      "main_run": {"db_attributed": "250 行 / 1,022,536 tok / $0.102185（dashscope_fast 225 + no_generation_model 0tok 22 + no_generation_model_estimated 带 216/216/277tok 3——一审 C-4 勘误：原记 219+24+3=246≠250，以库实测分布 225+22+3=250 为准）", "stream_frame_only": "152 行 / 545,200 tok / $0.054525（引擎回执 cost_micro_usd；模型归因因计量持久化丢失不可得，如实标注）", "fully_unmetered_delivered": 12, "fully_unmetered_note": "一审 C-2 勘误：原记 14——L3-r3-09/L3-r4-09 已于 23:05:20/25 落库，采集 join 竞态多计", "total_est_usd": 0.156710},
+      "fastlane_probe": {"db_attributed": "91 行 / 103,336 tok / $0.010334（78 model-lane 回退行 + 13 deterministic no_generation_model/0tok——一审 C-1 勘误：原记「全部为 model-lane 回退行」不实）", "deterministic_rows": "26 行 0 token，账面 26/26 全部落库（13 正常流 + 13 经 23:42:02 恢复批，均为 I09 承诺的 no_generation_model/0tok；一审 C-1 勘误：原记「0 行账面」系汇总 join 23:42:03 晚于自身恢复批 23:42:02 的 TOCTOU 采集伪象，early-return 假设撤回）", "total_est_usd": 0.010334},
       "guest_accounts": "wtQ04_bench / wtQ04_bench_fl（guest 端点，零注册成本）"
     }
   },
@@ -71,9 +71,12 @@
   "recovery": {
     "context": "共享 Redis queue:billing 存在第二个消费者（主检出驻留栈 worker，其 Postgres 凭据失效），死信恢复的 RPUSH 被其抢占并以 password auth 失败回写死信，队列重推循环不收敛",
     "method": "recover_q04_billing_deadletter.py：读死信中 request_id 前缀 wtq04- 的记录，以 BillingWorker._to_stmt_data 同一列映射与 insert 语句直插 token_usage（duplicate key 跳过，同 worker._retry_individually 语义）——恢复产品自身已产出的真实计量，非 Mock/非人工造数",
-    "recovered_rows": 59,
+    "recovered_rows": 58,
+    "recovered_rows_note": "一审 C-7 勘误：库内恢复批实测 58 行（23:42:00 分桶，全部 fastlane）；原记 59 系把脚本处理总记录数计入——58 插入 + 1 duplicate 跳过（该行已经正常流落库），见 commands.id=10",
     "residual_loss": "152 行计量记录被失效消费者吞没且未进死信，不可恢复；其成本已由流内 usage 帧（引擎回执）补齐，模型归因缺失如实标注"
   },
+  "attempt_reconciliation": "【一审 C-6 勘误补记：交付时本键不存在、summary 悬空引用，现补该节】辅助调用（router embedding / Layer3 意图分类 / sufficiency / HyDE）计量对账从未落地：attempt 级隐藏调用无可独立观测的 attempt 计数源，token_usage 行数与 attempt 数之差无法归因「漏辅助计费」——该验收面以 NOT_MEASURED 兜底（limitations §3），按一审明示列为红项边界（非已排除面）",
+  "errata_r1": "一审 wtQ04R1 PASS_WITH_CHALLENGES（review_r1.md）C-1..C-7 已就地勘误并内联标注；红项归属总表见 diff_or_evidence_only.md。raw/*.jsonl、cost_rollup-*.json、summary-*.md 为采集时点（23:42-23:43 join）快照未改动，其 fully_unmetered=14/13、cancel 库行 1/4、恢复 59 等数为 TOCTOU join 竞态伪象，权威口径以本 manifest 与 diff_or_evidence_only.md 勘误值为准",
   "artifacts_sha256": {
     "raw/raw-main.jsonl": "01831cc2edaa97b469ca17e0e76b612247ee8bd2cbc5523696f2ced11d16fbdc",
     "raw/raw-fastlane.jsonl": "a5841ecf9ab58d349ca40431f94ce62114b5460a7781fda76f79cf5daa03bf84",

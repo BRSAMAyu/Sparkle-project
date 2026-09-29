@@ -236,3 +236,14 @@ cost: db_attributed=81行/532510tok/$0.053250 | stream_frame_only=19行/161220to
 注：隐藏辅助调用（Layer3 意图分类/sufficiency/HyDE/router embedding）不在 token_usage
 计量范围——本表口径为「主生成计量成本」；辅助调用无计量即属漏计费面，
 以 token_usage 行数与 attempt 数的差异另报（见 run_manifest.attempt_reconciliation）。
+
+---
+
+## 一审勘误注记（wtQ04R1 PASS_WITH_CHALLENGES；本文件为采集时点快照，原始行未改动）
+
+本文件 generated=23:43:12 的 join 读数早于/部分早于终态库，一审共享库复验订正：
+- fully_unmetered_delivered 合计 **14→12**（L3 4→2：L3-r3-09/L3-r4-09 已于 23:05:20/25 落库，本表该两行为采集竞态伪象——C-2）。
+- 上方「billing_persistence_loss」152 行仍成立（终态仍无库行，红项④不变）。
+- 辅助调用对账键 run_manifest.attempt_reconciliation 系一审 C-6 勘误补记（交付时不存在）。
+
+权威口径以 run_manifest.json / diff_or_evidence_only.md 勘误值为准。

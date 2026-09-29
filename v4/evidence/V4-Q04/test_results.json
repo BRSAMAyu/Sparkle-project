@@ -3,12 +3,12 @@
   "run_tag": "main+cancel+fastlane",
   "generated": "2026-09-29T07:50+0800",
   "verdict_summary": {
-    "M04_L0_fast_lane": "FAIL（flag=off：生成调用≠0 且首 delta p95=11.4s；flag=on：deterministic 子集 0 token ✓ 但端到端首 delta p50=1.32s/p90=4.78s > 500ms；且 deterministic 轮次无账面行）",
+    "M04_L0_fast_lane": "FAIL（flag=off：生成调用≠0 且首 delta p95=10.1–10.4s〔raw-main 全集标准分位；一审 C-3 勘误：原引 11.4s/46s 疑混用 greeting 子集切面不可复现，完成 p95 同勘为 39.0–40.3s〕；flag=on：deterministic 子集 0 token ✓ 但端到端首 delta p50=1.32s/p90=4.78s > 500ms；deterministic 轮次账面 26/26 全部落库 no_generation_model/0tok〔一审 C-1 勘误〕）——勘误仅动数值，FAIL 结论不变",
     "M05_L1_first_useful": "FAIL（p50=2.45s>2s；p95=6.84s>5s）",
     "M06_L2_usable_proposal": "FAIL（p50=4.27s>4s；p95=34.25s>12s；p99=111.5s）",
     "M07_L3_control_return": "PASS（首状态帧 p50=0.282s/p95=1.227s/max=3.87s ≤5s；完成 max=69.8s 未越软 90s——完成耗时分位单列，不以 ack 冒充答案）",
     "acceptance_1_four_moments": "PASS（四时刻逐行分开计量，澄清门 full_text 路径单列，不合并）",
-    "acceptance_2_billing_reds": "报红（4 类：no_generation 带 token 3 行；取消轮次 0 计费；delivered 完全无计量 main14+fastlane13 行；计量持久化丢失 152 行〔环境性〕）",
+    "acceptance_2_billing_reds": "报红（4 类：no_generation 带 token 3 行；取消轮次 0 计费〔L2 13,320 tok 帧级收据实锤，L0/L1/L3 无收据为推断，终态 4/4 库行 0tok——一审 C-5〕；delivered 完全无计量 main12+fastlane13〔一审 C-1/C-2 勘误：fastlane 13 行已经自身恢复批全部落库 no_generation_model/0tok，26/26 达标，采集伪象；main 14→12〕；计量持久化丢失 152 行〔环境性〕）",
     "acceptance_3_cancel_degrade_fail_in_denominator": "PASS（方法面：全部分母保留无剔除；发现面：系统对取消轮次的自身记账为 0——真实服务端成本不可见，已报红）"
   },
   "percentiles_main": {
@@ -44,11 +44,11 @@
   "percentiles_fastlane_L0": {
     "note": "ENABLE_DETERMINISTIC_FAST_LANE=true；n=104 全 delivered；lane 分布 deterministic=26 / model=78（剥词校验回退按 I09 设计工作）",
     "all": {"t_ack_s": [0.004, 0.925, 1.66], "t_first_delta_s": [2.366, 6.013, 10.088], "t_complete_s": [6.215, 24.397, 42.522]},
-    "deterministic_subset_n26": {"t_first_delta_p50": 1.324, "p90": 4.782, "p99": 11.79, "tokens": "0（db 0 行账面，见 RED）"}
+    "deterministic_subset_n26": {"t_first_delta_p50": 1.324, "p90": 4.782, "p99": 11.79, "tokens": "0（账面 26/26 全部落库为 no_generation_model/0tok——一审 C-1 勘误：原记 db 0 行账面系 join 竞态）"}
   },
   "cancel_probes": {
     "n": 8, "cancelled": 8,
-    "billing_after_cancel": "4 条 first_delta 后取消的轮次 DB 记账全部为 no_generation_model/0tok；其中 L2-CANCEL 在客户端取消前已见 13,320 tok usage 帧——服务端继续生成的真实成本未入账（RED）",
+    "billing_after_cancel": "4 条 first_delta 后取消的轮次终态 DB 记账全部为 no_generation_model/0tok（raw 采集时点仅 1/4 行可见，join 竞态）；服务端继续生成的实证面为 L2-CANCEL：取消前已见 13,320 tok usage 帧级收据——L0/L1/L3 无收据，「续生成」为合理推断非实证（RED，一审 C-5 收窄）",
     "rows": [
       {"qid": "L0-CANCEL-ack-1", "t_ack_s": 0.177}, {"qid": "L0-CANCEL-first_delta-2", "t_ack_s": 2.112, "t_first_delta_s": 28.5483},
       {"qid": "L1-CANCEL-ack-1", "t_ack_s": 0.002}, {"qid": "L1-CANCEL-first_delta-2", "t_ack_s": 1.1123, "t_first_delta_s": 14.6514},
@@ -57,16 +57,17 @@
     ]
   },
   "cost_rollup_main": {
-    "db_attributed": {"rows": 250, "tokens": 1022536, "usd": 0.102185, "model_distribution": {"dashscope_fast": 219, "no_generation_model(0tok)": 24, "no_generation_model_estimated(带tok)": 3}},
+    "db_attributed": {"rows": 250, "tokens": 1022536, "usd": 0.102185, "model_distribution": {"dashscope_fast": 225, "no_generation_model(0tok)": 22, "no_generation_model_estimated(带tok)": 3}, "errata_C4": "一审勘误：原记 219+24+3=246≠250，库实测分布 225+22+3=250"},
     "stream_frame_only": {"rows": 152, "tokens": 545200, "usd": 0.054525, "note": "引擎回执 cost_micro_usd（I10 同源权威）；模型归因丢失如实标注"},
-    "fully_unmetered_delivered_rows": 14,
+    "fully_unmetered_delivered_rows": 12,
+    "fully_unmetered_errata_C2": "一审勘误：原记 14——L3-r3-09/L3-r4-09 已落库",
     "total_est_usd": 0.15671,
     "tier_observation": "归因子集 100% dashscope_fast——pro/deep 的 L2/L3 行亦无 STANDARD/MAX 归因（tier 塌缩复现，E08 先例）"
   },
   "billing_reds": {
     "no_generation_with_tokens_estimated_bucket": ["L2-r1-08 (216tok)", "L2-r3-08 (216tok)", "L2-r4-08 (277tok)"],
     "cancelled_turns_billed_zero": ["L0/L1/L2/L3 CANCEL-first_delta-2 ×4 全部 no_generation_model/0tok"],
-    "delivered_fully_unmetered": {"main": 14, "fastlane_deterministic": 13, "note": "fastlane 13 行全部为 deterministic 轮次——I09 单测承诺『账面 0+0 直达 no_generation_model 桶』在 live 未发生（快路 early-return 疑似绕过 cleanup 记账）；成本为 0 但审计 trail 缺失"},
+    "delivered_fully_unmetered": {"main": 12, "fastlane_deterministic": 13, "note": "一审 C-1/C-2 勘误：fastlane 13 行已经自身恢复批（23:42:02）全部落库 no_generation_model/0tok——I09 承诺 live 成立 26/26，原「early-return 疑似绕过 cleanup」假设无据撤回；main 原记 14，L3-r3-09/L3-r4-09 已落库改 12——遗留真红=main 12 行无 usage 帧且无库行（混合面，环境概率高）"},
     "metering_persistence_loss": {"rows": 152, "root_cause": "共享 queue:billing 第二消费者（驻留栈 worker，凭据失效）抢占且未进死信；成本由流内 usage 帧补齐"},
     "total_red_count_main": 172
   },

@@ -65,3 +65,9 @@ cost: db_attributed=0行/0tok/$0.000000 | stream_frame_only=0行/0tok/$0.000000 
 注：隐藏辅助调用（Layer3 意图分类/sufficiency/HyDE/router embedding）不在 token_usage
 计量范围——本表口径为「主生成计量成本」；辅助调用无计量即属漏计费面，
 以 token_usage 行数与 attempt 数的差异另报（见 run_manifest.attempt_reconciliation）。
+
+---
+
+## 一审勘误注记（wtQ04R1 PASS_WITH_CHALLENGES；本文件为采集时点快照，原始行未改动）
+
+本表 db_attributed 为采集时点 join 读数：4 条取消轮次终态 **4/4 库行均已落库**（no_generation_model/0tok），采集时点仅 L2 1 行可见。红项②表述按一审 C-5 收窄：L2 13,320 tok 帧级收据实锤（t=20.366s，早于取消）；L0/L1/L3 无 usage 帧收据，「续生成」为合理推断非实证。权威口径以 run_manifest.json / diff_or_evidence_only.md 勘误值为准。

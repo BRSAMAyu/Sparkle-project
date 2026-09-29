@@ -38,3 +38,9 @@ cost: db_attributed=91行/103336tok/$0.010334 | stream_frame_only=0行/0tok/$0.0
 注：隐藏辅助调用（Layer3 意图分类/sufficiency/HyDE/router embedding）不在 token_usage
 计量范围——本表口径为「主生成计量成本」；辅助调用无计量即属漏计费面，
 以 token_usage 行数与 attempt 数的差异另报（见 run_manifest.attempt_reconciliation）。
+
+---
+
+## 一审勘误注记（wtQ04R1 PASS_WITH_CHALLENGES；本文件为采集时点快照，原始行未改动）
+
+本文件 generated=23:42:03 的 join 晚于本卡自身恢复批（23:42:02，58 行/120ms 突发）读及面 1 秒——TOCTOU 竞态。一审终态复验订正：本表 13 行「fully_unmetered_delivered」**全部已落库**，标签恰为 I09 承诺的 no_generation_model/0tok（deterministic 面 26/26 达标）；「快路 early-return 疑绕过 cleanup」根因假设撤回（C-1）。权威口径以 run_manifest.json / diff_or_evidence_only.md 勘误值为准。
