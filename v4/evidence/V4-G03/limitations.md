@@ -27,3 +27,8 @@ L10 规格句「记忆清空有明确说明和**可查询进度**，不被 3 次
 ## L-6 断点续跑形态
 
 前任 dirty=19 全数继承（含其对 semantic_pill/aurora/cognitive/memory 的 11 组修复），本次盘点逐组复算确认有效后保留；前任方案缺陷 2 处就地修正（R6 首帧闪、R10 棘轮越线）；前任遗漏 8 处补修（R1–R5/R7–R9）。「前任已修/续跑修复」逐项标注见 diff_or_evidence_only.md §1。
+
+## Errata (leader, 2026-09-30, R1 F-1/F-2 + 跨卡冲突注记)
+- 跨卡冲突：本卡与 G05 同修 capsule 三屏（jobs/detail/pattern_list）——union 取舍=G03 textPrimary 哲学（关键正文走 textPrimary 全档≥8.07，语义色由图标/描边承载；tint 0.06）覆盖 G05 的 0.05 彩色文本案于 jobs 两处；detail chip 两案收敛 0.05 保留 G05 注释。合并态 G03 12 钉+G05 insights 面 12 测联跑绿。
+- F-1：contrast_recompute_g03.py 的 FIX 检查在旧 borderSubtle 底上建模（局限），其 42 fails 输出不构成修复反证——产品达标由 R1 带外复算补证（五档 min 8.33 精确吻合）。
+- F-2：repeat 调用点实数 90（非 91）；UI-TOKENS 616 簿记不可复得（base 同规则 632→615 只降成立）。

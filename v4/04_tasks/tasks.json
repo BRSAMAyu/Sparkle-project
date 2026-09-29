@@ -3970,9 +3970,9 @@
       "id": "V4-G03",
       "title": "记忆/Aurora理解——四风格商业化完备",
       "depends_on": [],
-      "status": "PENDING",
-      "implementation_state": "REVIEW_READY",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "PASS_WITH_CHALLENGES",
       "kind": "implementation",
       "required_locks": [
         "ui-polish-g03"
@@ -4025,7 +4025,7 @@
       ],
       "rollback": "变更独立 commit+四风格 profile 开关；golden 基线变更需独立签理由（EVALUATION_PROTOCOL）。",
       "no_duplicate_rule": "与 Q05 分工：G 系列做实现打磨（修到完备），Q05 做三端重卡审查（HEAVY 截图矩阵）——G 卡返绿使 Q05 审查有据可过；不重写已验收 U/F 卡面。",
-      "progress_note": "2026-09-29 wtG03：REVIEW_READY 交付（断点续跑——前任因宿主机强制重启阵亡，dirty=19 全数继承零丢弃；分支 agent/v4/g03，base 9369f0e5，实现头 4abfe3d2，未 push）。四风格复算 205 组合量化（contrast_recompute_g03.py）：前任 11 组修复复算确认保留（P1–P11），本次补修前任遗漏 8 处（R1 归档徽章 4.01–4.45/R2 脚注 1.71–2.38 全档崩/R3 meta 徽章 4.27–4.35/R4 描述正文 3.25–3.90/R5 方案正文 successLight 2.12–2.88/R7 turns 芯片 borderSubtle 中灰底 2.03–4.3 五档全崩→surfaceTertiary+textPrimary ≥8.33/R8 字号/R9 evidence badge I18nService 三元→arb）+ 修正前任方案 2 处（R6 typing dots build 内 stop 首帧仍闪→didChangeDependencies 首帧前门控，双向钉证等价≠摘功能；R10 前任 +1 数字 fontSize 致 UI-TOKENS 红→全文件令牌化，棘轮 616→615 只降转绿）。新套 12 用例（四风格语义钉×4/跨档反例/证据门控/reduce-motion 双向钉/turns 芯片四档令牌钉）；回归：core/design 271+家族 156+widget 28+i18n/邻接 19+1env门+收口复跑 13 全绿；全量 mobile 套件错峰 --concurrency=1 跑 3342 passed ~23 skipped（env 门族）**零失败**；analyze 零 issue；L10N-PARITY/I18N/UI-TOKENS PASS；repeat 棘轮 48 零漂移（≤48 达标）。证据 9 文件（五件套+四档 PNG/语义 dump 头行档位令牌值，F05 判例）→ v4/evidence/V4-G03/。辨识度专项：三分区 pill 族 quiet/dusk 全 tone ≥4.5（0.05 tint 收口后）；「来自/仅用于/更改/忘记」操作行与预算说明文案对比度达标；清空进度流缺席按 stop-condition 登记不走手修（L-1）；无人格雷达=结构性事实（Prism 三分区列表）。行为语义零 diff；RF-06 零触碰；l10n 双语纯增量（arb 勘误零）。挑战预登记 7 条（CH-1 dirty 继承边界/CH-2 golden 形态裁决/CH-3 reduce-motion 真机/CH-4 棘轮收口方式/CH-5 清空流归属/CH-6 DS 层 brand tone 4.40 潜在面/CH-7 全量分母）→ review_receipt.json。"
+      "progress_note": "2026-09-30 wtG03：断点续跑交付（前任 19 脏全继承 P1-P11+2 方案缺陷修正；实现 4abfe3d2+证据 e47b297c，base 9369f0e5）。R1-R10 量化修复（R7 五档全崩芯片→surfaceTertiary min 8.33；R6 reduce-motion 首帧闪重构双向钉；R10 令牌化棘轮只降）。R1=PASS_WITH_CHALLENGES（receipt d3d182f0）：十靶全过，R7 五档亲复算精确吻合、对比度 6+ 对逐值吻合、CH-5 清空流零命中登记正当、Q03 tracked 副作用 CONFIRMED→FIX-580；F-1 脚本建模局限/F-2 簿记勘误入 limitations。合并注记：与 G05 跨卡冲突 union（textPrimary 哲学覆盖 jobs 两处，合并态双卡交叉面联跑绿 12+12）。集成复验@合并树 analyze 零+12 钉绿。"
     },
     {
       "id": "V4-G04",
