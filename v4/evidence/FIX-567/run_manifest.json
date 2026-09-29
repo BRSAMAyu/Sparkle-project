@@ -1,0 +1,96 @@
+{
+  "card": "V3-FIX-567",
+  "title": "后端 resume_view 角色回执生产者缺失（U01 一审 R1-1；首页 EpisodeResumeStrip 真实环境永不可现）",
+  "agent": "wtF567",
+  "branch": "fix/v4/f567-resume-view-producer",
+  "base_sha": "834651a7（本地 main；领先 origin/main 5cbc715f 三个 fleet state/闭账 commit，origin/main 为其祖先——worktree 按卡指令自本地 main 开出）",
+  "implementation_commit": "5290e010a0c5300c68dc85458e82c9664fd4c02f",
+  "generated_at_local": "2026-09-29",
+  "kind": "fix",
+  "product_code_changed": true,
+  "pushed": false,
+  "environment": {
+    "worktree": "wtF567（git worktree add ../wtF567 -b fix/v4/f567-resume-view-producer main，exit 0）",
+    "os": "darwin 25.6.0 arm64",
+    "python": "3.11.15（venv 共享主检出 /Users/brsama/code/GitHub/Sparkle-project/backend/.venv，worktree 无自有 venv）",
+    "pytest": "9.0.2（asyncio_mode=auto）",
+    "mypy": "1.20.2",
+    "ruff": "0.15.x",
+    "black": "26.3.1（line-length 120）",
+    "env_discipline": ".env 零触碰：backend 测试以进程级 SECRET_KEY=x 运行（未读写任何 env 文件），pytest 自然 sqlite（worktree 无 DATABASE_URL 指向任何真实库）；backend/app/gen 主检出同源复制（gitignored 生成物，test_calibration_receipt 家族收集需要；未入库、未手改）——env 先例 v4/evidence/V4-U13/run_manifest.json"
+  },
+  "defect": {
+    "source": "v4/evidence/V4-U01/review_r1.md §1 CH-1/R1-1（wtU01 证据已随 U01 合并入 main f28f157b；台账 v3/06_agent_fleet/DYNAMIC_ISSUES.md V3-FIX-567 行）",
+    "statement": "后端无任何 resume_view 角色回执生产者——唯一生产链 context_pack.py 硬编码 selection_role=chat_context，latest_receipt 不分角色返回最新一条 → 真实环境即使 I06 receipt mode=live，U01 消费面（episode_resume_provider 以 selection_role=='resume_view' 为角色门）取到的 latest 恒为 chat_context，首页 EpisodeResumeStrip 永不可现",
+    "defect_locations": [
+      "backend/app/core/context_pack.py（receipt 生产点 selection_role=\"chat_context\" 硬编码）",
+      "backend/app/services/episode_resume_service.py build_resume_view（I01 聚合完成不产生任何回执——服务为只读聚合器）"
+    ]
+  },
+  "fix_option_choice": {
+    "chosen": "选项一：resume view 生产链补 resume_view 角色（I01 端点层生产者 + 纯装配函数），REST latest 透传即下发面",
+    "rejected": [
+      "选项二：WS 帧主动下发——现状零 WS 帧携带 context_selection_receipt（backend/gateway grep 零命中），新增帧 = proto/*.proto 契约变更，触本卡 proto 红线 → 只登记边界不实现",
+      "选项三：服务层内落账——违反 V4-I01 只读纪律（tests/api/test_episode_resume_api.py::test_service_is_read_only_surface 锚死服务类零写方法），且 receipt 时序（B05 §2「resume view 返回之前」）归 API 边界所有",
+      "选项四：chat 面顺手多产一条 resume_view——归因错置（合同 §2 角词语义「这次选择在哪生效」；同一轮一个 receipt）"
+    ],
+    "reasons": [
+      "契约忠实：B05 §2 产生时机「Context Compiler 完成选择时、在 proposal 发出 / resume view 返回之前」——I01 聚合即 resume view 的选择面，端点在 HTTP 返回前落账正合同时序",
+      "不造第二契约：selection_role=resume_view 是 SELECTION_ROLES 现有成员；schema_version 冻结 v1；候选 ref task://+goal:// 均在 ACTION_SOURCE_REF_SCHEMES 封闭集且 verify_source_ref 已有 tasks/goals join 真源路径（I06 sources 测试先例）；移动端读面（context_receipt_models.dart 词表/字段）零改动",
+      "下发面零新增：消费面唯一数据源是 REST GET /experience/context-receipts/latest，selection_role 是 payload 字段值（to_payload 透传）——生产者补齐后角色经既有读面自然可见（任务书预判路径「latest_receipt 帧透传则纯后端可完成」亲验成立）"
+    ]
+  },
+  "implementation": {
+    "files_changed": [
+      "backend/app/orchestration/context_receipt_assembly.py（+SELECTOR_VERSION_RESUME_VIEW 常量 + assemble_resume_view_receipt 纯函数：角色 resume_view；候选=task://+goal:// selected；input_versions=真实读到的版本 token+epoch，policy=null 不冒充；why_now=null 合同 null 语义；budget 如实读数）",
+      "backend/app/services/episode_resume_service.py（+ResumeSelectionObservations 冻结数据类 + EpisodeResumeResult.observations 可选字段——成功聚合时携带 goal/task id+版本 token+epoch；服务保持零写路径；降级恒 None）",
+      "backend/app/api/v1/episode_resume.py（+_record_resume_view_receipt：mode∈{shadow,live} 门（off 零变化）+ fail-soft（任何失败只 WARN 不阻断视图）+ 视图成功返回前落账；record_receipt 落库前契约校验 fail-closed）"
+    ],
+    "proto_changed": false,
+    "proto_boundary_ruling": "未动 proto/*.proto。亲验：backend/gateway 全域 grep 零 context_selection_receipt 引用（receipt 从不过网关 WS 帧）；移动端 episode_resume_provider/context_receipt_provider 经 ApiClient HTTP GET 消费。下发面=REST latest 透传，纯后端可完成——按任务书「优先验证这条路径」裁决；WS 主动推送面如实登记 NOT_RUN（见 limitations #2/#3）"
+  },
+  "commands_and_exit_codes": [
+    {
+      "purpose": "新测+同文件回归（端点 9 + wiring 13，含新 6 测）",
+      "cmd": "cd wtF567/backend && SECRET_KEY=x <main-repo>/.venv/bin/python -m pytest tests/api/test_episode_resume_api.py tests/unit/test_context_selection_receipt_wiring.py -q --tb=short",
+      "exit_code": 0,
+      "summary": "22 passed in 5.11s（新 6 + 既有 16）"
+    },
+    {
+      "purpose": "受影响面回归（receipt 契约冻结/来源验证/接线/I01 服务/视图契约/端点/跨进程集成）",
+      "cmd": "… -m pytest tests/contract/test_context_selection_receipt_contract.py tests/unit/test_context_selection_receipt_sources.py tests/services/test_episode_resume_service.py tests/unit/test_episode_resume_view_contract.py tests/api/test_episode_resume_api.py tests/unit/test_context_selection_receipt_wiring.py tests/integration/test_episode_resume_cross_process.py -q",
+      "exit_code": 0,
+      "summary": "130 passed in 18.13s"
+    },
+    {
+      "purpose": "邻域回归（calibration receipt 家族：同属 receipt 落账/响应消费面）",
+      "cmd": "… -m pytest tests/unit/test_calibration_receipt.py tests/unit/test_a06_calibration_receipt.py tests/unit/test_a06_receipt_respond.py -q",
+      "exit_code": 0,
+      "summary": "44 passed in 7.69s"
+    },
+    {
+      "purpose": "ruff（改动 5 文件）",
+      "cmd": "… -m ruff check app/api/v1/episode_resume.py app/services/episode_resume_service.py app/orchestration/context_receipt_assembly.py tests/api/test_episode_resume_api.py tests/unit/test_context_selection_receipt_wiring.py",
+      "exit_code": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "purpose": "black（改动 5 文件）",
+      "cmd": "… -m black --check <同上 5 文件>",
+      "exit_code": 0,
+      "summary": "5 files would be left unchanged."
+    },
+    {
+      "purpose": "mypy 棘轮（冷缓存，同口径双跑）",
+      "cmd": "rm -rf .mypy_cache && SECRET_KEY=x … -m mypy app --ignore-missing-imports --no-error-summary | grep -c 'error:'",
+      "exit_code": 0,
+      "summary": "main@834651a7 冷缓存 59 = 本分支冷缓存 59（零新增；≤77 棘轮达标）。暖缓存 58/59 伪差已定谳：types-PyYAML 缺失的 stubs 错误每次运行只报首个遇到者，暖缓存分析序差异所致（清缓存后双方 yaml 错误均 3 条；diff 逐行核对唯一差异即 policy_loader.py:9 该既有项，本卡改动文件零 mypy 错误）"
+    },
+    {
+      "purpose": "mutation 自验（角色补丁还原 → 新正例必红）",
+      "cmd": "assemble_resume_view_receipt 代码行 selection_role=\"resume_view\" → \"chat_context\"（保持语法有效）→ 跑 CMD1 同命令",
+      "exit_code": 1,
+      "summary": "恰 3 条新正例红：test_assemble_resume_view_receipt_role_and_shape（装配角色）+ test_endpoint_produces_resume_view_receipt_in_live_mode（端点生产）+ test_latest_receipt_flips_to_resume_view_role_after_resume_flow（latest 翻转）；19 passed 含全部反例（off 零回执/降级零回执不误伤）。还原后 22/22 复绿"
+    }
+  ]
+}

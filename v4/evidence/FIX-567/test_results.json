@@ -1,0 +1,56 @@
+{
+  "card": "V3-FIX-567",
+  "generated_at_local": "2026-09-29",
+  "branch": "fix/v4/f567-resume-view-producer @ 5290e010",
+  "new_tests": {
+    "count": 6,
+    "list": [
+      "tests/unit/test_context_selection_receipt_wiring.py::test_assemble_resume_view_receipt_role_and_shape（角色值+载荷字段逐断言+validate_contract 零违例）",
+      "tests/unit/test_context_selection_receipt_wiring.py::test_assemble_resume_view_receipt_unread_authority_stays_null（未读权威位 null 不冒充）",
+      "tests/api/test_episode_resume_api.py::test_endpoint_produces_resume_view_receipt_in_live_mode（正例：行级逐字段 + I06 latest 下发面透传 + 来源验证双 resolved + resolved_selected_count==2）",
+      "tests/api/test_episode_resume_api.py::test_endpoint_off_mode_produces_no_receipt（反例：off 零回执，V3 路径零变化）",
+      "tests/api/test_episode_resume_api.py::test_endpoint_degraded_view_produces_no_receipt（反例：降级视图零回执——receipt ref 缺失 + goal 终态两形态）",
+      "tests/api/test_episode_resume_api.py::test_latest_receipt_flips_to_resume_view_role_after_resume_flow（角色分流：chat_context 在场→latest 翻转 resume_view）"
+    ]
+  },
+  "runs": [
+    {
+      "scope": "新测+同文件回归（api 9 + wiring 13）",
+      "result": "22 passed",
+      "exit_code": 0
+    },
+    {
+      "scope": "受影响面回归 7 文件（contract 词表冻结 / sources 来源验证 / wiring 接线 / I01 service / view contract / api / cross_process 集成）",
+      "result": "130 passed",
+      "exit_code": 0
+    },
+    {
+      "scope": "邻域回归（calibration receipt 家族 3 文件）",
+      "result": "44 passed",
+      "exit_code": 0
+    }
+  ],
+  "mutation_selfcheck": {
+    "mutation": "assemble_resume_view_receipt 代码行 selection_role=\"resume_view\" → \"chat_context\"（语法有效，docstring 不动）",
+    "expected": "新正例必红",
+    "observed": "恰 3 红（装配角色测 / 端点生产测 / latest 翻转测），19 passed——反例（off 零回执、降级零回执）不误伤",
+    "restored": true,
+    "restore_verification": "还原后 22/22 绿（最终复跑受影响面 130 绿）"
+  },
+  "toolchain_gates": {
+    "mypy": {
+      "cmd": "cd backend && rm -rf .mypy_cache && SECRET_KEY=x <venv>/python -m mypy app --ignore-missing-imports --no-error-summary | grep -c 'error:'",
+      "main_baseline_834651a7_cold": 59,
+      "branch_cold": 59,
+      "new_errors": 0,
+      "ratchet_limit": 77,
+      "note": "暖缓存曾现 58/59 伪差：types-PyYAML 缺失 stubs 错误每次运行只报首个遇到者，暖缓存分析序差异；清缓存双跑各 3 条 yaml 错误、逐行 diff 唯一差异 = policy_loader.py:9 既有项；本卡改动文件零 mypy 错误"
+    },
+    "ruff": "5 改动文件 All checks passed!（exit 0）",
+    "black": "5 改动文件 would be left unchanged（exit 0）"
+  },
+  "ws_delivery_surface": {
+    "status": "NOT_RUN",
+    "reason": "现状零 WS 帧携带 context_selection_receipt（backend/gateway 全域 grep 零命中）；移动端消费面唯一下发源 = REST GET /experience/context-receipts/latest（selection_role 为 payload 字段值，to_payload 透传）。WS 主动推送面 = 网关/proto 契约变更（与 F03 CH-2 WS Frame proto owner 同卡族），触本卡 proto 红线——不下发面断言、不改 proto，详见 limitations"
+  }
+}

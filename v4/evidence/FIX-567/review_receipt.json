@@ -1,0 +1,56 @@
+{
+  "card": "V3-FIX-567",
+  "reviewer": null,
+  "review_round": "pending_r1",
+  "generated_at_local": "2026-09-29",
+  "status": "REVIEW_READY",
+  "implementation_agent": "wtF567（fix/v4/f567-resume-view-producer @ 5290e010，基线 834651a7=本地 main；未 push）",
+  "independent_reviewer_required": 1,
+  "scope_hint": "backend 单域 3 产品文件（orchestration/context_receipt_assembly.py 纯函数追加 / services/episode_resume_service.py 观测字段 / api/v1/episode_resume.py 端点生产挂点）+ 2 测试文件（+6 测）；proto/gateway/mobile 零 diff 可直接 git diff 834651a7..5290e010 核验",
+  "challenge_points_pre_registered": [
+    {
+      "id": "CH-F567-1",
+      "point": "生产挂点在 API 端点层而非服务层是否成立",
+      "detail": "B05 §2 产生时机「resume view 返回之前」——端点在 HTTP 返回前落账。反方主张：服务层才是「选择完成」时刻。裁决依据：V4-I01 只读纪律有测试锚（test_service_is_read_only_surface：服务类公开方法必须恰为 build_resume_view 一个），且观测随 EpisodeResumeResult 交付、端点持有 db 会话与用户身份。若审查判服务层更正当，需先裁决只读锚测试的存废。",
+      "falsifiable_via": "diff_or_evidence_only.md §三处产品代码 / test_service_is_read_only_surface"
+    },
+    {
+      "id": "CH-F567-2",
+      "point": "首条 resume_view 回执的触发链间隙（limitations #2）是否构成「修法不完整」",
+      "detail": "移动端唯一 I01 调用方是其自身角色门后的 provider——纯移动端自发循环的首条触发需外部源（F03/WS/次级入口）。本卡定性为消费/集成侧后续卡职责（R1-1 登记的是「生产者缺位」）。若审查判生产者应内建触发（如 chat 面收尾主动聚合），那属新生产面而非本缺陷修复，且会引入「无请求自产回执」的新契约问题。",
+      "falsifiable_via": "limitations.md #2 + test_latest_receipt_flips_to_resume_view_role_after_resume_flow"
+    },
+    {
+      "id": "CH-F567-3",
+      "point": "候选集只含 task://+goal://（subtask/run 不进）是否漏记权威",
+      "detail": "回执候选语义 = 视图依据权威锚。subtask 属 task 聚合内部读；run:// 在 verify_source_ref 现映射判 unknown——进候选会在 U03 读面显假阴性「来源已不可定位」。若审查判应扩 _resolve_scheme 支持 subtask://，那是 I06 sources 面的增量卡（其 docstring 预留登记路径），不应阻塞本卡生产者语义。",
+      "falsifiable_via": "context_selection_receipt_service.py _resolve_scheme docstring + limitations.md #4"
+    },
+    {
+      "id": "CH-F567-4",
+      "point": "GET 产生写副作用（回执落账）是否违 REST 语义/幂等",
+      "detail": "B05 §8 设计即「shadow 写先行、默认读关闭」——回执本就是「读与选」的权威记录（I1 授权无关，非业务事实写）；幂等键 receipt_id 唯一约束防重放。每次 GET 一条新回执 = 每次真实选择一条记录（同 chat 面每 build 一条）。若审查判需去重（如同 task+TTL 窗口内复用），那是契约收紧（bump 纪律），请给出 B05 依据。",
+      "falsifiable_via": "context_selection_receipt_service.py record_receipt docstring + B05 §8"
+    },
+    {
+      "id": "CH-F567-5",
+      "point": "mypy 暖缓存 58/59 波动是否藏新增错误",
+      "detail": "冷缓存双跑 59=59；逐行 diff 唯一差异 = policy_loader.py:9 既有 types-PyYAML stubs 项（每运行只报首个遇到者的分析序噪声）；本卡改动 5 文件零 mypy 错误（grep episode_resume|context_receipt 零命中）。",
+      "falsifiable_via": "test_results.json toolchain_gates.mypy note + /tmp/mypy_main.txt vs /tmp/mypy_f567.txt 复现"
+    }
+  ],
+  "self_check": {
+    "proto_red_line": "未动 proto/*.proto、未动 backend/gateway——WS 下发面按红线停手登记（limitations #1），REST 透传路径亲验后交付",
+    "no_second_contract": "角色值/词表/schema_version/字段形状全部取自既有 I06 契约与 U01 消费面现状；移动端零改动",
+    "auth_unchanged": "get_current_user/get_db 依赖链零改动",
+    "no_mock_results": "全部断言跑在真实 sqlite 落账链上（record_receipt 契约校验+落库+latest 读取）；无 mock 数据库、无手改数据",
+    "honest_gates": "mypy 冷缓存 59=59 零新增（伪差定谳过程如实记录）；ruff/black 零违例；mutation 3 红/还原复绿",
+    "evidence_five_pieces": [
+      "run_manifest.json（命令+exit codes+环境纪律）",
+      "diff_or_evidence_only.md",
+      "test_results.json（新测/回归/mutation/工具链门/WS NOT_RUN）",
+      "limitations.md（proto 边界/触发链间隙/粒度语义）",
+      "review_receipt.json（本件）"
+    ]
+  }
+}
