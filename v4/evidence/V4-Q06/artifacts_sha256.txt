@@ -1,0 +1,12 @@
+# V4-Q06 · 证据原件 SHA256（shasum -a 256 实测 2026-09-29）
+
+```
+9d052f984f735c1713062363bf766f26b4c5b90213c90e0d89548f8dc4ddf1c7  mobile/test/core/experience/sensory_matrix_q06_test.dart
+709b8c7a8bf8aa4a1f115538e9c3cb43a6bb7a75a039a08dbed6c7793147afb2  v4/evidence/V4-Q06/test_results.json
+a3164f6b0c1ae5e92ffdcdcdb55a7ae8d932429b3362c2dbdd6738a34c1b4373  v4/evidence/V4-Q06/run_manifest.json
+558d4f157f8fd93731f5a901b65b0a7fd190daadccb6fe6595ce2115ec30417e  v4/evidence/V4-Q06/raw/matrix_machine.jsonl
+5039c335853b0a14828d747113684abe10a97154103725b670e1a85ebb39601f  v4/evidence/V4-Q06/raw/analyze_full.txt
+3e5c926e0bce4f30c16115828eff229617461b866616453a707cca7751117618  v4/evidence/V4-Q06/raw/test_experience.txt
+d38bf14889fc276da301b43ed3f49550188c4777e963762b24663581cff996aa  v4/evidence/V4-Q06/raw/test_services.txt
+93cd062b16b077684e667029c1fd491b4459fc2bc20d135231df24a5100743ef  v4/evidence/V4-Q06/raw/test_design.txt
+```

@@ -1,0 +1,269 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 61.0.0 (108.0.0 available)
+  _flutterfire_internals 1.3.59 (1.3.77 available)
+  analyzer 5.13.0 (14.4.0 available)
+  analyzer_plugin 0.11.2 (0.14.17 available)
+  animations 2.1.1 (3.0.0 available)
+  app_links 6.4.1 (7.2.1 available)
+  app_links_platform_interface 2.0.2 (2.0.4 available)
+  async 2.13.0 (2.13.1 available)
+  audioplayers 6.6.0 (6.8.1 available)
+  audioplayers_android 5.2.1 (5.3.0 available)
+  audioplayers_darwin 6.4.0 (6.5.0 available)
+  audioplayers_linux 4.2.1 (4.3.0 available)
+  audioplayers_platform_interface 7.1.1 (7.2.0 available)
+  audioplayers_web 5.2.0 (5.3.0 available)
+  audioplayers_windows 4.3.0 (4.4.1 available)
+  build 2.4.1 (4.0.11 available)
+  build_config 1.1.2 (1.3.3 available)
+  build_daemon 4.1.1 (4.1.6 available)
+  build_resolvers 2.4.2 (3.0.4 available)
+  build_runner 2.4.13 (2.16.1 available)
+  build_runner_core 7.3.2 (9.3.2 available)
+  built_value 8.12.1 (8.13.0 available)
+  cached_network_image 3.4.0 (4.0.2 available)
+  cached_network_image_platform_interface 4.1.1 (5.0.2 available)
+  cached_network_image_web 1.3.0 (2.0.2 available)
+  clock 1.1.2 (1.1.3 available)
+  code_builder 4.11.0 (4.12.0 available)
+  confetti 0.7.0 (0.8.0 available)
+  connectivity_plus 7.0.0 (7.3.1 available)
+  connectivity_plus_platform_interface 2.0.1 (2.1.0 available)
+  cross_file 0.3.5+1 (0.4.0 available)
+  cupertino_icons 1.0.8 (1.0.9 available)
+  custom_lint_core 0.6.3 (0.8.2 available)
+  dart_style 2.3.2 (3.1.13 available)
+  dbus 0.7.11 (0.8.0 available)
+  device_info_plus 10.1.2 (13.2.0 available)
+  device_info_plus_platform_interface 7.0.3 (8.1.0 available)
+  dio 5.9.0 (5.11.1 available)
+  dio_web_adapter 2.1.1 (2.2.2 available)
+  equatable 2.0.7 (3.0.0 available)
+  ffi 2.1.4 (2.2.0 available)
+! file_picker 8.3.7 from path third_party_plugins/file_picker (overridden)
+  file_selector_linux 0.9.4 (0.9.4+1 available)
+  file_selector_macos 0.9.5 (0.9.5+1 available)
+  file_selector_windows 0.9.3+5 (0.9.3+6 available)
+  firebase_core 3.15.2 (4.15.0 available)
+  firebase_core_platform_interface 6.0.2 (8.1.1 available)
+  firebase_core_web 2.24.1 (3.12.0 available)
+  firebase_messaging 15.2.10 (16.7.0 available)
+  firebase_messaging_platform_interface 4.6.10 (4.10.0 available)
+  firebase_messaging_web 3.10.10 (4.2.5 available)
+  fl_chart 0.66.2 (1.2.0 available)
+  flutter_cache_manager 3.4.1 (3.4.5 available)
+! flutter_local_notifications 17.2.4 from path third_party_plugins/flutter_local_notifications (overridden)
+  flutter_local_notifications_linux 4.0.1 (8.0.1 available)
+  flutter_local_notifications_platform_interface 7.2.0 (12.2.0 available)
+  flutter_markdown 0.6.23 (discontinued replaced by flutter_markdown_plus)
+  flutter_plugin_android_lifecycle 2.0.33 (2.0.35 available)
+  flutter_riverpod 2.6.1 (3.4.3 available)
+! flutter_secure_storage 9.2.4 from path third_party_plugins/flutter_secure_storage (overridden)
+  flutter_secure_storage_linux 1.2.3 (3.0.3 available)
+  flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+  flutter_secure_storage_platform_interface 1.1.2 (2.1.1 available)
+  flutter_secure_storage_web 1.2.1 (2.1.1 available)
+  flutter_secure_storage_windows 3.1.2 (4.2.2 available)
+  flutter_svg 2.2.3 (2.3.0 available)
+  flutter_timezone 5.0.1 (5.1.0 available)
+! fluwx 4.6.3 from path third_party_plugins/fluwx (overridden)
+  freezed 2.5.2 (4.0.2 available)
+  freezed_annotation 2.4.4 (3.1.0 available)
+  gal 2.3.2 (2.3.3 available)
+  glob 2.1.3 (2.2.0 available)
+  go_router 13.2.5 (18.0.1 available)
+  golden_toolkit 0.15.0 (discontinued)
+  google_sign_in 6.3.0 (7.2.0 available)
+  google_sign_in_android 6.2.1 (7.2.17 available)
+  google_sign_in_ios 5.9.0 (6.3.5 available)
+  google_sign_in_platform_interface 2.5.0 (3.1.0 available)
+  google_sign_in_web 0.12.4+4 (1.1.3 available)
+  googleapis_auth 2.0.0 (2.3.4 available)
+  gtk 2.1.0 (2.2.0 available)
+  http2 2.3.1 (3.1.0 available)
+  image_picker 1.2.1 (1.2.3 available)
+  image_picker_android 0.8.13+10 (0.8.13+23 available)
+  image_picker_ios 0.8.13+3 (0.8.13+8 available)
+  injector 3.0.0 (4.0.0 available)
+  intl 0.20.2 (0.20.3 available)
+  io 1.0.5 (1.1.0 available)
+! isar_flutter_libs 3.1.0+1 from path third_party_plugins/isar_flutter_libs (overridden)
+! isar_generator 3.1.0+1 from path third_party_plugins/isar_generator (overridden)
+! jpush_flutter 2.6.0 from path third_party_plugins/jpush_flutter (overridden)
+  js 0.6.7 (0.7.2 available)
+  json_annotation 4.9.0 (4.12.0 available)
+  json_serializable 6.8.0 (6.14.1 available)
+  logger 2.6.2 (2.8.0 available)
+  markdown 7.3.0 (7.3.1 available)
+  matcher 0.12.18 (0.12.20 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  math_expressions 3.1.0 (3.2.0 available)
+  meta 1.17.0 (1.19.0 available)
+  mime 1.0.6 (2.1.0 available)
+  mobile_scanner 7.2.0 (7.4.2 available)
+  mockito 5.4.4 (5.8.1 available)
+  nm 0.5.0 (0.6.0 available)
+  octo_image 2.1.0 (2.1.1 available)
+  package_config 2.2.0 (3.0.0 available)
+  package_info_plus 8.3.1 (10.2.1 available)
+  package_info_plus_platform_interface 3.2.1 (4.1.0 available)
+  path_provider 2.1.5 (2.1.6 available)
+  path_provider_android 2.2.22 (2.3.1 available)
+  path_provider_foundation 2.5.1 (2.6.0 available)
+  path_provider_linux 2.2.1 (2.2.2 available)
+  path_provider_platform_interface 2.1.2 (2.1.3 available)
+  permission_handler 12.0.1 (13.0.2 available)
+  permission_handler_android 13.0.1 (14.1.0 available)
+  permission_handler_apple 9.4.7 (9.6.1 available)
+  permission_handler_html 0.1.3+5 (0.1.4+1 available)
+  permission_handler_platform_interface 4.3.0 (4.4.1 available)
+  permission_handler_windows 0.2.1 (0.2.2 available)
+  petitparser 7.0.1 (7.0.2 available)
+  platform 3.1.6 (3.2.0 available)
+  pool 1.5.2 (1.5.3 available)
+  process 5.0.5 (5.0.6 available)
+! protobuf 6.1.0 (overridden)
+  pub_semver 2.2.0 (2.2.1 available)
+  pubspec_parse 1.5.0 (1.6.0 available)
+  record 6.0.0 (7.1.1 available)
+  record_android 1.4.5 (2.2.0 available)
+  record_ios 1.1.5 (2.1.1 available)
+  record_linux 1.2.1 (2.1.2 available)
+  record_macos 1.1.2 (2.1.1 available)
+  record_platform_interface 1.4.0 (2.1.0 available)
+  record_web 1.1.9 (2.1.3 available)
+  record_windows 1.0.7 (2.3.0 available)
+  retrofit 4.9.1 (4.10.0 available)
+  riverpod 2.6.1 (3.4.3 available)
+  riverpod_analyzer_utils 0.5.1 (0.5.10 available)
+  riverpod_annotation 2.6.1 (4.0.7 available)
+  riverpod_generator 2.4.0 (4.0.9 available)
+  sentry 8.14.2 (9.30.1 available)
+  sentry_dart_plugin 2.4.1 (3.4.0 available)
+! sentry_flutter 8.14.2 from path third_party_plugins/sentry_flutter (overridden)
+  share_plus 12.0.1 (13.3.0 available)
+  share_plus_platform_interface 6.1.0 (7.2.0 available)
+  shared_preferences 2.5.4 (2.5.5 available)
+  shared_preferences_android 2.4.18 (2.4.28 available)
+  shared_preferences_foundation 2.5.6 (2.5.7 available)
+  shared_preferences_platform_interface 2.4.1 (2.4.2 available)
+  shelf_web_socket 2.0.1 (3.0.0 available)
+  shimmer 3.0.0 (4.0.0 available)
+  sign_in_with_apple 6.1.4 (8.2.0 available)
+  sign_in_with_apple_platform_interface 1.1.0 (2.0.0 available)
+  sign_in_with_apple_web 2.1.1 (3.0.0 available)
+  source_gen 1.5.0 (4.3.0 available)
+  source_helper 1.3.5 (1.3.13 available)
+  source_span 1.10.1 (1.10.2 available)
+  sqflite 2.4.2 (2.4.4 available)
+  sqflite_android 2.4.2+2 (2.4.4 available)
+  sqflite_common 2.5.6 (2.5.13 available)
+  sqflite_darwin 2.4.2 (2.4.4 available)
+  sqflite_platform_interface 2.4.0 (2.4.2 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  stream_transform 2.1.1 (2.1.2 available)
+  synchronized 3.4.0 (3.4.2 available)
+  table_calendar 3.2.0 (3.2.1 available)
+  test_api 0.7.9 (0.7.14 available)
+  timezone 0.9.4 (0.11.1 available)
+  url_launcher_android 6.3.28 (6.3.33 available)
+  url_launcher_ios 6.3.6 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_web 2.4.1 (2.4.3 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  uuid 4.5.2 (4.6.0 available)
+  vector_graphics 1.1.19 (1.2.3 available)
+  vector_graphics_compiler 1.1.19 (1.3.0 available)
+  vector_math 2.2.0 (2.4.3 available)
+  vm_service 15.0.2 (15.3.0 available)
+  watcher 1.2.0 (1.2.1 available)
+  webdriver 3.1.0 (3.2.0 available)
+  win32 5.15.0 (6.4.0 available)
+  win32_registry 1.1.5 (3.0.3 available)
+  xml 6.6.1 (7.0.1 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+2 packages are discontinued.
+174 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_badge_test.dart
+00:00 +0: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_badge_test.dart: (a) 成功面孔 → PixelSuccessBadge 在树（唯一庆祝载体在位）
+00:00 +1: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_badge_test.dart: (b)(反c) unknown 决策 → 「结果未知」可查，树中无 PixelSuccessBadge
+00:00 +2: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_badge_test.dart: (反c) failed 决策 → 树中无 PixelSuccessBadge
+00:00 +3: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_badge_test.dart: (反c) conflict 决策 → 树中无 PixelSuccessBadge
+00:01 +4: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 解析面（fail-safe：违规形状永不成事件） (正) 合法 committed 事件解析成功且身份完整
+00:01 +5: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 解析面（fail-safe：违规形状永不成事件） (反1) 未注册 kind → null（B05 §8：忽略 + 计数，绝不当成功）
+00:01 +6: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 解析面（fail-safe：违规形状永不成事件） (反2) E1 被破坏：state_confirmed 无 receipt_ref / 带 error → null
+00:01 +7: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 解析面（fail-safe：违规形状永不成事件） (反3) E2 互斥被破坏：committed 带 error_state / error 缺 error_state → null
+00:01 +8: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 验收 1：无 committed 回执不触发成功；同 event 重播不重复震/音 (正) committed 任务事件 → 成功面孔（success 徽章 + 成功声/触一次）
+00:01 +9: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 验收 1：无 committed 回执不触发成功；同 event 重播不重复震/音 (反) 结构违规事件 → ignoredInvalid：无视觉、无声/触、计数可观测
+00:01 +10: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 验收 1：无 committed 回执不触发成功；同 event 重播不重复震/音 同 event_id 重播 → replaySuppressed：不重复声/触、不重放庆祝，文本仍恢复
+00:01 +11: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 验收 2：仅保存记忆不显示任务修改完成；证据登记不叫精通 (反) memory committed 事件 → 高亮呈现：无成功徽章、无成功声/触
+00:01 +12: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 验收 2：仅保存记忆不显示任务修改完成；证据登记不叫精通 证据登记（progress_delta + outcome://）→「证据已登记」，中性无精通词
+00:01 +13: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 验收 2：仅保存记忆不显示任务修改完成；证据登记不叫精通 冻结文案表禁词扫描：全表无「精通/已掌握/掌握度」，成功键仅三域
+00:01 +14: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 验收 3：断网/版本未知仍可查，不渲染为绿色成功 (正) resolveUnknownDisplayState → unknown 徽章态（虚线问号，仍可查）
+00:01 +15: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 验收 3：断网/版本未知仍可查，不渲染为绿色成功 (反) committed 事件 + 当前版本未知（断网）→ unknown 态，绝不成功视觉
+00:01 +16: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 验收 3：断网/版本未知仍可查，不渲染为绿色成功 版本不符（对象已前进）→ staleVersionSuppressed：无庆祝，仅中性文本
+00:01 +17: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: 失败面（terminal_failed）：错误语义永不通成功视觉 version_conflict → conflict 徽章；expired → failed 徽章；警示触一次
+00:01 +18: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/experience_feedback_adapter_test.dart: copy 表跨端互钉：canonical sha256 与 backend 侧一致（F03 二审 CH-3）
+00:02 +19: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R1 按压/选择 M-R1-C1 enabled：selection 槽 userInitiated 放行一枚 selectionClick；按压路径零声音通道（乐谱「声音默认无」）
+00:02 +20: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R1 按压/选择 M-R1-C2 disabled：偏好关/减少动态 → 0 触觉 0 声音；选择动作本身照常完成（决策面无异常、返回抑制决策）
+00:02 +21: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R1 按压/选择 M-R1-C3 replay：同槽短窗第二次派发 → dedupedWithinWindow（同类交互短窗不重复触发——调用级去重记账）
+00:02 +22: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R1 按压/选择 M-R1-C4 background：生命周期 paused → 已注册在航动画控制器立即停止，resumed → 恢复（「foreground→background 立即停止装饰」调用级锚）
+00:02 +23: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R1 按压/选择 M-R1-C5 unsupported：桌面平台能力探测 → platformUnsupported 静默保持文本，且**不蜂鸣替代**（0 触觉 0 声音通道调用）
+00:02 +24: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R1 按压/选择 M-R1-C6 permission 拒绝：框架已有系统触觉（nativeHandled）→ 不叠加双震；OS 系统触觉总开关尊重面 = DEVICE_UNVERIFIED（真机/系统层，不冒充已验证）
+00:02 +25: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R2 提案出现 M-R2-C1 enabled：预算 200ms ∈ [160,220]；词表封闭——提案不是 experience_event kind，绝不触发成功面（提案≠完成）
+00:02 +26: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R2 提案出现 M-R2-C2 disabled：减少动态 → 静态分支直落终态（提案完整呈现，等价信息不丢失；零时长通路不存在）
+00:02 +27: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R2 提案出现 M-R2-C2b reduce-motion 静态分支：提案组件直出终态内容
+00:02 +28: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R2 提案出现 M-R2-C3 replay：恢复重放面（resume_available 重复投递）→ replaySuppressed，无任何声/触/庆祝位（提案型入场不重播）
+00:02 +29: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R2 提案出现 M-R2-C4 background：提案组件族零 AnimationController/零 repeat（一次性 implicit 动画——后台无在航 ticker 可残留），装饰停止面引用 M-R1-C4 锚；事件链可见性门 GAP_INTEGRATION（登记不伪造）
+00:02 +30: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R2 提案出现 M-R2-C5 unsupported：提案行声/触列 = 无（结构性零出口），任何平台能力下通道调用恒 0
+00:02 +31: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R2 提案出现 M-R2-C6 permission 拒绝：提案渲染无任何授权前置（本地呈现零出口——结构上无「被拒面」），0 通道调用
+00:02 +32: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R3 写入提交成功 M-R3-C1 enabled：committed 回执 + 版本相符 → presentSuccess（成功徽章 + 成功声/触恰一次，调用级记账）
+00:02 +33: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R3 写入提交成功 M-R3-C2 disabled：静音+无触觉+减少动态 → 决策/文案/徽章与 C1 全同（任务同样可完成），物理通道 0 调用（全真实链：服务+派发器+平台通道）
+00:02 +34: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R3 写入提交成功 M-R3-C3 replay：同 event_id 重投 → replaySuppressed（不重复庆祝、不重放声/触；文案仍返回——文本状态仍恢复）
+00:02 +35: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R3 写入提交成功 M-R3-C4 background：装饰停止面 = 生命周期暂停（M-R1-C4 锚引用）；事件链可见性门 = GAP_INTEGRATION（适配器 present() 无可见性入参、生产事件源未接线——S03-L5/FIX-569 登记面，本格不伪造 PASS）
+00:02 +36: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R3 写入提交成功 M-R3-C5 unsupported：桌面平台 → success 触觉被能力门拦（0 震动），成功徽章/文案仍完整呈现（信息不丢）；未许可资产缺省拒绝（账本门）
+00:02 +37: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R3 写入提交成功 M-R3-C6 permission 拒绝：系统拒绝播放（诚实降级位）→ 0 声音且不蜂鸣；触觉不受降级影响（按偏好照发）；任务流无异常
+00:02 +38: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R4 仅记忆已保存 M-R4-C1 enabled：memory committed → presentHighlight（非成功面孔：无成功徽章/成功声/成功触），轻触为 selection 级
+00:02 +39: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R4 仅记忆已保存 M-R4-C2 disabled：静音+无触觉 → 决策/文案与 C1 全同，物理通道 0
+00:02 +40: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R4 仅记忆已保存 M-R4-C3 replay：同 event_id → replaySuppressed，高亮文案仍恢复
+00:02 +41: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R4 仅记忆已保存 M-R4-C4 background：同 R3-C4——装饰停止面 PASS（锚引用），事件链可见性门 GAP_INTEGRATION（登记）
+00:02 +42: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R4 仅记忆已保存 M-R4-C5 unsupported：桌面 → 轻触被能力门拦，高亮信息完整（语义级不变）
+00:02 +43: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R4 仅记忆已保存 M-R4-C6 permission 拒绝（无用户同意）：触觉偏好未开 → userPreferenceOff；高亮文本仍呈现（任何声音或动态关闭都不减少可理解信息）
+00:02 +44: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R5 证据已登记 M-R5-C1 enabled：中性呈现（无庆祝无声触）；印章预算 160ms；冻结文案表全表无「精通/已掌握」类词
+00:02 +45: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R5 证据已登记 M-R5-C2 disabled：静音/减少动态 → 决策与文案全同（本行声/触本就缺省无——结构性零出口不随偏好变化）
+00:02 +46: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R5 证据已登记 M-R5-C3 replay：重复投递 → replaySuppressed（印章不重播）
+00:02 +47: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R5 证据已登记 M-R5-C4 background：同 R3-C4（装饰停止面 PASS + 事件链可见性门 GAP_INTEGRATION 登记）
+00:02 +48: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R5 证据已登记 M-R5-C5 unsupported：证据印章在减少动态/桌面下全尺寸即时呈现（信息不丢），无任何声触出口
+00:02 +49: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R5 证据已登记 M-R5-C6 permission 拒绝：无授权 → 0 通道调用，中性文案完整
+00:02 +50: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R6 独立检验通过 M-R6-C1 enabled：goal 成功面孔（有回执）→ success 恰一次；里程碑预算 ≤650ms；「不等同一次点击」= E1 门（无回执的 success 形状被解析面拒收，绝不庆祝）
+00:02 +51: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R6 独立检验通过 M-R6-C2 disabled：静音+无触觉 → 成功文案/徽章与 C1 全同（任务同样可完成），物理通道 0
+00:02 +52: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R6 独立检验通过 M-R6-C3 replay：评测结果重投 → 抑制；新 event_id（真实新 commit）→ 放行（仅真实 commit 用 success 的双向锚）
+00:02 +53: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R6 独立检验通过 M-R6-C4 background：同 R3-C4（装饰停止面 PASS + 可见性门 GAP_INTEGRATION 登记；重要 run 由服务器管理——客户端无 run 终止面）
+00:02 +54: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R6 独立检验通过 M-R6-C5 unsupported：桌面 → success 触觉拦下，徽章语义仍在（语义级：成功信息经视觉/文本仍可达）
+00:02 +55: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R6 独立检验通过 M-R6-C6 permission 拒绝：降级静音 + 无同意 → 0 声音 0 触觉，成功文案完整（评测结论不因感官关闭而丢失）
+00:02 +56: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R7 冲突/未知/失败 M-R7-C1 enabled：terminal_failed → failed 徽章 + 警示触恰一次；version_conflict → conflict 徽章；未知（版本未对账）→ unknown 徽章 + 零声触（未知≠失败≠成功）
+00:02 +57: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R7 冲突/未知/失败 M-R7-C2 disabled：静音+无触觉 → 失败文案/徽章与 C1 全同（信息不独占于颜色/声音），物理通道 0
+00:02 +58: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R7 冲突/未知/失败 M-R7-C3 replay：失败事件重投 → 抑制（警示不重复——「单次失败只提示一次，不连锁蜂鸣」）
+00:02 +59: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R7 冲突/未知/失败 M-R7-C4 background：同 R3-C4（装饰停止面 PASS + 可见性门 GAP_INTEGRATION 登记）
+00:02 +60: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R7 冲突/未知/失败 M-R7-C5 unsupported：桌面 → 警示触被能力门拦且不蜂鸣替代（0 触觉0 声音），失败文本行仍在
+00:02 +61: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R7 冲突/未知/失败 M-R7-C6 permission 拒绝：无同意 → 警示触 userPreferenceOff；文本信息完整（失败可理解性不依赖触觉/声音）
+00:02 +62: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R8 深任务进行中 M-R8-C1 enabled：progress_delta → 中性呈现（无庆祝无声触——结构性零出口）；阶段文案可见
+00:02 +63: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R8 深任务进行中 M-R8-C2 disabled：静音/减少动态 → 阶段文案全同（任务进行信息不依赖动效）
+00:02 +64: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R8 深任务进行中 M-R8-C3 replay：进度事件重投 → 抑制（不重播进行中提示），文案仍返回
+00:02 +65: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R8 深任务进行中 M-R8-C4 background：深 run 继续由服务器管理（客户端只读呈现——run subject 恒中性、无庆祝），装饰停止面引用 M-R1-C4 锚
+00:02 +66: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R8 深任务进行中 M-R8-C5 unsupported：桌面 → 结构性零声触（本行无出口），文案完整
+00:02 +67: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R8 深任务进行中 M-R8-C6 permission 拒绝：无任何授权依赖面（零出口行），0 通道调用
+00:02 +68: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R9 长期回归 M-R9-C1 enabled：冷启动缺省 = 零自动播放（提示音缺省关/背景声缺省关/焦点态 IDLE）；恢复进入 resume_available → 中性呈现非庆祝
+00:02 +69: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R9 长期回归 M-R9-C2 disabled：减少动态 → 回归进入走静态档（预算表合规、无后台无限动画契约面），信息完整
+00:02 +70: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R9 长期回归 M-R9-C3 replay：恢复重放重投 → 抑制（回归进入不重复庆祝），文案恢复
+00:02 +71: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R9 长期回归 M-R9-C4 background：STOPPED_BY_USER 后抢占结束不自续（音频焦点面 S02 语义复验）；装饰停止面 = M-R1-C4 生命周期锚；重要 run 由服务器管理（客户端无 run 终止面）
+00:02 +72: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R9 长期回归 M-R9-C5 unsupported：桌面 → 零自动播放零触觉（回归进入静默），0 通道调用
+00:02 +73: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: R9 长期回归 M-R9-C6 permission 拒绝：未点播（缺省关）+ 降级位 → 长期回归进入零自动播放；缺省拒绝即「无用户同意不发声」的对偶
+00:02 +74: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: Q06 验收① 任务可完成性聚合（徽章语义在两态下同可达） 成功徽章：全感官开 vs 静音+无触觉+减少动态 → 语义标签同样可查（任务完成信息等价可达）
+00:02 +75: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: Q06 验收① 任务可完成性聚合（徽章语义在两态下同可达） 失败/冲突/未知徽章：减少动态下语义同样可查（无颜色/声音独占信息）
+00:02 +76: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/experience/sensory_matrix_q06_test.dart: Q06 验收① 任务可完成性聚合（徽章语义在两态下同可达） 全文案表在「任何关闭」下不变（信息不减的语义级对偶：冻结表是常量）
+00:02 +77: All tests passed!

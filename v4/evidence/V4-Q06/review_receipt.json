@@ -1,0 +1,38 @@
+{
+ "task": "V4-Q06",
+ "review_state": "NOT_RUN",
+ "independent_reviewers_required": 1,
+ "note": "普通风险卡：需 1 份独立未参与会话审查 + 集成 SHA 可失败复验后才能销账。本文件为占位，R1 receipt 由审查会话另行落盘（review_r1.md），审查结论回写本文件 review_state。审查基线 = agent/v4/q06 证据提交（base f13a21efb954ed50ac096f246690b7a3088e59ac，S 线全收点）。",
+ "pre_registered_challenges": [
+  {
+   "id": "R1-C1",
+   "challenge": "验证卡零产品码改动，产出只有测试+证据——是否构成「没干活」或举证不足？",
+   "defense": "卡 kind=verification + no_duplicate_rule「仓库已满足本卡行为时做差量举证，不重写」。乐谱行为面由 S01/S02/S03 已合并实现承载；本卡的活=把 9×6=54 格从「各锁面局部已钉」升格为「全矩阵逐格可失败证据」，并如实暴露 C4 列集成链缺口（局部绿不等于全矩阵绿）。58 用例中 54 格逐格锚点可独立失败，另产出缺口登记与 DEVICE_UNVERIFIED 边界声明——这是矩阵卡的本职。"
+  },
+  {
+   "id": "R1-C2",
+   "challenge": "C4（background）列 9 格签了「PASS¹」——装饰停止面过 ≠ 事件链后台行为过，是否冒充全绿？",
+   "defense": "未冒充：9 格全部逐格标注 GAP_INTEGRATION（test_results.json boundary_note + diff 文档脚注 + limitations L2）。既有装饰停止面（AnimationLifecycleMixin/BGM 生命周期/STOPPED_BY_USER 不自续）是调用级实测 PASS；事件链可见性门缺口如实登记（适配器无可见性入参+生产源未接线，S03-L5/FIX-569 在案）。矩阵 verdict 字段区分 54 格「模拟器层 PASS」与缺口注记；value 不标 PASS。若审查判 C4 列应记 FAIL 而非 PASS+GAP——请裁决：缺口在 contract-owner 集成链，验证卡的验收三条（静音可完成/重放抑制/DEVICE_UNVERIFIED 口径）不含后台列，故按「既有面 PASS+缺口登记」口径交付。"
+  },
+  {
+   "id": "R1-C3",
+   "challenge": "permission 列把「无用户同意（偏好关）」「nativeHandled（框架已有触觉）」「诚实降级位」都算进去——与 disabled 列边界是否重叠/偷换？",
+   "defense": "列定义：disabled = 用户显式关闭后的完整关闭态（C2 列测任务可完成性）；permission 拒绝 = 「未获得许可/被拒」的拒绝面——触觉侧=无同意缺省（M-R1-C6 走 nativeHandled=系统已有反馈不叠加；M-R4-C6/M-R7-C6 走 userPreferenceOff）、音频侧=系统拒绝播放的诚实降级位（M-R3-C6/M-R6-C6：0 声音不蜂鸣、触觉不受影响、任务流无异常）+ 缺省拒绝对偶（M-R9-C6）。与 C2 的差异：C6 格断言的是「拒绝路径的**降级诚实性**与**不连坐**（触觉/视觉不受音频降级影响）」，非「关闭后可完成」。"
+  },
+  {
+   "id": "R1-C4",
+   "challenge": "R5（证据已登记）用 progress_delta kind + evidence.registered copyKey 组合——词表里没有 evidence kind，这个组合是否自造契约？",
+   "defense": "未自造：copyKey 是事件 payload 字段（服务端按冻结表下发），frozen 表含 evidence.registered 键且 kind 词表封闭七元确无 evidence kind——「证据已登记」行的呈现面=中性 kind 携带该 copyKey（路由到 presentNeutral，无庆祝），这正是适配器的真实行为路径，矩阵按现状测。若产品侧要独立 evidence kind，属契约变更（词表扩展），非本验证卡权限。"
+  },
+  {
+   "id": "R1-C5",
+   "challenge": "无真机连模拟器 App 都没跑——「模拟器层」签收口径是否过弱？",
+   "defense": "limitations L1 如实登记模拟器 App 运行面 NOT_RUN 及理由：本卡全部可验证面在 flutter test 层已全覆盖且模拟器上同样只有调用级可观测（无马达/无听感位/事件链无流量）；S01/S02/S03 证据同口径（L0/L1），V4_DONE「音触只测到调用时注明边界」判例成立。卡面原文「无真机只签模拟器层」——本卡签的是模拟器层中可失败、可复现、逐格锚定的部分，未测面全部显式声明。矩阵套件即 L3 复验工具（零改动可重跑）。"
+  },
+  {
+   "id": "R1-C6",
+   "challenge": "首跑 15 败+1 败后修复装置再全绿——是否掩盖了产品缺陷或删断言凑绿？",
+   "defense": "两处均为测试装置缺陷：① platform 通道记录器为 main 级单例未逐格清零，跨用例计数泄漏（15 格「Expected 0 Actual 1」全此因）；② 事件构造器 receiptRef 参数 `??` 缺省把 E1 反例的显式 null 回执覆盖为合法回执（1 败）。修复均在测试文件（setUp 清零 + 哨兵参数），产品码零改动、断言零删除；最终 raw/matrix_machine.jsonl 为最终文件状态复跑（58/58）。过程如实登记于 limitations L8。"
+  }
+ ]
+}

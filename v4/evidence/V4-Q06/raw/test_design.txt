@@ -1,0 +1,1040 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 61.0.0 (108.0.0 available)
+  _flutterfire_internals 1.3.59 (1.3.77 available)
+  analyzer 5.13.0 (14.4.0 available)
+  analyzer_plugin 0.11.2 (0.14.17 available)
+  animations 2.1.1 (3.0.0 available)
+  app_links 6.4.1 (7.2.1 available)
+  app_links_platform_interface 2.0.2 (2.0.4 available)
+  async 2.13.0 (2.13.1 available)
+  audioplayers 6.6.0 (6.8.1 available)
+  audioplayers_android 5.2.1 (5.3.0 available)
+  audioplayers_darwin 6.4.0 (6.5.0 available)
+  audioplayers_linux 4.2.1 (4.3.0 available)
+  audioplayers_platform_interface 7.1.1 (7.2.0 available)
+  audioplayers_web 5.2.0 (5.3.0 available)
+  audioplayers_windows 4.3.0 (4.4.1 available)
+  build 2.4.1 (4.0.11 available)
+  build_config 1.1.2 (1.3.3 available)
+  build_daemon 4.1.1 (4.1.6 available)
+  build_resolvers 2.4.2 (3.0.4 available)
+  build_runner 2.4.13 (2.16.1 available)
+  build_runner_core 7.3.2 (9.3.2 available)
+  built_value 8.12.1 (8.13.0 available)
+  cached_network_image 3.4.0 (4.0.2 available)
+  cached_network_image_platform_interface 4.1.1 (5.0.2 available)
+  cached_network_image_web 1.3.0 (2.0.2 available)
+  clock 1.1.2 (1.1.3 available)
+  code_builder 4.11.0 (4.12.0 available)
+  confetti 0.7.0 (0.8.0 available)
+  connectivity_plus 7.0.0 (7.3.1 available)
+  connectivity_plus_platform_interface 2.0.1 (2.1.0 available)
+  cross_file 0.3.5+1 (0.4.0 available)
+  cupertino_icons 1.0.8 (1.0.9 available)
+  custom_lint_core 0.6.3 (0.8.2 available)
+  dart_style 2.3.2 (3.1.13 available)
+  dbus 0.7.11 (0.8.0 available)
+  device_info_plus 10.1.2 (13.2.0 available)
+  device_info_plus_platform_interface 7.0.3 (8.1.0 available)
+  dio 5.9.0 (5.11.1 available)
+  dio_web_adapter 2.1.1 (2.2.2 available)
+  equatable 2.0.7 (3.0.0 available)
+  ffi 2.1.4 (2.2.0 available)
+! file_picker 8.3.7 from path third_party_plugins/file_picker (overridden)
+  file_selector_linux 0.9.4 (0.9.4+1 available)
+  file_selector_macos 0.9.5 (0.9.5+1 available)
+  file_selector_windows 0.9.3+5 (0.9.3+6 available)
+  firebase_core 3.15.2 (4.15.0 available)
+  firebase_core_platform_interface 6.0.2 (8.1.1 available)
+  firebase_core_web 2.24.1 (3.12.0 available)
+  firebase_messaging 15.2.10 (16.7.0 available)
+  firebase_messaging_platform_interface 4.6.10 (4.10.0 available)
+  firebase_messaging_web 3.10.10 (4.2.5 available)
+  fl_chart 0.66.2 (1.2.0 available)
+  flutter_cache_manager 3.4.1 (3.4.5 available)
+! flutter_local_notifications 17.2.4 from path third_party_plugins/flutter_local_notifications (overridden)
+  flutter_local_notifications_linux 4.0.1 (8.0.1 available)
+  flutter_local_notifications_platform_interface 7.2.0 (12.2.0 available)
+  flutter_markdown 0.6.23 (discontinued replaced by flutter_markdown_plus)
+  flutter_plugin_android_lifecycle 2.0.33 (2.0.35 available)
+  flutter_riverpod 2.6.1 (3.4.3 available)
+! flutter_secure_storage 9.2.4 from path third_party_plugins/flutter_secure_storage (overridden)
+  flutter_secure_storage_linux 1.2.3 (3.0.3 available)
+  flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+  flutter_secure_storage_platform_interface 1.1.2 (2.1.1 available)
+  flutter_secure_storage_web 1.2.1 (2.1.1 available)
+  flutter_secure_storage_windows 3.1.2 (4.2.2 available)
+  flutter_svg 2.2.3 (2.3.0 available)
+  flutter_timezone 5.0.1 (5.1.0 available)
+! fluwx 4.6.3 from path third_party_plugins/fluwx (overridden)
+  freezed 2.5.2 (4.0.2 available)
+  freezed_annotation 2.4.4 (3.1.0 available)
+  gal 2.3.2 (2.3.3 available)
+  glob 2.1.3 (2.2.0 available)
+  go_router 13.2.5 (18.0.1 available)
+  golden_toolkit 0.15.0 (discontinued)
+  google_sign_in 6.3.0 (7.2.0 available)
+  google_sign_in_android 6.2.1 (7.2.17 available)
+  google_sign_in_ios 5.9.0 (6.3.5 available)
+  google_sign_in_platform_interface 2.5.0 (3.1.0 available)
+  google_sign_in_web 0.12.4+4 (1.1.3 available)
+  googleapis_auth 2.0.0 (2.3.4 available)
+  gtk 2.1.0 (2.2.0 available)
+  http2 2.3.1 (3.1.0 available)
+  image_picker 1.2.1 (1.2.3 available)
+  image_picker_android 0.8.13+10 (0.8.13+23 available)
+  image_picker_ios 0.8.13+3 (0.8.13+8 available)
+  injector 3.0.0 (4.0.0 available)
+  intl 0.20.2 (0.20.3 available)
+  io 1.0.5 (1.1.0 available)
+! isar_flutter_libs 3.1.0+1 from path third_party_plugins/isar_flutter_libs (overridden)
+! isar_generator 3.1.0+1 from path third_party_plugins/isar_generator (overridden)
+! jpush_flutter 2.6.0 from path third_party_plugins/jpush_flutter (overridden)
+  js 0.6.7 (0.7.2 available)
+  json_annotation 4.9.0 (4.12.0 available)
+  json_serializable 6.8.0 (6.14.1 available)
+  logger 2.6.2 (2.8.0 available)
+  markdown 7.3.0 (7.3.1 available)
+  matcher 0.12.18 (0.12.20 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  math_expressions 3.1.0 (3.2.0 available)
+  meta 1.17.0 (1.19.0 available)
+  mime 1.0.6 (2.1.0 available)
+  mobile_scanner 7.2.0 (7.4.2 available)
+  mockito 5.4.4 (5.8.1 available)
+  nm 0.5.0 (0.6.0 available)
+  octo_image 2.1.0 (2.1.1 available)
+  package_config 2.2.0 (3.0.0 available)
+  package_info_plus 8.3.1 (10.2.1 available)
+  package_info_plus_platform_interface 3.2.1 (4.1.0 available)
+  path_provider 2.1.5 (2.1.6 available)
+  path_provider_android 2.2.22 (2.3.1 available)
+  path_provider_foundation 2.5.1 (2.6.0 available)
+  path_provider_linux 2.2.1 (2.2.2 available)
+  path_provider_platform_interface 2.1.2 (2.1.3 available)
+  permission_handler 12.0.1 (13.0.2 available)
+  permission_handler_android 13.0.1 (14.1.0 available)
+  permission_handler_apple 9.4.7 (9.6.1 available)
+  permission_handler_html 0.1.3+5 (0.1.4+1 available)
+  permission_handler_platform_interface 4.3.0 (4.4.1 available)
+  permission_handler_windows 0.2.1 (0.2.2 available)
+  petitparser 7.0.1 (7.0.2 available)
+  platform 3.1.6 (3.2.0 available)
+  pool 1.5.2 (1.5.3 available)
+  process 5.0.5 (5.0.6 available)
+! protobuf 6.1.0 (overridden)
+  pub_semver 2.2.0 (2.2.1 available)
+  pubspec_parse 1.5.0 (1.6.0 available)
+  record 6.0.0 (7.1.1 available)
+  record_android 1.4.5 (2.2.0 available)
+  record_ios 1.1.5 (2.1.1 available)
+  record_linux 1.2.1 (2.1.2 available)
+  record_macos 1.1.2 (2.1.1 available)
+  record_platform_interface 1.4.0 (2.1.0 available)
+  record_web 1.1.9 (2.1.3 available)
+  record_windows 1.0.7 (2.3.0 available)
+  retrofit 4.9.1 (4.10.0 available)
+  riverpod 2.6.1 (3.4.3 available)
+  riverpod_analyzer_utils 0.5.1 (0.5.10 available)
+  riverpod_annotation 2.6.1 (4.0.7 available)
+  riverpod_generator 2.4.0 (4.0.9 available)
+  sentry 8.14.2 (9.30.1 available)
+  sentry_dart_plugin 2.4.1 (3.4.0 available)
+! sentry_flutter 8.14.2 from path third_party_plugins/sentry_flutter (overridden)
+  share_plus 12.0.1 (13.3.0 available)
+  share_plus_platform_interface 6.1.0 (7.2.0 available)
+  shared_preferences 2.5.4 (2.5.5 available)
+  shared_preferences_android 2.4.18 (2.4.28 available)
+  shared_preferences_foundation 2.5.6 (2.5.7 available)
+  shared_preferences_platform_interface 2.4.1 (2.4.2 available)
+  shelf_web_socket 2.0.1 (3.0.0 available)
+  shimmer 3.0.0 (4.0.0 available)
+  sign_in_with_apple 6.1.4 (8.2.0 available)
+  sign_in_with_apple_platform_interface 1.1.0 (2.0.0 available)
+  sign_in_with_apple_web 2.1.1 (3.0.0 available)
+  source_gen 1.5.0 (4.3.0 available)
+  source_helper 1.3.5 (1.3.13 available)
+  source_span 1.10.1 (1.10.2 available)
+  sqflite 2.4.2 (2.4.4 available)
+  sqflite_android 2.4.2+2 (2.4.4 available)
+  sqflite_common 2.5.6 (2.5.13 available)
+  sqflite_darwin 2.4.2 (2.4.4 available)
+  sqflite_platform_interface 2.4.0 (2.4.2 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  stream_transform 2.1.1 (2.1.2 available)
+  synchronized 3.4.0 (3.4.2 available)
+  table_calendar 3.2.0 (3.2.1 available)
+  test_api 0.7.9 (0.7.14 available)
+  timezone 0.9.4 (0.11.1 available)
+  url_launcher_android 6.3.28 (6.3.33 available)
+  url_launcher_ios 6.3.6 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_web 2.4.1 (2.4.3 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  uuid 4.5.2 (4.6.0 available)
+  vector_graphics 1.1.19 (1.2.3 available)
+  vector_graphics_compiler 1.1.19 (1.3.0 available)
+  vector_math 2.2.0 (2.4.3 available)
+  vm_service 15.0.2 (15.3.0 available)
+  watcher 1.2.0 (1.2.1 available)
+  webdriver 3.1.0 (3.2.0 available)
+  win32 5.15.0 (6.4.0 available)
+  win32_registry 1.1.5 (3.0.3 available)
+  xml 6.6.1 (7.0.1 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+2 packages are discontinued.
+174 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart
+00:00 +0: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets EmptyState renders in light and dark with large text
+00:00 +1: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets shimmer skeleton (ListItemSkeleton) disables shimmer when reduce motion is on
+00:01 +2: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget retry action remains functional
+00:01 +3: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget retry action remains functional
+00:01 +4: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget retry action remains functional
+00:01 +5: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget retry action remains functional
+00:01 +6: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget retry action remains functional
+00:01 +7: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget retry action remains functional
+00:01 +8: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget retry action remains functional
+00:01 +9: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget retry action remains functional
+00:01 +10: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget retry action remains functional
+00:01 +11: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget default constructor resolves zh retry from context
+00:01 +12: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets CustomErrorWidget default constructor resolves zh retry from context
+00:01 +13: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: shared state widgets shared theme-aware components update in system mode
+00:01 +14: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: CompactEmptyState U-01 Step 3 extensions description renders as tertiary hint under message
+00:01 +15: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: CompactEmptyState U-01 Step 3 extensions iconSize overrides default 64 for compact inline empty states
+00:01 +16: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/shared_state_widgets_test.dart: CompactEmptyState U-01 Step 3 extensions defaults stay unchanged (64px icon, no description row)
+00:01 +17: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: SparkleButton 默认行为冻结（Step 4 扩展参数不得改变既有渲染） 默认 primary 变体：实心背景 + label 渲染 + 按钮语义
+00:02 +18: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: SparkleButton 默认行为冻结（Step 4 扩展参数不得改变既有渲染） 默认不约束最小尺寸（minWidth/minHeight 未传时无约束路径）
+00:02 +19: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: SparkleButton 默认行为冻结（Step 4 扩展参数不得改变既有渲染） disabled: true → 点击不触发回调
+00:02 +20: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: SparkleButton 默认行为冻结（Step 4 扩展参数不得改变既有渲染） backgroundGradient 渲染渐变且不影响默认 Material 路径
+00:02 +21: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: Step 4 迁移用新参数 minWidth/minHeight 生成命中区下限（M3 按钮 64x40 等价）
+00:02 +22: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: Step 4 迁移用新参数 borderSide 渲染描边（OutlinedButton 等价）
+00:02 +23: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: Step 4 迁移用新参数 foregroundColor 覆盖前景色（语义色文字动作等价）
+00:02 +24: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: SparkleButton.text 变体（承接 M3 TextButton） 透明背景 + 无阴影 + 可点
+00:02 +25: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: 对话动作对迁移形态（关键屏可点性） actions: [text 取消, primary 确认] 双按钮语义与命中
+00:02 +26: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: SparkleIconButton 几何根治（FAB-UNIFY）：最大尺寸语义钉死 放入 Scaffold FAB 槽（bounded-loose）不超方形上限，页心 tap 不被吞
+SparkleIconButton (N31 a11y): icon-only button without semanticLabel (icon: 0xe21a). Add semanticLabel (l10n) so screen readers can announce the button purpose.
+00:02 +27: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: SparkleIconButton 几何根治（FAB-UNIFY）：最大尺寸语义钉死 fabGeometry：FAB 槽位钉死 56 方档且 tap 只命中按钮区域
+SparkleIconButton (N31 a11y): icon-only button without semanticLabel (icon: 0xe047). Add semanticLabel (l10n) so screen readers can announce the button purpose.
+00:02 +28: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: SparkleIconButton 几何根治（FAB-UNIFY）：最大尺寸语义钉死 constraints 参数：可上调档位，触控下限不可破
+SparkleIconButton (N31 a11y): icon-only button without semanticLabel (icon: 0xe16a). Add semanticLabel (l10n) so screen readers can announce the button purpose.
+SparkleIconButton (N31 a11y): icon-only button without semanticLabel (icon: 0xe16a). Add semanticLabel (l10n) so screen readers can announce the button purpose.
+00:02 +29: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_button_test.dart: SparkleIconButton 几何根治（FAB-UNIFY）：最大尺寸语义钉死 a11y：默认档与 fabGeometry 触控目标 ≥ 48
+SparkleIconButton (N31 a11y): icon-only button without semanticLabel (icon: 0xe047). Add semanticLabel (l10n) so screen readers can announce the button purpose.
+SparkleIconButton (N31 a11y): icon-only button without semanticLabel (icon: 0xe047). Add semanticLabel (l10n) so screen readers can announce the button purpose.
+00:03 +30: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel_preview_prefs_restore_test.dart: initialize() 读到合法持久索引 dusk 恢复对应档
+00:03 +31: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: A 预算可测（语义乐谱窗口机器校验） A+ 默认预算逐槽落在乐谱窗口内且校验零违例
+00:03 +32: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_haptics_s03_test.dart: A 偏好门（验收1：无用户同意/已关闭 = 0 触觉调用） 正：U14 偏好开启 → 派发一次 successNotification（默认读取器=服务权威）
+00:03 +33: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_haptics_s03_test.dart: A 偏好门（验收1：无用户同意/已关闭 = 0 触觉调用） 正：U14 偏好开启 → 派发一次 successNotification（默认读取器=服务权威）
+00:03 +34: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +35: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +36: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +37: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +38: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +39: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +40: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +41: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +42: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +43: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +44: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +45: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +46: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +47: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +48: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +49: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +50: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +51: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +52: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +53: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +54: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +55: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:03 +56: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:04 +57: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:04 +58: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:04 +59: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:04 +60: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 按压 80ms 在航可测：40ms 处在 0.97–1.0 之间，落定 0.97
+00:04 +61: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/calm_low_stimulation_test.dart: U-02 Theme 层真实接线（applyToTheme 切换注册的扩展档位） 普通档：context.motion 为默认时长、lowStimulation 关
+00:04 +62: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 静态分支：减弱动效不装 AnimatedScale 壳，点按仍触发
+00:04 +63: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 静态分支：减弱动效不装 AnimatedScale 壳，点按仍触发
+00:04 +64: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B+ 静态分支：减弱动效不装 AnimatedScale 壳，点按仍触发
+00:04 +65: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/calm_low_stimulation_test.dart: U-02 导航转场一致（in-app 低刺激经 MediaQuery 叠加） 普通档且系统未要求 → 全动效档
+00:04 +66: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: B 按压节奏与静态分支（SparklePressable 对齐乐谱） B- 控制组：常规路径 AnimatedScale 在场（静态分支断言非恒真）
+00:04 +67: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/calm_low_stimulation_test.dart: U-02 庆祝组件低刺激整体短路 低刺激：play 触发也不挂载粒子、不占粒子预算
+00:04 +68: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: C 提案出现：一次性入场 + reduce-motion 直落终态 C+ 首帧抬起中（透明度 0→1 在航），落定完整可见
+00:04 +69: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/calm_low_stimulation_test.dart: U-02 庆祝组件低刺激整体短路 普通档：庆祝正常挂载并计入粒子预算
+00:04 +70: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: C 提案出现：一次性入场 + reduce-motion 直落终态 C+ 静态分支：减弱动效首帧完整呈现（等价信息不丢失），零动画壳
+00:04 +71: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: C 提案出现：一次性入场 + reduce-motion 直落终态 C- 控制组：常规路径首帧透明度 < 1（静态分支断言非恒真）
+00:04 +72: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: D 回执替换：同 key 重投不重播；取消内容无成功载体 D+ 首挂载不播替换（初始内容直落终态），key 变化才播一次 160ms
+00:04 +73: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: D 回执替换：同 key 重投不重播；取消内容无成功载体 D+ 同 key 重投（恢复重放）不重播替换：下一帧即终态
+00:04 +74: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: D 回执替换：同 key 重投不重播；取消内容无成功载体 D+ 取消面：换成取消内容 = 普通替换，树中无成功徽章载体
+00:04 +75: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: D 回执替换：同 key 重投不重播；取消内容无成功载体 D+ 静态分支：减弱动效下 key 变化即时替换（文本状态恢复不延迟）
+00:04 +76: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: E 证据印章：160ms 压印 + 零粒子 + 静态分支 E+ 压印在航（透明度/缩放在中段），落定全尺寸；零粒子发射
+00:04 +77: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: E 证据印章：160ms 压印 + 零粒子 + 静态分支 E+ 静态分支：减弱动效印章全尺寸即时呈现，零动画壳零 ticker
+00:04 +78: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: E 证据印章：160ms 压印 + 零粒子 + 静态分支 E- 控制组：常规路径首帧透明度 < 1 且粒子计数仍为 0（非恒真）
+00:04 +79: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: F 无后台无限动画：settle 后零 ticker + 源码棘轮 F+ 语义族 + 按压面全 settle 后零持续 ticker（追加帧仍为 0）
+00:04 +80: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: F 无后台无限动画：settle 后零 ticker + 源码棘轮 F- 控制组：repeat 动画同探针判 ≥1（零值断言非恒真）
+00:05 +81: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: F 无后台无限动画：settle 后零 ticker + 源码棘轮 F+ 源码棘轮：S01 新表面禁 repeat/AnimationController（结构零无限面）
+00:05 +82: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+00:05 +83: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+00:05 +84: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+00:05 +85: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+00:05 +86: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+00:05 +87: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+00:05 +88: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+00:05 +89: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+00:05 +90: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+00:05 +91: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+00:05 +92: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G+ 含语义族行列表滚帧在阈值内；settle 后零 ticker（不持续调度帧）
+S01 scroll avg frame time: 29279us (threshold 70000 us)
+00:06 +93: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: G 滚动正文不降帧：语义族不锁正文帧预算 G- 控制组：列表混入 repeat 行 → settle 后 ticker ≥1（探针活性）
+00:06 +94: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: H 帧时间对照：动画路 vs reduce-motion 静态基线（同 harness） H+ 动画帧时 < 阈值，且与静态基线同批对照落证
+S01 proposal-enter animated avg frame: 71.9us
+S01 reduce-motion static baseline avg frame: 26.4us
+00:06 +95: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_test.dart: H 帧时间对照：动画路 vs reduce-motion 静态基线（同 harness） H- 控制组：静态基线在航期零 ticker（基线确为静止路径）
+00:06 +96: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/motion_reduce_motion_test.dart: SparkleMotion.createBreathingController（DS 守护令①） disableAnimations=true → controller 不启动，静止呼吸中点
+00:06 +97: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/motion_reduce_motion_test.dart: SparkleMotion.createBreathingController（DS 守护令①） disableAnimations=false → 正常呼吸 repeat
+00:06 +98: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/motion_reduce_motion_test.dart: StarBackground（focus 首批） disableAnimations=true → 星星静止（无 repeat ticker）
+00:06 +99: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/motion_reduce_motion_test.dart: StarBackground（focus 首批） 对照组：默认（未开启减弱动效）→ 闪烁持续运行
+00:06 +100: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/motion_reduce_motion_test.dart: FlipClock（focus 首批） disableAnimations=true → 冒号常亮静止（无 repeat ticker）
+00:06 +101: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/motion_reduce_motion_test.dart: FlipClock（focus 首批） disableAnimations=true → 数字变化直接落位（跳过翻转）
+00:06 +102: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/motion_reduce_motion_test.dart: FlipClock（focus 首批） 对照组：默认（未开启减弱动效）→ 冒号闪烁运行
+00:06 +103: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/motion_reduce_motion_test.dart: TimerWidget（focus 首批，装饰性脉动守护） disableAnimations=true → 计时中表盘无脉动缩放（静止 1.0）
+00:07 +104: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/motion_reduce_motion_test.dart: TimerWidget（focus 首批，装饰性脉动守护） 对照组：默认（未开启减弱动效）→ 脉动缩放运行
+00:07 +105: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_switching_test.dart: classic_gate｜preview 不隐性全量上线（验收 1） 正例：enableStylePreview 默认 false（设计未批准前入口不存在）
+00:07 +106: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_switching_test.dart: classic_gate｜preview 不隐性全量上线（验收 1） 正例：flag 关 → gate 渲染零节点；flag 开 → 入口可进 preview 页
+00:08 +107: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_switching_test.dart: classic_gate｜preview 不隐性全量上线（验收 1） 正例：flag 关 → gate 渲染零节点；flag 开 → 入口可进 preview 页
+00:08 +108: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_evidence_test.dart: [evidence:PixelPreviewProfile.classic:home] 单面 canonical 流步渲染并按需落盘
+00:08 +109: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_switching_test.dart: classic_gate｜preview 不隐性全量上线（验收 1） 正例：classic（默认）下页面真实渲染，稳定主题仍可用
+00:08 +110: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_switching_test.dart: classic_gate｜preview 不隐性全量上线（验收 1） 正例：classic（默认）下页面真实渲染，稳定主题仍可用
+00:08 +111: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_evidence_test.dart: [evidence:PixelPreviewProfile.classic:memory] 单面 canonical 流步渲染并按需落盘
+00:08 +112: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_switching_test.dart: switching｜切主题不重启 run / 清数据 / 改 token 用量（验收 2） 正例：classic→纸昼→暮色→低刺激 live 切档，主题逐槽换装
+00:08 +113: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_switching_test.dart: switching｜切主题不重启 run / 清数据 / 改 token 用量（验收 2） 正例：classic→纸昼→暮色→低刺激 live 切档，主题逐槽换装
+00:08 +114: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_switching_test.dart: switching｜切主题不重启 run / 清数据 / 改 token 用量（验收 2） 正例：classic→纸昼→暮色→低刺激 live 切档，主题逐槽换装
+00:08 +115: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_evidence_test.dart: [evidence:PixelPreviewProfile.classic:stuckSheetOpen] sheet 顶层真实形态落盘
+00:08 +116: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_switching_test.dart: switching｜切主题不重启 run / 清数据 / 改 token 用量（验收 2） 反例+正例：回退 classic 逐槽复原（回退即红：任何槽残留）
+00:09 +117: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_switching_test.dart: switching｜切主题不重启 run / 清数据 / 改 token 用量（验收 2） 反例+正例：回退 classic 逐槽复原（回退即红：任何槽残留）
+00:09 +118: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +119: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +120: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +121: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +122: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +123: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +124: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +125: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +126: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +127: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +128: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +129: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +130: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +131: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +132: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +133: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +134: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +135: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +136: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +137: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +138: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +139: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +140: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +141: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +142: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +143: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +144: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +145: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +146: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +147: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +148: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +149: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +150: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +151: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +152: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +153: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +154: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +155: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +156: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +157: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +158: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +159: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +160: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +161: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +162: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +163: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +164: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +165: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +166: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +167: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +168: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +169: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +170: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +171: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +172: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +173: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +174: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:09 +175: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例：五面真实表面组件逐面就位，seed 渲染真实文案
+00:10 +176: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_state_story_test.dart: 渲染面区分 + 无成功动效（反例钉死） [PixelPreviewProfile.paperDay] 四态语义标签互异、状态色逐对不等
+00:10 +177: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_state_story_test.dart: 渲染面区分 + 无成功动效（反例钉死） [PixelPreviewProfile.paperDay] 四态语义标签互异、状态色逐对不等
+00:10 +178: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例+反例：同一状态流四步推进——所有面同源换态；success 徽章仅在 committed 步出现（反例：其余步出现即红）
+00:10 +179: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例+反例：同一状态流四步推进——所有面同源换态；success 徽章仅在 committed 步出现（反例：其余步出现即红）
+00:10 +180: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例+反例：同一状态流四步推进——所有面同源换态；success 徽章仅在 committed 步出现（反例：其余步出现即红）
+00:10 +181: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例+反例：同一状态流四步推进——所有面同源换态；success 徽章仅在 committed 步出现（反例：其余步出现即红）
+00:10 +182: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例+反例：同一状态流四步推进——所有面同源换态；success 徽章仅在 committed 步出现（反例：其余步出现即红）
+00:10 +183: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例+反例：同一状态流四步推进——所有面同源换态；success 徽章仅在 committed 步出现（反例：其余步出现即红）
+00:10 +184: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例+反例：同一状态流四步推进——所有面同源换态；success 徽章仅在 committed 步出现（反例：其余步出现即红）
+00:10 +185: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: faces｜五面真实组件 + 确定性 seed（验收 3 机制面） 正例+反例：同一状态流四步推进——所有面同源换态；success 徽章仅在 committed 步出现（反例：其余步出现即红）
+00:11 +186: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/style_preview/style_preview_faces_test.dart: R1-C1a 泛化非空守卫｜未来新增流步拼错键不静默逃逸 全部流步的 F03 冻结 copy 均非空（遍历枚举，不只钉四键字面）
+00:11 +187: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_a11y_f06_test.dart: 验收③ · 200% 文本缩放（像素组件族 + 故事页） A+：200% 下故事页全族渲染零异常，五态语义与 CTA 仍在
+00:11 +188: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (a) 装饰覆盖按钮时点击仍达按钮（IgnorePointer 透传）
+00:11 +189: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_a11y_f06_test.dart: 验收③ · 200% 文本缩放（像素组件族 + 故事页） A-：溢出探针活性——故意超宽子树同法必报异常（防自证）
+00:11 +190: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (d) 控制组：吞手势覆盖层下同一断言必须判负（可失败性）
+00:11 +191: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_a11y_f06_test.dart: 验收③ · reduce-motion 静态分支（PixelSuccessBadge） B+：disableAnimations 下零 ticker，直落静止终态
+00:11 +192: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (b) 键盘 Tab 按 TabTraversa 顺序聚焦两个主 CTA
+00:11 +193: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (b) 键盘 Tab 按 TabTraversa 顺序聚焦两个主 CTA
+00:11 +194: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (b) 键盘 Tab 按 TabTraversa 顺序聚焦两个主 CTA
+00:11 +195: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (b) 键盘 Tab 按 TabTraversa 顺序聚焦两个主 CTA
+00:11 +196: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (b) 键盘 Tab 按 TabTraversa 顺序聚焦两个主 CTA
+00:12 +197: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_a11y_f06_test.dart: 验收② · screenreader 无同义重复朗读 D+：五态徽章语义标签逐字相等（无「X换行X」拼接重复）
+00:12 +198: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (c) 语义可定位操作：receipt 纠正/仅本次/删除带 tap 动作
+00:12 +199: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (c) 语义可定位操作：receipt 纠正/仅本次/删除带 tap 动作
+00:12 +200: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (c) 语义可定位操作：receipt 纠正/仅本次/删除带 tap 动作
+00:12 +201: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (c) 语义可定位操作：receipt 纠正/仅本次/删除带 tap 动作
+00:12 +202: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: (e) 控制组：动作未挂回调时同一 tap 断言必须判负（可失败性）
+00:12 +203: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_frame_hit_focus_test.dart: 按钮语义带 button 标志与显式标签（读屏可定位）
+00:12 +204: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_geometry_dpr_test.dart: 纯几何：五档 DPR 物理像素吸附（PixelOutlineGeometry.stair） dpr=1.0：顶点物理对齐、阶梯步数恒 4、偏差 ≤2 物理像素
+00:12 +205: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_geometry_dpr_test.dart: 纯几何：五档 DPR 物理像素吸附（PixelOutlineGeometry.stair） dpr=1.25：顶点物理对齐、阶梯步数恒 4、偏差 ≤2 物理像素
+00:12 +206: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_geometry_dpr_test.dart: 纯几何：五档 DPR 物理像素吸附（PixelOutlineGeometry.stair） dpr=1.5：顶点物理对齐、阶梯步数恒 4、偏差 ≤2 物理像素
+00:12 +207: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_geometry_dpr_test.dart: 纯几何：五档 DPR 物理像素吸附（PixelOutlineGeometry.stair） dpr=2.0：顶点物理对齐、阶梯步数恒 4、偏差 ≤2 物理像素
+00:12 +208: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_geometry_dpr_test.dart: 纯几何：五档 DPR 物理像素吸附（PixelOutlineGeometry.stair） dpr=3.0：顶点物理对齐、阶梯步数恒 4、偏差 ≤2 物理像素
+00:12 +209: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_geometry_dpr_test.dart: 纯几何：五档 DPR 物理像素吸附（PixelOutlineGeometry.stair） 反例控制组：未吸附顶点在网格断言下必须判负（可失败性）
+00:12 +210: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_geometry_dpr_test.dart: widget 渲染：五档 DPR 渲染盒与轮廓路径稳定 五档逐档 pump：渲染盒恒等、路径顶点物理对齐
+00:13 +211: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_geometry_dpr_test.dart: 文字不点阵化（系统字体路径，无位图/无缩放画布） 五档 DPR：fontSize 逻辑值恒等、文本盒逻辑尺寸恒等、无 RawImage
+00:13 +212: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_geometry_dpr_test.dart: classic 零差量红线（组件降级路径） preview off：无像素扩展 → 标准圆角轮廓、无阶梯、仍可用
+00:13 +213: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_story_evidence_test.dart: [evidence:PixelPreviewProfile.paperDay] 故事页真实渲染并按需落盘
+00:14 +214: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_story_evidence_test.dart: [evidence:PixelPreviewProfile.dusk] 故事页真实渲染并按需落盘
+00:14 +215: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_story_evidence_test.dart: [evidence:PixelPreviewProfile.quiet] 故事页真实渲染并按需落盘
+00:14 +216: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_primary_action_test.dart: loading 切换前后按钮几何恒等（loading 不改宽度）
+00:15 +217: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_primary_action_test.dart: 重复点击禁写：锁存窗内第二次 press 不触发回调
+00:15 +218: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_primary_action_test.dart: loading 期间 press 禁写（onPressed 恒不触发）
+00:15 +219: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_primary_action_test.dart: focus ring 画在按钮盒外侧（切角外仍可见）
+00:15 +220: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_a11y_evidence_test.dart: [evidence:200pct_reduceMotion] 200% 文本+减弱动效故事页
+00:15 +221: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_a11y_evidence_test.dart: [evidence:200pct_reduceMotion] 200% 文本+减弱动效故事页
+00:15 +222: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/pixel/pixel_a11y_evidence_test.dart: [evidence:100pct_baseline] 100% 基线故事页（对照）
+00:21 +223: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/semantic_motion_s01_evidence_test.dart: [evidence:s01] 动画落定终态 vs reduce-motion 静态分支：语义与像素等价
+00:22 +224: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/components/organisms/expandable_section_test.dart: 折叠初态：chevron 朝下（turns 0），动画档为 owner 统一档
+00:23 +225: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/components/organisms/expandable_section_test.dart: 点击展开：chevron 旋转半圈（turns 0.5），内容可达，语义翻转
+00:23 +226: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/components/organisms/expandable_section_test.dart: 再点收起：chevron 回正（turns 0），动画档不随状态改变
+00:23 +227: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/components/organisms/expandable_section_test.dart: initiallyExpanded：初帧即展开态（chevron 0.5，无需动画）
+00:23 +228: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/components/organisms/expandable_section_test.dart: 统一动画档即 AnimationSystem.quick 档（150ms），不引入散落时长
+00:23 +229: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/compact_error_card_a7_tap_test.dart: tapping the card padding (away from the label glyphs) fires onRetry
+00:24 +230: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/compact_error_card_a7_tap_test.dart: tapping the card padding (away from the label glyphs) fires onRetry
+00:24 +231: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/compact_error_card_a7_tap_test.dart: tapping the card padding (away from the label glyphs) fires onRetry
+00:24 +232: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/typography_rhythm_convergence_test.dart: N44 · SparkleMarkdown 长文段距显式 standard 角色：多段内容每段上下 6（相邻段合计空隙 12=spacing12 档）
+00:24 +233: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/typography_rhythm_convergence_test.dart: N44 · SparkleMarkdown 长文段距显式 standard 角色：多段内容每段上下 6（相邻段合计空隙 12=spacing12 档）
+00:24 +234: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/compact_error_card_a7_tap_test.dart: card without onRetry is inert (no crash on tap)
+00:24 +235: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/typography_rhythm_convergence_test.dart: N44 · SparkleMarkdown 长文段距显式 standard 角色：h2 标题块距上下 9（0.75×段距，标题先于正文脱行）
+00:24 +236: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/typography_rhythm_convergence_test.dart: N44 · SparkleMarkdown 长文段距显式 chatBubble 角色：段距豁免为 0，不与 aurora 分组 spacing6 双重叠加
+00:25 +237: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: (setUpAll)
+00:25 +237: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · 动效/状态 token 两档 diff（量化对照表来源） SparkleMotionTokens standard vs low 逐字段数值表
+MOTION_TOKEN_DIFF
+| 字段 | standard | low | 差值/变化 |
+|---|---|---|---|
+| fast | 150ms | 80ms | -70ms |
+| normal | 250ms | 150ms | -100ms |
+| slow | 400ms | 200ms | -200ms |
+| slower | 600ms | 240ms | -360ms |
+| standardCurve | Cubic(0.65, 0.04, 0.35, 1.00) | Cubic(0.65, 0.04, 0.35, 1.00) | 不变 |
+| enterCurve | Cubic(0.00, 0.00, 0.58, 1.00) | Cubic(0.00, 0.00, 0.58, 1.00) | 不变 |
+| exitCurve | Cubic(0.42, 0.00, 1.00, 1.00) | Cubic(0.42, 0.00, 1.00, 1.00) | 不变 |
+| bounceCurve | ElasticOutCurve(0.4) | Cubic(0.00, 0.00, 0.58, 1.00) | 弹性撤除 |
+| overshootCurve | Cubic(0.17, 0.89, 0.32, 1.27) | Cubic(0.00, 0.00, 0.58, 1.00) | 过冲撤除 |
+00:25 +238: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · 动效/状态 token 两档 diff（量化对照表来源） SparkleStateTokens calm/celebrate/attention × 两档 数值表
+STATE_TOKEN_DIFF
+| mood | 字段 | standard | low |
+|---|---|---|---|
+| SparkleStateMood.calm | glowOpacity | 0.05 | 0.05 |
+| SparkleStateMood.calm | emphasisScale | 1.0 | 1.0 |
+| SparkleStateMood.calm | motionScale | 1.0 | 1.0 |
+| SparkleStateMood.calm | particleScale | 0.0 | 0.0 |
+| SparkleStateMood.calm | allowBounce | false | false |
+| SparkleStateMood.celebrate | glowOpacity | 0.16 | 0.08 |
+| SparkleStateMood.celebrate | emphasisScale | 1.02 | 1.0 |
+| SparkleStateMood.celebrate | motionScale | 1.0 | 0.6 |
+| SparkleStateMood.celebrate | particleScale | 1.0 | 0.0 |
+| SparkleStateMood.celebrate | allowBounce | true | false |
+| SparkleStateMood.attention | glowOpacity | 0.1 | 0.06 |
+| SparkleStateMood.attention | emphasisScale | 1.0 | 1.0 |
+| SparkleStateMood.attention | motionScale | 1.0 | 0.6 |
+| SparkleStateMood.attention | particleScale | 0.0 | 0.0 |
+| SparkleStateMood.attention | allowBounce | false | false |
+00:25 +239: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · contrast（真实主题管道 token 对，WCAG 程序化） standard 档：文字 token × 表面 token 全对达标
+CONTRAST textPrimary on surfacePrimary = 16.37:1 (AA 4.5:1 PASS)
+CONTRAST textPrimary on surfaceSecondary = 15.15:1 (AA 4.5:1 PASS)
+CONTRAST textPrimary on surfaceTertiary = 13.49:1 (AA 4.5:1 PASS)
+CONTRAST textSecondary on surfacePrimary = 5.24:1 (AA 4.5:1 PASS)
+CONTRAST textSecondary on surfaceSecondary = 4.85:1 (AA 4.5:1 PASS)
+CONTRAST chatBubbleOtherText on chatBubbleOther = 15.80:1 (AA 4.5:1 PASS)
+CONTRAST textTertiary on surfacePrimary = 4.59:1 (AA-large 3.0:1 PASS)
+CONTRAST textTertiary on surfaceSecondary = 4.25:1 (AA-large 3.0:1 PASS)
+CONTRAST chatBubbleUserText on chatBubbleUser = 5.36:1 (AA 4.5:1 PASS)
+CONTRAST onPrimary on brandPrimary = 5.82:1 (AA 4.5:1 PASS)
+00:25 +240: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · contrast（真实主题管道 token 对，WCAG 程序化） low 档：低刺激滤色后的实显 token 对仍达标（减色不牺牲可读性）
+CONTRAST textPrimary* on surfacePrimary* = 15.13:1 (AA 4.5:1 PASS)
+CONTRAST textPrimary* on surfaceSecondary* = 14.00:1 (AA 4.5:1 PASS)
+CONTRAST textSecondary* on surfacePrimary* = 5.12:1 (AA 4.5:1 PASS)
+CONTRAST textTertiary* on surfacePrimary* = 4.50:1 (AA-large 3.0:1 PASS)
+CONTRAST chatBubbleUserText* on chatBubbleUser* = 5.17:1 (AA 4.5:1 PASS)
+CONTRAST chatBubbleOtherText* on chatBubbleOther* = 14.60:1 (AA 4.5:1 PASS)
+00:25 +241: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） home · 两档渲染树 hierarchy + mode-diff
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:26 +242: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） home · 两档渲染树 hierarchy + mode-diff
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:26 +243: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） home · 两档渲染树 hierarchy + mode-diff
+PersistentStateNotifier: Loaded state for dashboard_cards.config
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/exam-sprint/dashboard[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/growth/dashboard[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/growth/daily-context-line[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/aurora/spine/status-band[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/experience/understanding-snapshot[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/journey/first-action[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/exam-sprint/dashboard[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/growth/dashboard[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/growth/daily-context-line[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/aurora/spine/status-band[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/experience/understanding-snapshot[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/journey/first-action[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+Home growth dashboard unavailable: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+Home daily context line unavailable: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+ActiveGoal: user settings unavailable: DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/plans/active[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/aurora/spine/goals[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/plans/active[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/aurora/spine/goals[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+Home active plan unavailable: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+ActiveGoal: spine goals unavailable: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/tasks/today[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/plans?is_active=true[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/tasks/today[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/plans?is_active=true[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+Home today tasks unavailable: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+ActiveGoal: active plans unavailable: type 'String' is not a subtype of type 'Map<String, dynamic>?' in type cast
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/streak[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/streak[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+Home streak unavailable: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+HIERARCHY home/standard headingMax=19.0 "先定下你的第一个目标"
+HIERARCHY home/standard bodyMax=16.0 "输入消息..."
+SCREEN_CONTRAST home/standard #ff6c655d on #fff8f4ef 12px w700 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST home/standard #ff171717 on #fff8f4ef 19px w700 = 16.37:1 (需 3.0) PASS
+SCREEN_CONTRAST home/standard #ff48678d on #fff8f4ef 12px w500 = 5.33:1 (需 4.5) PASS
+SCREEN_CONTRAST home/standard #ffffffff on #ff382e29 13px w500 = 13.20:1 (需 4.5) PASS
+SCREEN_CONTRAST home/standard #ff825d49 on #fff8f4ef 13px w500 = 5.31:1 (需 4.5) PASS
+SCREEN_CONTRAST home/standard #996c655d on #fff8f4ef 12px w400 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST home/standard #806c655d on #fff8f4ef 16px w400 = 5.24:1 (需 4.5) PASS
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:26 +244: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） home · 两档渲染树 hierarchy + mode-diff
+00:26 +245: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） home · 两档渲染树 hierarchy + mode-diff
+HIERARCHY home/low headingMax=19.0 "先定下你的第一个目标"
+HIERARCHY home/low bodyMax=16.0 "输入消息..."
+SCREEN_CONTRAST home/low #ff6c655d on #fff8f4ef 12px w700 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST home/low #ff171717 on #fff8f4ef 19px w700 = 16.37:1 (需 3.0) PASS
+SCREEN_CONTRAST home/low #ff48678d on #fff8f4ef 12px w500 = 5.33:1 (需 4.5) PASS
+SCREEN_CONTRAST home/low #ffffffff on #ff382e29 13px w500 = 13.20:1 (需 4.5) PASS
+SCREEN_CONTRAST home/low #ff825d49 on #fff8f4ef 13px w500 = 5.31:1 (需 4.5) PASS
+SCREEN_CONTRAST home/low #996c655d on #fff8f4ef 12px w400 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST home/low #806c655d on #fff8f4ef 16px w400 = 5.24:1 (需 4.5) PASS
+🗑️  Disposing WebSocketChatServiceV2
+🔌 Closing connection
+00:26 +246: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） chat · 两档渲染树 hierarchy + mode-diff
+🔧 API Base URL (Android): http://10.0.2.2:8080
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/me/files?limit=100&offset=0[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/aurora/core-session/current[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/me/files?limit=100&offset=0[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/aurora/core-session/current[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+HIERARCHY chat/standard headingMax=16.0 "AI学习助手"
+HIERARCHY chat/standard bodyMax=16.0 "输入消息..."
+SCREEN_CONTRAST chat/standard #ffffffff on #ff382e29 12px w700 = 13.20:1 (需 4.5) PASS
+SCREEN_CONTRAST chat/standard #ff171717 on #fff8f4ef 14px w400 = 16.37:1 (需 4.5) PASS
+SCREEN_CONTRAST chat/standard #ff6c655d on #fff8f4ef 12px w500 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST chat/standard #996c655d on #fff8f4ef 10px w400 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST chat/standard #b86c655d on #fff8f4ef 10px w400 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST chat/standard #ff825d49 on #fff8f4ef 11px w500 = 5.31:1 (需 4.5) PASS
+SCREEN_CONTRAST chat/standard #b8825d49 on #fff8f4ef 10px w400 = 5.31:1 (需 4.5) PASS
+SCREEN_CONTRAST chat/standard #ff52443c on #fff8f4ef 12px w400 = 8.52:1 (需 4.5) PASS
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/aurora/core-session/current[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/aurora/core-session/current[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+HIERARCHY chat/low headingMax=25.0 "你好，我是 Aurora"
+HIERARCHY chat/low bodyMax=17.0 "你的学习伙伴。我会看着你的进展，有把握时提醒你，拿不准时先问你。"
+SCREEN_CONTRAST chat/low #ff171717 on #fff8f4ef 25px w700 = 16.37:1 (需 3.0) PASS
+SCREEN_CONTRAST chat/low #ff6c655d on #fff8f4ef 17px w400 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST chat/low #ff52443c on #fff8f4ef 13px w400 = 8.52:1 (需 4.5) PASS
+00:27 +247: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/widgets/object_unavailable_surface_test.dart: 正·missing 面呈现标题/解释/主动作/恒在回首页出口；回首页真实路由
+00:27 +248: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/widgets/object_unavailable_surface_test.dart: 正·missing 面呈现标题/解释/主动作/恒在回首页出口；回首页真实路由
+00:27 +249: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） journeyFirstAction · 两档渲染树 hierarchy + mode-diff
+00:27 +250: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） journeyFirstAction · 两档渲染树 hierarchy + mode-diff
+00:27 +251: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） journeyFirstAction · 两档渲染树 hierarchy + mode-diff
+HIERARCHY journeyFirstAction/standard headingMax=N/A [FAIL-REGISTERED? true] 无标题层（全部渲染文本均为正文/辅助级）
+SCREEN_CONTRAST journeyFirstAction/standard #ff171717 on #fff8f4ef 16px w500 = 16.37:1 (需 4.5) PASS
+SCREEN_CONTRAST journeyFirstAction/standard #ff6c655d on #fff8f4ef 12px w400 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST journeyFirstAction/standard #ff736f62 on #fff8f4ef 12px w500 = 4.59:1 (需 4.5) PASS
+SCREEN_CONTRAST journeyFirstAction/standard #ff825d49 on #fff8f4ef 13px w500 = 5.31:1 (需 4.5) PASS
+00:27 +252: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） journeyFirstAction · 两档渲染树 hierarchy + mode-diff
+HIERARCHY journeyFirstAction/low headingMax=N/A [FAIL-REGISTERED? true] 无标题层（全部渲染文本均为正文/辅助级）
+SCREEN_CONTRAST journeyFirstAction/low #ff171717 on #fff8f4ef 16px w500 = 16.37:1 (需 4.5) PASS
+SCREEN_CONTRAST journeyFirstAction/low #ff6c655d on #fff8f4ef 12px w400 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST journeyFirstAction/low #ff736f62 on #fff8f4ef 12px w500 = 4.59:1 (需 4.5) PASS
+SCREEN_CONTRAST journeyFirstAction/low #ff825d49 on #fff8f4ef 13px w500 = 5.31:1 (需 4.5) PASS
+00:27 +252: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_icon_button_semantics_test.dart: SparkleIconButton 语义名（N31） 两者皆无 → 不致命（构建成功），登记制走 debug 诊断
+SparkleIconButton (N31 a11y): icon-only button without semanticLabel (icon: 0xe30b). Add semanticLabel (l10n) so screen readers can announce the button purpose.
+00:27 +253: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/sparkle_icon_button_semantics_test.dart: SparkleIconButton 语义名（N31） 两者皆无 → 不致命（构建成功），登记制走 debug 诊断
+00:27 +254: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/u02_contrast_hierarchy_rubric_test.dart: U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树） settings · 两档渲染树 hierarchy + mode-diff
+🔧 API Base URL (Android): http://10.0.2.2:8080
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   NotificationService._initialize (package:sparkle/core/services/notification_service.dart:139:13)[0m
+[38;5;12m│ #1   <asynchronous suspension>[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 NotificationService initialized[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   NotificationService._initialize (package:sparkle/core/services/notification_service.dart:139:13)[0m
+[38;5;12m│ #1   <asynchronous suspension>[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 NotificationService initialized[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/profile/context[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/aurora/preferences[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/aurora/preferences[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/profile/context[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/aurora/preferences[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/aurora/preferences[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/user/settings[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+EmotionStateNotifier failed to load server mode: DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+HIERARCHY settings/standard headingMax=20.0 "胶囊生成"
+HIERARCHY settings/standard bodyMax=16.0 "感官反馈"
+SCREEN_CONTRAST settings/standard #ff171717 on #fff8f4ef 16px w400 = 16.37:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/standard #ff6c655d on #fff8f4ef 12px w500 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/standard #ff6a6057 on #fff8f4ef 11px w400 = 5.60:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/standard #ff825d49 on #fff8f4ef 13px w600 = 5.31:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/standard #ffffffff on #ff382e29 13px w500 = 13.20:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/standard #f5ffffff on #ff382e29 12px w700 = 13.20:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/standard #ff456e52 on #fff8f4ef 12px w500 = 5.32:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/standard #ff48678d on #fff8f4ef 12px w500 = 5.33:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/standard #cc825d49 on #fff8f4ef 12px w700 = 5.31:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/standard #b3825d49 on #fff8f4ef 10px w500 = 5.31:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/standard #c7171717 on #fff8f4ef 12px w400 = 16.37:1 (需 4.5) PASS
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/profile/context[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/profile/context[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+HIERARCHY settings/low headingMax=20.0 "胶囊生成"
+HIERARCHY settings/low bodyMax=17.0 "感官反馈"
+SCREEN_CONTRAST settings/low #ff171717 on #fff8f4ef 17px w400 = 16.37:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/low #ff6c655d on #fff8f4ef 12px w500 = 5.24:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/low #ff6a6057 on #fff8f4ef 11px w400 = 5.60:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/low #ff825d49 on #fff8f4ef 13px w600 = 5.31:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/low #ffffffff on #ff382e29 13px w500 = 13.20:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/low #f5ffffff on #ff382e29 12px w700 = 13.20:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/low #ff456e52 on #fff8f4ef 12px w500 = 5.32:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/low #ff48678d on #fff8f4ef 12px w500 = 5.33:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/low #cc825d49 on #fff8f4ef 12px w700 = 5.31:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/low #b3825d49 on #fff8f4ef 10px w500 = 5.31:1 (需 4.5) PASS
+SCREEN_CONTRAST settings/low #c7171717 on #fff8f4ef 13px w400 = 16.37:1 (需 4.5) PASS
+00:28 +255: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/loading_indicator_test.dart: circular defaults keep historical rendering (40px / sw 3 / indeterminate / liveRegion)
+00:28 +256: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/loading_indicator_test.dart: circular inline params pass through (size/strokeWidth/color/liveRegion:false)
+00:28 +257: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/loading_indicator_test.dart: determinate ring passes value/backgroundColor/strokeCap
+00:28 +258: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/loading_indicator_test.dart: linear defaults keep historical track color DS.neutral200
+00:28 +259: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/loading_indicator_test.dart: linear determinate passes value/minHeight/backgroundColor/borderRadius
+00:28 +260: /Users/brsama/code/GitHub/wtQ06/mobile/test/core/design/loading_indicator_test.dart: showText keeps label + text rendering
+00:28 +261: All tests passed!

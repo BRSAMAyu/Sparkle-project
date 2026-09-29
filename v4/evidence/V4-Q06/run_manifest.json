@@ -1,0 +1,86 @@
+{
+ "task": "V4-Q06",
+ "title": "全感官关闭/重放/真机能力矩阵（验收矩阵卡）",
+ "date": "2026-09-29",
+ "executor": "wtQ06（worktree /Users/brsama/code/GitHub/wtQ06，分支 agent/v4/q06，自 main@f13a21ef 开出）",
+ "kind": "verification",
+ "risk": "normal",
+ "required_locks": ["qa-sensory"],
+ "heavy_token_required": true,
+ "no_push": true,
+ "source_sha_base": "f13a21efb954ed50ac096f246690b7a3088e59ac",
+ "source_sha_base_note": "git rev-parse f13a21ef 实测=f13a21efb954ed50ac096f246690b7a3088e59ac（merge: V4-S02 收口——S 线 4/4 全收，即 Q06 依赖解锁点）",
+ "source_sha_head": "见台账（evidence 提交后的分支头；本文件所在提交即证据面）",
+ "main_drift_note": "作业期间本机 main 由他机推进（f13a21ef → 04b97fbe，U02 收口族）。本分支不追不并不 push（卡面明令）；集成时按台账以 f13a21ef 为本卡基线。触达面 = 新增 1 个测试文件 + 证据目录，与他卡在航面零交集。",
+ "diff_summary": {
+  "product_code_changes": 0,
+  "new_files": [
+   "mobile/test/core/experience/sensory_matrix_q06_test.dart"
+  ],
+  "evidence_files": [
+   "v4/evidence/V4-Q06/diff_or_evidence_only.md",
+   "v4/evidence/V4-Q06/run_manifest.json",
+   "v4/evidence/V4-Q06/test_results.json",
+   "v4/evidence/V4-Q06/review_receipt.json",
+   "v4/evidence/V4-Q06/limitations.md",
+   "v4/evidence/V4-Q06/artifacts_sha256.txt",
+   "v4/evidence/V4-Q06/raw/matrix_machine.jsonl",
+   "v4/evidence/V4-Q06/raw/analyze_full.txt",
+   "v4/evidence/V4-Q06/raw/test_experience.txt",
+   "v4/evidence/V4-Q06/raw/test_services.txt",
+   "v4/evidence/V4-Q06/raw/test_design.txt"
+  ],
+  "note": "本卡 kind=verification：仓库已满足乐谱行为面（S01/S02/S03 已合并），按 no_duplicate_rule 做全量矩阵举证——新增矩阵测试一套，零产品码改动、零依赖变更（pubspec.lock 零 diff）。"
+ },
+ "matrix_denominator": {
+  "score_rows": 9,
+  "score_rows_source": "v4/02_design/MOTION_AUDIO_HAPTICS.md 事件乐谱表（按压/提案/提交成功/记忆保存/证据登记/独立检验/冲突未知失败/深任务进行中/长期回归）",
+  "state_columns": ["enabled", "disabled", "replay", "background", "unsupported", "permission"],
+  "denominator": 54,
+  "tested": 54,
+  "passed_simulator_layer": 54,
+  "gap_inintegration_registered": 9,
+  "gap_note": "C4 列 9 格的既有装饰停止面（BGM 生命周期暂停 + AnimationLifecycleMixin 控制器暂停）调用级 PASS；experience 事件链的应用可见性门 = GAP_INTEGRATION（适配器无可见性入参 + 生产事件源未接线，S03-L5/D01/B05/FIX-569 登记过的 contract-owner 面）——逐格如实标注，不伪造 PASS。",
+  "device_unverified_surfaces": ["真机触感舒适度", "真扬声器听感", "真实 OS 音频中断事件源（来电/耳机拔出接线）", "OS 系统触觉总开关/马达存在性", "Android API<30 notification 触觉平台效果"],
+  "coverage_detail": "见 test_results.json matrix_coverage（逐格 cell/test_name/anchor_level/result/boundary_note）"
+ },
+ "evidence_scope": {
+  "level": "L0/L1（flutter test 调用级/语义级 + widget 级）——模拟器层口径，与 S01/S02/S03 证据同口径",
+  "not_run": "L3 真机/模拟器 App 安装运行面（本机无物理 iOS/Android 设备；iOS 模拟器 App 运行面未执行，理由与边界见 limitations L1）；L4 真实用户面（不可达）",
+  "physical_device": "无（DEVICE_UNVERIFIED 真机面全部显式标注，未写成已验证）"
+ },
+ "toolchain": {
+  "flutter": "3.41.3 stable (revision 48c32af034, 2026-02-27)",
+  "dart": "3.11.1 stable",
+  "host": "darwin 25.6.0 arm64 (macOS)",
+  "gen_note": "worktree 自主检出后 cp -RL 复制主检出 gitignored gen 目录（mobile/lib/gen + backend/app/gen + gateway/gen，S03/U14/S02 同处置）；本卡无 l10n 变更、无生成物重生成",
+  "disk_note": "HEAVY 卡磁盘约束：作业前数据卷可用 7.5Gi，收尾 6.7Gi（pub get 复用共享 pub-cache，无新插件下载；无模拟器镜像/构建产物落盘）；/tmp 中间物已清，探针（通道记录器/事件构造器）全部内联于测试文件随仓受治理，无独立一次性脚本入库"
+ },
+ "model_usage": {
+  "llm_used": true,
+  "model": "GLM（会话模型 GLM-5.3-Flash，ZCode 代理会话）",
+  "token_count": "NOT_EXPOSED（宿主未暴露 token 计数接口，如实登记不伪造——S02/S03 同口径）",
+  "pricing_source": "账户侧计费，本卡无独立可引用价目"
+ },
+ "commands": [
+  {"id": 1, "purpose": "创建工作树", "command": "git worktree add ../wtQ06 -b agent/v4/q06 main", "exit_code": 0},
+  {"id": 2, "purpose": "复制 gitignored 生成物目录（mobile/lib/gen + backend/app/gen + gateway/gen）", "command": "cp -RL 主检出 gen 目录 → worktree", "exit_code": 0},
+  {"id": 3, "purpose": "依赖解析（新 worktree 无 .dart_tool）", "command": "cd mobile && flutter pub get", "exit_code": 0, "note": "2 packages discontinued（既有口径）；pubspec.lock 零改动（零新增依赖）"},
+  {"id": 4, "purpose": "静态检查（全库）", "command": "cd mobile && flutter analyze --no-pub", "exit_code": 0, "note": "No issues found!（最终态；本卡新文件 95 个 info 级风格项经 dart fix 与手改逐轮清零，无 ignore 豁免残留）", "raw": "v4/evidence/V4-Q06/raw/analyze_full.txt"},
+  {"id": 5, "purpose": "矩阵全量测（54 格 + 4 补充 = 58 用例，逐格可失败）", "command": "cd mobile && flutter test test/core/experience/sensory_matrix_q06_test.dart", "exit_code": 0, "note": "+58 全绿。首跑 15 败为测试装置缺陷（platform 通道记录器跨用例未清零）；次跑 1 败为事件构造器 receiptRef 哨兵语义（?? 吞掉显式 null）；两处均装置侧修复，非产品码缺陷，修复后 58/58", "raw": "v4/evidence/V4-Q06/raw/matrix_machine.jsonl"},
+  {"id": 6, "purpose": "受影响域回归：experience（F03 适配器/事件模型/徽章绑定）", "command": "cd mobile && flutter test test/core/experience/", "exit_code": 0, "note": "+77 全绿", "raw": "v4/evidence/V4-Q06/raw/test_experience.txt"},
+  {"id": 7, "purpose": "受影响域回归：services（S02 焦点机/资产门/U14 偏好/感官服务）", "command": "cd mobile && flutter test test/core/services/", "exit_code": 0, "note": "+142 全绿", "raw": "v4/evidence/V4-Q06/raw/test_services.txt"},
+  {"id": 8, "purpose": "受影响域回归：design（S01 语义动效/S03 触觉锁面/F02 像素族）", "command": "cd mobile && flutter test test/core/design/", "exit_code": 0, "note": "+261 全绿", "raw": "v4/evidence/V4-Q06/raw/test_design.txt"},
+  {"id": 9, "purpose": "证据哈希登记", "command": "shasum -a 256 <矩阵测试与证据原件>", "exit_code": 0, "raw": "v4/evidence/V4-Q06/artifacts_sha256.txt"}
+ ],
+ "acceptance_verdicts": {
+  "A1_静音/无触觉/减少动态所有任务同样可完成": "PASS（模拟器层）：C2 列 9/9 + 聚合 3 用例——决策/文案/徽章与 enabled 全同，物理通道 0 调用，reduce-motion 静态分支信息等价（含全真实出口链格 M-R3-C2）",
+  "A2_replay不重播_仅真实commit用success": "PASS（模拟器层）：C3 列 9/9——replaySuppressed 恒无庆祝且文案仍恢复；E1 门反例（无回执 success 形状 → ignoredInvalid 绝不庆祝）+ R6-C3 双向锚（同 event_id 抑制/新 event_id 放行）",
+  "A3_DEVICE_UNVERIFIED不写成体验舒适度已通过": "PASS（口径纪律）：本卡全部真机面只签调用级并在逐格 boundary_note + limitations 显式标注 DEVICE_UNVERIFIED；全文无「触感/听感舒适已验证」表述；真机硬件面未测=如实声明（本机无真机）"
+ },
+ "value_claim": "REVIEW_READY（模拟器层全测通过 + 集成链缺口如实登记；value 不标 PASS——真机面 DEVICE_UNVERIFIED 与 C4 列 GAP_INTEGRATION 未清偿前不称全绿无边界）",
+ "handoff": {
+  "review_required": "1 份独立未参与会话审查（普通风险卡）+ 集成 SHA 可失败复验后销账",
+  "gap_owner_note": "C4 列可见性门缺口归 contract-owner 集成链（FIX-569 所在面）：接线后本矩阵可按真实流量复验——矩阵测试文件即复验工具（零改动可重跑）"
+ }
+}

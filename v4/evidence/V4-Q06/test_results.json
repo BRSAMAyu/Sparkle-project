@@ -1,0 +1,538 @@
+{
+ "task": "V4-Q06",
+ "title": "全感官关闭/重放/真机能力矩阵",
+ "date": "2026-09-29",
+ "suite": "mobile/test/core/experience/sensory_matrix_q06_test.dart",
+ "runner": "flutter test --machine",
+ "exit_code": 0,
+ "totals": {
+  "passed": 58,
+  "failed": 0
+ },
+ "matrix_coverage": {
+  "score_rows": 9,
+  "state_columns": [
+   "enabled",
+   "disabled",
+   "replay",
+   "background",
+   "unsupported",
+   "permission"
+  ],
+  "matrix_cells_declared": 54,
+  "matrix_cells_tested": 54,
+  "matrix_cells_passed": 54,
+  "matrix_cells_missing": [],
+  "supplementary_tests": [
+   {
+    "name": "R2 提案出现 M-R2-C2b reduce-motion 静态分支：提案组件直出终态内容",
+    "result": "success"
+   },
+   {
+    "name": "Q06 验收① 任务可完成性聚合（徽章语义在两态下同可达） 成功徽章：全感官开 vs 静音+无触觉+减少动态 → 语义标签同样可查（任务完成信息等价可达）",
+    "result": "success"
+   },
+   {
+    "name": "Q06 验收① 任务可完成性聚合（徽章语义在两态下同可达） 失败/冲突/未知徽章：减少动态下语义同样可查（无颜色/声音独占信息）",
+    "result": "success"
+   },
+   {
+    "name": "Q06 验收① 任务可完成性聚合（徽章语义在两态下同可达） 全文案表在「任何关闭」下不变（信息不减的语义级对偶：冻结表是常量）",
+    "result": "success"
+   }
+  ],
+  "cells": [
+   {
+    "cell": "M-R1-C1",
+    "score_row": "R1 按压/选择",
+    "state_column": "enabled",
+    "anchor_level": "CALL+SEM",
+    "test_name": "R1 按压/选择 M-R1-C1 enabled：selection 槽 userInitiated 放行一枚 selectionClick；按压路径零声音通道（乐谱「声音默认无」）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R1-C2",
+    "score_row": "R1 按压/选择",
+    "state_column": "disabled",
+    "anchor_level": "CALL",
+    "test_name": "R1 按压/选择 M-R1-C2 disabled：偏好关/减少动态 → 0 触觉 0 声音；选择动作本身照常完成（决策面无异常、返回抑制决策）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R1-C3",
+    "score_row": "R1 按压/选择",
+    "state_column": "replay",
+    "anchor_level": "CALL",
+    "test_name": "R1 按压/选择 M-R1-C3 replay：同槽短窗第二次派发 → dedupedWithinWindow（同类交互短窗不重复触发——调用级去重记账）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R1-C4",
+    "score_row": "R1 按压/选择",
+    "state_column": "background",
+    "anchor_level": "CALL",
+    "test_name": "R1 按压/选择 M-R1-C4 background：生命周期 paused → 已注册在航动画控制器立即停止，resumed → 恢复（「foreground→background 立即停止装饰」调用级锚）",
+    "result": "success",
+    "boundary_note": "装饰停止面；事件链可见性门 GAP_INTEGRATION（逐格引用 R3-C4 登记）"
+   },
+   {
+    "cell": "M-R1-C5",
+    "score_row": "R1 按压/选择",
+    "state_column": "unsupported",
+    "anchor_level": "CALL",
+    "test_name": "R1 按压/选择 M-R1-C5 unsupported：桌面平台能力探测 → platformUnsupported 静默保持文本，且**不蜂鸣替代**（0 触觉 0 声音通道调用）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R1-C6",
+    "score_row": "R1 按压/选择",
+    "state_column": "permission",
+    "anchor_level": "CALL+DU",
+    "test_name": "R1 按压/选择 M-R1-C6 permission 拒绝：框架已有系统触觉（nativeHandled）→ 不叠加双震；OS 系统触觉总开关尊重面 = DEVICE_UNVERIFIED（真机/系统层，不冒充已验证）",
+    "result": "success",
+    "boundary_note": "OS 系统触觉总开关/马达存在性=DEVICE_UNVERIFIED（真机/系统层）"
+   },
+   {
+    "cell": "M-R2-C1",
+    "score_row": "R2 提案出现",
+    "state_column": "enabled",
+    "anchor_level": "SEM",
+    "test_name": "R2 提案出现 M-R2-C1 enabled：预算 200ms ∈ [160,220]；词表封闭——提案不是 experience_event kind，绝不触发成功面（提案≠完成）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R2-C2",
+    "score_row": "R2 提案出现",
+    "state_column": "disabled",
+    "anchor_level": "SEM",
+    "test_name": "R2 提案出现 M-R2-C2 disabled：减少动态 → 静态分支直落终态（提案完整呈现，等价信息不丢失；零时长通路不存在）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R2-C3",
+    "score_row": "R2 提案出现",
+    "state_column": "replay",
+    "anchor_level": "SEM",
+    "test_name": "R2 提案出现 M-R2-C3 replay：恢复重放面（resume_available 重复投递）→ replaySuppressed，无任何声/触/庆祝位（提案型入场不重播）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R2-C4",
+    "score_row": "R2 提案出现",
+    "state_column": "background",
+    "anchor_level": "SEM+GAP",
+    "test_name": "R2 提案出现 M-R2-C4 background：提案组件族零 AnimationController/零 repeat（一次性 implicit 动画——后台无在航 ticker 可残留），装饰停止面引用 M-R1-C4 锚；事件链可见性门 GAP_INTEGRATION（登记不伪造）",
+    "result": "success",
+    "boundary_note": "组件族零控制器（结构）；可见性门 GAP_INTEGRATION"
+   },
+   {
+    "cell": "M-R2-C5",
+    "score_row": "R2 提案出现",
+    "state_column": "unsupported",
+    "anchor_level": "CALL",
+    "test_name": "R2 提案出现 M-R2-C5 unsupported：提案行声/触列 = 无（结构性零出口），任何平台能力下通道调用恒 0",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R2-C6",
+    "score_row": "R2 提案出现",
+    "state_column": "permission",
+    "anchor_level": "CALL",
+    "test_name": "R2 提案出现 M-R2-C6 permission 拒绝：提案渲染无任何授权前置（本地呈现零出口——结构上无「被拒面」），0 通道调用",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R3-C1",
+    "score_row": "R3 写入提交成功",
+    "state_column": "enabled",
+    "anchor_level": "CALL",
+    "test_name": "R3 写入提交成功 M-R3-C1 enabled：committed 回执 + 版本相符 → presentSuccess（成功徽章 + 成功声/触恰一次，调用级记账）",
+    "result": "success",
+    "boundary_note": "真扬声器听感=DEVICE_UNVERIFIED（通道记账只证调用）"
+   },
+   {
+    "cell": "M-R3-C2",
+    "score_row": "R3 写入提交成功",
+    "state_column": "disabled",
+    "anchor_level": "SEM+CALL",
+    "test_name": "R3 写入提交成功 M-R3-C2 disabled：静音+无触觉+减少动态 → 决策/文案/徽章与 C1 全同（任务同样可完成），物理通道 0 调用（全真实链：服务+派发器+平台通道）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R3-C3",
+    "score_row": "R3 写入提交成功",
+    "state_column": "replay",
+    "anchor_level": "SEM",
+    "test_name": "R3 写入提交成功 M-R3-C3 replay：同 event_id 重投 → replaySuppressed（不重复庆祝、不重放声/触；文案仍返回——文本状态仍恢复）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R3-C4",
+    "score_row": "R3 写入提交成功",
+    "state_column": "background",
+    "anchor_level": "CALL+GAP",
+    "test_name": "R3 写入提交成功 M-R3-C4 background：装饰停止面 = 生命周期暂停（M-R1-C4 锚引用）；事件链可见性门 = GAP_INTEGRATION（适配器 present() 无可见性入参、生产事件源未接线——S03-L5/FIX-569 登记面，本格不伪造 PASS）",
+    "result": "success",
+    "boundary_note": "适配器无可见性入参+生产事件源未接线（S03-L5/FIX-569）=GAP_INTEGRATION；装饰停止面（M-R1-C4）PASS"
+   },
+   {
+    "cell": "M-R3-C5",
+    "score_row": "R3 写入提交成功",
+    "state_column": "unsupported",
+    "anchor_level": "CALL",
+    "test_name": "R3 写入提交成功 M-R3-C5 unsupported：桌面平台 → success 触觉被能力门拦（0 震动），成功徽章/文案仍完整呈现（信息不丢）；未许可资产缺省拒绝（账本门）",
+    "result": "success",
+    "boundary_note": "Android API<30 notification 触觉平台无效果=平台策略（SDK 文档，本环境不可测）"
+   },
+   {
+    "cell": "M-R3-C6",
+    "score_row": "R3 写入提交成功",
+    "state_column": "permission",
+    "anchor_level": "CALL",
+    "test_name": "R3 写入提交成功 M-R3-C6 permission 拒绝：系统拒绝播放（诚实降级位）→ 0 声音且不蜂鸣；触觉不受降级影响（按偏好照发）；任务流无异常",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R4-C1",
+    "score_row": "R4 仅记忆已保存",
+    "state_column": "enabled",
+    "anchor_level": "SEM+CALL",
+    "test_name": "R4 仅记忆已保存 M-R4-C1 enabled：memory committed → presentHighlight（非成功面孔：无成功徽章/成功声/成功触），轻触为 selection 级",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R4-C2",
+    "score_row": "R4 仅记忆已保存",
+    "state_column": "disabled",
+    "anchor_level": "SEM+CALL",
+    "test_name": "R4 仅记忆已保存 M-R4-C2 disabled：静音+无触觉 → 决策/文案与 C1 全同，物理通道 0",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R4-C3",
+    "score_row": "R4 仅记忆已保存",
+    "state_column": "replay",
+    "anchor_level": "SEM",
+    "test_name": "R4 仅记忆已保存 M-R4-C3 replay：同 event_id → replaySuppressed，高亮文案仍恢复",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R4-C4",
+    "score_row": "R4 仅记忆已保存",
+    "state_column": "background",
+    "anchor_level": "SEM+GAP",
+    "test_name": "R4 仅记忆已保存 M-R4-C4 background：同 R3-C4——装饰停止面 PASS（锚引用），事件链可见性门 GAP_INTEGRATION（登记）",
+    "result": "success",
+    "boundary_note": "见 R3-C4 GAP 登记"
+   },
+   {
+    "cell": "M-R4-C5",
+    "score_row": "R4 仅记忆已保存",
+    "state_column": "unsupported",
+    "anchor_level": "CALL+SEM",
+    "test_name": "R4 仅记忆已保存 M-R4-C5 unsupported：桌面 → 轻触被能力门拦，高亮信息完整（语义级不变）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R4-C6",
+    "score_row": "R4 仅记忆已保存",
+    "state_column": "permission",
+    "anchor_level": "CALL",
+    "test_name": "R4 仅记忆已保存 M-R4-C6 permission 拒绝（无用户同意）：触觉偏好未开 → userPreferenceOff；高亮文本仍呈现（任何声音或动态关闭都不减少可理解信息）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R5-C1",
+    "score_row": "R5 证据已登记",
+    "state_column": "enabled",
+    "anchor_level": "SEM",
+    "test_name": "R5 证据已登记 M-R5-C1 enabled：中性呈现（无庆祝无声触）；印章预算 160ms；冻结文案表全表无「精通/已掌握」类词",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R5-C2",
+    "score_row": "R5 证据已登记",
+    "state_column": "disabled",
+    "anchor_level": "SEM",
+    "test_name": "R5 证据已登记 M-R5-C2 disabled：静音/减少动态 → 决策与文案全同（本行声/触本就缺省无——结构性零出口不随偏好变化）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R5-C3",
+    "score_row": "R5 证据已登记",
+    "state_column": "replay",
+    "anchor_level": "SEM",
+    "test_name": "R5 证据已登记 M-R5-C3 replay：重复投递 → replaySuppressed（印章不重播）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R5-C4",
+    "score_row": "R5 证据已登记",
+    "state_column": "background",
+    "anchor_level": "SEM+GAP",
+    "test_name": "R5 证据已登记 M-R5-C4 background：同 R3-C4（装饰停止面 PASS + 事件链可见性门 GAP_INTEGRATION 登记）",
+    "result": "success",
+    "boundary_note": "见 R3-C4 GAP 登记"
+   },
+   {
+    "cell": "M-R5-C5",
+    "score_row": "R5 证据已登记",
+    "state_column": "unsupported",
+    "anchor_level": "WIDGET+CALL",
+    "test_name": "R5 证据已登记 M-R5-C5 unsupported：证据印章在减少动态/桌面下全尺寸即时呈现（信息不丢），无任何声触出口",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R5-C6",
+    "score_row": "R5 证据已登记",
+    "state_column": "permission",
+    "anchor_level": "CALL",
+    "test_name": "R5 证据已登记 M-R5-C6 permission 拒绝：无授权 → 0 通道调用，中性文案完整",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R6-C1",
+    "score_row": "R6 独立检验通过",
+    "state_column": "enabled",
+    "anchor_level": "SEM+CALL",
+    "test_name": "R6 独立检验通过 M-R6-C1 enabled：goal 成功面孔（有回执）→ success 恰一次；里程碑预算 ≤650ms；「不等同一次点击」= E1 门（无回执的 success 形状被解析面拒收，绝不庆祝）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R6-C2",
+    "score_row": "R6 独立检验通过",
+    "state_column": "disabled",
+    "anchor_level": "SEM+CALL",
+    "test_name": "R6 独立检验通过 M-R6-C2 disabled：静音+无触觉 → 成功文案/徽章与 C1 全同（任务同样可完成），物理通道 0",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R6-C3",
+    "score_row": "R6 独立检验通过",
+    "state_column": "replay",
+    "anchor_level": "SEM",
+    "test_name": "R6 独立检验通过 M-R6-C3 replay：评测结果重投 → 抑制；新 event_id（真实新 commit）→ 放行（仅真实 commit 用 success 的双向锚）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R6-C4",
+    "score_row": "R6 独立检验通过",
+    "state_column": "background",
+    "anchor_level": "SEM+GAP",
+    "test_name": "R6 独立检验通过 M-R6-C4 background：同 R3-C4（装饰停止面 PASS + 可见性门 GAP_INTEGRATION 登记；重要 run 由服务器管理——客户端无 run 终止面）",
+    "result": "success",
+    "boundary_note": "重要 run 由服务器管理；见 R3-C4 GAP 登记"
+   },
+   {
+    "cell": "M-R6-C5",
+    "score_row": "R6 独立检验通过",
+    "state_column": "unsupported",
+    "anchor_level": "CALL+SEM",
+    "test_name": "R6 独立检验通过 M-R6-C5 unsupported：桌面 → success 触觉拦下，徽章语义仍在（语义级：成功信息经视觉/文本仍可达）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R6-C6",
+    "score_row": "R6 独立检验通过",
+    "state_column": "permission",
+    "anchor_level": "CALL",
+    "test_name": "R6 独立检验通过 M-R6-C6 permission 拒绝：降级静音 + 无同意 → 0 声音 0 触觉，成功文案完整（评测结论不因感官关闭而丢失）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R7-C1",
+    "score_row": "R7 冲突/未知/失败",
+    "state_column": "enabled",
+    "anchor_level": "SEM+CALL",
+    "test_name": "R7 冲突/未知/失败 M-R7-C1 enabled：terminal_failed → failed 徽章 + 警示触恰一次；version_conflict → conflict 徽章；未知（版本未对账）→ unknown 徽章 + 零声触（未知≠失败≠成功）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R7-C2",
+    "score_row": "R7 冲突/未知/失败",
+    "state_column": "disabled",
+    "anchor_level": "SEM+CALL",
+    "test_name": "R7 冲突/未知/失败 M-R7-C2 disabled：静音+无触觉 → 失败文案/徽章与 C1 全同（信息不独占于颜色/声音），物理通道 0",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R7-C3",
+    "score_row": "R7 冲突/未知/失败",
+    "state_column": "replay",
+    "anchor_level": "SEM",
+    "test_name": "R7 冲突/未知/失败 M-R7-C3 replay：失败事件重投 → 抑制（警示不重复——「单次失败只提示一次，不连锁蜂鸣」）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R7-C4",
+    "score_row": "R7 冲突/未知/失败",
+    "state_column": "background",
+    "anchor_level": "SEM+GAP",
+    "test_name": "R7 冲突/未知/失败 M-R7-C4 background：同 R3-C4（装饰停止面 PASS + 可见性门 GAP_INTEGRATION 登记）",
+    "result": "success",
+    "boundary_note": "见 R3-C4 GAP 登记"
+   },
+   {
+    "cell": "M-R7-C5",
+    "score_row": "R7 冲突/未知/失败",
+    "state_column": "unsupported",
+    "anchor_level": "CALL+SEM",
+    "test_name": "R7 冲突/未知/失败 M-R7-C5 unsupported：桌面 → 警示触被能力门拦且不蜂鸣替代（0 触觉0 声音），失败文本行仍在",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R7-C6",
+    "score_row": "R7 冲突/未知/失败",
+    "state_column": "permission",
+    "anchor_level": "CALL",
+    "test_name": "R7 冲突/未知/失败 M-R7-C6 permission 拒绝：无同意 → 警示触 userPreferenceOff；文本信息完整（失败可理解性不依赖触觉/声音）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R8-C1",
+    "score_row": "R8 深任务进行中",
+    "state_column": "enabled",
+    "anchor_level": "SEM",
+    "test_name": "R8 深任务进行中 M-R8-C1 enabled：progress_delta → 中性呈现（无庆祝无声触——结构性零出口）；阶段文案可见",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R8-C2",
+    "score_row": "R8 深任务进行中",
+    "state_column": "disabled",
+    "anchor_level": "SEM",
+    "test_name": "R8 深任务进行中 M-R8-C2 disabled：静音/减少动态 → 阶段文案全同（任务进行信息不依赖动效）",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R8-C3",
+    "score_row": "R8 深任务进行中",
+    "state_column": "replay",
+    "anchor_level": "SEM",
+    "test_name": "R8 深任务进行中 M-R8-C3 replay：进度事件重投 → 抑制（不重播进行中提示），文案仍返回",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R8-C4",
+    "score_row": "R8 深任务进行中",
+    "state_column": "background",
+    "anchor_level": "SEM+GAP",
+    "test_name": "R8 深任务进行中 M-R8-C4 background：深 run 继续由服务器管理（客户端只读呈现——run subject 恒中性、无庆祝），装饰停止面引用 M-R1-C4 锚",
+    "result": "success",
+    "boundary_note": "见 R3-C4 GAP 登记"
+   },
+   {
+    "cell": "M-R8-C5",
+    "score_row": "R8 深任务进行中",
+    "state_column": "unsupported",
+    "anchor_level": "SEM+CALL",
+    "test_name": "R8 深任务进行中 M-R8-C5 unsupported：桌面 → 结构性零声触（本行无出口），文案完整",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R8-C6",
+    "score_row": "R8 深任务进行中",
+    "state_column": "permission",
+    "anchor_level": "CALL",
+    "test_name": "R8 深任务进行中 M-R8-C6 permission 拒绝：无任何授权依赖面（零出口行），0 通道调用",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R9-C1",
+    "score_row": "R9 长期回归",
+    "state_column": "enabled",
+    "anchor_level": "CALL+SEM",
+    "test_name": "R9 长期回归 M-R9-C1 enabled：冷启动缺省 = 零自动播放（提示音缺省关/背景声缺省关/焦点态 IDLE）；恢复进入 resume_available → 中性呈现非庆祝",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R9-C2",
+    "score_row": "R9 长期回归",
+    "state_column": "disabled",
+    "anchor_level": "SEM",
+    "test_name": "R9 长期回归 M-R9-C2 disabled：减少动态 → 回归进入走静态档（预算表合规、无后台无限动画契约面），信息完整",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R9-C3",
+    "score_row": "R9 长期回归",
+    "state_column": "replay",
+    "anchor_level": "SEM",
+    "test_name": "R9 长期回归 M-R9-C3 replay：恢复重放重投 → 抑制（回归进入不重复庆祝），文案恢复",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R9-C4",
+    "score_row": "R9 长期回归",
+    "state_column": "background",
+    "anchor_level": "CALL",
+    "test_name": "R9 长期回归 M-R9-C4 background：STOPPED_BY_USER 后抢占结束不自续（音频焦点面 S02 语义复验）；装饰停止面 = M-R1-C4 生命周期锚；重要 run 由服务器管理（客户端无 run 终止面）",
+    "result": "success",
+    "boundary_note": "真实耳机拔出/来电 OS 事件源未接线=DEVICE_UNVERIFIED（S02-L2/L3）"
+   },
+   {
+    "cell": "M-R9-C5",
+    "score_row": "R9 长期回归",
+    "state_column": "unsupported",
+    "anchor_level": "CALL",
+    "test_name": "R9 长期回归 M-R9-C5 unsupported：桌面 → 零自动播放零触觉（回归进入静默），0 通道调用",
+    "result": "success",
+    "boundary_note": ""
+   },
+   {
+    "cell": "M-R9-C6",
+    "score_row": "R9 长期回归",
+    "state_column": "permission",
+    "anchor_level": "CALL",
+    "test_name": "R9 长期回归 M-R9-C6 permission 拒绝：未点播（缺省关）+ 降级位 → 长期回归进入零自动播放；缺省拒绝即「无用户同意不发声」的对偶",
+    "result": "success",
+    "boundary_note": ""
+   }
+  ]
+ },
+ "acceptance_mapping": {
+  "A1_静音/无触觉/减少动态任务同样可完成": "C2 列全行 9/9 PASS + 验收①聚合 3 用例（徽章语义两态同可达、文案表常量）",
+  "A2_replay不重播_仅真实commit用success": "C3 列全行 9/9 PASS + R6-C1 E1 反例（无回执 success 形状被解析面拒收）+ R6-C3 双向锚（同 id 抑制/新 id 放行）",
+  "A3_DEVICE_UNVERIFIED不写成舒适度已通过": "全部真机面只签调用级并在 boundary_note/limitations 显式标注 DEVICE_UNVERIFIED；无任何「触感/听感舒适已验证」表述"
+ }
+}
