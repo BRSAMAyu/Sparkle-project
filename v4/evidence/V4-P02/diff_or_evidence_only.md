@@ -68,3 +68,10 @@ C-07 cache versioning / E-05 source lifecycle）做对抗检验：**12 探针 12
 **FINDINGS_OPEN（1 中危 + 2 低危；验收②③ PASS、验收①部分报红）**——按 stop_conditions#1：
 发现如实上报不绕门；F1/F2/F3 的修复属后续实现卡工作（建议归口：F1/F2 记忆污染入口 provenance 门，
 F3 source lifecycle 缩略图擦除），本卡不越权代修、不降验收阈值。
+
+
+## 双审勘误附录（R1 160485dc + R2 602ee098，原文不动保 sha256 链）
+- CH-1：S-02 实 16 用例非 18（148=11+7+17+56+16+24+15+2 分解自洽）。
+- CH-2：defense_pins 11 vs 矩阵 10=P1.4 双钉；CH-3：screenshot 枚举串实测 6 处皆非持久化面；CH-4：证据实 8 件。
+- F3 计数精化：create_presigned_get_url 实 3 处调用方（全签主对象），缩略图零 GET 结论不变。
+- O-1 精化：reflection 亦不在 ALLOWED_EVIDENCE_TYPES，fallthrough 窗口亲测可顶链头（生产零调用方）——随 FIX-575 修复面钉注。
