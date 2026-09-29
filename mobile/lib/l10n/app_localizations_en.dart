@@ -1535,6 +1535,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get focusExitConfirmStep3 => 'Confirm exit';
 
   @override
+  String focusOutcomeActualMinutes(int minutes) {
+    return 'Focused $minutes min (actual)';
+  }
+
+  @override
+  String focusOutcomePlanMinutes(int minutes) {
+    return 'Planned: $minutes min';
+  }
+
+  @override
+  String get focusOutcomeHint =>
+      'Jot down one outcome, or skip — both are first-class.';
+
+  @override
+  String get focusOutcomeFieldLabel => 'Outcome of this session (optional)';
+
+  @override
+  String get focusOutcomeFieldHint =>
+      'One line is enough; leaving it empty means skip';
+
+  @override
+  String get focusOutcomeRecord => 'Save outcome';
+
+  @override
   String get streakTitle => 'Learning Streak';
 
   @override

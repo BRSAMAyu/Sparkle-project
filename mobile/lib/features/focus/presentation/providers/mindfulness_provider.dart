@@ -272,6 +272,16 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
 
   /// 停止正念模式
   Future<MindfulnessStopResult> stop() async {
+    // V4-U09 重复结算守卫：结算窗口（isLoggingSession）内的重入直接返回，
+    // 不产生第二条保存记录（退出双击/弹层确认与返回键并发、重开恢复后
+    // 重复 stop 等路径都不双结算）。结算成功后 state 整体清空、失败后
+    // isLoggingSession 复位，正常重试路径不受影响。
+    if (state.isLoggingSession) {
+      return const MindfulnessStopResult(
+        savedLocally: false,
+        syncedRemotely: false,
+      );
+    }
     if (!state.isActive || state.startTime == null) {
       _timer?.cancel();
       _timer = null;

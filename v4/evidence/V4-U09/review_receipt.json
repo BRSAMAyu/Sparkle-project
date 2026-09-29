@@ -1,0 +1,36 @@
+{
+  "card": "V4-U09",
+  "risk": "normal",
+  "independent_reviewers_required": 1,
+  "implementation_state": "REVIEW_READY",
+  "evidence_verdict": "NOT_RUN",
+  "status": "PENDING",
+  "reviewer_instructions": "以卡面三条验收为准（必须可失败，突变复放见 test_results.json mutation_replay）：①中断计时不假保存；估计和实际分开（M2：把 mindfulness_provider.dart 结算 durationMinutes 换回 currentTask?.estimatedMinutes 应 +4 -1）②切后台/重开不重置或重复结算（M1：摘除 stop() 开头 isLoggingSession 守卫应 +4 -1）③无声音动效仍完整可用，失败不显示庆祝（M3：砍掉 _handleExit 的 !result.savedLocally 失败分支应 +4 -1；减动效正例看 transientCallbackCount==0 断言）。红线清单见 diff_or_evidence_only.md §2（RF-06 三冲突面/backend/proto/路由零触碰、不造第二权威、ambient 只接状态零新音频机制）。 objective 附加面：结束可记录成果或跳过不强制长反思——亲验 reflection_dialog.dart 已删、新 sheet barrierDismissible=true 且留空记录=跳过。",
+  "pre_registered_challenges": [
+    {
+      "id": "CH-1",
+      "challenge": "「中断」的诚实状态口径：基线 stop() 保存的 status 由 interruptionCount>3 启发式决定 'interrupted'/'completed'，本卡按「不重写已满足行为」保守侧未动（interruptionCount 原样随记录上报、无伪造完成声明、中断路径零写入已钉死）。请审查者裁决：会话被多次打断后用户主动退出仍计 'completed' 是否需要更诚实的状态语义（如显式 ended_by_user/interrupted 终态枚举）——如是，属 backend status 枚举扩展（契约为单一 owner），本卡整改还是另卡。"
+    },
+    {
+      "id": "CH-2",
+      "challenge": "失败路径的退出语义：保存失败按基线行为 pop 返回来源页（诚实错误 + R2-03 快照保留可重开续结），未改为停留原地重试——理由是避免服务端持续不可用时把用户困在专注页（PopScope 会再次触发 stop 循环）。请审查者裁决：失败即退出是否丢失「当场重试」的用户预期，是否需要失败面给「留在页内/回首页」双选（涉及新 UI 面，本卡保守侧未加）。"
+    },
+    {
+      "id": "CH-3",
+      "challenge": "重复结算守卫的覆盖边界：守卫只在结算窗口（isLoggingSession=true，即 saveSession 在飞）合流；两次**顺序** stop（第一次成功 teardown 后第二次）走 isActive=false 空分支天然不重写。但「第一次成功落账后、用户在同一分钟内再次进入并再次 stop」会形成两条真实记录（两次独立会话结算）——provider 状态已清空无从判重。请审查者裁决：这是两个合法会话还是需要 entry 级幂等（如 startTime 去重）——后者需 repository 查询面，本卡未触碰。"
+    },
+    {
+      "id": "CH-4",
+      "challenge": "intervention acted 回执的时点变化：基线在 elapsedMinutes>0 即上报 acted（即使保存失败），本卡改为仅 savedLocally==true（或有 masteryUpdates）后上报——与 F03「无 committed 回执不触发成功」对齐。请审查者复验：是否存在依赖「失败也上报 acted」的下游统计/干预闭环（intervention_action_service 消费面），如有，本改动是否构成其数据面行为变化需告知 owner。"
+    },
+    {
+      "id": "CH-5",
+      "challenge": "成果面的创建失败判定：createFragment 失败以返回 null（repository 内部吞异常置 cognitiveProvider.error）或抛异常双路径呈现同一人话错误；「跳过始终可用」在 saving 态下按钮禁用（loading）——极端情况下记录请求悬挂超过网络超时前，用户只能等 loading 不能跳过。请审查者裁决是否需要 saving 态下保留跳过逃生门（一刀 UI 行为，本卡按「防双击重复提交」保守侧禁用）。"
+    },
+    {
+      "id": "CH-6",
+      "challenge": "证据 harness 强度：u09_evidence_test 直接挂 MindfulnessModeScreen（override 七 provider + 真实 MindfulnessNotifier + 假 saveSession/cognitive 仓储 + GoRouter 双路由），断言（结束面文本/双按钮/结算参数/语义 dump）未被 harness 短路；截图因 Ahem 字体仅证结构非美观（Q05 归口）。请审查者对照 diff 确认交互闭环（真实 tap 路径）与生命周期场景（并发 stop、失败重开重试）的证据等级是否足以支撑三条验收。"
+    }
+  ],
+  "integration_reverify": "合并后需在集成 SHA 复跑：flutter test test/features/focus/（+19）+ flutter analyze --no-pub lib test（零 issue）+ L10N-REGEN-PARITY/i18n-coverage/N9/SPACING 守卫 + 双侧 gen-l10n 再生解 arb 碰撞（本卡与 main 新增键均为纯增量）；mobile 全量 3087 passed 基线见 test_results.json"
+}

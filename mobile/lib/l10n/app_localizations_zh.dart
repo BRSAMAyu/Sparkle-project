@@ -1495,6 +1495,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get focusExitConfirmStep3 => '确定退出';
 
   @override
+  String focusOutcomeActualMinutes(int minutes) {
+    return '实际专注 $minutes 分钟';
+  }
+
+  @override
+  String focusOutcomePlanMinutes(int minutes) {
+    return '计划 $minutes 分钟';
+  }
+
+  @override
+  String get focusOutcomeHint => '记一句成果，或直接跳过——两条路都成立。';
+
+  @override
+  String get focusOutcomeFieldLabel => '这次专注的成果（可选）';
+
+  @override
+  String get focusOutcomeFieldHint => '一句话即可；留空视同跳过';
+
+  @override
+  String get focusOutcomeRecord => '记录成果';
+
+  @override
   String get streakTitle => '连续学习';
 
   @override

@@ -1,0 +1,71 @@
+{
+  "card": "V4-U09",
+  "generated_at": "2026-09-29T08:20:00+08:00",
+  "summary": {
+    "total_suites": "mobile 全量 flutter test",
+    "passed": 3087,
+    "skipped": 23,
+    "failed": 0,
+    "skipped_note": "23 skip 为既有豁免集（含 widget_bench 负载项、focus_agent_sheet 预测桩复杂度 skip），非本卡引入"
+  },
+  "new_tests": {
+    "u09_focus_settlement_test.dart": {
+      "count": 5,
+      "covers": "面1（中断不假保存/估时不顶替实测）+ 面2（重开不重置/不重复结算/失败重试单结算）",
+      "result": "5 passed"
+    },
+    "u09_focus_outcome_flow_test.dart": {
+      "count": 5,
+      "covers": "结束面双一等路径/实测估时分列/跳过零写入；留空记录=跳过（不强制反思钉）；记录成果溯源头；失败不庆祝钉+重试单结算生命周期；减动效+声音全关完整可用（transientCallbackCount==0）",
+      "result": "5 passed"
+    },
+    "u09_evidence_test.dart": {
+      "count": 1,
+      "covers": "结束面真实渲染断言 + 截图/语义 dump 采集（U09_EVIDENCE_DIR 门控）",
+      "result": "1 passed"
+    }
+  },
+  "mutation_replay": [
+    {
+      "id": "M1",
+      "mutation": "摘除 mindfulness_provider.stop() 的 isLoggingSession 重复结算守卫",
+      "command": "flutter test test/features/focus/presentation/providers/u09_focus_settlement_test.dart",
+      "expected": "+4 -1（面2 反例红）",
+      "observed": "+4 -1 Some tests failed",
+      "restored": "+5 All tests passed"
+    },
+    {
+      "id": "M2",
+      "mutation": "durationMinutes 改回 snapshot.currentTask?.estimatedMinutes 顶替实测",
+      "command": "flutter test test/features/focus/presentation/providers/u09_focus_settlement_test.dart",
+      "expected": "+4 -1（面1 正例红）",
+      "observed": "+4 -1 Some tests failed",
+      "restored": "+5 All tests passed"
+    },
+    {
+      "id": "M3",
+      "mutation": "砍掉 _handleExit 的保存失败分支（失败也渲染成果面=失败庆祝）",
+      "command": "flutter test test/features/focus/presentation/screens/u09_focus_outcome_flow_test.dart",
+      "expected": "+4 -1（失败不庆祝钉红）",
+      "observed": "+4 -1 Some tests failed",
+      "restored": "focus 套件 +19 All tests passed"
+    }
+  ],
+  "regression": {
+    "focus_suite": "+19 All tests passed（含既有 mindfulness_provider 5 + R2-03 2 + agent_sheet 1 skip）",
+    "mobile_full": "+3087 ~23 All tests passed（0 failed）",
+    "analyze": "flutter analyze --no-pub lib test → No issues found!",
+    "guards": [
+      "L10N-REGEN-PARITY OK: 10195 template keys == abstract members; zh/en subclasses complete",
+      "[i18n-coverage] PASS",
+      "[n9-raw-exception-leak] PASS（过程修正：新增 sheet 的 catch 原始异常改人话模板+debugPrint）",
+      "[spacing-rhythm-ratchet] PASS（过程修正：spacing6 半步 → 4pt 基格 spacing4）",
+      "bash scripts/run_all_rule_guards.sh 最终运行全 PASS（AQ/BG 初跑红为 worktree 缺 gitignored proto 生成物所致，自主检出自同源复制后 PASS——非代码回归）"
+    ]
+  },
+  "honesty_notes": [
+    "「2 秒」「59 项全绿」类声明不适用：本卡全部数字来自上述可复跑命令",
+    "生命周期场景为 provider/widget 测试级模拟（SharedPreferences 快照+并发 stop），非真机杀进程实拍——真机级证据归 Q07 长期接续回归（在航）",
+    "音/触只测到调用边界（playAmbient/pauseAmbient/resumeAmbient 的状态消费），真扬声器行为未验证（S02 在航）"
+  ]
+}

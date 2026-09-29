@@ -2912,6 +2912,42 @@ abstract class AppLocalizations {
   /// **'确定退出'**
   String get focusExitConfirmStep3;
 
+  /// V4-U09 结束面主行：只报实测分钟，估时不得顶替（U08 actualMinutes 同口径）
+  ///
+  /// In zh, this message translates to:
+  /// **'实际专注 {minutes} 分钟'**
+  String focusOutcomeActualMinutes(int minutes);
+
+  /// V4-U09 结束面注脚：任务估时仅作对照，与实测分列
+  ///
+  /// In zh, this message translates to:
+  /// **'计划 {minutes} 分钟'**
+  String focusOutcomePlanMinutes(int minutes);
+
+  /// No description provided for @focusOutcomeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'记一句成果，或直接跳过——两条路都成立。'**
+  String get focusOutcomeHint;
+
+  /// No description provided for @focusOutcomeFieldLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次专注的成果（可选）'**
+  String get focusOutcomeFieldLabel;
+
+  /// No description provided for @focusOutcomeFieldHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'一句话即可；留空视同跳过'**
+  String get focusOutcomeFieldHint;
+
+  /// No description provided for @focusOutcomeRecord.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录成果'**
+  String get focusOutcomeRecord;
+
   /// No description provided for @streakTitle.
   ///
   /// In zh, this message translates to:
