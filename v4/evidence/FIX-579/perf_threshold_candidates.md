@@ -39,3 +39,5 @@ CI 面为 `.github/workflows/ci.yml` 的 `flutter test --coverage`（默认全�
   其余 Stopwatch 用途：仅打印/统计，无阈值断言
 - `semantic_motion_s01_test.dart` H 组 `_frameThresholdUs`（33334μs）：同文件但未证 flaky，
   本卡零触碰（同文件其余 22 测 CI50/CI52 rerun 全绿）
+
+- 补登（F579R1 C3）：`mobile/test/performance/widget_bench_test.dart:110` GalaxyScreen build `<100ms` 裸绝对阈值、无 env 开关、galaxy 家族——同模式观察候选，未证 flaky 不修。
