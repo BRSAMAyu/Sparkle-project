@@ -1407,7 +1407,7 @@ Future<void> main() async {
             await shot('$_kRun/$_kLeg/10b-task-list-with-row.png');
             await dumpTexts(tester, 'task-list-after-create');
             recordStep('task_created_via_ui', rowVisible,
-                'task "=$_kTaskTitle" via list CTA form; row visible=$rowVisible');
+                'task "$_kTaskTitle" via list CTA form; row visible=$rowVisible');
             if (rowVisible) {
               final row = find.textContaining(_kTaskTitle);
               try {
@@ -1749,33 +1749,64 @@ Future<void> main() async {
       );
       recordStep('hybrid_entry', hybridEntry, 'entry tapped=$hybridEntry');
       if (hybridEntry) {
-        // sheet 加载（备料/judgment 界面出现）
-        final sheetReady = await waitUntil(
-          tester,
-          () => textAny(['一起推进：备料 · 你研判 · 交付']) != null ||
-              find
-                  .byKey(const ValueKey('hybrid-journey-ready'))
-                  .evaluate()
-                  .isNotEmpty,
-          timeout: const Duration(seconds: 30),
-        );
-        await safeSettle(tester);
-        await shot('$_kRun/$_kLeg/21-hybrid-sheet.png');
-        await dumpTexts(tester, 'hybrid-open');
-        recordStep('hybrid_sheet_open', sheetReady, 'sheetVisible=$sheetReady');
-
-        // 备料→你研判：等 judgment 阶段 UI（选择来源+就按这些来）
-        final judgmentReady = await waitUntil(
-          tester,
-          () => textAny(['就按这些来']) != null,
-          timeout: const Duration(seconds: 240),
-        );
+        // 备料→你研判：等 judgment 阶段 UI（选择来源+就按这些来）。
+        // r5 实证：POST /journey/hybrid 服务端 prep（真实检索+假设答案 LLM）
+        // 可超过客户端 30s receiveTimeout → 客户端 abort → sheet 停在 prep。
+        // 真实用户行为 = 关 sheet 稍候重进（服务端幂等回放：run 已存在则
+        // 原样回放状态）；3 次进入机会，每次给足服务端时间。
+        var judgmentReady = false;
+        var hybridAttempts = 0;
+        for (var attempt = 0; attempt < 3 && !judgmentReady; attempt++) {
+          hybridAttempts++;
+          if (attempt > 0) {
+            // 关 sheet（modal barrier 点按）→ 真实等待 → 重新进入
+            await tester.tapAt(const Offset(30, 60));
+            await tester.pump(const Duration(milliseconds: 600));
+            await safeSettle(tester, const Duration(seconds: 4));
+            final waited = await waitUntil(
+              tester,
+              () => false,
+              timeout: const Duration(seconds: 45),
+            );
+            // ignore: avoid_print
+            print('Q01_HYBRID_RETRY attempt=$hybridAttempts waited=$waited');
+            final reEntry = await tapWhenVisible(
+              tester,
+              () => textAny(['和 Sparkle 一起推进', '继续一起推进']),
+              timeout: const Duration(seconds: 15),
+            );
+            if (!reEntry) break;
+          }
+          final sheetReady = await waitUntil(
+            tester,
+            () => textAny(['一起推进：备料 · 你研判 · 交付']) != null ||
+                find
+                    .byKey(const ValueKey('hybrid-journey-ready'))
+                    .evaluate()
+                    .isNotEmpty,
+            timeout: const Duration(seconds: 30),
+          );
+          if (attempt == 0) {
+            await safeSettle(tester);
+            await shot('$_kRun/$_kLeg/21-hybrid-sheet.png');
+            await dumpTexts(tester, 'hybrid-open');
+            recordStep('hybrid_sheet_open', sheetReady, 'sheetVisible=$sheetReady');
+          }
+          if (!sheetReady) break;
+          judgmentReady = await waitUntil(
+            tester,
+            () => textAny(['就按这些来']) != null,
+            timeout: const Duration(seconds: 150),
+          );
+        }
         await safeSettle(tester);
         await shot('$_kRun/$_kLeg/22-hybrid-judgment.png');
         await dumpTexts(tester, 'hybrid-judgment');
         await dumpSemantics('hybrid-judgment');
         recordStep('hybrid_judgment_stage', judgmentReady,
-            'prep done; judgment stage reachable=$judgmentReady');
+            'prep done; judgment stage reachable=$judgmentReady '
+            '(entries=$hybridAttempts; r5: server prep > client 30s '
+            'receiveTimeout, idempotent re-entry retried)');
 
         if (judgmentReady) {
           // 选来源（至少一项）：点第一个 checkbox/选择行
