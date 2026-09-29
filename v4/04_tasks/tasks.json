@@ -3342,9 +3342,9 @@
         "V4-D02",
         "V4-F05"
       ],
-      "status": "PENDING",
-      "implementation_state": "NOT_STARTED",
-      "evidence_verdict": "NOT_RUN",
+      "status": "done",
+      "implementation_state": "DONE_REVIEWED",
+      "evidence_verdict": "FAIL",
       "kind": "verification",
       "required_locks": [
         "qa-vertical"
@@ -3390,7 +3390,13 @@
         "连续三轮未改善停止无目标修补，写反例归因再裁决；不降验收阈值"
       ],
       "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
-      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。"
+      "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
+      "relay": {
+        "closed_at": "2026-09-30T39:40",
+        "verdict_detail": "L3 真栈真模型 PASS（attempt10 16 步）；Hybrid/回执 FAIL（FIX-583 挂死 5 POST/4 用户+FIX-584 投影缺口）；value=FAIL 如实记录=协议正确产出",
+        "closure_chain": "impl f1c58190→12b3bdba + driver v3-v3.2/r6-r8 证据 → R1 09538940 PASS_WITH_CHALLENGES → 勘误 e23d9116（三 MEDIUM/两 LOW 更正采纳+r9 探针入账）",
+        "r1_key": "主证三向一致/僵尸锁链活栈复现/token 13736 活库逐位复算/三证对齐抽 2 逐字/挑战①-⑤ 裁决均支持实现侧"
+      }
     },
     {
       "id": "V4-Q02",
