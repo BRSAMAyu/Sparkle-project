@@ -1,0 +1,56 @@
+{
+  "card": "V3-FIX-570",
+  "date": "2026-09-28",
+  "branch": "fix/v4/f570-deeplink-pin-scene-rollback",
+  "base_sha": "0949da604e14f2f6ab0897b591955464d4d65fb5",
+  "flutter": "3.41.3 stable (darwin arm64)",
+  "new_tests": {
+    "total": 3,
+    "breakdown": [
+      {
+        "file": "mobile/test/features/task/task_routes_fix570_gate_wiring_test.dart",
+        "count": 1,
+        "defect": "①",
+        "cases": [
+          "FIX-570①接线钉：/tasks/:id/execute 路由产物经深链闸，闸消费 :id 与 origin/intervention_id（删 gate 调用必红）"
+        ]
+      },
+      {
+        "file": "mobile/test/core/services/sensory_feedback_service_fix570_test.dart",
+        "count": 2,
+        "defect": "②",
+        "cases": [
+          "反·开关关闭时点播被门拒：运行场景态与持久化零残留",
+          "反·门拒→重开开关→同场景显式重放：不被同场景早退吞掉"
+        ]
+      }
+    ]
+  },
+  "runs": [
+    { "name": "①wiring 新测单跑", "result": "+1: All tests passed!", "exit_code": 0 },
+    { "name": "②scene 新测单跑（修复前基线同跑过一次，HEAD 语义绿）", "result": "+2: All tests passed!", "exit_code": 0 },
+    { "name": "mutation ①（删 gate 调用）→ wiring 测", "result": "+0 -1 Some tests failed（Found 0 widgets with type TaskExecutionDeepLinkGate）", "exit_code": 1 },
+    { "name": "mutation ②（写入挪回门前）→ scene 测", "result": "+0 -2 Some tests failed（钉1 none→rain 残留；钉2 重放被吞 Expected true/Actual false）", "exit_code": 1 },
+    { "name": "mutation ①还原后复绿", "result": "+1: All tests passed!", "exit_code": 0 },
+    { "name": "mutation ②还原后复绿", "result": "+2: All tests passed!", "exit_code": 0 },
+    { "name": "回归批（14 文件）", "result": "+109: All tests passed!", "exit_code": 0 }
+  ],
+  "regression_batch_files": [
+    "test/core/services/sensory_feedback_service_fix570_test.dart",
+    "test/core/services/sensory_feedback_service_u14_test.dart",
+    "test/core/services/sensory_feedback_service_s02_test.dart",
+    "test/core/services/sensory_feedback_service_test.dart",
+    "test/core/services/sensory_feedback_service_p2_10_test.dart",
+    "test/core/services/audio_focus_controller_s02_test.dart",
+    "test/core/services/audio_asset_gate_s02_test.dart",
+    "test/widget/unified_settings_ambient_toggle_test.dart",
+    "test/widget/unified_settings_bgm_test.dart",
+    "test/widget/unified_settings_sfx_volume_test.dart",
+    "test/features/task/presentation/screens/task_execution_deep_link_gate_test.dart",
+    "test/features/task/task_routes_fix570_gate_wiring_test.dart",
+    "test/features/chat/presentation/providers/voice_input_provider_u14_test.dart",
+    "test/widget/full_route_coverage_test.dart"
+  ],
+  "analyze": { "cmd": "flutter analyze --no-pub", "result": "No issues found! (ran in 6.5s)", "exit_code": 0 },
+  "mutation_cleanup": "两次 mutation 均以 git checkout -- 还原；git status 复核仅余两个新增测试文件（untracked），零生产 diff"
+}

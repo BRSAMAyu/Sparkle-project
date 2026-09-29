@@ -1,0 +1,87 @@
+{
+  "card": "V3-FIX-570",
+  "task": "U14 遗留双缺陷：①深链闸路由接线（task_routes→gate）无测试钉；②playAmbient 门判定状态残留（CH-2，基线同构 release-only）",
+  "agent": "wtF570",
+  "branch": "fix/v4/f570-deeplink-pin-scene-rollback",
+  "base_sha": "0949da604e14f2f6ab0897b591955464d4d65fb5",
+  "generated_at_local": "2026-09-28",
+  "kind": "fix",
+  "product_code_changed": false,
+  "environment": {
+    "worktree": "wtF570（git worktree add ../wtF570 -b fix/v4/f570-deeplink-pin-scene-rollback main，exit 0）",
+    "host": "darwin arm64",
+    "flutter": "3.41.3 stable",
+    "note": "worktree 缺 gitignored mobile/lib/gen（protobuf 生成物），从主检出 cp -R 复制（不入库）；flutter pub get --offline exit 0"
+  },
+
+  "adjudication": {
+    "defect_1": "CH-1 成立：task_routes.dart:94（基线 0949da60 行号）TaskExecutionDeepLinkGate 接线无任何路由级测试锚——task_execution_deep_link_gate_test.dart 直泵闸 widget 不走路由表；full_route_coverage_test.dart 只查路径存在。把接线还原（删 gate 调用）无测试变红。",
+    "defect_2_verdict": "CH-2 的「门判定前写 _currentScene」在 main HEAD 已被 S02 一审 D2 整改（ef0901a5，2026-09-29，先于本卡派发提交 0949da60 入 main）结构性闭合：playAmbient 的 _currentScene 写入与 _saveAmbientScene 持久化已移到全部门之后（资产门 :600 → U14 ambient 门 :611 → 焦点会话获批 :619-623 → 提交点 :624-625）——「门拒零残留」以更强形式（先不写，无需回滚）成立，台账修法「门拒绝时回滚 previousScene」的语义已满足且无死代码可加。",
+    "defect_2_gap": "缺口与 ① 同形：无任何可失败测试钉 pin 该不变量——把写入挪回门前（CH-2/U14 形态回归）此前无测试变红。本卡交付物即两枚反演钉（零残留 + 重放可达）+ mutation 红证。",
+    "not_in_scope": "release-only 可达性本身（_ambientPlayer 仅由 _playSound 懒 init 的生产形态）是 S02/U14 既有事实，本卡不改 init 策略；scene_audio_scope/focus_timer 消费面零触碰。"
+  },
+
+  "changed_files": [
+    "mobile/test/features/task/task_routes_fix570_gate_wiring_test.dart（新增 1 例：路由级接线钉，①）",
+    "mobile/test/core/services/sensory_feedback_service_fix570_test.dart（新增 2 例：门拒零残留钉 + 同场景重放可达钉，②）",
+    "v3/06_agent_fleet/DYNAMIC_ISSUES.md（V3-FIX-570 行 OPEN → FIXED，随 state 提交）",
+    "v4/evidence/FIX-570/（五件套）"
+  ],
+
+  "commands": [
+    {
+      "purpose": "建 worktree",
+      "cmd": "git worktree add ../wtF570 -b fix/v4/f570-deeplink-pin-scene-rollback main",
+      "exit_code": 0,
+      "evidence": "HEAD=0949da604e14f2f6ab0897b591955464d4d65fb5（main 最新，含 F563/F570 补派提交）"
+    },
+    {
+      "purpose": "worktree 依赖装载（gitignored 生成物 + pub get）",
+      "cmd": "cp -R Sparkle-project/mobile/lib/gen wtF570/mobile/lib/gen && cd mobile && flutter pub get --offline",
+      "exit_code": 0,
+      "evidence": "Got dependencies!（protobuf 生成物不入库，与 FIX-562 backend/app/gen 同先例）"
+    },
+    {
+      "purpose": "①接线钉（新）单跑：正常路由过闸",
+      "cmd": "flutter test test/features/task/task_routes_fix570_gate_wiring_test.dart --no-pub",
+      "exit_code": 0,
+      "evidence": "+1: All tests passed!——路由表真实装配 GoRouter 落 /tasks/:id/execute，闸上树且携带 :id/origin/intervention_id，仓储确证 404 落已删除面"
+    },
+    {
+      "purpose": "②门拒状态钉（新）单跑：HEAD 语义绿",
+      "cmd": "flutter test test/core/services/sensory_feedback_service_fix570_test.dart --no-pub",
+      "exit_code": 0,
+      "evidence": "+2: All tests passed!——门拒零残留 + 重开开关后同场景显式重放真实可达（S02 平台假体逐调用记账）"
+    },
+    {
+      "purpose": "mutation ①自验（反证可失败）：临时还原 U14 前接线（删 gate 调用，直连 TaskExecutionScreen）",
+      "cmd": "python3 inline-mutation（task_routes.dart gate 块→TaskExecutionScreen(origin,interventionId)，import 同步）&& flutter test test/features/task/task_routes_fix570_gate_wiring_test.dart --no-pub",
+      "exit_code": 1,
+      "evidence": "+0 -1 Some tests failed——『Expected: exactly one matching candidate / Actual: Found 0 widgets with type \"TaskExecutionDeepLinkGate\"』（wiring_test.dart:107）。随后 git checkout -- 还原，git status 复核零生产 diff"
+    },
+    {
+      "purpose": "mutation ②自验（反证可失败）：临时把 _currentScene 写入+_saveAmbientScene 挪回 ambient 门之前（CH-2/U14 形态）",
+      "cmd": "python3 inline-mutation（sensory_feedback_service.dart 提交点两行移至 previousScene 捕获后）&& flutter test test/core/services/sensory_feedback_service_fix570_test.dart --no-pub",
+      "exit_code": 1,
+      "evidence": "+0 -2 Some tests failed——钉1『Expected: AmbientScene.none / Actual: AmbientScene.rain / 门拒调用不得留下 _currentScene 残留（CH-2）』（:149）+ 钉2『Expected: true / Actual: false / 门拒后同场景显式重放必须真实可达（被早退吞掉即 CH-2 回归）』（:179，CH-2 症状逐字复现）。随后 git checkout -- 还原，git status 复核零生产 diff"
+    },
+    {
+      "purpose": "mutation 还原后复绿确认（②钉）",
+      "cmd": "flutter test test/core/services/sensory_feedback_service_fix570_test.dart --no-pub",
+      "exit_code": 0,
+      "evidence": "+2: All tests passed!"
+    },
+    {
+      "purpose": "回归批：U14 既有套件 + ambient/scene 相邻套件 + 路由覆盖（14 文件）",
+      "cmd": "flutter test test/core/services/sensory_feedback_service_{fix570,u14,s02,p2_10}_test.dart test/core/services/sensory_feedback_service_test.dart test/core/services/audio_focus_controller_s02_test.dart test/core/services/audio_asset_gate_s02_test.dart test/widget/unified_settings_{ambient_toggle,bgm,sfx_volume}_test.dart test/features/task/presentation/screens/task_execution_deep_link_gate_test.dart test/features/task/task_routes_fix570_gate_wiring_test.dart test/features/chat/presentation/providers/voice_input_provider_u14_test.dart test/widget/full_route_coverage_test.dart --no-pub",
+      "exit_code": 0,
+      "evidence": "+109: All tests passed!（含 U14 既有 5+2+3 闸/偏好/voice 全绿——新钉零误伤既有语义）"
+    },
+    {
+      "purpose": "静态检查零 issue",
+      "cmd": "flutter analyze --no-pub",
+      "exit_code": 0,
+      "evidence": "No issues found! (ran in 6.5s)"
+    }
+  ]
+}
