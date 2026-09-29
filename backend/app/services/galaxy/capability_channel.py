@@ -108,6 +108,16 @@ NON_TASK_SOURCE_CHANNELS: dict[str, CapabilityChannel] = {
 #: 行为观察（练习证明），不是能力检验。
 _HUMAN_VERIFICATION_EVIDENCE_SOURCES: frozenset[str] = frozenset({"quiz_feedback"})
 
+#: FIX-562 · API 面客户端自报 outcome 的能力通道（``POST /nodes/{node_id}/spark``）。
+#: 客户端主张的 quiz/task_outcome 在该面无 D-02 账本条目、无 quiz 物化、无服务端
+#: 核验——真相面恒为 :attr:`TruthClass.SELF_REPORTED`，按封闭词表
+#: :data:`TRUTH_CLASS_CHANNELS` 恒归 PRACTICED（参与足迹可见、永不推进掌握度
+#: 后验）。等价引用封闭词表（单一事实源，词表漂移时本面随动）；路由侧另设
+#: fail-closed 拒绝门（判 VERIFIED 即 422），保证即使词表被改，该面也永不融合。
+#: 独立检验的唯一入口是服务端核验面：X-08 quiz 物化 → D-02 账本 → G-02 吸收器
+#: ``classify_outcome_channel`` 通道分类（VERIFIED 才融合）。
+CLIENT_SELF_REPORT_CHANNEL: CapabilityChannel = TRUTH_CLASS_CHANNELS[TruthClass.SELF_REPORTED]
+
 #: Agent receipt 附着证据源（X-08 run receipt → ``agent_run://`` 引用）。
 _AGENT_RECEIPT_EVIDENCE_SOURCE = "agent_run_receipt"
 
@@ -232,6 +242,7 @@ def node_capability_channel(*, verified_evidence_count: int | None, unlocked: bo
 
 __all__ = [
     "CAPABILITY_CHANNEL_SCHEMA_VERSION",
+    "CLIENT_SELF_REPORT_CHANNEL",
     "CapabilityChannel",
     "NODE_VERIFIED_EVIDENCE_REASONS",
     "NON_TASK_SOURCE_CHANNELS",
