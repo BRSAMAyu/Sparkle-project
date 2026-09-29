@@ -173,19 +173,26 @@ def test_bisect_real_keys_pass_through():
 
 @pytest.mark.asyncio
 async def test_cleanup_synthetic_estimate_detected_and_relabeled(_spawn_inline, monkeypatch):
-    """FIX545 产生面端到端：无模型键 + 合成估算 token>0 → 检出计数 + 改标降级计量。
+    """FIX545 产生面端到端：无模型键 + 合成估算 token>0 → 改记 unattributed_model 正确桶。
 
-    修前形状（B06 §4.5）：判定先于估算，产出 no_generation_model + token>0 的
-    自相矛盾行；修后该行被检出（计数器递增）并以显式标签落账，cost=None
-    （未核价不填 0 也不按 gpt-4 错价），usage_source=estimated 不冒充实测。
+    V4-FIX-573（Q04 红项①）收口：no_generation 家族行禁止携带 token——真实
+    生成发生过而模型键未回填的形态本质是「有真实用量但无模型归因」，改记
+    unattributed_model（Q04 L2-r1/r3/r4-08 三行 216/216/277 tok 错挂
+    no_generation_model_estimated 的产生路径就此终结）。FIX545 检出器
+    （bisect + 计数器）语义不变，保留为回归防线：本路径改挂后不再触发。
+    cost=None（未核价不填 0 也不按 gpt-4 错价），usage_source=estimated
+    不冒充实测——成本可见性与降级计量诚实性与 I10 原契约一致。
     """
     surface_before = _counter_value(
         "sparkle_metering_no_generation_with_tokens_total", {"surface": "cleanup"}
     )
+    reattributed_before = _counter_value(
+        "sparkle_metering_no_generation_reattributed_total", {"surface": "cleanup"}
+    )
     tracker = _CaptureTracker()
     stub = _CleanupStub(tracker)
     # 无 generation_model_key/model_used → resolve 产 no_generation_model；
-    # messages 非空 → 合成估算产 token>0 → FIX545 形状。
+    # messages 非空 → 合成估算产 token>0 → Q04 红项①形状。
     final_state = _final_state({"chat_mode": "standard"}, assistant="这是一段兜底回答内容。", user="用户问题")
 
     await ResponseBuilderMixin._cleanup(
@@ -205,14 +212,17 @@ async def test_cleanup_synthetic_estimate_detected_and_relabeled(_spawn_inline, 
 
     assert len(tracker.recorded) == 1
     row = tracker.recorded[0]
-    assert row["model"] == METERING_MODEL_DEGRADED_ESTIMATE
+    assert row["model"] == "unattributed_model"  # FIX-573：正确桶（有真实用量、模型键未知）
     assert row["prompt_tokens"] > 0 and row["completion_tokens"] > 0
     assert row["usage_source"] == "estimated"
     assert row["cost"] is None  # 未核价 unknown 语义，绝不填 gpt-4 错价也不填 0 冒充
-    surface_after = _counter_value(
+    assert _counter_value(
+        "sparkle_metering_no_generation_reattributed_total", {"surface": "cleanup"}
+    ) == reattributed_before + 1, "FIX573 改挂必须可计数"
+    # FIX545 检出器不再被本路径触发（形状已在产生面改挂），防线静默即健康。
+    assert _counter_value(
         "sparkle_metering_no_generation_with_tokens_total", {"surface": "cleanup"}
-    )
-    assert surface_after == surface_before + 1, "FIX545 with-tokens 检出必须可计数"
+    ) == surface_before
 
 
 @pytest.mark.asyncio

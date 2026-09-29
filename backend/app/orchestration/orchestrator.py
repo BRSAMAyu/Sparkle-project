@@ -47,6 +47,7 @@ from app.core.business_metrics import (
 from app.core.execution_router import ExecutionRouter
 from app.core.metrics import (
     ACTIVE_SESSIONS,
+    METERING_CANCEL_RECEIPT_RECOVERED,
     REQUEST_COUNT,
     STREAM_RESPONSE_DROPPED,
 )
@@ -4124,6 +4125,25 @@ class ChatOrchestrator(
                 )
 
             finally:
+                # V4-FIX-573 缺陷②（Q04 红项②）：取消/超时路径的帧级收据恢复。
+                # _execute_graph 的局部 token 累积在取消时会随生成器闭合同丢失，
+                # result_holder 上的即时落账才是取消时点权威——取消前已产生的
+                # token 必须入账（Q04 L2-CANCEL：13,320 tok 收据被记 0tok），
+                # 取消后才产生、未及入队的帧才允许归零。
+                if "result_holder" in locals():
+                    try:
+                        receipt_prompt_tokens = int(result_holder.get("total_prompt_tokens") or 0)
+                        receipt_completion_tokens = int(result_holder.get("total_completion_tokens") or 0)
+                    except (TypeError, ValueError):
+                        receipt_prompt_tokens = 0
+                        receipt_completion_tokens = 0
+                    _pre_prompt = int(total_prompt_tokens or 0)
+                    _pre_completion = int(total_completion_tokens or 0)
+                    total_prompt_tokens = max(_pre_prompt, receipt_prompt_tokens)
+                    total_completion_tokens = max(_pre_completion, receipt_completion_tokens)
+                    # 仅实际补账时计数：正常完成路径局部值本就等于收据值，不算恢复。
+                    if total_prompt_tokens > _pre_prompt or total_completion_tokens > _pre_completion:
+                        METERING_CANCEL_RECEIPT_RECOVERED.inc()
                 # O-02：trace spine 收尾（早退路径——校验失败/幂等命中——可能
                 # 尚未创建 recorder，故判存在；失败绝不阻断清理）。
                 try:
@@ -4136,6 +4156,15 @@ class ChatOrchestrator(
                 except Exception:
                     pass
                 latency_probe.finish()
+                _final_state_for_cleanup = result_holder.get("final_state") if "result_holder" in locals() else None
+                # V4-FIX-573 缺陷②：取消路径 final_state=None 时以共享
+                # WorkflowState.context_data 兜底模型归因（generation 节点
+                # 在 LLM 调用前已回填模型键）。
+                _context_data_fallback = None
+                if _final_state_for_cleanup is None and "state" in locals():
+                    _candidate_context = getattr(state, "context_data", None)
+                    if isinstance(_candidate_context, dict):
+                        _context_data_fallback = _candidate_context
                 await self._cleanup(
                     lock_acquired=lock_acquired,
                     lock_renewal_task=lock_renewal_task,
@@ -4146,7 +4175,8 @@ class ChatOrchestrator(
                     user_id=user_id,
                     total_prompt_tokens=total_prompt_tokens,
                     total_completion_tokens=total_completion_tokens,
-                    final_state=result_holder.get("final_state") if "result_holder" in locals() else None,
+                    final_state=_final_state_for_cleanup,
+                    context_data_fallback=_context_data_fallback,
                     chat_mode_hint=chat_mode if "chat_mode" in locals() else None,
                     reasoning_mode_hint=(
                         str((context_data or {}).get("reasoning_mode") or "balanced")

@@ -1986,6 +1986,12 @@ class ExecutionEngineMixin:
                         # 否则配额/计费链路只记最后一次调用的用量。
                         total_prompt_tokens += item.usage.prompt_tokens
                         total_completion_tokens += item.usage.completion_tokens
+                        # V4-FIX-573 缺陷②（Q04 红项②）：帧级收据即时落
+                        # result_holder——取消/超时路径不再因局部累积丢失把真实
+                        # 消耗记 0（Q04 L2-CANCEL：t=20.366s usage 帧 13,320 tok
+                        # 早于取消，终态却记 0tok）。
+                        result_holder["total_prompt_tokens"] = total_prompt_tokens
+                        result_holder["total_completion_tokens"] = total_completion_tokens
                         if self.token_tracker:
                             TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(item.usage.prompt_tokens)
                             TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(item.usage.completion_tokens)
@@ -2008,6 +2014,10 @@ class ExecutionEngineMixin:
                 except asyncio.CancelledError:
                     logger.warning("Graph task was cancelled unexpectedly; ending stream cleanly")
                     result_holder["cancelled"] = True
+                    # V4-FIX-573 缺陷②：图任务被取消时局部累积同样落
+                    # result_holder，取消前已产生的收据不丢。
+                    result_holder["total_prompt_tokens"] = total_prompt_tokens
+                    result_holder["total_completion_tokens"] = total_completion_tokens
                     return
                 if exc:
                     raise exc
@@ -2016,6 +2026,19 @@ class ExecutionEngineMixin:
                 result_holder["total_completion_tokens"] = total_completion_tokens
         except GeneratorExit:
             graph_task.cancel()
+            # V4-FIX-573 缺陷②：客户端断连（GeneratorExit）时，队列里已入队的
+            # usage 帧属「取消前已产生」——排空入账后再退出；取消后才产生的帧
+            # 才归零。Q04 红项②：取消轮次 13,320 tok 帧级收据被记 0 的产生点。
+            while True:
+                try:
+                    pending = queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+                if pending.HasField("usage"):
+                    total_prompt_tokens += pending.usage.prompt_tokens
+                    total_completion_tokens += pending.usage.completion_tokens
+            result_holder["total_prompt_tokens"] = total_prompt_tokens
+            result_holder["total_completion_tokens"] = total_completion_tokens
             raise
 
     def _build_stream_heartbeat_response(
