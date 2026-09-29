@@ -1,0 +1,106 @@
+{
+  "task": "V4-G01",
+  "date": "2026-09-29",
+  "flutter": "3.41.3 stable",
+  "concurrency": "全程 --concurrency=1（AGENTS.md 资源红线）",
+  "batches": [
+    {
+      "id": 2,
+      "purpose": "G01 新套复跑（前任）",
+      "command": "flutter test --concurrency=1 test/core/design/style_preview/g01_family_contrast_test.dart test/core/design/style_preview/g01_family_four_style_sweep_test.dart",
+      "passed": 20,
+      "failed": 0,
+      "exit_code": 0
+    },
+    {
+      "id": 3,
+      "purpose": "G01 golden 基线（前任 8 张四风格）",
+      "command": "flutter test --concurrency=1 test/goldens/g01_four_style/",
+      "passed": 2,
+      "failed": 0,
+      "exit_code": 0
+    },
+    {
+      "id": 7,
+      "purpose": "post_exam_review 含续跑 2 新钉（E+ 静止终态 / E- 位移对照）",
+      "command": "flutter test --concurrency=1 test/features/plan/presentation/screens/post_exam_review_screen_test.dart",
+      "passed": 5,
+      "failed": 0,
+      "exit_code": 0,
+      "note": "首跑 1 编译错（record 类型笔误），修复后全绿"
+    },
+    {
+      "id": 8,
+      "purpose": "B1 修复后 golden 零漂移复跑",
+      "command": "flutter test --concurrency=1 test/goldens/g01_four_style/",
+      "passed": 2,
+      "failed": 0,
+      "exit_code": 0,
+      "note": "输出等值令牌化设计实证：基线无需重签"
+    },
+    {
+      "id": 12,
+      "purpose": "回归子集：home+goal",
+      "command": "flutter test --concurrency=1 test/features/home test/features/goal",
+      "passed": 133,
+      "failed": 0,
+      "exit_code": 0
+    },
+    {
+      "id": 13,
+      "purpose": "回归子集：task+calendar",
+      "command": "flutter test --concurrency=1 test/features/task test/features/calendar",
+      "passed": 106,
+      "failed": 0,
+      "exit_code": 0
+    },
+    {
+      "id": 14,
+      "purpose": "回归子集：plan",
+      "command": "flutter test --concurrency=1 test/features/plan",
+      "passed": 66,
+      "failed": 0,
+      "exit_code": 0
+    },
+    {
+      "id": 15,
+      "purpose": "回归子集：core/design",
+      "command": "flutter test --concurrency=1 test/core/design",
+      "passed": 281,
+      "failed": 0,
+      "exit_code": 0
+    },
+    {
+      "id": 16,
+      "purpose": "全量回归（错峰终批，单批后台）",
+      "command": "flutter test --concurrency=1（mobile 全量）",
+      "passed": 3344,
+      "skipped": "~23（既有 skip，非本卡新增；runner 尾行 +3344 ~23 All tests passed!）",
+      "failed": 0,
+      "exit_code": 0,
+      "wall_clock": "约 22 分钟（11:34 启动 → 11:56 收尾）"
+    }
+  ],
+  "analyze": {
+    "command": "flutter analyze",
+    "result": "No issues found!",
+    "note": "修复前 2 info（task_card redundant_argument_values / contrast_test unnecessary_import，均前任遗留）→ 清零"
+  },
+  "repeat_ratchet": {
+    "command": "git grep -l '\\.repeat(' -- 'lib/*.dart' | wc -l",
+    "base_57edc4e4": 48,
+    "head": 48,
+    "call_sites_head": 90,
+    "verdict": "≤48 只降不升 达标",
+    "note": "U15 册记 49 为其清点时点口径（含其后他卡已移除 1 文件）；S01 自述 48 互证"
+  },
+  "new_pins_count": {
+    "predecessor": 20,
+    "successor": 2,
+    "total": 22,
+    "golden_faces": 8,
+    "breakdown": "contrast 3（E+ 15 对 / E- / E2+）+ sweep 17（dashboard 4 态 + 任务列表 4 态 + 目标 2 态 + 档案/冲刺卡 3 + 日历 1 + 语义钉合同 3）+ review 2（reduce-motion E±）"
+  },
+  "known_failures": [],
+  "distinguishing_note": "无既有失败与本卡回归的区分需要：全量单批零失败；分批子集与本卡触碰面（task/plan/home/goal/design）全部覆盖。"
+}

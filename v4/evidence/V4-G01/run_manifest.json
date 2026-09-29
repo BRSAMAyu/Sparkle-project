@@ -1,0 +1,158 @@
+{
+  "task": "V4-G01",
+  "title": "首页/目标/任务/日历——四风格商业化完备",
+  "date": "2026-09-29",
+  "executor": "V4-G01 续跑会话（worktree /Users/brsama/code/GitHub/wtG01，分支 agent/v4/g01，自 57edc4e4 开出；前任会话因宿主机强制重启中断，dirty=11 全部继承盘点后继续，未丢弃）",
+  "source_sha_base": "57edc4e48bbd8638247b6dc9b2ce46c3dddfd6b7",
+  "source_sha_head": "c276bbefce66b09ead105eb2c60ff231cbb603bf（实现 commit；证据文件在其后的证据 commit）",
+  "no_push": true,
+  "heavy_token_required": false,
+  "risk": "normal",
+  "lock": {
+    "required": "ui-polish-g01",
+    "lease": "NOT_RUN（sparkle-coordination-v2 私有远端未配置于本机，S01 同口径）；冲突面以 diff 自证：RF-06 三文件（dashboard_screen/compact_status_bar/task_execution_screen）零触碰、无 routes/backend/proto/tokens_v2/gen 产物命中"
+  },
+  "toolchain": {
+    "flutter": "3.41.3 stable",
+    "host": "darwin 25.6.0 arm64",
+    "resource_redlines": "全程遵守 AGENTS.md 双红线：flutter test 一律 --concurrency=1；子集先行后全量错峰；每轮大命令前 df -h /（实测 44Gi→37Gi 可用）；swap used=0；mobile/build 用后即清（实测 125M）"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "盘点前任进度（dirty=11：8 产品文件 + 2 新测试文件 + 1 golden 目录）",
+      "command": "git status && git diff --stat && git diff <逐文件>",
+      "exit_code": 0,
+      "note": "前任完成 A1-A10 十处缺陷修复 + 20 个 G01 测试 + 8 张四风格 golden；本会话全部继承"
+    },
+    {
+      "id": 2,
+      "purpose": "前任 G01 测试复跑验证（contrast 3 + sweep 17）",
+      "command": "cd mobile && flutter test --concurrency=1 test/core/design/style_preview/g01_family_contrast_test.dart test/core/design/style_preview/g01_family_four_style_sweep_test.dart",
+      "exit_code": 0,
+      "note": "+20 All tests passed!"
+    },
+    {
+      "id": 3,
+      "purpose": "前任 golden 基线复跑（B04 容差比较器，无 skip 门）",
+      "command": "cd mobile && flutter test --concurrency=1 test/goldens/g01_four_style/",
+      "exit_code": 0,
+      "note": "+2 All tests passed！8 张四风格 golden 常态比对全过"
+    },
+    {
+      "id": 4,
+      "purpose": "令牌外颜色清点（走查缺陷面量化）",
+      "command": "grep -rn 'Color(0x' lib/features/{home,goal,task,plan,calendar}/ | wc -l; grep -rn 'Colors\\.' 五模块（排除 transparent/注释）",
+      "exit_code": 0,
+      "note": "Color(0x)=0 五模块全零；Colors.* 内容面残余 4 处（weather lerp 派生基料，登记不修）+ 7 处范围外（layers/ 三文件，唯一消费点 visual_elements 预览对话框，非家族触达）"
+    },
+    {
+      "id": 5,
+      "purpose": "续跑修复 B1：predicted_intent_card 三处暗分支 Colors.white 字面量→rimLight+alpha 覆盖（输出字节等值）",
+      "command": "Edit ×3（isDark ? Colors.white.withValues(alpha:0.04/0.03/0.035) → context.colors.rimLight.withValues(alpha: 同值)）",
+      "exit_code": 0,
+      "note": "rimLight 全档 RGB=纯白，alpha 覆盖后输出逐字节不变（A5 task_card 判例）"
+    },
+    {
+      "id": 6,
+      "purpose": "续跑修复 B2：post_exam_review 新 reduce-motion 分支补 screen 级钉（E+ 静止终态零位移 + E- 常规位移对照）",
+      "command": "Edit test/features/plan/presentation/screens/post_exam_review_screen_test.dart（+2 testWidgets + _pumpReviewAndCollectConfetti 判例泵制）",
+      "exit_code": 0,
+      "note": "S01 双源判例（MediaQuery.disableAnimations）；收集 7 个 auto_awesome_rounded 图标位置，泵进 1000ms 前后比对"
+    },
+    {
+      "id": 7,
+      "purpose": "新钉测试验证",
+      "command": "cd mobile && flutter test --concurrency=1 test/features/plan/presentation/screens/post_exam_review_screen_test.dart",
+      "exit_code": 0,
+      "note": "+5 All tests passed!（3 既有 + 2 新钉）；首跑因 record 类型笔误 1 编译错，修复后全绿"
+    },
+    {
+      "id": 8,
+      "purpose": "golden 零漂移验证（B1 输出等值设计→基线无需重签）",
+      "command": "cd mobile && flutter test --concurrency=1 test/goldens/g01_four_style/",
+      "exit_code": 0,
+      "note": "+2 All tests passed！修复后 8 张 golden 常态比对零漂移"
+    },
+    {
+      "id": 9,
+      "purpose": "analyze 清零（清掉前任遗留 2 条 info：task_card redundant_argument_values + contrast_test unnecessary_import）",
+      "command": "cd mobile && flutter analyze",
+      "exit_code": 0,
+      "note": "修复前 2 issues → 修复后 No issues found!"
+    },
+    {
+      "id": 10,
+      "purpose": "RF-06 零触碰叙证 + 前任注释误标修正（task_detail_screen 自称 RF-06 面触达，实际不在三文件清单）",
+      "command": "git diff --name-only | grep -E 'dashboard_screen|compact_status_bar|task_execution_screen'; echo exit=$?",
+      "exit_code": 1,
+      "note": "grep 零命中（exit=1）；task_detail_screen 注释改为准确表述，行为零变化"
+    },
+    {
+      "id": 11,
+      "purpose": "repeat 棘轮复算（≤48 只降不升）",
+      "command": "git grep -l '\\.repeat(' -- 'lib/*.dart' | wc -l（base 经 git stash 对照）",
+      "exit_code": 0,
+      "note": "base 57edc4e4 = 48 文件 → 头 = 48 文件（调用点 90）；零新增零漂移。U15 记 49 为其含 1 个其后他卡已移除文件的清点口径，S01 自述 48 互证"
+    },
+    {
+      "id": 12,
+      "purpose": "回归子集（错峰第一批：家族五模块）",
+      "command": "cd mobile && flutter test --concurrency=1 test/features/home test/features/goal",
+      "exit_code": 0,
+      "note": "+133 全绿"
+    },
+    {
+      "id": 13,
+      "purpose": "回归子集（错峰第二批）",
+      "command": "cd mobile && flutter test --concurrency=1 test/features/task test/features/calendar",
+      "exit_code": 0,
+      "note": "+106 全绿"
+    },
+    {
+      "id": 14,
+      "purpose": "回归子集（错峰第三批）",
+      "command": "cd mobile && flutter test --concurrency=1 test/features/plan",
+      "exit_code": 0,
+      "note": "+66 全绿"
+    },
+    {
+      "id": 15,
+      "purpose": "回归子集（错峰第四批：design 域）",
+      "command": "cd mobile && flutter test --concurrency=1 test/core/design",
+      "exit_code": 0,
+      "note": "+281 全绿（含 G01 新套 20）"
+    },
+    {
+      "id": 16,
+      "purpose": "全量回归（错峰终批，单批 --concurrency=1）",
+      "command": "cd mobile && flutter test --concurrency=1",
+      "exit_code": "SEE_TEST_RESULTS",
+      "note": "结果与计数见 test_results.json（后台单批执行，含全部既有套件 + G01 新套）"
+    }
+  ],
+  "llm_usage": {
+    "actual_model_and_usage": "本卡为纯工程实现，无 LLM 调用、无模型产出物"
+  },
+  "diff_scope": {
+    "product_code_changed": 9,
+    "product_code_files": [
+      "mobile/lib/core/design/widgets/sparkle_confetti.dart（前任：reduce-motion 静态分支）",
+      "mobile/lib/features/goal/presentation/widgets/goal_created_dialog.dart（前任：onPrimary 对比度）",
+      "mobile/lib/features/home/presentation/widgets/predicted_intent_card.dart（续跑：3 处 rimLight 令牌化，输出字节等值）",
+      "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart（前任：15 字面量令牌化）",
+      "mobile/lib/features/plan/presentation/screens/post_exam_review_screen.dart（前任：纸屑/面纱令牌化+reduce-motion）",
+      "mobile/lib/features/plan/presentation/widgets/learning_path_progress_bar.dart（前任：onColor 星标对比度）",
+      "mobile/lib/features/task/presentation/screens/task_detail_screen.dart（前任：onPrimary；续跑：注释误标修正，行为零变化）",
+      "mobile/lib/features/task/presentation/widgets/task_card.dart（前任：rimLight sheen+200% Wrap；续跑：删冗余 crossAxisAlignment）",
+      "mobile/lib/features/task/presentation/widgets/task_feedback_dialog.dart（前任：里程碑卡 warning 派生）"
+    ],
+    "tests_added_or_changed": [
+      "mobile/test/core/design/style_preview/g01_family_contrast_test.dart（前任新，3 测；续跑：删冗余 import）",
+      "mobile/test/core/design/style_preview/g01_family_four_style_sweep_test.dart（前任新，17 测）",
+      "mobile/test/goldens/g01_four_style/g01_four_style_golden_test.dart + goldens/8 张（前任新）",
+      "mobile/test/features/plan/presentation/screens/post_exam_review_screen_test.dart（续跑：+2 钉 + 判例泵制 helper）"
+    ],
+    "forbidden_surfaces_touched": "无（RF-06 三文件 / routes / backend / proto / tokens_v2 / gen 产物零命中，命令 10 实证）"
+  }
+}

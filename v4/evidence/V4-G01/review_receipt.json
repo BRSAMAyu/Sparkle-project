@@ -1,0 +1,22 @@
+{
+  "task": "V4-G01",
+  "status": "PENDING",
+  "independent_reviewers_required": 1,
+  "note": "实现自证完成（G01 新套 22 测：前任 20 + 续跑 2，每面带 E- 控制组探针；analyze 零 issue；家族五模块 305 + design 281 + review 5 分批全绿，全量单批结果见 test_results.json；golden 8 张零漂移；repeat 棘轮 48→48）。断点续跑交接：前任 dirty=11 全部继承盘点（A1-A10 十处修复 + 20 测 + 8 golden），零丢弃。审查挑战 CH-1~CH-6 预登记于 limitations.md §4。自报完成不算完成——本 receipt 在独立未参与会话审查落账前恒为 PENDING。",
+  "reviewer": null,
+  "verdict": null,
+  "challenges": [
+    "CH-1 走查分母（10 面逐泵 vs 30 屏家族）",
+    "CH-2 B1 输出等值令牌化是否算修复",
+    "CH-3 C1 weather lerp 白基料登记不修裁决",
+    "CH-4 repeat 棘轮 48 vs U15 册记 49 口径漂移",
+    "CH-5 golden 基线量（2 面×4 风格最小充分口径）",
+    "CH-6 reduce-motion 等价证据层级（位置序列 vs RGBA 字节级）"
+  ],
+  "evidence_dir": "v4/evidence/V4-G01/",
+  "base_sha": "57edc4e48bbd8638247b6dc9b2ce46c3dddfd6b7",
+  "head_sha": "c276bbefce66b09ead105eb2c60ff231cbb603bf",
+  "branch": "agent/v4/g01",
+  "worktree": "/Users/brsama/code/GitHub/wtG01",
+  "date_created": "2026-09-29"
+}
