@@ -665,7 +665,7 @@ func Load() *Config {
 	viper.SetDefault("WS_MAX_CONNECTIONS_PER_USER", 2)
 	viper.SetDefault("WS_GLOBAL_MAX_CONNECTIONS", 2000)
 	viper.SetDefault("REDIS_URL", "")
-	viper.SetDefault("REDIS_HOST", "sparkle_redis")
+	viper.SetDefault("REDIS_HOST", "redis")
 	viper.SetDefault("REDIS_PORT", 6379)
 	viper.SetDefault("REDIS_PASSWORD", "")
 	// Security: Fail-Closed mode for Redis
