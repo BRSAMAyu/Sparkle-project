@@ -1,0 +1,80 @@
+# V4-Q01 independent review R1 (Q01) read-only DB probe
+# reviewer: wt-review (not part of implementation); captured_at_local: 2026-09-29 19:53:53 
+# target branch: agent/v4/q01, reviewed evidence at 12b3bdba; product sha under test 5cbc715f (product code byte-identical through HEAD, git diff empty)
+# method: docker exec sparkle_db psql SELECT-only; NO writes, NO hybrid start triggered
+
+## 0. review probe header
+
+## 1. agent_runs hybrid_journey (all, with user attribution)
+# SQL: SELECT ar.id, ar.status, ar.current_stage, ar.created_at, u.username, t.title FROM agent_runs ar LEFT JOIN tasks t ON ar.task_id=t.id LEFT JOIN users u ON t.user_id=u.id WHERE ar.trace_id='hybrid_journey' ORDER BY ar.created_at;
+9ff03120-358a-44e8-807c-36c6ba6b1c95|RUNNING|prep|2026-09-29 10:04:14.659791|q01up874775|Map the baseline
+a77f9eb0-bf88-4ddf-a43b-f641758eb365|RUNNING|prep|2026-09-29 10:14:06.514636|q01up874775|Map the baseline
+57f4a41f-2a58-4b2f-a1c3-3367d5baa30a|RUNNING|prep|2026-09-29 10:41:03.326108|q01up083360|Map the baseline
+20770aed-e33f-4681-af90-9dcabdeff52b|RUNNING|prep|2026-09-29 11:26:27.978073|q01up981034|二叉树遍历
+b32f6527-634e-4546-9d4d-8ac8e001da24|RUNNING|prep|2026-09-29 11:43:02.061298|q01up980549|二叉树遍历
+
+## 2. pg_stat_activity non-idle snapshot (lock chain live state)
+# SQL: SELECT pid, state, wait_event_type, backend_start, LEFT(query,72) FROM pg_stat_activity WHERE datname='sparkle' AND state<>'idle' AND pid<>pg_backend_pid() ORDER BY backend_start;
+6995|active|Lock|2026-09-29 09:57:30.756594+00|SELECT agent_runs.user_id, agent_runs.kind, agent_runs.objective, agent_
+7007|idle in transaction|Client|2026-09-29 09:57:31.742484+00|SELECT document_chunks.file_id, document_chunks.user_id, document_chunks
+7025|idle in transaction|Client|2026-09-29 09:57:40.204744+00|SELECT document_chunks.file_id, document_chunks.user_id, document_chunks
+7026|active|Lock|2026-09-29 09:57:40.204907+00|SELECT agent_runs.user_id, agent_runs.kind, agent_runs.objective, agent_
+8794|active|Lock|2026-09-29 10:34:28.311026+00|SELECT agent_runs.user_id, agent_runs.kind, agent_runs.objective, agent_
+8864|idle in transaction|Client|2026-09-29 10:35:16.537672+00|SELECT document_chunks.file_id, document_chunks.user_id, document_chunks
+11580|idle in transaction|Client|2026-09-29 11:22:36.941355+00|SELECT document_chunks.file_id, document_chunks.user_id, document_chunks
+11585|active|Lock|2026-09-29 11:22:37.003588+00|SELECT agent_runs.user_id, agent_runs.kind, agent_runs.objective, agent_
+12557|active|Lock|2026-09-29 11:39:24.596575+00|SELECT agent_runs.user_id, agent_runs.kind, agent_runs.objective, agent_
+12594|idle in transaction|Client|2026-09-29 11:39:47.283499+00|SELECT user_push_opt_in.user_id, user_push_opt_in.enabled, user_push_opt
+12598|idle in transaction|Client|2026-09-29 11:39:47.583829+00|SELECT document_chunks.file_id, document_chunks.user_id, document_chunks
+
+## 3. token_usage per q01up user (13736 recomputation)
+# SQL: SELECT u.username, count(*), sum(tu.total_tokens) FROM token_usage tu JOIN users u ON tu.user_id=u.id WHERE u.username LIKE 'q01up%' GROUP BY u.username ORDER BY min(tu.created_at);
+q01up350302|2|2730
+q01up370599|2|2749
+q01up874775|2|2800
+q01up054542|2|2787
+q01up083360|2|2670
+q01up852450|2|2775
+q01up302458|2|2871
+q01up981034|2|2817
+q01up980549|2|2963
+
+## 3b. token_usage call times for attempt10 user q01up874775 (e727a39d)
+# SQL: SELECT created_at, model, total_tokens FROM token_usage WHERE user_id='e727a39d-0a39-4405-82f8-378ed70bf444' ORDER BY created_at;
+2026-09-29 09:58:26.287847|dashscope_fast|1483
+2026-09-29 09:58:41.295128|dashscope_fast|1317
+
+## 4. correction/calibration landing tables today (expect 0 per §5 challenge)
+# SQL: SELECT 'memory_corrections' t, count(*) FROM memory_corrections WHERE created_at>='2026-09-29' UNION ALL SELECT 'stuck_journey_corrections', count(*) FROM stuck_journey_corrections WHERE created_at>='2026-09-29' UNION ALL SELECT 'understanding_calibration_runs', count(*) FROM understanding_calibration_runs WHERE created_at>='2026-09-29';
+memory_corrections|0
+stuck_journey_corrections|0
+understanding_calibration_runs|0
+
+## 5. action_proposals today (calibration commit server landing)
+# SQL: SELECT p.id, u.username, p.status, p.created_at, p.payload::text FROM action_proposals p JOIN users u ON p.user_id=u.id WHERE p.created_at>='2026-09-29' ORDER BY p.created_at;
+ecf15f20-ca0d-4ee5-80eb-1f0c1250d293|guest_e07228575871|COMMITTED|2026-09-29 05:05:05.214504|{"fields": {"estimated_minutes": 30}, "task_id": "cab05cd4-c8b1-45de-a0bd-4b70917ea30a"}
+ec5521f1-3b0f-4462-9228-1b0f25076d36|guest_e07228575871|COMMITTED|2026-09-29 08:09:08.068596|{"fields": {"estimated_minutes": 15}, "task_id": "cab05cd4-c8b1-45de-a0bd-4b70917ea30a"}
+e0d34333-17ba-458a-8800-97a7dccc073b|guest_67a1f9659667|COMMITTED|2026-09-29 09:02:40.412004|{"fields": {"estimated_minutes": 15}, "task_id": "82696e0a-74be-4115-882c-a1b3e6314e4e"}
+c9ce8541-9bec-45e7-8c7c-b35c01f6d721|guest_c884f8abe530|COMMITTED|2026-09-29 09:18:51.150039|{"fields": {"estimated_minutes": 15}, "task_id": "07f7bdf1-adb1-44a2-b8de-e4d0da6cd34b"}
+13fc4bd5-cd2d-4063-9c77-c38ba246a2ab|q01up981034|COMMITTED|2026-09-29 11:26:05.772892|{"fields": {"estimated_minutes": 15}, "task_id": "65512a92-5bcc-466c-8dc8-510fb366cd4d"}
+a750cb76-606b-4ed7-bb86-fac4293323fe|q01up980549|COMMITTED|2026-09-29 11:42:40.257151|{"fields": {"estimated_minutes": 15}, "task_id": "7b23c744-53d3-4f26-a05a-2e714e64b855"}
+
+## 6. seeded task cab05cd4 current minutes (attempt2 overwrite check)
+# SQL: SELECT id, title, status, estimated_minutes, updated_at FROM tasks WHERE id='cab05cd4-c8b1-45de-a0bd-4b70917ea30a';
+cab05cd4-c8b1-45de-a0bd-4b70917ea30a|计算机网络 - TCP协议分析|STUCK|15|2026-09-29 08:09:16.310679
+
+## 7. q01up users goals/tasks counts
+# SQL: SELECT u.username, u.created_at, (SELECT count(*) FROM memory_goals g WHERE g.user_id=u.id AND g.status='active') active_goals, (SELECT count(*) FROM tasks t WHERE t.user_id=u.id) tasks FROM users u WHERE u.username LIKE 'q01up%' ORDER BY u.created_at;
+q01up350302|2026-09-29 09:32:35.901781|1|0
+q01up370599|2026-09-29 09:49:40.497208|1|0
+q01up874775|2026-09-29 09:58:00.840203|1|4
+q01up054542|2026-09-29 10:17:46.418764|1|4
+q01up083360|2026-09-29 10:34:49.254183|1|4
+q01up852450|2026-09-29 11:04:21.633188|1|0
+q01up302458|2026-09-29 11:11:48.205949|1|0
+q01up981034|2026-09-29 11:23:06.726824|1|1
+q01up980549|2026-09-29 11:39:46.631855|1|1
+
+## 8. attempt10 user stored_files + document_chunks
+# SQL: SELECT (SELECT count(*) FROM stored_files WHERE user_id='e727a39d-0a39-4405-82f8-378ed70bf444' AND status='processed') processed_files, (SELECT count(*) FROM document_chunks WHERE user_id='e727a39d-0a39-4405-82f8-378ed70bf444') chunks;
+1|9
