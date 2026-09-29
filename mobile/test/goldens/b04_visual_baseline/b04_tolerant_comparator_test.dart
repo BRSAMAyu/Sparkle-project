@@ -138,7 +138,7 @@ void main() {
         '不变）；CI(GITHUB_ACTIONS)= $ciTolerance（0.005 × '
         '$kCiGoldenToleranceScale）');
     expect(localTolerance, 0.005, reason: '本地阈值必须等于修前原值');
-    expect(ciTolerance, 0.010);
+    expect(ciTolerance, 0.020);
   });
 
   testWidgets('0 差 → passed 直通判过', (tester) async {
