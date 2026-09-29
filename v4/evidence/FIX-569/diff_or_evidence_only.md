@@ -17,7 +17,7 @@ leader 2026-09-30 裁决：**接线**（F03 链低成本样本先行），删除
 - 选位：SCREEN_FAMILIES L7「卡住sheet先输入原因，再一个决策问题和提案」——`_ReadyPane` 的
   `_InterventionCard` 就是该提案卡（侦察与派单双点名）。abstain（无提案）时组件结构性缺席（P- 钉）。
 - 语义：挂载一次性 200ms 纸面抬起（预算单源）；同 payload 重建不重播（回答问题/纠正 ack 不重播）；
-  纠正换载荷经 AnimatedSwitcher 换代 = 新提案播一次；sheet 关闭即卸载零残留；reduce-motion 静态分支。
+  纠正后不重播（R1 F-1 勘误：provider 全程 ready 原地更新无换代，保守侧）；sheet 关闭即卸载零残留；reduce-motion 静态分支。
 
 ### 2. SparkleReceiptSwap × recovery 校准区 committed 相
 `mobile/lib/features/recovery/presentation/widgets/recovery_calibration_section.dart:120`（key helper :77）
@@ -63,3 +63,6 @@ FIX-565 同律「接线必须带覆盖」：每接线一正一反 + reduce-motio
 `test/core/design/` 271/271（含既有 S01 套件）｜`test/features/recovery/ + insights/` 67/67｜
 `test/features/home/` 113/113｜U15 棘轮 14/14（复跑数 48 ≤ 基线 49，零新增）｜
 `flutter analyze --no-pub` 零 issue。
+
+## Errata (leader, 2026-09-30, R1 F-1)
+- §1 对 ProposalEnter 的『纠正换代重播』断言失实：实测不重播（AnimatedSwitcher 子 key 恒 ready，原地更新）。已同步修正 dart 注释与 run_manifest。

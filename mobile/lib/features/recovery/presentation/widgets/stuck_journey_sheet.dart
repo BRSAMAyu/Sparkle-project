@@ -204,8 +204,9 @@ class _ReadyPane extends ConsumerWidget {
           const SizedBox(height: DS.spacing8),
           // V4-FIX-569 ·「提案出现」乐谱行的产品消费点（SCREEN_FAMILIES L7
           // 「一个决策问题和提案」）：intervention 提案卡挂载时一次性从纸面
-          // 抬起入场（200ms，预算单源）。同 payload 重建不重播；纠正换
-          // 载荷经 AnimatedSwitcher 换代 = 新提案播一次；sheet 关闭（取消）
+          // 抬起入场（200ms，预算单源）。同 payload 重建不重播；纠正后
+          // 不重播（R1 F-1 实测：provider 全程 ready，switcher 子 key 恒
+          // 'stuck-journey-ready' 原地更新无换代——保守侧）；sheet 关闭（取消）
           // 即卸载，不残留在航动画；reduce-motion 直落终态（组件内置）。
           SparkleProposalEnter(
             child: _InterventionCard(
