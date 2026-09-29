@@ -17,6 +17,7 @@ import 'package:sparkle/features/goal/data/services/scenario_pack_service.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_created_dialog.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_intent_input.dart';
 import 'package:sparkle/features/goal/presentation/widgets/intent_confirmation_card.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 
 class GoalCreationWizardScreen extends ConsumerStatefulWidget {
   const GoalCreationWizardScreen({
@@ -445,6 +446,17 @@ class _GoalCreationWizardScreenState
             milestones: _milestones,
           );
       if (!mounted) return;
+      // FIX-584 · 向导直达分支投影填充：服务端 createGoal 已建 goal+plan+
+      // tasks，但本分支此前零投影填充——「开始第一个任务」CTA 直达执行面
+      // 后，恢复校准区时长锚点（stuck_journey_sheet._resolveBaselineMinutes
+      // 只读 taskListProvider 投影）解析不到新任务 → baselineMinutes=null →
+      // 「调整这次行动」结构性缺席（V4-Q01 G5 实证；种子面因任务先于投影
+      // 构造存在而无此缺口）。收敛到 TaskNotifier.refreshTasks() 单一填充
+      // 函数（与任务列表下拉刷新同源，零第二实现）。**在途不阻成功弹窗**
+      // （不 await：弹窗/CTA 不得被网络时延卡住；refreshTasks 内部逐项吞
+      // 错入 state.error，绝无未捕获异常）。锚点消费侧是 watch 型自愈：校
+      // 准面随投影水化经 args 变化重建，慢网下最多晚一拍，不假缺席。
+      unawaited(ref.read(taskListProvider.notifier).refreshTasks());
       widget.onCreated?.call(created);
       if (widget.onCreated != null) {
         setState(() => _creating = false);

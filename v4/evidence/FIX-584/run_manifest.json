@@ -1,0 +1,76 @@
+{
+  "card": "FIX-584",
+  "title": "G5 校准投影缺口修复——向导直达分支任务列表投影零填充 → 校准区 baselineMinutes=null（Q01 揭案，P2）",
+  "agent": "wtF584",
+  "branch": "agent/v4/f584",
+  "base_sha": "146feddf",
+  "generated_at_local": "2026-09-29",
+  "kind": "fix",
+  "product_code_changed": true,
+  "pushed": false,
+  "environment": {
+    "worktree": "/Users/brsama/code/GitHub/wtF584（分支 agent/v4/f584 基于 main 146feddf，工作树除本卡两文件外零脏）",
+    "flutter": "worktree 首跑 flutter pub get --offline（exit 0）+ make mobile-proto（buf 1.66.0 host toolchain，生成 mobile/lib/gen 27 文件；gen/ gitignored 不入库，同 FIX-569/575/576 判例）",
+    "test_cmd": "flutter test（macOS 无 timeout 命令，用 flutter test 自带 --timeout/后台直写日志替代）",
+    "q01_stack": "运行中 Q01 栈（50051/8000/8080）全程未动——本卡全部为 pytest/flutter test 级测试，无栈依赖"
+  },
+  "changed_files": [
+    {
+      "path": "mobile/lib/features/goal/presentation/screens/goal_creation_wizard_screen.dart",
+      "delta": "+12 行（_createGoal 成功分支投影填充一次调用 + 头注；import +1）",
+      "overlap_check": "与 FIX-583（backend hybrid_journey_service）零文件交集：本卡只触 mobile/lib/features/goal/ 与 mobile/test/，未动任何 backend 文件"
+    },
+    {
+      "path": "mobile/test/features/goal/presentation/goal_creation_wizard_projection_fill_test.dart",
+      "delta": "新增回归测试文件（2 testWidgets：填充钉 + 锚点钉）"
+    }
+  ],
+  "fix": {
+    "site": "goal_creation_wizard_screen.dart _createGoal() 创建成功分支（widget.onCreated 分流之前，onCreated 与 dialog 两分支共覆盖）",
+    "call": "unawaited(ref.read(taskListProvider.notifier).refreshTasks())",
+    "design_rationale": [
+      "收敛单一填充函数：TaskNotifier.refreshTasks()（与任务列表下拉刷新/既有写路径刷新同源，零第二实现）",
+      "不 await 的裁决：初版 await 形态使成功弹窗/CTA 被网络时延卡住（最坏 connectTimeout 10s），且打破既有 goal_creation_wizard_screen_test 契约（onCreated 在 250ms pump 内未触发，邻域回归实证红）——改 unawaited 后该测试恢复绿；锚点消费侧（stuck_journey_sheet._resolveBaselineMinutes → recoveryCalibrationProvider(args)）是 watch 型自愈：投影水化 → args 变化 → 校准控制器携 baseline 重建，慢网下最多晚一拍，不假缺席",
+      "pilot 面口径对齐：种子面任务先于 TaskNotifier 构造存在（构造期 loadTasks 即含锚点）；本修复使向导面在创建后同样进入「投影含锚点任务」状态"
+    ]
+  },
+  "test_matrix": {
+    "new_regression": {
+      "file": "mobile/test/features/goal/presentation/goal_creation_wizard_projection_fill_test.dart",
+      "tests": [
+        "① 填充钉：向导创建成功后 taskListProvider.tasks 含新任务（estimated_minutes=25，due_date=null；修前 RED：投影停留构造期空列表）",
+        "② 锚点钉（G5 面端到端）：同容器投影水化后挂真实 StuckJourneySheetBody → 纠正提交进 scopeChoice 相 →「调整这次行动」在场、「无任务锚点」缺席文案不在场（= baselineMinutes 非 null 的可观察面；修前 RED：0 widgets）"
+      ],
+      "harness": "传输边界 mock（O11 submit-chain 同款）：真 ApiClient/真向导屏/真 TaskNotifier/真 TaskRepository（单容器共享 UncontrolledProviderScope），只 mock HttpClientAdapter；服务端真值模拟对齐 Q01 r5 console 实证（GET /tasks 无 today 过滤、创建后全量可读回、任务 due_date=null）"
+    },
+    "runs": [
+      {
+        "name": "mutation RED（git checkout 向导屏回修前形态）",
+        "result": "0 passed / 2 failed，EXIT_CODE=1",
+        "log": "raw/mutation_red_key_lines.log"
+      },
+      {
+        "name": "mutation GREEN（git apply 还原修复）+ 邻域全量（recovery 5 文件 + goal 4 文件 + f569 语义接线）",
+        "result": "+64: All tests passed!，EXIT_CODE=0",
+        "log": "raw/green_neighborhood_key_lines.log"
+      },
+      {
+        "name": "新测试 + 既有 goal_creation_wizard_screen_test（await 形态曾破、unawaited 终形态恢复）合跑",
+        "result": "+7: All tests passed!，EXIT_CODE=0"
+      }
+    ],
+    "analyze": "dart analyze（两变更文件）No issues found! exit 0"
+  },
+  "root_cause_evidence": {
+    "q01_evidence_read": [
+      "wtQ01/v4/evidence/V4-Q01/diff_or_evidence_only.md §3 G5 行 + limitations §3：校准锚点只读 taskListProvider 投影；向导 CTA 直达执行面时投影未含新任务；姊妹会话水化绕道 r5 仍 null（疑投影按 today 过滤）",
+      "wtQ01/v4/evidence/V4-Q01/db/r1_attempt10 与 r5_part1：calibration_runs 1 行 + tasks 4 行 estimated_minutes=25——服务端数据在场，缺的是客户端投影"
+    ],
+    "code_chain": [
+      "stuck_journey_sheet.dart:121 _resolveBaselineMinutes 只读 taskListProvider.tasks→todayTasks",
+      "goal_creation_wizard_screen.dart:474 onStartFirstTask 直接 router.go('/tasks/<firstTaskId>/execute')，全链零 taskListProvider 填充调用（git grep 实证）",
+      "backend/app/api/v1/tasks.py:338 list_tasks 全量分页无 today 过滤——姐妹会话「投影按 today 过滤」猜想证伪",
+      "wtQ01 r5 console 时间线（attempt12_r5_console.log:6470→6485）：水化绕道 step PASS 但期间零 GET /tasks 请求——拖拽未真正触发 RefreshIndicator.onRefresh，绕道从未生效；产品代码本就无填充点，才是缺口本体"
+    ]
+  }
+}
