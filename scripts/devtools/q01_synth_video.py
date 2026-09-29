@@ -53,18 +53,18 @@ def main() -> int:
     concat_list = out_mp4.with_suffix(".concat.txt")
     with concat_list.open("w") as fh:
         for e in timeline:
-            fh.write(f"file '{e['file']}'\n")
+            fh.write(f"file '{(shots_dir / e['file']).resolve()}'\n")
             fh.write(f"duration {e['hold_seconds']:.3f}\n")
         # ffmpeg concat 需要末帧重复一次以固化最后 duration
-        fh.write(f"file '{timeline[-1]['file']}'\n")
+        fh.write(f"file '{(shots_dir / timeline[-1]['file']).resolve()}'\n")
 
     out_mp4.parent.mkdir(parents=True, exist_ok=True)
     cmd = [
         "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-        "-i", str(concat_list),
+        "-i", str(concat_list.resolve()),
         "-vf", "scale=1280:-2:flags=lanczos,fps=2,format=yuv420p",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "26",
-        str(out_mp4),
+        str(out_mp4.resolve()),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(shots_dir))
     if proc.returncode != 0:

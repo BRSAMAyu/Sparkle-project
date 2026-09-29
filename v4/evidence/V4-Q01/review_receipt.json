@@ -1,0 +1,20 @@
+{
+  "task": "V4-Q01",
+  "status": "PENDING_INDEPENDENT_REVIEW",
+  "verdict": "FAIL",
+  "implementation_session": "wtQ01（断点续跑）+ 姊妹会话（同卡同 worktree，见 run_manifest.executor_sessions）",
+  "source_sha_pending_review": "5cbc715f63deaeb7872a9650ce44efaef6d07f4b",
+  "note": "实现侧完成：旅程六环节中 接续/卡住/澄清/纠正提交 实测通过（L3 真栈真模型），Hybrid/回执(向导任务面)/结果 三腿被产品级缺陷阻断（G6 hybrid start 系统性挂死 3/3 复现 + G5 校准投影缺口），value verdict 如实记 FAIL——协议口径：Q 任务 implementation 可完成，value verdict 仍 FAIL，终门读取后者。不以实现自证代替独立审查。",
+  "review_contract": {
+    "required_reviewers": 1,
+    "reviewer_must_verify": [
+      "被测版本恒 5cbc715f（git log 可复现），12 轮运行台账与 steps/console 一一对应（raw/pilot_r1/ + test_results.json 166 步全保留）",
+      "G6 反例可复现：注册→persona→底料就绪的用户 POST /api/v1/journey/hybrid 100% 网关 30s 503、run 永久 RUNNING/prep（db/*_db_evidence.json agent_runs 3 行 + backend/gateway 日志）",
+      "G1/G2 缝隙可复现：向导建目标只写 goals 表，first_action 读侧只认 memory_goals（代码锚 first_action_service:169 + DB 0 行对照）",
+      "fixture 经真实上传管线（stored_files processed + document_chunks 9），无手插 DB（celery 日志 48s processed）",
+      "video/*.mp4 由 raw 帧按 mtime 墙钟合成（manifest 可复算），帧内容未加工",
+      "预登记挑战①-⑥（limitations §8）逐条裁决并留痕"
+    ]
+  },
+  "self_check_only": "实现侧自测=12 轮真栈运行+只读 DB 采集+合成录像；作者不能自审；本 receipt 如实记 PENDING_INDEPENDENT_REVIEW，value verdict=FAIL 不因实现完成而拔高"
+}

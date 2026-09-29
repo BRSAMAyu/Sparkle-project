@@ -1,0 +1,1380 @@
+{
+ "card": "V4-Q01",
+ "compiled_at": "2026-09-29T19:00:00+08:00",
+ "honesty_note": "全部轮次 PASS/FAIL 原样收录，不挑拣；FAIL 的产品侧与 driver 侧归因见 limitations.md §2/§3 与 diff_or_evidence_only.md §3",
+ "runs": [
+  {
+   "source": "raw/pilot_r1/attempt10/q01_attempt10_part1_steps.json",
+   "run": "r1",
+   "leg": "part1",
+   "started_at": "2026-09-29T17:57:29.330630",
+   "ended_at": "2026-09-29T18:08:30.379876",
+   "steps": [
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "client_logout_clean_run",
+     "status": "PASS",
+     "note": "UI logout (profile→退出登录→确认); app-own session cleared",
+     "ts": "2026-09-29T17:57:38.520753"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "identity_entry",
+     "status": "PASS",
+     "note": "via=guest",
+     "ts": "2026-09-29T17:57:40.154942"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=25129",
+     "ts": "2026-09-29T17:57:54.459913"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=absent (FIX-567 生产者边界已知)",
+     "ts": "2026-09-29T17:57:54.773613"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "goal_anchor_created",
+     "status": "PASS",
+     "note": "register→persona fast-path (all UI); memory_goals.active ready",
+     "ts": "2026-09-29T17:58:36.681831"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "fixture_document_ready",
+     "status": "PASS",
+     "note": "real upload→chunk pipeline via app session (disclosed fixture); result=ok fileId=251617d5-7266-431c-b3cd-11da802cf528",
+     "ts": "2026-09-29T17:59:22.218265"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "wizard_open",
+     "status": "PASS",
+     "note": "和 AI 定目标 CTA→J-01 wizard opened",
+     "ts": "2026-09-29T17:59:22.606788"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "wizard_intent_analyzed",
+     "status": "PASS",
+     "note": "real LLM intent analysis returned=true",
+     "ts": "2026-09-29T17:59:38.141980"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "wizard_plan_created",
+     "status": "PASS",
+     "note": "real LLM plan preview→create; successDialog=true wizardGone=false",
+     "ts": "2026-09-29T18:01:59.812980"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_execution_open",
+     "status": "PASS",
+     "note": "task execution surface via wizard-first-task/legacy (stuck FAB present=true)",
+     "ts": "2026-09-29T18:02:10.329124"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_stuck",
+     "status": "PASS",
+     "note": "markTaskStuck via client FAB; help sheet visible=true",
+     "ts": "2026-09-29T18:02:28.170226"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "stuck_journey_payload",
+     "status": "PASS",
+     "note": "server-derived clarification payload ready=true",
+     "ts": "2026-09-29T18:02:36.302727"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "clarification_answered",
+     "status": "PASS",
+     "note": "first option tapped",
+     "ts": "2026-09-29T18:02:45.558091"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "correction_submitted",
+     "status": "PASS",
+     "note": "semantic correction accepted; scope cards visible=true",
+     "ts": "2026-09-29T18:02:53.861835"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "scope_this_time",
+     "status": "FAIL",
+     "note": "调整这次行动 CTA missing",
+     "ts": "2026-09-29T18:02:56.186400"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "minutes_adjusted",
+     "status": "FAIL",
+     "note": "adjusted=null target=15",
+     "ts": "2026-09-29T18:02:56.342660"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "diff_review",
+     "status": "FAIL",
+     "note": "server diff visible=false",
+     "ts": "2026-09-29T18:04:06.410906"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "calibration_committed",
+     "status": "FAIL",
+     "note": "confirm button missing",
+     "ts": "2026-09-29T18:04:08.762503"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "sheet_dismissed",
+     "status": "PASS",
+     "note": "barrier tap + drag dismiss",
+     "ts": "2026-09-29T18:04:14.475812"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_entry",
+     "status": "PASS",
+     "note": "entry tapped=true",
+     "ts": "2026-09-29T18:04:14.527709"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_sheet_open",
+     "status": "PASS",
+     "note": "sheetVisible=true",
+     "ts": "2026-09-29T18:04:22.693543"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_judgment_stage",
+     "status": "FAIL",
+     "note": "prep done; judgment stage reachable=false",
+     "ts": "2026-09-29T18:08:30.379484"
+    }
+   ],
+   "clicks": 26,
+   "failures": []
+  },
+  {
+   "source": "raw/pilot_r1/attempt2/q01_r1_part1_steps.json",
+   "run": "r1",
+   "leg": "part1",
+   "started_at": "2026-09-29T16:05:53.673037",
+   "ended_at": "2026-09-29T16:13:45.232619",
+   "steps": [
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "identity_entry",
+     "status": "PASS",
+     "note": "session persisted (no login screen) — real reopen continuation",
+     "ts": "2026-09-29T16:06:06.249978"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=19836",
+     "ts": "2026-09-29T16:06:13.509439"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=absent (FIX-567 生产者边界已知)",
+     "ts": "2026-09-29T16:06:13.818904"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "goal_anchor_created",
+     "status": "FAIL",
+     "note": "wizard real-LLM intent→create; MemoryGoal.active NOT created (hybrid anchor will fail)",
+     "ts": "2026-09-29T16:07:58.634687"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "resume_task_visible",
+     "status": "PASS",
+     "note": "seeded goal+stuck task on home (接续面)",
+     "ts": "2026-09-29T16:08:06.711299"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_execution_open",
+     "status": "PASS",
+     "note": "seeded task execution surface (stuck FAB present=true)",
+     "ts": "2026-09-29T16:08:24.958715"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_stuck",
+     "status": "PASS",
+     "note": "markTaskStuck via client FAB; help sheet visible=true",
+     "ts": "2026-09-29T16:08:32.715863"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "stuck_journey_payload",
+     "status": "PASS",
+     "note": "server-derived clarification payload ready=true",
+     "ts": "2026-09-29T16:08:40.998914"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "clarification_answered",
+     "status": "PASS",
+     "note": "first option tapped",
+     "ts": "2026-09-29T16:08:50.319247"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "correction_submitted",
+     "status": "PASS",
+     "note": "semantic correction accepted; scope cards visible=true",
+     "ts": "2026-09-29T16:08:58.778394"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "scope_this_time",
+     "status": "PASS",
+     "note": "this-time-only selected",
+     "ts": "2026-09-29T16:09:06.410815"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "minutes_adjusted",
+     "status": "PASS",
+     "note": "adjusted=15 target=15",
+     "ts": "2026-09-29T16:09:07.639652"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "diff_review",
+     "status": "PASS",
+     "note": "server diff visible=true",
+     "ts": "2026-09-29T16:09:15.857989"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "calibration_committed",
+     "status": "PASS",
+     "note": "receipt-gated success visible=true",
+     "ts": "2026-09-29T16:09:24.185356"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "sheet_dismissed",
+     "status": "PASS",
+     "note": "barrier tap + drag dismiss",
+     "ts": "2026-09-29T16:09:29.882665"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_entry",
+     "status": "PASS",
+     "note": "entry tapped=true",
+     "ts": "2026-09-29T16:09:29.903319"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_sheet_open",
+     "status": "PASS",
+     "note": "sheetVisible=true",
+     "ts": "2026-09-29T16:09:37.476882"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_judgment_stage",
+     "status": "FAIL",
+     "note": "prep done; judgment stage reachable=false",
+     "ts": "2026-09-29T16:13:45.232080"
+    }
+   ],
+   "clicks": 13,
+   "failures": [
+    "screenshot r1/part1/03-wizard-intent.png failed: Reentrant call to runAsync() denied.\nrunAsync() was called, then before its future completed, it was called again. You must wait for the first returned future to complete before calling runAsync() again.",
+    "screenshot r1/part1/04-wizard-intent-result.png failed: Reentrant call to runAsync() denied.\nrunAsync() was called, then before its future completed, it was called again. You must wait for the first returned future to complete before calling runAsync() again.",
+    "screenshot r1/part1/05-wizard-step-0.png failed: Reentrant call to runAsync() denied.\nrunAsync() was called, then before its future completed, it was called again. You must wait for the first returned future to complete before calling runAsync() again.",
+    "screenshot r1/part1/05-wizard-step-1.png failed: Reentrant call to runAsync() denied.\nrunAsync() was called, then before its future completed, it was called again. You must wait for the first returned future to complete before calling runAsync() again.",
+    "screenshot r1/part1/05-wizard-step-2.png failed: Reentrant call to runAsync() denied.\nrunAsync() was called, then before its future completed, it was called again. You must wait for the first returned future to complete before calling runAsync() again.",
+    "screenshot r1/part1/05-wizard-step-3.png failed: Reentrant call to runAsync() denied.\nrunAsync() was called, then before its future completed, it was called again. You must wait for the first returned future to complete before calling runAsync() again."
+   ]
+  },
+  {
+   "source": "raw/pilot_r1/attempt3/q01_attempt3_part1_steps.json",
+   "run": "r1",
+   "leg": "part1",
+   "started_at": "2026-09-29T16:30:31.365328",
+   "ended_at": "2026-09-29T16:31:49.566156",
+   "steps": [
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "client_logout_clean_run",
+     "status": "PASS",
+     "note": "UI logout (profile→退出登录→确认); app-own session cleared",
+     "ts": "2026-09-29T16:30:43.612941"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "identity_entry",
+     "status": "FAIL",
+     "note": "via=guest_tap_failed",
+     "ts": "2026-09-29T16:31:02.812349"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=76619",
+     "ts": "2026-09-29T16:31:47.985286"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=ready (FIX-567 生产者边界已知)",
+     "ts": "2026-09-29T16:31:49.547558"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "wizard_open",
+     "status": "FAIL",
+     "note": "dashboard never reached; part1 downstream skipped",
+     "ts": "2026-09-29T16:31:49.551760"
+    }
+   ],
+   "clicks": 3,
+   "failures": []
+  },
+  {
+   "source": "raw/pilot_r1/attempt4/q01_attempt4_part1_steps.json",
+   "run": "r1",
+   "leg": "part1",
+   "started_at": "2026-09-29T16:44:14.605002",
+   "ended_at": "2026-09-29T16:46:22.881729",
+   "steps": [
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "client_logout_clean_run",
+     "status": "PASS",
+     "note": "UI logout (profile→退出登录→确认); app-own session cleared",
+     "ts": "2026-09-29T16:44:26.858092"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "identity_entry",
+     "status": "FAIL",
+     "note": "via=guest_tap_failed",
+     "ts": "2026-09-29T16:45:34.228573"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=126275",
+     "ts": "2026-09-29T16:46:20.880215"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=ready (FIX-567 生产者边界已知)",
+     "ts": "2026-09-29T16:46:22.846282"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "wizard_open",
+     "status": "FAIL",
+     "note": "dashboard never reached; part1 downstream skipped",
+     "ts": "2026-09-29T16:46:22.855886"
+    }
+   ],
+   "clicks": 3,
+   "failures": []
+  },
+  {
+   "source": "raw/pilot_r1/attempt5/q01_attempt5_part1_steps.json",
+   "run": "r1",
+   "leg": "part1",
+   "started_at": "2026-09-29T16:59:08.199682",
+   "ended_at": "2026-09-29T17:07:17.646292",
+   "steps": [
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "client_logout_clean_run",
+     "status": "PASS",
+     "note": "UI logout (profile→退出登录→确认); app-own session cleared",
+     "ts": "2026-09-29T16:59:17.312143"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "identity_entry",
+     "status": "PASS",
+     "note": "via=guest",
+     "ts": "2026-09-29T16:59:19.023524"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=25079",
+     "ts": "2026-09-29T16:59:33.279209"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=absent (FIX-567 生产者边界已知)",
+     "ts": "2026-09-29T16:59:33.587196"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "goal_anchor_created",
+     "status": "FAIL",
+     "note": "wizard real-LLM intent→create; MemoryGoal.active NOT created (hybrid anchor will fail)",
+     "ts": "2026-09-29T17:01:22.427604"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "resume_task_visible",
+     "status": "PASS",
+     "note": "seeded goal+stuck task on home (接续面)",
+     "ts": "2026-09-29T17:01:30.158625"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_execution_open",
+     "status": "PASS",
+     "note": "seeded task execution surface (stuck FAB present=true)",
+     "ts": "2026-09-29T17:01:44.834667"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_stuck",
+     "status": "PASS",
+     "note": "markTaskStuck via client FAB; help sheet visible=true",
+     "ts": "2026-09-29T17:02:02.429977"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "stuck_journey_payload",
+     "status": "PASS",
+     "note": "server-derived clarification payload ready=true",
+     "ts": "2026-09-29T17:02:10.628843"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "clarification_answered",
+     "status": "PASS",
+     "note": "first option tapped",
+     "ts": "2026-09-29T17:02:19.927661"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "correction_submitted",
+     "status": "PASS",
+     "note": "semantic correction accepted; scope cards visible=true",
+     "ts": "2026-09-29T17:02:28.214074"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "scope_this_time",
+     "status": "PASS",
+     "note": "this-time-only selected",
+     "ts": "2026-09-29T17:02:35.702404"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "minutes_adjusted",
+     "status": "PASS",
+     "note": "adjusted=15 target=15",
+     "ts": "2026-09-29T17:02:39.993865"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "diff_review",
+     "status": "PASS",
+     "note": "server diff visible=true",
+     "ts": "2026-09-29T17:02:48.240096"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "calibration_committed",
+     "status": "PASS",
+     "note": "receipt-gated success visible=true",
+     "ts": "2026-09-29T17:02:56.438336"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "sheet_dismissed",
+     "status": "PASS",
+     "note": "barrier tap + drag dismiss",
+     "ts": "2026-09-29T17:03:02.153705"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_entry",
+     "status": "PASS",
+     "note": "entry tapped=true",
+     "ts": "2026-09-29T17:03:02.163135"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_sheet_open",
+     "status": "PASS",
+     "note": "sheetVisible=true",
+     "ts": "2026-09-29T17:03:09.663033"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_judgment_stage",
+     "status": "FAIL",
+     "note": "prep done; judgment stage reachable=false",
+     "ts": "2026-09-29T17:07:17.644680"
+    }
+   ],
+   "clicks": 16,
+   "failures": []
+  },
+  {
+   "source": "raw/pilot_r1/attempt6/q01_attempt6_part1_steps.json",
+   "run": "r1",
+   "leg": "part1",
+   "started_at": "2026-09-29T17:14:06.662056",
+   "ended_at": "2026-09-29T17:23:28.378128",
+   "steps": [
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "client_logout_clean_run",
+     "status": "PASS",
+     "note": "UI logout (profile→退出登录→确认); app-own session cleared",
+     "ts": "2026-09-29T17:14:15.750826"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "identity_entry",
+     "status": "PASS",
+     "note": "via=guest",
+     "ts": "2026-09-29T17:14:16.886004"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=24590",
+     "ts": "2026-09-29T17:14:31.252902"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=absent (FIX-567 生产者边界已知)",
+     "ts": "2026-09-29T17:14:31.565742"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "goal_anchor_created",
+     "status": "FAIL",
+     "note": "wizard real-LLM intent→create; MemoryGoal.active NOT created (hybrid anchor will fail)",
+     "ts": "2026-09-29T17:17:30.747621"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "resume_task_visible",
+     "status": "PASS",
+     "note": "seeded goal+stuck task on home (接续面)",
+     "ts": "2026-09-29T17:17:38.150864"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_execution_open",
+     "status": "PASS",
+     "note": "seeded task execution surface (stuck FAB present=true)",
+     "ts": "2026-09-29T17:17:54.186233"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_stuck",
+     "status": "PASS",
+     "note": "markTaskStuck via client FAB; help sheet visible=true",
+     "ts": "2026-09-29T17:18:12.849858"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "stuck_journey_payload",
+     "status": "PASS",
+     "note": "server-derived clarification payload ready=true",
+     "ts": "2026-09-29T17:18:21.025377"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "clarification_answered",
+     "status": "PASS",
+     "note": "first option tapped",
+     "ts": "2026-09-29T17:18:30.359228"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "correction_submitted",
+     "status": "PASS",
+     "note": "semantic correction accepted; scope cards visible=true",
+     "ts": "2026-09-29T17:18:38.716063"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "scope_this_time",
+     "status": "PASS",
+     "note": "this-time-only selected",
+     "ts": "2026-09-29T17:18:46.308932"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "minutes_adjusted",
+     "status": "PASS",
+     "note": "adjusted=15 target=15",
+     "ts": "2026-09-29T17:18:50.785175"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "diff_review",
+     "status": "PASS",
+     "note": "server diff visible=true",
+     "ts": "2026-09-29T17:18:58.934166"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "calibration_committed",
+     "status": "PASS",
+     "note": "receipt-gated success visible=true",
+     "ts": "2026-09-29T17:19:07.230700"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "sheet_dismissed",
+     "status": "PASS",
+     "note": "barrier tap + drag dismiss",
+     "ts": "2026-09-29T17:19:13.164903"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_entry",
+     "status": "PASS",
+     "note": "entry tapped=true",
+     "ts": "2026-09-29T17:19:13.208396"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_sheet_open",
+     "status": "PASS",
+     "note": "sheetVisible=true",
+     "ts": "2026-09-29T17:19:20.775380"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_judgment_stage",
+     "status": "FAIL",
+     "note": "prep done; judgment stage reachable=false",
+     "ts": "2026-09-29T17:23:28.377650"
+    }
+   ],
+   "clicks": 20,
+   "failures": []
+  },
+  {
+   "source": "raw/pilot_r1/attempt7/q01_attempt7_part1_steps.json",
+   "run": "r1",
+   "leg": "part1",
+   "started_at": "2026-09-29T17:26:26.837597",
+   "ended_at": "2026-09-29T17:28:06.089912",
+   "steps": [
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "client_logout_clean_run",
+     "status": "PASS",
+     "note": "UI logout (profile→退出登录→确认); app-own session cleared",
+     "ts": "2026-09-29T17:26:35.936019"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "identity_entry",
+     "status": "PASS",
+     "note": "via=guest",
+     "ts": "2026-09-29T17:26:37.491201"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=25046",
+     "ts": "2026-09-29T17:26:51.884466"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=absent (FIX-567 生产者边界已知)",
+     "ts": "2026-09-29T17:26:52.193544"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "goal_anchor_created",
+     "status": "FAIL",
+     "note": "register→persona fast-path (all UI); memory_goals.active NOT created (hybrid anchor will fail)",
+     "ts": "2026-09-29T17:27:09.609977"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "resume_task_visible",
+     "status": "FAIL",
+     "note": "seeded stuck task not surfaced after 40s",
+     "ts": "2026-09-29T17:28:05.040429"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_execution_open",
+     "status": "FAIL",
+     "note": "seeded task execution surface (stuck FAB present=false)",
+     "ts": "2026-09-29T17:28:06.087998"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "wizard_open",
+     "status": "FAIL",
+     "note": "execution surface not reached; downstream skipped",
+     "ts": "2026-09-29T17:28:06.089497"
+    }
+   ],
+   "clicks": 8,
+   "failures": []
+  },
+  {
+   "source": "raw/pilot_r1/attempt8/q01_attempt8_part1_steps.json",
+   "run": "r1",
+   "leg": "part1",
+   "started_at": "2026-09-29T17:32:12.175543",
+   "ended_at": "2026-09-29T17:37:37.003701",
+   "steps": [
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "identity_entry",
+     "status": "PASS",
+     "note": "via=guest",
+     "ts": "2026-09-29T17:32:15.622614"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=17814",
+     "ts": "2026-09-29T17:32:29.989838"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=absent (FIX-567 生产者边界已知)",
+     "ts": "2026-09-29T17:32:30.301679"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "goal_anchor_created",
+     "status": "PASS",
+     "note": "register→persona fast-path (all UI); memory_goals.active ready",
+     "ts": "2026-09-29T17:33:16.819506"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "fixture_document_ready",
+     "status": "FAIL",
+     "note": "real upload→chunk pipeline via app session (disclosed fixture); result=processing_timeout",
+     "ts": "2026-09-29T17:36:39.276949"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "resume_task_visible",
+     "status": "FAIL",
+     "note": "seeded stuck task not surfaced after 40s",
+     "ts": "2026-09-29T17:37:26.584804"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_execution_open",
+     "status": "FAIL",
+     "note": "seeded task execution surface (stuck FAB present=false)",
+     "ts": "2026-09-29T17:37:37.000878"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "wizard_open",
+     "status": "FAIL",
+     "note": "execution surface not reached; downstream skipped",
+     "ts": "2026-09-29T17:37:37.002913"
+    }
+   ],
+   "clicks": 11,
+   "failures": []
+  },
+  {
+   "source": "raw/pilot_r1/attempt9/q01_attempt9_part1_steps.json",
+   "run": "r1",
+   "leg": "part1",
+   "started_at": "2026-09-29T17:49:04.658748",
+   "ended_at": "2026-09-29T17:52:00.259809",
+   "steps": [
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "client_logout_clean_run",
+     "status": "PASS",
+     "note": "UI logout (profile→退出登录→确认); app-own session cleared",
+     "ts": "2026-09-29T17:49:14.002725"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "identity_entry",
+     "status": "PASS",
+     "note": "via=guest",
+     "ts": "2026-09-29T17:49:16.027910"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=25630",
+     "ts": "2026-09-29T17:49:30.289113"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=absent (FIX-567 生产者边界已知)",
+     "ts": "2026-09-29T17:49:30.598967"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "goal_anchor_created",
+     "status": "PASS",
+     "note": "register→persona fast-path (all UI); memory_goals.active ready",
+     "ts": "2026-09-29T17:50:16.730594"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "fixture_document_ready",
+     "status": "PASS",
+     "note": "real upload→chunk pipeline via app session (disclosed fixture); result=ok fileId=dea1379b-f12d-4c83-b5e4-2111420880f4",
+     "ts": "2026-09-29T17:50:52.054908"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "resume_task_visible",
+     "status": "FAIL",
+     "note": "seeded stuck task not surfaced after 40s",
+     "ts": "2026-09-29T17:51:39.333488"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_execution_open",
+     "status": "FAIL",
+     "note": "seeded task execution surface (stuck FAB present=false)",
+     "ts": "2026-09-29T17:52:00.258101"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "wizard_open",
+     "status": "FAIL",
+     "note": "execution surface not reached; downstream skipped",
+     "ts": "2026-09-29T17:52:00.259125"
+    }
+   ],
+   "clicks": 16,
+   "failures": []
+  },
+  {
+   "source": "raw/pilot_r1/q01_pilot_part1_steps.json",
+   "run": "r1",
+   "leg": "part1",
+   "started_at": "2026-09-29T13:03:17.886173",
+   "ended_at": "2026-09-29T13:09:41.655057",
+   "steps": [
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "identity_entry",
+     "status": "PASS",
+     "note": "via=guest",
+     "ts": "2026-09-29T13:03:29.735907"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=26144",
+     "ts": "2026-09-29T13:03:44.030606"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=absent (FIX-567 生产者边界已知)",
+     "ts": "2026-09-29T13:03:44.351465"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "resume_task_visible",
+     "status": "PASS",
+     "note": "seeded goal+stuck task on home (接续面)",
+     "ts": "2026-09-29T13:03:44.352971"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_execution_open",
+     "status": "PASS",
+     "note": "seeded task execution surface (stuck FAB present=true)",
+     "ts": "2026-09-29T13:04:12.686373"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "task_stuck",
+     "status": "PASS",
+     "note": "markTaskStuck via client FAB; help sheet visible=true",
+     "ts": "2026-09-29T13:04:28.594985"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "stuck_journey_payload",
+     "status": "PASS",
+     "note": "server-derived clarification payload ready=true",
+     "ts": "2026-09-29T13:04:36.591081"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "clarification_answered",
+     "status": "PASS",
+     "note": "first option tapped",
+     "ts": "2026-09-29T13:04:45.714858"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "correction_submitted",
+     "status": "PASS",
+     "note": "semantic correction accepted; scope cards visible=true",
+     "ts": "2026-09-29T13:04:53.792523"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "scope_this_time",
+     "status": "PASS",
+     "note": "this-time-only selected",
+     "ts": "2026-09-29T13:04:56.976187"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "minutes_adjusted",
+     "status": "FAIL",
+     "note": "adjusted=30 target=15",
+     "ts": "2026-09-29T13:05:04.742667"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "diff_review",
+     "status": "PASS",
+     "note": "server diff visible=true",
+     "ts": "2026-09-29T13:05:11.919584"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "calibration_committed",
+     "status": "PASS",
+     "note": "receipt-gated success visible=true",
+     "ts": "2026-09-29T13:05:20.576050"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "sheet_dismissed",
+     "status": "PASS",
+     "note": "barrier tap + drag dismiss",
+     "ts": "2026-09-29T13:05:26.218980"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_entry",
+     "status": "PASS",
+     "note": "entry tapped=true",
+     "ts": "2026-09-29T13:05:26.231560"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_sheet_open",
+     "status": "PASS",
+     "note": "sheetVisible=true",
+     "ts": "2026-09-29T13:05:33.871030"
+    },
+    {
+     "leg": "part1",
+     "run": "r1",
+     "step": "hybrid_judgment_stage",
+     "status": "FAIL",
+     "note": "prep done; judgment stage reachable=false",
+     "ts": "2026-09-29T13:09:41.654891"
+    }
+   ],
+   "clicks": 5,
+   "failures": []
+  },
+  {
+   "source": "raw/q01_probe_probe_steps.json",
+   "run": "probe",
+   "leg": "probe",
+   "started_at": "2026-09-29T11:02:35.192566",
+   "ended_at": "2026-09-29T11:03:00.253448",
+   "steps": [
+    {
+     "leg": "probe",
+     "run": "probe",
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "leg=probe entry captured",
+     "ts": "2026-09-29T11:02:52.677365"
+    },
+    {
+     "leg": "probe",
+     "run": "probe",
+     "step": "register_nav",
+     "status": "FAIL",
+     "note": "register link not found",
+     "ts": "2026-09-29T11:02:52.681578"
+    },
+    {
+     "leg": "probe",
+     "run": "probe",
+     "step": "dashboard_probe",
+     "status": "PASS",
+     "note": "elapsedMs=25060",
+     "ts": "2026-09-29T11:03:00.253307"
+    }
+   ],
+   "clicks": null,
+   "failures": []
+  },
+  {
+   "source": "/tmp/r4_console.log（姊妹会话）",
+   "run": "r4",
+   "leg": "part1",
+   "steps": [
+    {
+     "step": "client_logout_clean_run",
+     "status": "PASS",
+     "note": "UI logout (profile→退出登录→确认); app-own session cleared"
+    },
+    {
+     "step": "identity_entry",
+     "status": "PASS",
+     "note": "via=guest"
+    },
+    {
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=24805"
+    },
+    {
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=absent (FIX-567 生产者边界已知)"
+    },
+    {
+     "step": "goal_anchor_created",
+     "status": "PASS",
+     "note": "register→persona fast-path (all UI); memory_goals.active ready"
+    },
+    {
+     "step": "fixture_document_ready",
+     "status": "PASS",
+     "note": "real upload→chunk pipeline via app session (disclosed fixture); result=ok fileId=d65b11a9-2e20-4490-bd7a-9d8441cfd9cd"
+    },
+    {
+     "step": "wizard_open",
+     "status": "PASS",
+     "note": "和 AI 定目标 CTA→J-01 wizard opened"
+    },
+    {
+     "step": "wizard_intent_analyzed",
+     "status": "PASS",
+     "note": "real LLM intent analysis returned=true"
+    },
+    {
+     "step": "wizard_plan_created",
+     "status": "PASS",
+     "note": "real LLM plan preview→create; successDialog=true wizardGone=false"
+    },
+    {
+     "step": "task_execution_open",
+     "status": "PASS",
+     "note": "task execution surface via wizard-first-task/legacy (stuck FAB present=true)"
+    }
+   ],
+   "note": "steps 由 console Q01_STEP 行重建（该轮 steps json 落 /tmp，未归档前被清）"
+  },
+  {
+   "source": "/tmp/r5_console.log（姊妹会话）",
+   "run": "r5",
+   "leg": "part1",
+   "steps": [
+    {
+     "step": "client_logout_clean_run",
+     "status": "PASS",
+     "note": "UI logout (profile→退出登录→确认); app-own session cleared"
+    },
+    {
+     "step": "identity_entry",
+     "status": "PASS",
+     "note": "via=guest"
+    },
+    {
+     "step": "app_launch",
+     "status": "PASS",
+     "note": "elapsedMs=24752"
+    },
+    {
+     "step": "home_resume_surface",
+     "status": "PASS",
+     "note": "strip=absent (FIX-567 生产者边界已知)"
+    },
+    {
+     "step": "goal_anchor_created",
+     "status": "PASS",
+     "note": "register→persona fast-path (all UI); memory_goals.active ready"
+    },
+    {
+     "step": "fixture_document_ready",
+     "status": "PASS",
+     "note": "real upload→chunk pipeline via app session (disclosed fixture); result=ok fileId=3d9e2dc1-ccf6-4b29-b541-4a59c679cf63"
+    },
+    {
+     "step": "wizard_open",
+     "status": "PASS",
+     "note": "和 AI 定目标 CTA→J-01 wizard opened"
+    },
+    {
+     "step": "wizard_intent_analyzed",
+     "status": "PASS",
+     "note": "real LLM intent analysis returned=true"
+    },
+    {
+     "step": "wizard_plan_created",
+     "status": "PASS",
+     "note": "real LLM plan preview→create; successDialog=true wizardGone=false"
+    },
+    {
+     "step": "task_execution_open",
+     "status": "PASS",
+     "note": "task execution surface via wizard-first-task/legacy (stuck FAB present=true)"
+    },
+    {
+     "step": "task_list_projection_refreshed",
+     "status": "PASS",
+     "note": "tasks list visit + pull-refresh before stuck sheet (anchor hydration detour, runB lesson)"
+    },
+    {
+     "step": "task_stuck",
+     "status": "PASS",
+     "note": "markTaskStuck via client FAB; help sheet visible=true"
+    },
+    {
+     "step": "stuck_journey_payload",
+     "status": "PASS",
+     "note": "server-derived clarification payload ready=true"
+    },
+    {
+     "step": "clarification_answered",
+     "status": "PASS",
+     "note": "first option tapped"
+    },
+    {
+     "step": "correction_submitted",
+     "status": "PASS",
+     "note": "semantic correction accepted; scope cards visible=true"
+    },
+    {
+     "step": "scope_this_time",
+     "status": "FAIL",
+     "note": "调整这次行动 CTA missing"
+    },
+    {
+     "step": "minutes_adjusted",
+     "status": "FAIL",
+     "note": "adjusted=null target=15"
+    },
+    {
+     "step": "diff_review",
+     "status": "FAIL",
+     "note": "server diff visible=false"
+    },
+    {
+     "step": "calibration_committed",
+     "status": "FAIL",
+     "note": "confirm button missing"
+    },
+    {
+     "step": "sheet_dismissed",
+     "status": "PASS",
+     "note": "barrier tap + drag dismiss"
+    },
+    {
+     "step": "hybrid_entry",
+     "status": "PASS",
+     "note": "entry tapped=true"
+    },
+    {
+     "step": "hybrid_sheet_open",
+     "status": "PASS",
+     "note": "sheetVisible=true"
+    },
+    {
+     "step": "hybrid_judgment_stage",
+     "status": "FAIL",
+     "note": "prep done; judgment stage reachable=false"
+    }
+   ],
+   "note": "steps 由 console Q01_STEP 行重建（该轮 steps json 落 /tmp，未归档前被清）"
+  }
+ ]
+}

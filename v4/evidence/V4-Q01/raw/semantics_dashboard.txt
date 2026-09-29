@@ -1,0 +1,54 @@
+# semantics dump dashboard run=probe leg=probe ts=2026-09-29T11:03:00.250994
+[0] label="" value="" tooltip=""  rect=(0,0,1600x1200)
+  [1] label="" value="" tooltip=""  rect=(0,0,800x600)
+    [3] label="" value="" tooltip=""  rect=(0,0,800x600)
+      [4] label="" value="" tooltip=""  rect=(0,0,800x528)
+        [5] label="" value="" tooltip=""  rect=(0,0,800x528)
+          [6] label="" value="" tooltip=""  rect=(0,0,800x408)
+            [17] label="" value="" tooltip=""  rect=(0,0,800x408)
+              [7] label="现在的指挥台
+先定下你的第一个目标
+告诉我你最近最想推进的一件事，我会立刻帮你拆成可执行的计划。" value="" tooltip=""  rect=(0,0,800x256)
+                [42] label="和 AI 定目标" value="" tooltip="" button rect=(0,0,696x44)
+                [43] label="我卡住了" value="" tooltip="" button rect=(0,0,168x44)
+                [44] label="考试冲刺" value="" tooltip="" button rect=(0,0,83x22)
+                [45] label="长期学习" value="" tooltip="" button rect=(0,0,83x22)
+                [46] label="项目交付" value="" tooltip="" button rect=(0,0,83x22)
+                [47] label="自我成长" value="" tooltip="" button rect=(0,0,83x22)
+                [48] label="我也说不清" value="" tooltip="" button rect=(0,0,95x22)
+              [10] label="完成引导，让 AI 更懂你
+学习画像和建模访谈还没完成。先随便体验，随时回来继续——AI 已经可以用了。
+继续引导" value="" tooltip="" button rect=(0,0,800x152)
+              [12] label="今日简报 · 当天的状态与节奏
+今日简报
+当天的状态与节奏" value="" tooltip="" button rect=(0,0,800x65)
+              [49] label="多目标看板 · 所有目标的总览
+多目标看板
+所有目标的总览" value="" tooltip="" button rect=(0,0,800x65)
+              [50] label="考试冲刺 · 尚未启动 · 点开创建
+考试冲刺
+尚未启动 · 点开创建" value="" tooltip="" button rect=(0,0,800x65)
+              [51] label="任务面板 · 今日待办与进度
+任务面板
+今日待办与进度" value="" tooltip="" button rect=(0,0,800x50)
+          [18] label="" value="" tooltip=""  rect=(0,0,768x36)
+            [23] label="" value="" tooltip=""  rect=(0,0,768x36)
+              [19] label="创建任务" value="" tooltip=""  rect=(0,0,97x28)
+              [20] label="开始专注" value="" tooltip=""  rect=(0,0,97x28)
+              [21] label="查看日历" value="" tooltip=""  rect=(0,0,97x28)
+              [22] label="好奇心胶囊" value="" tooltip=""  rect=(0,0,109x28)
+          [24] label="语音输入" value="" tooltip="语音输入" button rect=(0,0,48x44)
+          [25] label="输入消息..." value="" tooltip="" textField rect=(0,0,588x44)
+          [26] label="切换 Agent 模式" value="" tooltip="" button rect=(0,0,48x44)
+          [27] label="发送" value="" tooltip="" button rect=(0,0,48x44)
+      [28] label="" value="" tooltip=""  rect=(0,0,800x72)
+        [29] label="驾驶舱
+第 1 个标签，共 5 个" value="" tooltip="" button rect=(0,0,160x72)
+        [30] label="星图
+第 2 个标签，共 5 个" value="" tooltip="" button rect=(0,0,160x72)
+        [31] label="对话
+第 3 个标签，共 5 个" value="" tooltip="" button rect=(0,0,160x72)
+        [32] label="社群
+第 4 个标签，共 5 个" value="" tooltip="" button rect=(0,0,160x72)
+        [33] label="我的
+第 5 个标签，共 5 个" value="" tooltip="" button rect=(0,0,160x72)

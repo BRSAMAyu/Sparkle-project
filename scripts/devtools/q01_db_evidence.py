@@ -75,7 +75,7 @@ Q = {
 
 def q(sql: str, params: dict) -> dict:
     out = subprocess.run(
-        ["docker", "exec", "sparkle_db", "psql", "-U", "sparkle", "-d", "sparkle",
+        ["docker", "exec", "sparkle_db", "psql", "-U", "postgres", "-d", "sparkle",
          "-A", "-t", "-c", sql],
         capture_output=True, text=True,
     )
@@ -83,10 +83,13 @@ def q(sql: str, params: dict) -> dict:
 
 
 def q_json(sql: str, params: dict) -> list:
+    def lit(v):
+        return "'" + str(v).replace("'", "''") + "'"
+    rendered = sql.replace("%(uid)s", lit(params.get("uid", ""))).replace("%(u)s", lit(params.get("u", "")))
     out = subprocess.run(
-        ["docker", "exec", "sparkle_db", "psql", "-U", "sparkle", "-d", "sparkle",
+        ["docker", "exec", "sparkle_db", "psql", "-U", "postgres", "-d", "sparkle",
          "-A", "-t", "-c",
-         "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) FROM (" + sql + " LIMIT 200) t;"],
+         "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) FROM (" + rendered + " LIMIT 200) t;"],
         capture_output=True, text=True,
     )
     if out.returncode != 0:
@@ -103,6 +106,7 @@ def main() -> int:
         return 2
     username, prefix = sys.argv[1], sys.argv[2]
     users = q_json(Q["user"], {"u": username})
+    users = [u for u in users if isinstance(u, dict) and "id" in u]
     if not users:
         print(f"user {username} not found")
         return 1

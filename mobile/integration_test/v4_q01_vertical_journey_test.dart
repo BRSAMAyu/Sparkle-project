@@ -19,6 +19,7 @@ import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart
 import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/persona_onboarding_screen.dart';
 import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
+import 'package:sparkle/features/task/presentation/screens/task_create_screen.dart';
 import 'package:sparkle/main.dart' as app;
 
 /// V4-Q01 核心像素×AI 垂直旅程真端验收 driver（measurement infrastructure —
@@ -64,6 +65,11 @@ const _kTaskTitle = String.fromEnvironment('Q01_TASK_TITLE',
     defaultValue: '二叉树遍历');
 const _kMinutes = String.fromEnvironment('Q01_MINUTES', defaultValue: '15');
 const _kUser = String.fromEnvironment('Q01_USER');
+/// J-01 向导支线开关（v3 默认关）：r5 实证向导计划任务不落任务列表投影 →
+/// 校准「仅本次」锚点结构性缺席；v3 主径=列表空态真实任务创建。向导的
+/// 真 LLM 意图分析+计划 preview 证据已在 r4/r5 捕获并保留（证据五件套
+/// 引用），六环节闭环旅程不再依赖它。
+const _kRunWizard = String.fromEnvironment('Q01_WIZARD', defaultValue: '0');
 const kIntentText = '两周内掌握线性代数矩阵特征值，能独立做完一套期末真题';
 
 /// 注册转化用测试口令（测试自建账号，非任何真实凭据）
@@ -954,7 +960,8 @@ Future<void> main() async {
       // 「开始第一个任务」直达任务面。种子 demo 世界属 guest user_id，
       // 原地注册=新 user_id（attempt9 DB 实证 tasks=0），种子任务链作废。
       var opened = false;
-      var journeyTaskTitle = 'wizard-first-task';
+      var journeyTaskTitle = _kTaskTitle;
+      if (_kRunWizard == '1') {
       var wizardUp = false;
       final startAiCta = await waitUntil(
         tester,
@@ -1288,14 +1295,171 @@ Future<void> main() async {
           }
         }
       }
+      } // _kRunWizard == '1'（J-01 向导支线，v3 默认关）
+
+      else {
+        // ── ②' 真实任务创建（v3 主径）：r5 实证 J-01 向导的计划任务不落
+        // 任务列表投影（TEXTDUMP task-list-refreshed=「今天还没有待办事项」）
+        // → 校准「仅本次」锚点结构性缺席。真实用户路径 = 任务列表空态
+        // 「创建第一项任务」→ 表单（标题 + 默认 25 分钟）→ 列表行 →
+        // 开始任务 → 执行面。列表创建经 taskListProvider.refreshTasks，
+        // 投影必含新任务 → 执行面与校准锚点同时满足。全程 UI 驱动。
+        try {
+          final navCtx = tester.element(find.byType(Navigator).first);
+          clicks[0]++;
+          // push 的 Future 在 pop 时才完成（r4 死锁实证）——unawaited。
+          unawaited(navCtx.push('/tasks'));
+          await waitUntil(
+            tester,
+            () => textAny(['待处理', '全部']) != null,
+            timeout: const Duration(seconds: 15),
+          );
+          Finder? createCta;
+          for (var r = 0; r < 3 && createCta == null; r++) {
+            createCta = textAny(['创建第一项任务', '创建任务', '新建任务']);
+            if (createCta == null) {
+              try {
+                await tester.drag(
+                  find.byType(Scrollable).first,
+                  const Offset(0, -220),
+                );
+                await tester.pump(const Duration(milliseconds: 450));
+              } catch (_) {
+                break;
+              }
+            }
+          }
+          var createUp = false;
+          if (createCta != null) {
+            try {
+              await tester.ensureVisible(createCta!);
+            } catch (_) {}
+            clicks[0]++;
+            await tester.tap(createCta, warnIfMissed: false);
+            createUp = await waitUntil(
+              tester,
+              () => find.byType(TaskCreateScreen).evaluate().isNotEmpty,
+              timeout: const Duration(seconds: 15),
+            );
+          }
+          recordStep('task_create_opened', createUp,
+              'tasks list empty-state CTA → create form '
+              '${createUp ? 'opened' : 'NOT reached'}');
+          if (createUp) {
+            await safeSettle(tester);
+            final titleField = find.descendant(
+              of: find.byType(TaskCreateScreen),
+              matching: find.byType(TextFormField),
+            );
+            if (titleField.evaluate().isNotEmpty) {
+              await tester.enterText(titleField.first, _kTaskTitle);
+              await tester.pump(const Duration(milliseconds: 400));
+            }
+            await shot('$_kRun/$_kLeg/09b-task-create-form.png');
+            final submit = primaryButton(['创建任务']);
+            if (submit != null) {
+              try {
+                await tester.ensureVisible(submit);
+                await tester.pump(const Duration(milliseconds: 300));
+              } catch (_) {}
+              clicks[0]++;
+              await tester.tap(submit, warnIfMissed: false);
+            }
+            // 提交后：无 nudge 自动 pop；有 nudge 先逐个「忽略」再手动返回
+            var nudged = await waitUntil(
+              tester,
+              () => textAny(['忽略']) != null,
+              timeout: const Duration(seconds: 20),
+            );
+            var guard = 0;
+            while (nudged && guard < 6) {
+              guard++;
+              final dismiss = textAny(['忽略']);
+              if (dismiss == null) break;
+              try {
+                await tester.ensureVisible(dismiss);
+              } catch (_) {}
+              clicks[0]++;
+              await tester.tap(dismiss, warnIfMissed: false);
+              await tester.pump(const Duration(milliseconds: 400));
+              nudged = textAny(['忽略']) != null;
+            }
+            var backOnList = await waitUntil(
+              tester,
+              () => find.byType(TaskCreateScreen).evaluate().isEmpty,
+              timeout: const Duration(seconds: 15),
+            );
+            if (!backOnList) {
+              clicks[0]++;
+              navCtx.pop();
+              backOnList = await waitUntil(
+                tester,
+                () => find.byType(TaskCreateScreen).evaluate().isEmpty,
+                timeout: const Duration(seconds: 10),
+              );
+            }
+            // 行可见 = 列表投影含新任务（创建路径已 refreshTasks）
+            final rowVisible = await waitUntil(
+              tester,
+              () => find.textContaining(_kTaskTitle).evaluate().isNotEmpty,
+              timeout: const Duration(seconds: 15),
+            );
+            await shot('$_kRun/$_kLeg/10b-task-list-with-row.png');
+            await dumpTexts(tester, 'task-list-after-create');
+            recordStep('task_created_via_ui', rowVisible,
+                'task "=$_kTaskTitle" via list CTA form; row visible=$rowVisible');
+            if (rowVisible) {
+              final row = find.textContaining(_kTaskTitle);
+              try {
+                await tester.ensureVisible(row.first);
+              } catch (_) {}
+              clicks[0]++;
+              await tester.tap(row.first, warnIfMissed: false);
+              final detailUp = await waitUntil(
+                tester,
+                () => primaryButton(['开始任务', '继续', '开始']) != null,
+                timeout: const Duration(seconds: 15),
+              );
+              if (detailUp) {
+                final startBtn = primaryButton(['开始任务', '继续']);
+                if (startBtn != null &&
+                    find
+                        .byKey(const Key('stuck-help-fab'))
+                        .evaluate()
+                        .isEmpty) {
+                  try {
+                    await tester.ensureVisible(startBtn);
+                  } catch (_) {}
+                  clicks[0]++;
+                  await tester.tap(startBtn, warnIfMissed: false);
+                }
+              }
+              opened = await waitUntil(
+                tester,
+                () => find
+                    .byKey(const Key('stuck-help-fab'))
+                    .evaluate()
+                    .isNotEmpty,
+                timeout: const Duration(seconds: 25),
+              );
+            }
+          }
+        } catch (e) {
+          recordStep(
+            'task_created_via_ui',
+            false,
+            'create path failed: $e',
+          );
+        }
+      }
 
       await safeSettle(tester, const Duration(seconds: 8));
       await shot('$_kRun/$_kLeg/11-task-execution.png');
       await dumpTexts(tester, 'task-execution');
       await dumpSemantics('task-execution');
       recordStep('task_execution_open', opened,
-          'task execution surface via wizard-first-task/legacy (stuck FAB '
-          'present=$opened)');
+          'task execution surface via ui-create/wizard-first-task/legacy '
+          '(stuck FAB present=$opened)');
       final execOk = find
           .byKey(const Key('stuck-help-fab'))
           .evaluate()

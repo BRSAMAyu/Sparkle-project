@@ -1,0 +1,128 @@
+{
+ "card": "V4-Q01",
+ "title": "核心像素×AI垂直旅程真端验收",
+ "generated_at": "2026-09-29T18:55:00+08:00",
+ "executor_sessions": [
+  "本会话（断点续跑：前任 ENV-OUTAGE 阵亡后接续 worktree 未提交改动）",
+  "姊妹会话（同卡同 worktree，runB/r4/r5 迭代；其运行与日志按文件名归属并入本清单）"
+ ],
+ "source": {
+  "worktree": "/Users/brsama/code/GitHub/wtQ01",
+  "branch": "agent/v4/q01",
+  "tested_sha": "5cbc715f63deaeb7872a9650ce44efaef6d07f4b",
+  "product_code_modified": false,
+  "test_infra_added": [
+   "mobile/integration_test/v4_q01_vertical_journey_test.dart",
+   "scripts/devtools/q01_synth_video.py",
+   "scripts/devtools/q01_db_evidence.py"
+  ]
+ },
+ "stack": {
+  "round": 3,
+  "provenance_file": "raw/stack_takeover_r3.md",
+  "data_plane": "sparkle_db/redis/minio（cosmos 仓 compose 属主，FIX-557），全部 healthy 亲验",
+  "alembic_head": "i06_20260928",
+  "gateway_binary_sha256": "711997d0fd1a809da352186ef6cdd08eacf68cf044b3b9c775ee8fb012e4dde4",
+  "llm_router": "31 model configs loaded (grpc_server.log)",
+  "commands": [
+   {
+    "cmd": "bash scripts/dev-stage3.sh",
+    "exit_code": 0,
+    "note": "首轮 backend/gateway 未就绪误报 FAIL，grpc 因非交互 python3→3.14 缺 grpc_reflection 首起失败（日志留痕）；修复：BACKEND_PYTHON=/opt/homebrew/bin/python3.11 重启 gRPC，gateway 重启后 /api/v1/health 200"
+   },
+   {
+    "cmd": "cd backend && /opt/homebrew/bin/celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2",
+    "exit_code": 0,
+    "note": "第三轮新增：fixture 文档摄入所需（process_stored_file）"
+   },
+   {
+    "cmd": "curl http://localhost:8000/health && curl http://localhost:8080/api/v1/health && nc -z localhost 50051",
+    "exit_code": 0
+   }
+  ]
+ },
+ "device": {
+  "target": "macos desktop (flutter test -d macos)",
+  "build": "build/macos/Build/Products/Debug/sparkle.app",
+  "frame_policy": "LiveTestWidgetsFlutterBindingFramePolicy.fullyLive",
+  "frame_capture": "真实引擎顶层 RepaintBoundary（topmost full-viewport，V3-FIX-543 承接）"
+ },
+ "commands_and_exit_codes": {
+  "run_template": "cd /Users/brsama/code/GitHub/wtQ01/mobile && flutter test integration_test/v4_q01_vertical_journey_test.dart -d macos --concurrency=1 --dart-define=Q01_LEG=part1 --dart-define=Q01_RUN=<RUN> --dart-define=Q01_SHOT_DEST=/Users/brsama/code/GitHub/wtQ01/v4/evidence/V4-Q01/raw",
+  "runs": [
+   {
+    "run": "pilot（前任 13:03）",
+    "exit_code": 0,
+    "note": "flutter test 退出 0（steps 内 2 FAIL 如实入账）",
+    "steps_json": "raw/pilot_r1/q01_pilot_part1_steps.json"
+   },
+   {
+    "run": "attempt2-9",
+    "exit_code": 1,
+    "note": "逐轮 driver 根因修复，全部保留（raw/pilot_r1/attemptN/）"
+   },
+   {
+    "run": "r1/attempt10（主证）",
+    "exit_code": 1,
+    "note": "16 PASS / 5 FAIL（G5 校准投影 + G6 hybrid 挂死）；exit file raw/r1_part1_exit.txt",
+    "steps_json": "raw/pilot_r1/attempt10/q01_attempt10_part1_steps.json",
+    "console": "raw/pilot_r1/attempt10/console_attempt10_part1.log"
+   },
+   {
+    "run": "r4（姊妹会话）",
+    "exit_code": 1,
+    "note": "flutter_tools 通道崩溃（runner 层）；console /tmp/q01_run_r4_console.log 6629 行"
+   },
+   {
+    "run": "r5（姊妹会话）",
+    "exit_code": 1,
+    "note": "hybrid 503 第三例；console /tmp/q01_run_r5_console.log"
+   }
+  ]
+ },
+ "model": {
+  "requested": "LLMRouter 真实路由（wizard 意图分析/恢复旅程澄清/Hybrid prep 检索），主力档 dashscope_standard_thinking",
+  "actual": "token_usage 表：本卡升级用户路径 10 calls / 13736 tokens（dashscope_fast）；澄清/纠正派生调用与同栈舰队运行共享日志流，shared-infra attribution 如实登记（limitations §6）"
+ },
+ "scope_and_denominator": {
+  "objective_legs": [
+   "接续",
+   "卡住",
+   "纠正",
+   "Hybrid",
+   "回执",
+   "结果"
+  ],
+  "legs_verified_pass": [
+   "接续",
+   "卡住",
+   "纠正(澄清+纠正提交)"
+  ],
+  "legs_partial": [
+   "纠正(校准区投影缺口 G5，pilot 种子面曾全通)"
+  ],
+  "legs_blocked_by_product_defect": [
+   "Hybrid",
+   "回执(依赖 hybrid 判研面)",
+   "结果(依赖 hybrid 交付)"
+  ],
+  "repeats_same_version": "pilot + attempt2-10 + r4 + r5 共 12 轮，产品版本恒 5cbc715f；失败与重试全部保留"
+ },
+ "artifacts_sha256": {
+  "video/r1_attempt10_part1.mp4": "002e98d2427f89d25b3a58f64b65fb69feeb7ea51060cdf9949e8a76ebbbc693",
+  "video/r1_pilot_part1.mp4": "3da284911c3320150ea4ba7da599e20dd6cddcbe4e3553bead265aa72433eb5c",
+  "db/r1_attempt10_db_evidence.json": "见文件（json），生成器 scripts/devtools/q01_db_evidence.py（SELECT-only）",
+  "raw/stack_takeover_r3.md": "栈第三轮 provenance",
+  "raw/pilot_r1/attempt10/r1/part1/*.png": "24 帧，mtime=真实墙钟",
+  "external_archive": {
+   "path": "/Volumes/移动E/sparkle-offload/V4-Q01/V4-Q01_raw_evidence_20260929.tar.gz",
+   "sha256": "6c3ddd49fc5177938c2fbdc3aa2717ecdd3c1862def2501e0100614dac0b1482",
+   "entries": 266,
+   "note": "raw+db+video 全量压缩归档（资源红线：录像原始帧可于验证后删主盘原件，本卡暂保留至并行会话迭代结束）"
+  }
+ },
+ "env_outages": [
+  "第一次 ~11:43（Docker 崩溃，swap 95%）— raw/pilot_r1/ENV_OUTAGE_docker_crash.md",
+  "第二次 ~13:36 后（宿主强制重启，前任阵亡）— raw/stack_takeover_r3.md"
+ ]
+}

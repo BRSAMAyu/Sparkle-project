@@ -1,0 +1,117 @@
+{
+  "provenance": "video synthesized from real-engine RepaintBoundary frames captured inside integration_test driver (physical screen recording shows black frames under flutter_test host lock — probe-verified); timeline = real wall-clock from file mtimes; no frame content edited",
+  "shots_dir": "v4/evidence/V4-Q01/raw/pilot_r1/r1",
+  "out": "v4/evidence/V4-Q01/video/r1_pilot_part1.mp4",
+  "frame_count": 15,
+  "wall_start": "2026-09-29T13:03:27.986602+08:00",
+  "wall_end": "2026-09-29T13:09:41.340724+08:00",
+  "frames": [
+    {
+      "file": "part1/00-entry.png",
+      "mtime": "2026-09-29T13:03:27.986602+08:00",
+      "bytes": 115973,
+      "hold_seconds": 16.042991
+    },
+    {
+      "file": "part1/01-dashboard.png",
+      "mtime": "2026-09-29T13:03:44.029593+08:00",
+      "bytes": 575639,
+      "hold_seconds": 0.5
+    },
+    {
+      "file": "part1/02-home-resume.png",
+      "mtime": "2026-09-29T13:03:44.513963+08:00",
+      "bytes": 574563,
+      "hold_seconds": 27.864387
+    },
+    {
+      "file": "part1/11-task-execution.png",
+      "mtime": "2026-09-29T13:04:12.378350+08:00",
+      "bytes": 483846,
+      "hold_seconds": 16.21568
+    },
+    {
+      "file": "part1/12-stuck-help-sheet.png",
+      "mtime": "2026-09-29T13:04:28.594030+08:00",
+      "bytes": 122838,
+      "hold_seconds": 7.688109
+    },
+    {
+      "file": "part1/13-stuck-journey.png",
+      "mtime": "2026-09-29T13:04:36.282139+08:00",
+      "bytes": 92390,
+      "hold_seconds": 9.432517
+    },
+    {
+      "file": "part1/14-clarification-answered.png",
+      "mtime": "2026-09-29T13:04:45.714656+08:00",
+      "bytes": 64413,
+      "hold_seconds": 0.5
+    },
+    {
+      "file": "part1/15-correction-typed.png",
+      "mtime": "2026-09-29T13:04:46.096249+08:00",
+      "bytes": 74406,
+      "hold_seconds": 7.695385
+    },
+    {
+      "file": "part1/16-scope-choice.png",
+      "mtime": "2026-09-29T13:04:53.791634+08:00",
+      "bytes": 119079,
+      "hold_seconds": 3.183721
+    },
+    {
+      "file": "part1/17-adjusting.png",
+      "mtime": "2026-09-29T13:04:56.975355+08:00",
+      "bytes": 100559,
+      "hold_seconds": 7.767103
+    },
+    {
+      "file": "part1/18-minutes-set.png",
+      "mtime": "2026-09-29T13:05:04.742458+08:00",
+      "bytes": 101954,
+      "hold_seconds": 3.467219
+    },
+    {
+      "file": "part1/19-diff-review.png",
+      "mtime": "2026-09-29T13:05:08.209677+08:00",
+      "bytes": 95246,
+      "hold_seconds": 12.057769
+    },
+    {
+      "file": "part1/20-committed-receipt.png",
+      "mtime": "2026-09-29T13:05:20.267446+08:00",
+      "bytes": 90960,
+      "hold_seconds": 13.598991
+    },
+    {
+      "file": "part1/21-hybrid-sheet.png",
+      "mtime": "2026-09-29T13:05:33.866437+08:00",
+      "bytes": 43339,
+      "hold_seconds": 30.0
+    },
+    {
+      "file": "part1/22-hybrid-judgment.png",
+      "mtime": "2026-09-29T13:09:41.340724+08:00",
+      "bytes": 43339,
+      "hold_seconds": 2.0
+    }
+  ],
+  "frames_sha256": {
+    "part1/00-entry.png": "cf8fb6230092b66a9201ef8e3536f31d52288d3473d4390502df3a1f27ad8625",
+    "part1/01-dashboard.png": "4cc8f3ad0837a5a51f40ad69e3ddc228aabf37fb57cbeb161e7d919991321133",
+    "part1/02-home-resume.png": "37075a27b88e0024ac5426854a6b61469ab6e5e797b5984f57281391517eac01",
+    "part1/11-task-execution.png": "2cf6f1df7a10023161235f415b7dde77a0eb0a7283f378894947e65c501cf73b",
+    "part1/12-stuck-help-sheet.png": "6e913148790411f556ebdbbbd23ebc4199f0d4ac03e5fd470ae275819ff0e8e9",
+    "part1/13-stuck-journey.png": "229b66f87d8c32c6bee93b1e789d599b3fea7f881f97c1ae3bf9512449dc6414",
+    "part1/14-clarification-answered.png": "e16390d5b644db42032d5a7d64451e6b98c879a82bd3cc5d926c2740dcf6e6bf",
+    "part1/15-correction-typed.png": "833b21bee3f8688555df4be070dd8e4666344013b34d8136e6093d16419132a0",
+    "part1/16-scope-choice.png": "0eeafb825737d36ce15b64e9907bd27a9a16bd3bf4e05e9ca2eb006fae3ec9e9",
+    "part1/17-adjusting.png": "27251b27dcf33b3aef1154970382eefe41a15d22a2a8cd8abe360ce9055d03c8",
+    "part1/18-minutes-set.png": "db5814f76f7eca3682922c5fcec4b38ce058519043a50e13b090d6c9b31b30d3",
+    "part1/19-diff-review.png": "3c06e1c676dff74c09c0d8be771d580dfdddac26c1bd0b99b48c4eac2e2330be",
+    "part1/20-committed-receipt.png": "8b8342befff70a586799be2a6bc52ae7d0e71885005a11a27ecf6a8985371eec",
+    "part1/21-hybrid-sheet.png": "e0d033110e5d95c909c21b0247d8b96c0d237f0273585cd7965f8af37f3c7aa4",
+    "part1/22-hybrid-judgment.png": "e0d033110e5d95c909c21b0247d8b96c0d237f0273585cd7965f8af37f3c7aa4"
+  }
+}

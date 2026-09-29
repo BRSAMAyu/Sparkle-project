@@ -1,0 +1,180 @@
+{
+  "provenance": "video synthesized from real-engine RepaintBoundary frames captured inside integration_test driver (physical screen recording shows black frames under flutter_test host lock — probe-verified); timeline = real wall-clock from file mtimes; no frame content edited",
+  "shots_dir": "v4/evidence/V4-Q01/raw/pilot_r1/attempt10/r1",
+  "out": "v4/evidence/V4-Q01/video/r1_attempt10_part1.mp4",
+  "frame_count": 24,
+  "wall_start": "2026-09-29T17:57:37.649261+08:00",
+  "wall_end": "2026-09-29T18:08:30.049524+08:00",
+  "frames": [
+    {
+      "file": "part1/00-entry.png",
+      "mtime": "2026-09-29T17:57:37.649261+08:00",
+      "bytes": 651481,
+      "hold_seconds": 16.809434
+    },
+    {
+      "file": "part1/01-dashboard.png",
+      "mtime": "2026-09-29T17:57:54.458695+08:00",
+      "bytes": 772053,
+      "hold_seconds": 3.565195
+    },
+    {
+      "file": "part1/03-register-form.png",
+      "mtime": "2026-09-29T17:57:58.023890+08:00",
+      "bytes": 109504,
+      "hold_seconds": 11.090204
+    },
+    {
+      "file": "part1/05-registered-dashboard.png",
+      "mtime": "2026-09-29T17:58:09.114094+08:00",
+      "bytes": 686932,
+      "hold_seconds": 8.09978
+    },
+    {
+      "file": "part1/06-persona-step1.png",
+      "mtime": "2026-09-29T17:58:17.213874+08:00",
+      "bytes": 602557,
+      "hold_seconds": 9.408006
+    },
+    {
+      "file": "part1/07-modeling-deferred.png",
+      "mtime": "2026-09-29T17:58:26.621880+08:00",
+      "bytes": 216663,
+      "hold_seconds": 10.05946
+    },
+    {
+      "file": "part1/08-after-persona-home.png",
+      "mtime": "2026-09-29T17:58:36.681340+08:00",
+      "bytes": 709278,
+      "hold_seconds": 30.0
+    },
+    {
+      "file": "part1/09-wizard-intent.png",
+      "mtime": "2026-09-29T17:59:29.925986+08:00",
+      "bytes": 430201,
+      "hold_seconds": 8.19085
+    },
+    {
+      "file": "part1/10-wizard-intent-result.png",
+      "mtime": "2026-09-29T17:59:38.116836+08:00",
+      "bytes": 367254,
+      "hold_seconds": 1.160901
+    },
+    {
+      "file": "part1/11-wizard-step-0.png",
+      "mtime": "2026-09-29T17:59:39.277737+08:00",
+      "bytes": 367722,
+      "hold_seconds": 30.0
+    },
+    {
+      "file": "part1/11-wizard-step-1.png",
+      "mtime": "2026-09-29T18:00:12.854621+08:00",
+      "bytes": 479140,
+      "hold_seconds": 30.0
+    },
+    {
+      "file": "part1/11-wizard-step-2.png",
+      "mtime": "2026-09-29T18:00:45.825992+08:00",
+      "bytes": 368909,
+      "hold_seconds": 30.0
+    },
+    {
+      "file": "part1/11-wizard-step-3.png",
+      "mtime": "2026-09-29T18:01:18.424732+08:00",
+      "bytes": 236687,
+      "hold_seconds": 30.0
+    },
+    {
+      "file": "part1/11-wizard-step-4.png",
+      "mtime": "2026-09-29T18:01:51.397133+08:00",
+      "bytes": 650809,
+      "hold_seconds": 18.619977
+    },
+    {
+      "file": "part1/11-task-execution.png",
+      "mtime": "2026-09-29T18:02:10.017110+08:00",
+      "bytes": 546042,
+      "hold_seconds": 18.151122
+    },
+    {
+      "file": "part1/12-stuck-help-sheet.png",
+      "mtime": "2026-09-29T18:02:28.168232+08:00",
+      "bytes": 183982,
+      "hold_seconds": 7.826992
+    },
+    {
+      "file": "part1/13-stuck-journey.png",
+      "mtime": "2026-09-29T18:02:35.995224+08:00",
+      "bytes": 122726,
+      "hold_seconds": 9.562621
+    },
+    {
+      "file": "part1/14-clarification-answered.png",
+      "mtime": "2026-09-29T18:02:45.557845+08:00",
+      "bytes": 82617,
+      "hold_seconds": 0.5
+    },
+    {
+      "file": "part1/15-correction-typed.png",
+      "mtime": "2026-09-29T18:02:46.027959+08:00",
+      "bytes": 92406,
+      "hold_seconds": 7.83168
+    },
+    {
+      "file": "part1/16-scope-choice.png",
+      "mtime": "2026-09-29T18:02:53.859639+08:00",
+      "bytes": 135662,
+      "hold_seconds": 2.482417
+    },
+    {
+      "file": "part1/18-minutes-set.png",
+      "mtime": "2026-09-29T18:02:56.342056+08:00",
+      "bytes": 132870,
+      "hold_seconds": 30.0
+    },
+    {
+      "file": "part1/19-diff-review.png",
+      "mtime": "2026-09-29T18:04:06.098675+08:00",
+      "bytes": 136403,
+      "hold_seconds": 16.59221
+    },
+    {
+      "file": "part1/21-hybrid-sheet.png",
+      "mtime": "2026-09-29T18:04:22.690885+08:00",
+      "bytes": 33571,
+      "hold_seconds": 30.0
+    },
+    {
+      "file": "part1/22-hybrid-judgment.png",
+      "mtime": "2026-09-29T18:08:30.049524+08:00",
+      "bytes": 43339,
+      "hold_seconds": 2.0
+    }
+  ],
+  "frames_sha256": {
+    "part1/00-entry.png": "76b22999ec4fcbb815a0da763e8a3d3b9490ebba3135018994518e7a158980d7",
+    "part1/01-dashboard.png": "a6a36420daafb43cad19f31269edf0a69a110e942bef78188d336f868a8ec861",
+    "part1/03-register-form.png": "70a9d19fe034c88cd29d96673f30bb5b2478fc2324bf335bdd39489517d01dec",
+    "part1/05-registered-dashboard.png": "51536002a7a8b895cbc86c75b6548ad8ec24ca070991349269c8d9c6bae0ecd9",
+    "part1/06-persona-step1.png": "782c824f1500e5a0c09181b5e25db9cd975150d5b6ef486d9d8b4e93701a5afa",
+    "part1/07-modeling-deferred.png": "6bb64f0a6c47d1352d4e4f699f9dcc91815aecadd5fbc2b141023d9106862842",
+    "part1/08-after-persona-home.png": "178a10d023e3e5f51fb18977a63113a8f5bb4d5601fec0b8681c4d9253ae70b9",
+    "part1/09-wizard-intent.png": "899d3802bebf8b1ff0b1691011a78df55356a83484c6592832500355f120cc66",
+    "part1/10-wizard-intent-result.png": "e14088596497754afec10e3a1e7449e22dcb20e51264c2e0050da03f35e9f15b",
+    "part1/11-wizard-step-0.png": "fea54066cad4528cce9fb2679f36893319c0e19b476eecafc4a046105ff3855a",
+    "part1/11-wizard-step-1.png": "b4139ed9a32cc9104bfa0004b14f832ea02c3898ecde8424d56a80cfebbab327",
+    "part1/11-wizard-step-2.png": "ec32898cc41849ef5147b4c16711d2844bec76f13bb8f171f301a4a6a4e0fc8c",
+    "part1/11-wizard-step-3.png": "a62ae9984c44525b50b258837eebad8ed22650d4bd5844d3d5dd0b9524252536",
+    "part1/11-wizard-step-4.png": "a2f3698d6b91a2adf6abdd8db5d84ec7520054f00f2b846813ad910cc08b76cb",
+    "part1/11-task-execution.png": "cd2615acdc3fcfd6b0cd171324d7ec7d1e1c562ae848e839f6dac93540b6da06",
+    "part1/12-stuck-help-sheet.png": "5e1be353ae72d824d365c7e2d51d54ce0aa6ef1a6aa4c696a87e11fdc6e9442d",
+    "part1/13-stuck-journey.png": "98167ebbafeaeeb2cf2a8350f566d44c11fed100f3df80a7fdbdaf41c0398f26",
+    "part1/14-clarification-answered.png": "ae45d555552a65141fb107d961cce87490794ce416160ef002299b617e8c984f",
+    "part1/15-correction-typed.png": "7fbb5e9070113722421b4fe365b42ed0a24effcc080c226e00958c53a4cc8a2a",
+    "part1/16-scope-choice.png": "5bc97e92447cca2866c534cd45d6f640df975c7e69f85a9e89d7fea766650603",
+    "part1/18-minutes-set.png": "e08bbb9734dd06221be3100c0635989cb04e25cac9540a372a828315bf4e4a6b",
+    "part1/19-diff-review.png": "202aceb3e5fcf67cbc20aa5a729286eb46a84d575075c7bf0991215cc211e197",
+    "part1/21-hybrid-sheet.png": "9c4ae336ce003e5cc760e7a58b294f7450fe5d6a624752201ce1ec848b86c78d",
+    "part1/22-hybrid-judgment.png": "e0d033110e5d95c909c21b0247d8b96c0d237f0273585cd7965f8af37f3c7aa4"
+  }
+}

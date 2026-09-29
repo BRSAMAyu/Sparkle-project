@@ -1,0 +1,59 @@
+# semantics dump home-seeded run=r1 leg=part1 ts=2026-09-29T17:51:39.995045
+[0] label="" value=""  rect=(0,0,1600x1678)
+  [1] label="" value=""  rect=(0,0,800x839)
+    [398] label="" value=""  rect=(0,0,800x839)
+      [427] label="" value=""  rect=(0,0,719x839)
+        [428] label="" value=""  rect=(0,0,719x839)
+          [429] label="" value=""  rect=(0,0,719x719)
+            [453] label="" value=""  rect=(0,0,719x719)
+              [430] label="现在的指挥台
+先定下你的第一个目标
+告诉我你最近最想推进的一件事，我会立刻帮你拆成可执行的计划。" value=""  rect=(0,0,719x256)
+                [431] label="和 AI 定目标" value="" button rect=(0,0,607x44)
+                [432] label="我卡住了" value="" button rect=(0,0,168x44)
+                [433] label="考试冲刺" value="" button rect=(0,0,83x22)
+                [434] label="长期学习" value="" button rect=(0,0,83x22)
+                [435] label="项目交付" value="" button rect=(0,0,83x22)
+                [436] label="自我成长" value="" button rect=(0,0,83x22)
+                [437] label="我也说不清" value="" button rect=(0,0,95x22)
+              [441] label="你的第一步
+两周内掌握线性代数矩阵特征值，能独立做完一套期末真题
+根据你的真实目标，给出一个今天就能完成的最小有用第一步。
+生成我的第一步" value="" button rect=(0,0,719x165)
+              [442] label="今日简报 · 当天的状态与节奏
+今日简报
+当天的状态与节奏" value="" button rect=(0,0,719x65)
+              [443] label="多目标看板 · 所有目标的总览
+多目标看板
+所有目标的总览" value="" button rect=(0,0,719x65)
+              [473] label="考试冲刺 · 尚未启动 · 点开创建
+考试冲刺
+尚未启动 · 点开创建" value="" button rect=(0,0,719x65)
+              [474] label="任务面板 · 今日待办与进度
+任务面板
+今日待办与进度" value="" button rect=(0,0,719x65)
+              [475] label="动态 · 通知、洞察、提醒
+动态
+通知、洞察、提醒" value="" button rect=(0,0,719x38)
+              [476] label="工作区卡片 · 7 张已显示
+工作区卡片
+7 张已显示" value="" button rect=(0,0,719x65)
+              [477] label="关键指标 · 进度、连续天数、动力
+关键指标
+进度、连续天数、动力" value="" button rect=(0,0,719x65)
+              [478] label="成长质量 · 深度、稳定性、平衡
+成长质量
+深度、稳定性、平衡" value="" button rect=(0,0,719x65)
+              [479] label="本周叙事 · 一周变化的故事线
+本周叙事
+一周变化的故事线" value="" button rect=(0,0,719x28)
+          [454] label="" value=""  rect=(0,0,687x36)
+            [459] label="" value=""  rect=(0,0,687x36)
+              [455] label="创建任务" value=""  rect=(0,0,97x28)
+              [456] label="开始专注" value=""  rect=(0,0,97x28)
+              [457] label="查看日历" value=""  rect=(0,0,97x28)
+              [458] label="好奇心胶囊" value=""  rect=(0,0,109x28)
+          [460] label="语音输入" value="" button rect=(0,0,48x44)
+          [461] label="输入消息..." value="" textField rect=(0,0,507x44)
+          [462] label="切换 Agent 模式" value="" button rect=(0,0,48x44)
+          [463] label="发送" value="" button rect=(0,0,48x44)

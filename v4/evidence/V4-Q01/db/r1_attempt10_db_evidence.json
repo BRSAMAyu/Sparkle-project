@@ -1,0 +1,164 @@
+{
+  "username": "q01up874775",
+  "user_id": "e727a39d-0a39-4405-82f8-378ed70bf444",
+  "collected_at__utc": null,
+  "readonly": true,
+  "user": [
+    {
+      "id": "e727a39d-0a39-4405-82f8-378ed70bf444",
+      "username": "q01up874775",
+      "registration_source": "email",
+      "created_at": "2026-09-29T09:58:00.840203"
+    }
+  ],
+  "memory_goals": [
+    {
+      "id": "ccdc03d5-e690-4934-8436-7258e47dbe67",
+      "title": "两周内掌握线性代数矩阵特征值，能独立做完一套期末真题",
+      "status": "active",
+      "created_at": "2026-09-29T09:58:17.804582",
+      "archived_at": null
+    }
+  ],
+  "tasks": [
+    {
+      "id": "2ea9fe0c-ad5f-4797-9665-3c6bd34ecd3c",
+      "title": "Map the baseline",
+      "status": "STUCK",
+      "estimated_minutes": 25,
+      "updated_at": "2026-09-29T10:02:20.237894"
+    },
+    {
+      "id": "c0089d11-0116-495a-ae54-0268a345fc11",
+      "title": "Repair the core gaps",
+      "status": "PENDING",
+      "estimated_minutes": 25,
+      "updated_at": "2026-09-29T10:01:52.164015"
+    },
+    {
+      "id": "cb960e60-60e6-4c80-8748-b618a7e54fc4",
+      "title": "Timed practice loop",
+      "status": "PENDING",
+      "estimated_minutes": 25,
+      "updated_at": "2026-09-29T10:01:52.291533"
+    },
+    {
+      "id": "9bcc282e-1304-4d26-8baf-4107157fd2e9",
+      "title": "Readiness check",
+      "status": "PENDING",
+      "estimated_minutes": 25,
+      "updated_at": "2026-09-29T10:01:52.413848"
+    }
+  ],
+  "memory_corrections": [
+    {
+      "__error__": "ERROR:  column \"payload\" does not exist\nLINE 2:         SELECT id, created_at, LEFT(payload::text, 500) AS p...\n                                            ^\n"
+    }
+  ],
+  "calibration_runs": [
+    {
+      "__error__": "ERROR:  column \"status\" does not exist\nLINE 2:         SELECT id, status, created_at, updated_at\n                           ^\n"
+    }
+  ],
+  "agent_runs": [
+    {
+      "id": "9ff03120-358a-44e8-807c-36c6ba6b1c95",
+      "kind": "system",
+      "status": "RUNNING",
+      "current_stage": "prep",
+      "trace_id": "hybrid_journey",
+      "task_id": "2ea9fe0c-ad5f-4797-9665-3c6bd34ecd3c",
+      "session_id": null,
+      "created_at": "2026-09-29T10:04:14.659791",
+      "updated_at": "2026-09-29T10:04:14.680564"
+    },
+    {
+      "id": "a77f9eb0-bf88-4ddf-a43b-f641758eb365",
+      "kind": "system",
+      "status": "RUNNING",
+      "current_stage": "prep",
+      "trace_id": "hybrid_journey",
+      "task_id": "2ea9fe0c-ad5f-4797-9665-3c6bd34ecd3c",
+      "session_id": null,
+      "created_at": "2026-09-29T10:14:06.514636",
+      "updated_at": "2026-09-29T10:14:06.53053"
+    }
+  ],
+  "hybrid_artifacts": [],
+  "agent_tool_calls": [],
+  "stored_files": [
+    {
+      "id": "251617d5-7266-431c-b3cd-11da802cf528",
+      "file_name": "线性代数特征值与矩阵对角化学习笔记.md",
+      "mime_type": "text/markdown",
+      "status": "processed",
+      "created_at": "2026-09-29T09:58:36.764712"
+    }
+  ],
+  "document_chunks": [
+    {
+      "id": "814ab1d3-89ac-4519-a44c-f21d2a6b6856",
+      "file_id": "251617d5-7266-431c-b3cd-11da802cf528",
+      "chunk_index": 0,
+      "content_head": "设 A 是 n 阶方阵，若存在数 λ 和非零列向量 x，使得 Ax = λx，则称 λ 为 A 的特征值，x 为对应的特征向量。"
+    },
+    {
+      "id": "9843f1a4-c913-4fe8-919b-9cf129181236",
+      "file_id": "251617d5-7266-431c-b3cd-11da802cf528",
+      "chunk_index": 1,
+      "content_head": "求法：解特征方程 det(A − λE) = 0。特征多项式的根即全部特征值；对每个 λ，解齐次方程组 (A − λE)x = 0，其非零解即特征向量。"
+    },
+    {
+      "id": "67f4e8a8-17fd-4179-b469-a2bc66809a2f",
+      "file_id": "251617d5-7266-431c-b3cd-11da802cf528",
+      "chunk_index": 2,
+      "content_head": "全部特征值之和 = 迹 tr(A) = 主对角线元素之和。\n全部特征值之积 = 行列式 det(A)。\n不同特征值对应的特征向量线性无关。\n若 A 满足 f(A)=0（如 A²=A 幂等、A²=E 对合），特征值只能取 f 的根。"
+    },
+    {
+      "id": "32f29f77-2889-4ab8-8007-35ab5508dc5d",
+      "file_id": "251617d5-7266-431c-b3cd-11da802cf528",
+      "chunk_index": 3,
+      "content_head": "若 n 阶矩阵 A 有 n 个线性无关的特征向量，则 A 可相似对角化：存在可逆 P，使 P⁻¹AP = Λ（对角阵，对角元为特征值）。"
+    },
+    {
+      "id": "76efd1ad-e297-430c-b750-48cc5ccaac37",
+      "file_id": "251617d5-7266-431c-b3cd-11da802cf528",
+      "chunk_index": 4,
+      "content_head": "充要条件：每个 k 重特征值恰有 k 个线性无关的特征向量（几何重数 = 代数重数）。"
+    },
+    {
+      "id": "98120fc7-9998-48a8-9f2d-b44756ebe6d9",
+      "file_id": "251617d5-7266-431c-b3cd-11da802cf528",
+      "chunk_index": 5,
+      "content_head": "步骤：①求全部特征值；②对每个特征值求特征向量；③n 个无关向量拼成 P；④写出 Λ。"
+    },
+    {
+      "id": "24668dc3-9082-4615-a0cb-cb8f965c5a4c",
+      "file_id": "251617d5-7266-431c-b3cd-11da802cf528",
+      "chunk_index": 6,
+      "content_head": "实对称矩阵必可正交相似对角化：不同特征值的特征向量正交；重根对应的特征向量可施密特正交化。Q⁻¹AQ = QᵀAQ = Λ。"
+    },
+    {
+      "id": "a9a76efe-6b53-4a50-a85e-630728d12c8b",
+      "file_id": "251617d5-7266-431c-b3cd-11da802cf528",
+      "chunk_index": 7,
+      "content_head": "已知特征值反求参数：用 |A − λE| = 0 或 tr/det 联立。\n判断能否对角化：先数重数，再看无关特征向量个数。\n由 A 的特征值求 A⁻¹、A、A^k、f(A) 的特征值：同一特征向量，特征值做同样运算。\n二次型标准化与正负惯"
+    },
+    {
+      "id": "c3822ddf-92e7-466d-be7e-472d267a2808",
+      "file_id": "251617d5-7266-431c-b3cd-11da802cf528",
+      "chunk_index": 8,
+      "content_head": "特征向量必须非零；λ=0 可以是特征值（此时 A 不可逆）。\n对角化时 P 的列与 Λ 的对角元顺序必须对应。\n实对称重根的正交化不能忘记施密特补足。\n相似矩阵有相同特征值，但有相同特征值不一定相似。"
+    }
+  ],
+  "token_usage": [
+    {
+      "__error__": "ERROR:  column \"purpose\" does not exist\nLINE 2:         SELECT id, model, LEFT(purpose, 60) AS purpose, prom...\n                                       ^\n"
+    }
+  ],
+  "event_store": [
+    {
+      "__error__": "ERROR:  operator does not exist: uuid = text\nLINE 3:         FROM event_store WHERE aggregate_id = 'e727a39d-0a39...\n                                                    ^\nHINT:  No operator matches the given name and argument types. You might need to add explicit type casts.\n"
+    }
+  ]
+}

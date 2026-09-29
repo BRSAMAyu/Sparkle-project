@@ -1,0 +1,59 @@
+# semantics dump home-cold run=r1 leg=part1 ts=2026-09-29T17:57:54.769514
+[0] label="" value=""  rect=(0,0,1600x1678)
+  [1] label="" value=""  rect=(0,0,800x839)
+    [129] label="" value=""  rect=(0,0,800x839)
+      [130] label="" value=""  rect=(0,0,719x839)
+        [131] label="" value=""  rect=(0,0,719x839)
+          [132] label="" value=""  rect=(0,0,719x719)
+            [147] label="" value=""  rect=(0,0,719x719)
+              [133] label="访客体验68b2
+今天适合明亮推进，心境晴朗
+Lv.15
+Lv.15" value=""  rect=(0,0,719x82)
+                [178] label="心境晴朗" value=""  rect=(0,0,85x28)
+                [179] label="设置" value=""  rect=(0,0,32x32)
+              [141] label="" value=""  rect=(0,0,719x56)
+                [160] label="Aurora · 轻量感知中. Aurora 正在轻量感知，参考当前上下文优化回复。" value="" button rect=(0,0,719x56)
+                  [161] label="Aurora · 轻量感知中
+Aurora 正在轻量感知，参考当前上下文优化回复。" value=""  rect=(0,0,719x56)
+              [142] label="先解决卡点
+数据结构 - 二叉树遍历算法
+卡点在「人工智能基础」" value=""  rect=(0,0,719x257)
+                [162] label="示例" value=""  rect=(0,0,58x22)
+                [163] label="数据结构期中冲刺" value=""  rect=(0,0,131x22)
+                [184] label="0/2" value=""  rect=(0,0,53x22)
+                [185] label="截止就在今天" value=""  rect=(0,0,107x22)
+                [164] label="解开卡点" value="" button rect=(0,0,607x44)
+                [165] label="查看任务" value="" button rect=(0,0,168x44)
+              [143] label="数据结构期中冲刺" value=""  rect=(0,0,719x44)
+              [144] label="连学 7 天，今天搞定二叉树遍历，别让 AI 基础拖住数据结构冲刺。" value=""  rect=(0,0,719x41)
+              [145] label="我想换个方式理解人工智能基础。请结合这个卡点，帮我调整接下来的学习路径。" value=""  rect=(0,0,719x78)
+              [146] label="" value=""  rect=(0,0,719x161)
+                [172] label="Sparkle 理解快照" value=""  rect=(0,0,671x161)
+                  [186] label="Sparkle 对你的理解，可信度 50%
+Sparkle 对你的理解
+Aurora 有一个判断需要你确认。
+50%
+当前情景判断显示过载风险为「medium」。
+Aurora 当前对自身策略把握度约为 62%。
+当前目标锚点是“人工智能基础 / 美术基础 / 普通化学”。
+纠正我的理解" value="" button rect=(0,0,671x161)
+              [177] label="今日简报 · 今天 3 件待办 · 已就绪
+今日简报
+今天 3 件待办 · 已就绪" value="" button rect=(0,0,719x65)
+              [180] label="多目标看板 · 1/3 件已完成
+多目标看板
+1/3 件已完成" value="" button rect=(0,0,719x65)
+              [181] label="考试冲刺 · 尚未启动 · 点开创建
+考试冲刺
+尚未启动 · 点开创建" value="" button rect=(0,0,719x52)
+          [148] label="" value=""  rect=(0,0,687x36)
+            [153] label="" value=""  rect=(0,0,687x36)
+              [149] label="创建任务" value=""  rect=(0,0,97x28)
+              [150] label="开始专注" value=""  rect=(0,0,97x28)
+              [151] label="查看日历" value=""  rect=(0,0,97x28)
+              [152] label="好奇心胶囊" value=""  rect=(0,0,109x28)
+          [154] label="语音输入" value="" button rect=(0,0,48x44)
+          [155] label="输入消息..." value="" textField rect=(0,0,507x44)
+          [156] label="切换 Agent 模式" value="" button rect=(0,0,48x44)
+          [157] label="发送" value="" button rect=(0,0,48x44)

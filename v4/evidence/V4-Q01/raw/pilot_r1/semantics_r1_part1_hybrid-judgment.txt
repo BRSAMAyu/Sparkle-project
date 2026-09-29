@@ -1,0 +1,9 @@
+# semantics dump hybrid-judgment run=r1 leg=part1 ts=2026-09-29T13:09:41.653914
+[0] label="" value=""  rect=(0,0,1600x1678)
+  [1] label="" value=""  rect=(0,0,800x839)
+    [275] label="" value=""  rect=(0,0,800x839)
+      [276] label="" value=""  rect=(0,0,800x839)
+        [277] label="一起推进：备料 · 你研判 · 交付" value=""  rect=(0,0,259x26)
+        [278] label="" value=""  rect=(0,0,598x475)
+          [280] label="Failed to start hybrid journey" value=""  rect=(0,0,192x23)
+          [281] label="重试" value="" button rect=(0,0,598x44)

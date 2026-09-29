@@ -1,0 +1,45 @@
+# DB evidence (readonly) user=q01up054542 id=57068e1e-caf8-443a-a10e-d5f8f09eb1fa
+
+## user (1 rows)
+  {"id": "57068e1e-caf8-443a-a10e-d5f8f09eb1fa", "username": "q01up054542", "registration_source": "email", "created_at": "2026-09-29T10:17:46.418764"}
+
+## memory_goals (1 rows)
+  {"id": "69164184-df65-4c73-8905-95027dc3db75", "title": "两周内掌握线性代数矩阵特征值，能独立做完一套期末真题", "status": "active", "created_at": "2026-09-29T10:18:03.697734", "archived_at": null}
+
+## tasks (4 rows)
+  {"id": "90830b80-aac7-4173-b32e-c56838ac8f4a", "title": "Map the baseline", "status": "IN_PROGRESS", "estimated_minutes": 25, "updated_at": "2026-09-29T10:22:01.171727"}
+  {"id": "de176b79-5412-4a7e-b783-97850bddf775", "title": "Repair the core gaps", "status": "PENDING", "estimated_minutes": 25, "updated_at": "2026-09-29T10:21:47.875299"}
+  {"id": "d9a23a95-7afa-4bdf-b50a-71cf7a102663", "title": "Timed practice loop", "status": "PENDING", "estimated_minutes": 25, "updated_at": "2026-09-29T10:21:47.961161"}
+  {"id": "688753cf-c040-4e00-9c79-f7aa413b8768", "title": "Readiness check", "status": "PENDING", "estimated_minutes": 25, "updated_at": "2026-09-29T10:21:48.026407"}
+
+## memory_corrections (1 rows)
+  {"__error__": "ERROR:  column \"payload\" does not exist\nLINE 2:         SELECT id, created_at, LEFT(payload::text, 500) AS p...\n                                            ^\n"}
+
+## calibration_runs (1 rows)
+  {"__error__": "ERROR:  column \"status\" does not exist\nLINE 2:         SELECT id, status, created_at, updated_at\n                           ^\n"}
+
+## agent_runs (0 rows)
+
+## hybrid_artifacts (0 rows)
+
+## agent_tool_calls (0 rows)
+
+## stored_files (1 rows)
+  {"id": "d65b11a9-2e20-4490-bd7a-9d8441cfd9cd", "file_name": "线性代数特征值与矩阵对角化学习笔记.md", "mime_type": "text/markdown", "status": "processed", "created_at": "2026-09-29T10:18:29.139743"}
+
+## document_chunks (9 rows)
+  {"id": "048cea65-a8ee-4ad0-8d97-27b91dda5c91", "file_id": "d65b11a9-2e20-4490-bd7a-9d8441cfd9cd", "chunk_index": 0, "content_head": "设 A 是 n 阶方阵，若存在数 λ 和非零列向量 x，使得 Ax = λx，则称 λ 为 A 的特征值，x 为对应的特征向量。"}
+  {"id": "483b635d-e358-4302-8215-98df4b247dc8", "file_id": "d65b11a9-2e20-4490-bd7a-9d8441cfd9cd", "chunk_index": 1, "content_head": "求法：解特征方程 det(A − λE) = 0。特征多项式的根即全部特征值；对每个 λ，解齐次方程组 (A − λE)x = 0，其非零解即特征向量。"}
+  {"id": "87ed2700-71c8-48f0-89a9-ed7920102b24", "file_id": "d65b11a9-2e20-4490-bd7a-9d8441cfd9cd", "chunk_index": 2, "content_head": "全部特征值之和 = 迹 tr(A) = 主对角线元素之和。\n全部特征值之积 = 行列式 det(A)。\n不同特征值对应的特征向量线性无关。\n若 A 满足 f(A)=0（如 A²=A 幂等、A²=E 对合），特征值只能取 f 的根。"}
+  {"id": "d6d01447-dc35-453c-9394-f07b9d0b275e", "file_id": "d65b11a9-2e20-4490-bd7a-9d8441cfd9cd", "chunk_index": 3, "content_head": "若 n 阶矩阵 A 有 n 个线性无关的特征向量，则 A 可相似对角化：存在可逆 P，使 P⁻¹AP = Λ（对角阵，对角元为特征值）。"}
+  {"id": "42209d96-0adf-40c5-8635-35b7f4ca1961", "file_id": "d65b11a9-2e20-4490-bd7a-9d8441cfd9cd", "chunk_index": 4, "content_head": "充要条件：每个 k 重特征值恰有 k 个线性无关的特征向量（几何重数 = 代数重数）。"}
+  {"id": "87464a14-9ff2-4de7-8b43-e9f7a9fab206", "file_id": "d65b11a9-2e20-4490-bd7a-9d8441cfd9cd", "chunk_index": 5, "content_head": "步骤：①求全部特征值；②对每个特征值求特征向量；③n 个无关向量拼成 P；④写出 Λ。"}
+  {"id": "6c1366da-a642-4e66-9522-db3a6128fa16", "file_id": "d65b11a9-2e20-4490-bd7a-9d8441cfd9cd", "chunk_index": 6, "content_head": "实对称矩阵必可正交相似对角化：不同特征值的特征向量正交；重根对应的特征向量可施密特正交化。Q⁻¹AQ = QᵀAQ = Λ。"}
+  {"id": "a21dd87a-1eeb-4379-a574-6cf6e4d2b7ee", "file_id": "d65b11a9-2e20-4490-bd7a-9d8441cfd9cd", "chunk_index": 7, "content_head": "已知特征值反求参数：用 |A − λE| = 0 或 tr/det 联立。\n判断能否对角化：先数重数，再看无关特征向量个数。\n由 A 的特征值求 A⁻¹、A、A^k、f(A) 的特征值：同一特征向量，特征值做同样运算。\n二次型标准化与正负惯"}
+  {"id": "e2fff09b-3db7-4aac-b562-ed62ee1b369f", "file_id": "d65b11a9-2e20-4490-bd7a-9d8441cfd9cd", "chunk_index": 8, "content_head": "特征向量必须非零；λ=0 可以是特征值（此时 A 不可逆）。\n对角化时 P 的列与 Λ 的对角元顺序必须对应。\n实对称重根的正交化不能忘记施密特补足。\n相似矩阵有相同特征值，但有相同特征值不一定相似。"}
+
+## token_usage (1 rows)
+  {"__error__": "ERROR:  column \"purpose\" does not exist\nLINE 2:         SELECT id, model, LEFT(purpose, 60) AS purpose, prom...\n                                       ^\n"}
+
+## event_store (1 rows)
+  {"__error__": "ERROR:  operator does not exist: uuid = text\nLINE 3:         FROM event_store WHERE aggregate_id = '57068e1e-caf8...\n                                                    ^\nHINT:  No operator matches the given name and argument types. You might need to add explicit type casts.\n"}
