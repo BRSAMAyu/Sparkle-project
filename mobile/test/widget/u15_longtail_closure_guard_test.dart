@@ -37,7 +37,8 @@ const String kRepeatNeedle = '.repeat(';
 /// v4/evidence/V4-U15/run_manifest.json 清点矩阵。
 const int kRepeatRatchetMax = 49;
 
-/// 冻结 repeat 基线集（49 路径，lib 相对）——现存集合必须是其子集。
+/// 冻结 repeat 基线集（FIX-565 摘除 typing_text 后 48 路径，lib 相对）——现存集合必须是其子集。
+/// 基线集只允许清理出集（U15 只降不升律）；kRepeatRatchetMax 仍为 49 上界。
 const Set<String> kRepeatBaseline49 = {
   'lib/core/design/components/molecules/stepper_indicator.dart',
   'lib/core/design/motion.dart',
@@ -68,7 +69,6 @@ const Set<String> kRepeatBaseline49 = {
   'lib/features/chat/presentation/widgets/review_appeal_card.dart',
   'lib/features/chat/presentation/widgets/status_awareness_bar.dart',
   'lib/features/chat/widgets/agent_status_indicator.dart',
-  'lib/features/chat/widgets/typing_text.dart',
   'lib/features/community/presentation/widgets/bonfire_widget.dart',
   'lib/features/community/presentation/widgets/community_widgets.dart',
   'lib/features/focus/presentation/widgets/flip_clock.dart',
