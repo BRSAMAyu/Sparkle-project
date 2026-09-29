@@ -53,3 +53,13 @@ elif [ "$DISK_FREE_GB" -lt 20 ] || [ "$SWAP_USED_MB" -gt 10000 ]; then
   log "T1 done → $(df -g / | tail -1 | awk '{print $4}')G"
 fi
 echo "guard-ok free=${DISK_FREE_GB}G swap=${SWAP_USED_MB}MB"
+
+# --- PG env↔卷 hash 漂移探针（FIX-586 R-2，只读指纹化；失败不阻塞守卫主流程） ---
+PG_PROBE="$(dirname "$0")/pg_env_drift_probe.sh"
+if [ -f "$PG_PROBE" ]; then
+  PG_PROBE_OUT="$(bash "$PG_PROBE" --quiet 2>&1)"
+  PG_PROBE_RC=$?
+  log "$PG_PROBE_OUT (exit=$PG_PROBE_RC)"
+else
+  log "pg_env_drift_probe 缺席：$PG_PROBE"
+fi
