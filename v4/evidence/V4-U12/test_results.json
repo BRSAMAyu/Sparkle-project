@@ -1,0 +1,70 @@
+{
+  "task": "V4-U12",
+  "date": "2026-09-29",
+  "toolchain": "flutter 3.41.3 stable（worktree 内 analyze/test 实测）；backend pytest = 主检出 .venv python",
+  "new_tests": {
+    "files": [
+      "mobile/test/features/photon/presentation/screens/photon_redeem_idempotency_u12_test.dart",
+      "mobile/test/features/leaderboard/presentation/screens/self_anchor_boundary_u12_test.dart",
+      "mobile/test/widget/rewards_family_boundary_u12_test.dart"
+    ],
+    "count": 14,
+    "result": "14 passed / 0 failed",
+    "cases": {
+      "photon_redeem_idempotency_u12_test": [
+        "账本真值面：余额/成本/时长显示服务端快照数，本地常量不覆盖（4321/1777/9 上屏，1500/7 不上屏）",
+        "幂等正例：确认一次 → redeem() 恰好一次，余额显示服务端 balance_after（2544）",
+        "幂等反例钉：同帧双击动作 → 只开一个确认面，确认后 redeem() 仍只有一次",
+        "重放封口钉：兑换成功后动作按钮禁用，二次触发零调用零确认面",
+        "账本失败面：业务失败映射有界终态文案（基数不足），按钮禁用零调用"
+      ],
+      "self_anchor_boundary_u12_test": [
+        "正例：失败面人话固定模板 + 异常细节零直出（boom-secret/Exception findsNothing）+ 重试可达数据态",
+        "反例钉（通道关闭）：arb 源该键零 {error} 占位，调用面零实参（源扫描）",
+        "家族语义反钉：排行榜域唯一路由面 = 自我锚（恰 1 条 GoRoute），域内零全站榜面词"
+      ],
+      "rewards_family_boundary_u12_test": [
+        "庆祝正例：正常档下 rare 成就弹窗呈现彩带粒子（ConfettiWidget 在场）",
+        "庆祝反例钉：低刺激档下同一弹窗彩带粒子被抑制（庆祝可关闭，mutation 判别对）",
+        "光子/自我锚面零不可关庆祝源（无直连彩带/粒子引用）",
+        "HIDDEN 商店钉：奖励四家族零 shop 入口（ShopRoutes/'/shop' 零命中）",
+        "flame_level 分离钉：奖励四家族源码零 flameLevel 引用 + 全 mobile 零权益派生同现",
+        "付费墙反例钉：memory 域零 photon/付费/权益门词表 + 纠正走 /memory/provenance 免费链路正锚"
+      ]
+    }
+  },
+  "affected_regression": [
+    {
+      "suite": "mobile test/features/leaderboard/ + test/features/photon/ + test/widget/achievement_unlock_dialog_test.dart",
+      "command": "cd mobile && flutter test test/features/leaderboard/ test/features/photon/ test/widget/achievement_unlock_dialog_test.dart",
+      "exit_code": 0,
+      "result": "67 passed（含既有 self_anchor_screen_test 4 用例原样全绿——错误文案前缀断言不破坏；photon_surface_norm_test 既有 7 用例全绿——零回归）"
+    },
+    {
+      "suite": "backend photon 幂等/真账本证据（引擎侧零改动，验收 2 引擎面证据）",
+      "command": "cd backend && SECRET_KEY=test <main-venv python> -m pytest tests/unit/test_dcomm2_photon_redeem_pro.py tests/unit/test_photon_redeem_pro_status.py -q",
+      "exit_code": 0,
+      "result": "23 passed（内含 monthly_cap_blocks_second_redeem_and_converges、concurrent_redeem_exactly_one_success、transfer_in_excluded_from_redeemable_base——月顶幂等屏障+反刷+真账本引擎证据；.env 移出运行防演示库误写，conftest 守卫口径）"
+    }
+  ],
+  "full_suite": {
+    "command": "cd mobile && flutter analyze --no-pub && flutter test",
+    "analyze": "No issues found!（全库零 issue）",
+    "test": "+3104 passed / ~23 skipped（既有基线）/ 0 failed（flutter test --reporter compact 完整实录 /tmp/u12_full_test.log，23718 行；实现头 7cadd507 终态跑）",
+    "note": "首跑（同代码态）曾 +3101 ~23 -3：3 失败全部为 live 网关类环境性抖动（可见 1 例=q03_visual_qa_longtail tearDownAll，U11 同例已登记；时点与并行会话 wtS02/wtU02 全量跑重叠）；完整日志复跑同码全绿，按 U11 口径归因环境不计回归"
+  },
+  "guards": [
+    {
+      "guard": "check_n9_raw_exception_leak.py",
+      "result": "PASS after --update-baseline（cleanup batch 协议内下调：arb {error} 260→256、bareCatchVar 76→72、catchVarToString 78→77；基线 JSON 差量随本卡入库）"
+    },
+    {
+      "guard": "check_rule_comm_lb_leaderboard_unrouted.py",
+      "result": "PASS（全站榜保持 D17 隐藏，自我锚唯一产品面）"
+    },
+    {
+      "guard": "check_rule_ba_routes_parity.py",
+      "result": "PASS（621 gateway ↔ 1015 engine，169 ledgered diffs；backend/app 零触碰，OpenAPI 门不触发）"
+    }
+  ]
+}

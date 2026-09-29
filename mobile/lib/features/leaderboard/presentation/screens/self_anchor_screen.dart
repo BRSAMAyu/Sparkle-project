@@ -48,16 +48,18 @@ class SelfAnchorScreen extends ConsumerWidget {
           child: viewAsync.when(
             loading: () =>
                 const _ScrollableStateFill(child: SparkleCardSkeleton()),
-            error: (Object error, StackTrace stackTrace) =>
-                _ScrollableStateFill(
+            error: (Object error, StackTrace stackTrace) {
+              // N9 一致性（V4-U12）：异常细节只进日志，UI 走人话固定模板
+              // （arb 无 {error} 占位）——与 photon redeem-pro 错误面同纪律。
+              debugPrint('[SelfAnchor] load failed: $error');
+              return _ScrollableStateFill(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: context.space.md),
                     child: CustomErrorWidget(
-                      message:
-                          context.l10n.leaderboardSelfAnchorLoadFailed(error),
+                      message: context.l10n.leaderboardSelfAnchorLoadFailed,
                     ),
                   ),
                   SizedBox(height: context.space.md),
@@ -69,7 +71,8 @@ class SelfAnchorScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-            ),
+              );
+            },
             data: (SelfAnchorView view) {
               if (!view.hasAnyData) {
                 return _ScrollableStateFill(

@@ -1146,14 +1146,7 @@
   "leaderboardSelfAnchorEmptyAction": "Go to my sprint",
   "leaderboardSelfAnchorEmptyDescription": "No completed sprint tasks or mastery changes in the last 7 days. Finish today's first task and your anchor will start to grow.",
   "leaderboardSelfAnchorEmptyTitle": "No records in this window yet",
-  "leaderboardSelfAnchorLoadFailed": "Failed to load self anchor: {error}",
-  "@leaderboardSelfAnchorLoadFailed": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
+  "leaderboardSelfAnchorLoadFailed": "Could not load your self anchor. Your data is safe — please try again later.",
   "leaderboardSelfAnchorMasteryGained": "Mastery +{delta}",
   "@leaderboardSelfAnchorMasteryGained": {
     "placeholders": {

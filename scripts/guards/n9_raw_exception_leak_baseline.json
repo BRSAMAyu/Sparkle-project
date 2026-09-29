@@ -45,8 +45,6 @@
       "gmTransferFailed": 1,
       "intentAnalysisFailed": 1,
       "intentExecutionFailedWithDetail": 1,
-      "leaderboardSelfAnchorLoadFailed": 1,
-      "learningModeSaveFailed": 1,
       "learningPreferenceSaveFailed": 1,
       "loadingFailed": 1,
       "loadingFailedWithError": 1,
@@ -177,8 +175,6 @@
       "gmTransferFailed": 1,
       "intentAnalysisFailed": 1,
       "intentExecutionFailedWithDetail": 1,
-      "leaderboardSelfAnchorLoadFailed": 1,
-      "learningModeSaveFailed": 1,
       "learningPreferenceSaveFailed": 1,
       "loadingFailed": 1,
       "loadingFailedWithError": 1,
@@ -458,16 +454,12 @@
       "bareCatchVar": 0,
       "catchVarToString": 5
     },
-    "mobile/lib/features/leaderboard/presentation/screens/self_anchor_screen.dart": {
-      "bareCatchVar": 1,
-      "catchVarToString": 0
-    },
     "mobile/lib/features/memory/presentation/screens/memory_settings_screen.dart": {
       "bareCatchVar": 2,
       "catchVarToString": 0
     },
     "mobile/lib/features/memory/presentation/widgets/understanding_overview_view.dart": {
-      "bareCatchVar": 6,
+      "bareCatchVar": 3,
       "catchVarToString": 0
     },
     "mobile/lib/features/memory/presentation/widgets/why_this_receipt_sheet.dart": {
@@ -547,10 +539,6 @@
       "catchVarToString": 1
     },
     "mobile/lib/features/user/presentation/screens/export_data_screen.dart": {
-      "bareCatchVar": 0,
-      "catchVarToString": 1
-    },
-    "mobile/lib/features/user/presentation/screens/learning_mode_screen.dart": {
       "bareCatchVar": 0,
       "catchVarToString": 1
     },

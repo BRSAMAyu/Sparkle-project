@@ -1146,14 +1146,7 @@
   "leaderboardSelfAnchorEmptyAction": "去看我的冲刺",
   "leaderboardSelfAnchorEmptyDescription": "近 7 天还没有完成的冲刺任务或掌握度变化。完成今天的第一个任务，锚点就会开始生长。",
   "leaderboardSelfAnchorEmptyTitle": "这几天还没有记录",
-  "leaderboardSelfAnchorLoadFailed": "自我锚加载失败：{error}",
-  "@leaderboardSelfAnchorLoadFailed": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
+  "leaderboardSelfAnchorLoadFailed": "自我锚加载失败。你的数据没有丢，稍后再试一次。",
   "leaderboardSelfAnchorMasteryGained": "掌握度 +{delta}",
   "@leaderboardSelfAnchorMasteryGained": {
     "placeholders": {

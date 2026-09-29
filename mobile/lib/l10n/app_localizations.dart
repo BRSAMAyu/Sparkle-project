@@ -6299,8 +6299,8 @@ abstract class AppLocalizations {
   /// No description provided for @leaderboardSelfAnchorLoadFailed.
   ///
   /// In zh, this message translates to:
-  /// **'自我锚加载失败：{error}'**
-  String leaderboardSelfAnchorLoadFailed(Object error);
+  /// **'自我锚加载失败。你的数据没有丢，稍后再试一次。'**
+  String get leaderboardSelfAnchorLoadFailed;
 
   /// No description provided for @leaderboardSelfAnchorMasteryGained.
   ///
