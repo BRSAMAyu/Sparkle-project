@@ -2,7 +2,7 @@
   "task": "V4-U02",
   "risk": "high",
   "independent_reviewers_required": 2,
-  "status": "R1_FAIL_REWORKED",
+  "status": "R2_PASS_REVIEWED",
   "note": "实现自评不替代独立审查。本卡按高风险卡预登记 6 条审查挑战点（R1-C1..C6），供 R1/R2 优先证伪。",
   "pre_registered_challenges": [
     {
@@ -43,5 +43,21 @@
     "b1_decision": "客户端改用词表内 source=task（裁决与理由见 diff_or_evidence_only.md 返修节）；词表镜像常量 + 穿透 fake 的真仓库契约测试；mutation 自验红→还原绿",
     "b2_fix": "终态后重建换新键（cancelAdjustment/reAdjustAfterConflict 成功取消后 rotate salt）+ buildAdjustment 终态重放 fail-closed 守卫；正测「取消后重建换新键+新对照可落账」+ mutation 自验红→还原绿",
     "probe": "直调服务探针（临时 pytest 用后已删）：recovery_sheet → ValueError(closed vocabulary)；task → created=True/PENDING/权威 diff/同键重放 created=False/approve→COMMITTED+receipt+任务字段真实变更"
+  },
+  "r2_verdict": "PASS（review_r2.md @1384a1fe+f4a1b30b；一审 B-1/B-2 均判定彻底关闭，无新增阻断；3 条非阻断观察 O-1..O-3 登记）",
+  "r2": {
+    "reviewer": "wtU02R2（独立会话，未参与实现/一审/返修）",
+    "date": "2026-09-29",
+    "method": "只读审查 + 独立后端直调探针（4/4 过，用后即删）+ mutation 亲放×3（逐一还原）+ 全部回归数字亲跑",
+    "b1_resolution": "关闭：词表镜像逐值一致（ProposalSource/ActionCommandType/终态子集 vs action_command.py:91-111/:65-76）；source='task' 独立端到端探针全通（创建→权威 diff→同键恰一次→approve→COMMITTED+receipt→任务字段真实变更 15）；recovery_sheet 400 面独立复现；镜像机制裁决=活钉（mutation 亲证词表外即红；服务端 bump 镜像不随动为无害静默，残余缺口 O-3 由注释纪律+X-04 e2e 兜底）",
+    "b2_resolution": "关闭：取消后重建换新键正测/终态重放 fail-closed 反钉/失败重试同键恰一次正测三测亲跑绿；mutation 亲放（注释 cancelAdjustment 内 rotate → 键差异断言红 @:1187 → 还原绿）；边界亲证：cancel→同键重放 CANCELLED 死端（服务端侧复现）、换键真新建、3 轮取消循环全通、409 取消失败不换键（cancel 键 proposalId 基安全）、漏 rotate 时 buildAdjustment 终态守卫兜底",
+    "facade_maintenance": "回执门时序钉 mutation 亲放红（C2 同法短路 receipt 检查→反例红→还原绿）；两写分离/零 toast 在 32 绿套件内（生产文件零调用）；C4 证伪自述已更正",
+    "numbers_verified": "recovery 32（+5 恰为新测）；受影响面 396+bench 9=405；analyze 零；X-03 契约 45/45（U14 零回退）；88 守卫全过；arb 勘误核 42 值键+6 占位=48 条目 0 删除 zh/en 同构；分支零 backend/gateway/proto/routes 越界（30 文件）；merge-tree --write-tree vs f59ffe56 与 origin/main(c5978b29) 均 NO-CONFLICT（三段式输出的 2 处 <<<<<<< 为证据 md 引用文本非冲突，逐文件核 0 真冲突）",
+    "non_blocking_observations": [
+      "O-1 buildAdjustment 对 COMMITTED 重放投影（实际不可达路径）会渲染 diffReview——服务端幂等兜底无双写无假成功，留观",
+      "O-2 服务端 test_vocabularies_frozen 未含 ProposalSource 冻结断言——建议 X-03 owner 一行补钉（非本卡）",
+      "O-3 词表镜像与真源无跨仓自动同步测试——由活钉 contains 断言+单一消费值 task+X-04 e2e 兜底，可接受"
+    ],
+    "probe_residue": "无（后端直调探针文件与 __pycache__ 已删；mutation 全部还原；git status 干净）"
   }
 }
