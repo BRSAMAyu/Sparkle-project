@@ -2983,9 +2983,9 @@
     "V4-F03",
     "V4-U14"
    ],
-   "status": "in_progress",
-   "implementation_state": "REVIEW_READY",
-   "evidence_verdict": "NOT_RUN",
+   "status": "done",
+   "implementation_state": "DONE_REVIEWED",
+   "evidence_verdict": "PASS_WITH_CHALLENGES",
    "kind": "implementation",
    "required_locks": [
     "haptic-policy"
@@ -3035,7 +3035,12 @@
    ],
    "rollback": "变更独立commit与既有off/shadow/live开关；保留V3路径与数据向后兼容，迁移不得丢用户数据。",
    "no_duplicate_rule": "当前仓库已满足本卡行为时做差量举证，不重写；V3已DONE任务ID与证据不可重置。",
-   "progress_note": "2026-09-29 wtS03：REVIEW_READY 交付（worktree wtS03，分支 agent/v4/s03，实现 commit 17490a3a，未 push，base c3baf168）。haptic-policy 锁面=core/design/semantic_haptics.dart（能力探测封闭表 iOS/Android 支持·其余静默保持文本不蜂鸣替代；乐谱触觉列四槽→HapticFeedback 官方 API 恰一枚 selectionClick/lightImpact/successNotification/warningNotification——不造自定义震动语言；六序纯门：偏好→能力→重播→相位→native双震→同槽500ms去重窗，每面具名抑制）；F03 默认出口触侧升格接线（声侧零变化走既有服务 enableHaptic:false——声触各一条物理出口）。22 新测每验收面一正一反（关闭偏好钉/去重窗反例钉/pending·unknown 反例钉/重播钉/nativeHandled 钉/源码棘轮）+ SystemChannels.platform 真通道 mock 集成 4 钉（模拟器只认调用证据）。analyze 全库零 issue；design 261/experience 19/services 98/消费方 20/q03+home 139 全绿；88 守卫过。已知边界 6 条如实登记（v4/evidence/V4-S03/limitations.md）：真机触感 DEVICE_UNVERIFIED（归 Q06）；系统层触觉总开关/无马达探测不可达（OS 执行层尊重）；V3 词表触觉映射含成就双脉冲按 rollback 条款保留（收敛归后续裁决）；nativeHandled 为调用点纪律+去重窗兜底（不冒充全 app 双震清零）；F03 事件源生产接线仍空（contract-owner 面，现网仅测试流量 exercised 门控）；success 槽 notification 触觉 Android API<30 平台无效果（平台策略，V3 mediumImpact 路径未动）。"
+   "progress_note": "2026-09-29 wtS03：REVIEW_READY 交付（worktree wtS03，分支 agent/v4/s03，实现 commit 17490a3a，未 push，base c3baf168）。haptic-policy 锁面=core/design/semantic_haptics.dart（能力探测封闭表 iOS/Android 支持·其余静默保持文本不蜂鸣替代；乐谱触觉列四槽→HapticFeedback 官方 API 恰一枚 selectionClick/lightImpact/successNotification/warningNotification——不造自定义震动语言；六序纯门：偏好→能力→重播→相位→native双震→同槽500ms去重窗，每面具名抑制）；F03 默认出口触侧升格接线（声侧零变化走既有服务 enableHaptic:false——声触各一条物理出口）。22 新测每验收面一正一反（关闭偏好钉/去重窗反例钉/pending·unknown 反例钉/重播钉/nativeHandled 钉/源码棘轮）+ SystemChannels.platform 真通道 mock 集成 4 钉（模拟器只认调用证据）。analyze 全库零 issue；design 261/experience 19/services 98/消费方 20/q03+home 139 全绿；88 守卫过。已知边界 6 条如实登记（v4/evidence/V4-S03/limitations.md）：真机触感 DEVICE_UNVERIFIED（归 Q06）；系统层触觉总开关/无马达探测不可达（OS 执行层尊重）；V3 词表触觉映射含成就双脉冲按 rollback 条款保留（收敛归后续裁决）；nativeHandled 为调用点纪律+去重窗兜底（不冒充全 app 双震清零）；F03 事件源生产接线仍空（contract-owner 面，现网仅测试流量 exercised 门控）；success 槽 notification 触觉 Android API<30 平台无效果（平台策略，V3 mediumImpact 路径未动）。",
+   "review": {
+    "r1": "a3064325 PASS_WITH_CHALLENGES（R1-C1~C5 防守全成立逐项亲验：锁面直引恰 7 行一处+乐谱原文口径+experience 19/H 组 4 亲跑+500ms 双向边界钉+nativeHandled 位面钉死非死代码；mutation 4/4 杀死：拆去重窗/注入组合脉冲棘轮红/success 映射换 mediumImpact 5 红/相位门短路 3 红；22 计数全复现+359 绿+SHA256 全 OK；merge-tree 零冲突与 S02 零交集结构性成立）",
+    "remediation": "7f96d50c CH-1 棘轮文件域表述订正+观察计数勘误（15+4 非 19）；零代码改动",
+    "integration_reverify": "本 commit 即合并态，复验随合并后跑"
+   }
   },
   {
    "id": "V4-S04",
