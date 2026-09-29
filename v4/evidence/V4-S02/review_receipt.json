@@ -1,6 +1,6 @@
 {
   "task": "V4-S02",
-  "review_state": "R1_DONE: APPROVE_WITH_CONDITIONS (wtS02R1, see review_r1.md); RECTIFIED: conditions D1/D2/C6 清偿于整改 commit ef0901a5（agent/v4/s02，D1/D2 均选修复路线非钉债；C6=limitations L10；次级建议 duck 值锚同 commit）——mutation 自验 3 红精确映射探针后还原全绿，受影响面 75+录音消费方 8 全绿、analyze 零；awaiting R2（R2 基线=ef0901a5）",
+  "review_state": "R2_DONE: APPROVE (wtS02R2, see review_r2.md, 对象 a2487510/R2 基线 ef0901a5)。一审 COND-1(D1)/COND-2(D2)/COND-3(C6→L10) 全部清偿：D1 探针复放 played=true + 分支零 prefs 亲核；D2 直呼面零残留探针 PASS + mutation 复放恰 3 红逐一映射一审探针后还原全绿；C2 独立重数 33=33 双向空差集（第 34 条 kind=config 不入口径）与 C4 三入口单点维持。观察 O-1（非阻塞）：「零写穿 prefs」在 playAmbient 直呼面成立；setAmbientScene:430 既存 persist-first 契约使设置屏面录音中被拒仍记偏好——运行态错位（D2 核心）已全表面消除，无验收违反，不要求整改。回归 77 超集全绿+录音消费方 8/8+analyze 零+88 守卫全过；merge-tree vs main e2c2372c（⊇3bd1cec6）0 冲突、sensory/s02 文件零交集。两份独立审查（R1+R2）齐，待集成 SHA 可失败复验后销账。",
   "independent_reviewers_required": 2,
   "note": "高风险卡：需 2 份独立未参与会话审查 + 集成 SHA 可失败复验后才能销账。本文件为占位，R1/R2 receipt 由审查会话另行落盘（review_r1.md/review_r2.md），审查结论回写本文件 review_state。",
   "pre_registered_challenges": [
