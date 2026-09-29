@@ -1,22 +1,32 @@
-"""V4-I06 · ContextPack 装配观测 → ``context_selection_receipt.v1`` 回执装配（纯函数）。
+"""V4-I06 · 上下文选择观测 → ``context_selection_receipt.v1`` 回执装配（纯函数）。
 
-本模块是合同词表（``app.core.context_selection_receipt``）与装配点
-（``ContextPackBuilder.build``）之间的**纯转换层**：输入 = build 面已有的观测
-对象（M-03 PrefilterResult、最终 surfaced 集、M-05 selfcheck 内部档、冲突裁决
-suppressed 面、deny-quiet 面、I02 效用门 metadata 若开），输出 = 契约回执。
-零 I/O、零业务推理——只做归因收敛与词表映射。
+本模块是合同词表（``app.core.context_selection_receipt``）与装配点之间的**纯转换
+层**：输入 = 装配面已有的观测对象，输出 = 契约回执。零 I/O、零业务推理——只做
+归因收敛与词表映射。两个生产者：
 
-候选归因判定序（首个命中生效；全部确定性）：
+- ``assemble_pack_receipt``：ContextPackBuilder.build（chat/plan_review/context_focus
+  共用的上下文契约装配点；角色 ``chat_context``）——输入 = M-03 PrefilterResult、
+  最终 surfaced 集、M-05 selfcheck 内部档、冲突裁决 suppressed 面、deny-quiet 面、
+  I02 效用门 metadata 若开。
 
-    prefilter 拒用（M-03 映射表）
-      > surfaced（selected）
-      > M-05 selfcheck 降档（duplicate / utility_gate_rejected）
-      > 冲突裁决 suppressed（conflicts_confirmed_preference）
-      > deny-quiet（permission_denied —— 用户已说不许用）
-      > 其余合法但未进面（budget_exhausted —— 排名/预算/语义门选择压力）
+  候选归因判定序（首个命中生效；全部确定性）：
 
-归因缺口（上游某级丢弃候选但无 attributable 面）按 budget_exhausted 兜底并在
-note 标 ``unattributed_downstream``——候选集覆盖被扫描全集，不产生悬空缺失。
+      prefilter 拒用（M-03 映射表）
+        > surfaced（selected）
+        > M-05 selfcheck 降档（duplicate / utility_gate_rejected）
+        > 冲突裁决 suppressed（conflicts_confirmed_preference）
+        > deny-quiet（permission_denied —— 用户已说不许用）
+        > 其余合法但未进面（budget_exhausted —— 排名/预算/语义门选择压力）
+
+  归因缺口（上游某级丢弃候选但无 attributable 面）按 budget_exhausted 兜底并在
+  note 标 ``unattributed_downstream``——候选集覆盖被扫描全集，不产生悬空缺失。
+
+- ``assemble_resume_view_receipt``（FIX-567 · V3-FIX-567）：EpisodeResumeView 聚合
+  面（角色 ``resume_view``）——B05 §2「receipt 在 resume view 返回之前」。输入 =
+  聚合真实读到的权威锚（goal/task 行版本 token + memory epoch）；候选集 = 视图
+  依据权威（task:// + goal://，selected；聚合无拒用机制，无 rejected 候选——
+  不臆造归因）。ref scheme 均在 ``ACTION_SOURCE_REF_SCHEMES`` 封闭集内且可被
+  ``verify_source_ref`` join 真源（tasks/goals 表属主校验）。
 """
 
 from __future__ import annotations
@@ -246,4 +256,65 @@ def assemble_pack_receipt(
     )
 
 
-__all__ = ["assemble_pack_receipt"]
+#: selector 实现版本（resume view 生产者：EpisodeResumeView 聚合面，FIX-567）。
+SELECTOR_VERSION_RESUME_VIEW = "episode_resume.v4-f567.v1"
+
+
+def assemble_resume_view_receipt(
+    *,
+    user_id: UUID,
+    goal_id: str,
+    task_id: str,
+    goal_version: str | None,
+    task_version: str | None,
+    memory_epoch: int | None,
+) -> ContextSelectionReceipt:
+    """EpisodeResumeView 聚合观测 → ``resume_view`` 角色回执（纯函数；FIX-567）。
+
+    合同 §2 产生时机「resume view 返回之前」的装配面。字段纪律：
+
+    - ``selection_role="resume_view"``（封闭词表成员；U01 消费面
+      ``episode_resume_provider`` 以此角色门判定接续依据——chat_context 角色回执
+      不得冒充接续依据，归因错置）；
+    - 候选集 = 视图依据权威锚：``task://<task_id>`` + ``goal://<goal_id>``
+      （selected；两 ref 均在 ACTION_SOURCE_REF_SCHEMES 封闭集内且
+      ``verify_source_ref`` 可 join tasks/goals 真源）。聚合面无拒用机制——
+      不产生 rejected 候选、不臆造归因；
+    - ``input_versions``：goal/task 版本 token = 真实读到行的 ``version_token``
+      （null = 该权威未读到，不冒充）；memory_epoch = 聚合真实读值；
+      ``policy_version=None``（本面未读 policy 权威）；
+    - ``why_now=None``：视图的 why-now（task 字段位投影）随视图本体交付；回执级
+      why-now（「为什么现在做这次选择」）在本面无 Aurora 决策参与 → null
+      （合同 null 语义，与 pack 装配面同口径）。
+    """
+    task_ref = f"task://{str(task_id).strip()}"
+    goal_ref = f"goal://{str(goal_id).strip()}"
+    candidates = [
+        ReceiptCandidate(ref=task_ref, status="selected", reason_code=None, note=None),
+        ReceiptCandidate(ref=goal_ref, status="selected", reason_code=None, note=None),
+    ]
+    return ContextSelectionReceipt(
+        schema_version=CONTEXT_SELECTION_RECEIPT_SCHEMA_VERSION,
+        receipt_id=new_receipt_id(),
+        selection_role="resume_view",
+        decision_id=None,
+        input_versions=ReceiptInputVersions(
+            memory_epoch=memory_epoch,
+            goal_version=goal_version,
+            task_version=task_version,
+            policy_version=None,
+            selector_version=SELECTOR_VERSION_RESUME_VIEW,
+        ),
+        candidates=candidates,
+        # 无独立整数选中上限——如实读数：扫描面 = 依据权威全集，选中数 = 实际
+        # selected 数（与 pack 装配面 candidate_scan_limit=实际扫描数同口径）。
+        budget=ReceiptBudget(
+            candidate_scan_limit=len(candidates),
+            selected_max=len(candidates),
+            clarifications_used=0,
+        ),
+        why_now=None,
+    )
+
+
+__all__ = ["assemble_pack_receipt", "assemble_resume_view_receipt"]

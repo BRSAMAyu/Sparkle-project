@@ -25,6 +25,7 @@ from app.core.context_pack import ContextPackBuilder
 from app.core.context_selection_receipt import (
     CONTEXT_SELECTION_RECEIPT_SCHEMA_VERSION,
     REJECTION_REASON_CODES,
+    SELECTION_ROLES,
 )
 from app.models.context_selection_receipt import ContextSelectionReceiptRow
 from app.models.memory import EpisodicMemory
@@ -124,6 +125,73 @@ def test_assemble_attribution_precedence_surfaced_selfcheck_conflict_deny_budget
     # m5：过预筛但未进 ranked/surfaced 且无 attributable 面 → budget 兜底 + 缺口标记
     assert by_ref["memory://episodic/m5"].reason_code == "budget_exhausted"
     assert by_ref["memory://episodic/m5"].note == "unattributed_downstream"
+    assert receipt.validate_contract() == []
+
+
+# ---------------------------------------------------------------------------
+# 1b. FIX-567 · resume_view 角色回执装配纯函数（V3-FIX-567）
+# ---------------------------------------------------------------------------
+
+
+def test_assemble_resume_view_receipt_role_and_shape():
+    """FIX-567 正例：resume_view 角色回执装配——角色值 + 载荷字段逐断言。
+
+    契约锚（不造第二契约）：角色词表 = ``SELECTION_ROLES`` 现有成员；
+    schema_version = 冻结 v1；候选 = 视图依据权威（task/goal，selected）。
+    """
+    from app.orchestration.context_receipt_assembly import (
+        SELECTOR_VERSION_RESUME_VIEW,
+        assemble_resume_view_receipt,
+    )
+
+    goal_id, task_id = uuid4(), uuid4()
+    receipt = assemble_resume_view_receipt(
+        user_id=uuid4(),
+        goal_id=str(goal_id),
+        task_id=str(task_id),
+        goal_version="2026-09-28T08:00:00",
+        task_version="2026-09-28T08:30:00",
+        memory_epoch=7,
+    )
+    # 角色值：U01 消费面 episode_resume_provider 角色门唯一放行值
+    assert receipt.selection_role == "resume_view"
+    assert receipt.selection_role in SELECTION_ROLES
+    assert receipt.schema_version == CONTEXT_SELECTION_RECEIPT_SCHEMA_VERSION
+    assert receipt.receipt_id.startswith("csr_")
+    assert receipt.decision_id is None
+    # 候选集 = 视图依据权威（task:// + goal://，selected；聚合无拒用机制，不臆造归因）
+    assert [(c.ref, c.status, c.reason_code) for c in receipt.candidates] == [
+        (f"task://{task_id}", "selected", None),
+        (f"goal://{goal_id}", "selected", None),
+    ]
+    # input_versions：真实读数锚（版本 token + epoch）；policy 未读 → null 不冒充
+    assert receipt.input_versions.memory_epoch == 7
+    assert receipt.input_versions.task_version == "2026-09-28T08:30:00"
+    assert receipt.input_versions.goal_version == "2026-09-28T08:00:00"
+    assert receipt.input_versions.policy_version is None
+    assert receipt.input_versions.selector_version == SELECTOR_VERSION_RESUME_VIEW
+    # 视图 why-now 随视图本体交付；回执级 why-now 无 Aurora 决策参与 → null（合同 null 语义）
+    assert receipt.why_now is None
+    assert receipt.budget.candidate_scan_limit == 2
+    assert receipt.budget.selected_max == 2
+    assert receipt.validate_contract() == []
+
+
+def test_assemble_resume_view_receipt_unread_authority_stays_null():
+    """未读到的权威版本位 = null，不以 0/"" 冒充已读（合同 input_versions 纪律）。"""
+    from app.orchestration.context_receipt_assembly import assemble_resume_view_receipt
+
+    receipt = assemble_resume_view_receipt(
+        user_id=uuid4(),
+        goal_id=str(uuid4()),
+        task_id=str(uuid4()),
+        goal_version=None,
+        task_version=None,
+        memory_epoch=None,
+    )
+    assert receipt.input_versions.goal_version is None
+    assert receipt.input_versions.task_version is None
+    assert receipt.input_versions.memory_epoch is None
     assert receipt.validate_contract() == []
 
 

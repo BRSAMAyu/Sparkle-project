@@ -71,6 +71,22 @@ _OUTCOME_SCAN_MAX_PAGES = 3
 
 
 @dataclass(frozen=True)
+class ResumeSelectionObservations:
+    """成功聚合的选择观测（FIX-567：供调用方装配 ``resume_view`` 角色回执）。
+
+    只携带回执装配所需的真实读数锚：权威行版本 token（``version_token``）+
+    memory epoch + 解析后的 goal/task id。本服务自身保持只读（receipt 落账归
+    API 边界——B05 §2「receipt 在 resume view 返回之前」的调用方职责）。
+    """
+
+    goal_id: str
+    task_id: str
+    goal_version: str | None
+    task_version: str | None
+    memory_epoch: int
+
+
+@dataclass(frozen=True)
 class EpisodeResumeResult:
     """聚合结果：``view`` 与 ``reason_code`` 互斥——有视图必有权威面，降级必有原因。"""
 
@@ -78,6 +94,8 @@ class EpisodeResumeResult:
     reason_code: str | None = None
     #: WARN 收集（如 why_now 字段级降级原因），带 task 标识由服务层日志留痕。
     warnings: tuple[str, ...] = field(default_factory=tuple)
+    #: 成功聚合时的选择观测（降级恒 None——无选择发生不产生回执，B05 §2）。
+    observations: ResumeSelectionObservations | None = None
 
     @property
     def degraded(self) -> bool:
@@ -257,7 +275,16 @@ class EpisodeResumeService:
         shape_violations = validate_resume_view_shape(view)
         if shape_violations:  # pragma: no cover — 防御：冻结结构漂移必须 fail-loud
             raise ValueError(f"resume view shape violations: {shape_violations}")
-        return EpisodeResumeResult(view=view, reason_code=None, warnings=tuple(warnings))
+        # FIX-567：成功聚合 = 一次真实选择完成（读了哪些权威、哪些版本）——观测
+        # 随结果交调用方装配 resume_view 角色回执（本服务保持零写路径）。
+        observations = ResumeSelectionObservations(
+            goal_id=resolved_goal_id,
+            task_id=task_id_str,
+            goal_version=version_token(getattr(goal, "updated_at", None)),
+            task_version=version_token(getattr(task, "updated_at", None)),
+            memory_epoch=memory_epoch,
+        )
+        return EpisodeResumeResult(view=view, reason_code=None, warnings=tuple(warnings), observations=observations)
 
     # ------------------------------------------------------------------
     # 内部：各权威只读面
@@ -355,4 +382,5 @@ __all__ = [
     "PENDING_STEP_TASK_STATUSES",
     "EpisodeResumeResult",
     "EpisodeResumeService",
+    "ResumeSelectionObservations",
 ]
