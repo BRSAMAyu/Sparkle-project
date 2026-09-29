@@ -34,7 +34,9 @@ def _is_running_in_docker() -> bool:
 def _normalize_local_docker_host(host: str) -> str:
     if _is_running_in_docker():
         return host
-    if host in ("sparkle_db", "sparkle_redis"):
+    # sparkle_db/sparkle_redis=FIX-563 后仍有效的服务名或旧容器名（存量 .env 兼容）；
+    # redis=FIX-563 redis 服务键（compose 网络内真名，FIX-578 起模板/compose 统一用它）
+    if host in ("sparkle_db", "sparkle_redis", "redis"):
         return "127.0.0.1"
     return host
 
@@ -238,7 +240,7 @@ class Settings(BaseSettings):
 
     # Redis (canonical envs: REDIS_*)
     REDIS_URL: str = ""
-    REDIS_HOST: str = Field(default="sparkle_redis", validation_alias=AliasChoices("REDIS_HOST", "REDIS_HOSTNAME"))
+    REDIS_HOST: str = Field(default="redis", validation_alias=AliasChoices("REDIS_HOST", "REDIS_HOSTNAME"))
     REDIS_PORT: int = Field(default=6379, validation_alias=AliasChoices("REDIS_PORT", "REDIS_PORT_NUMBER"))
     REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0

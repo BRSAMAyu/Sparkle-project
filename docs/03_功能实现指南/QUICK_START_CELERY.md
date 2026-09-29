@@ -31,9 +31,9 @@ make celery-up
 ```
 
 **这将启动**:
-- ✅ `sparkle_celery_worker` - 任务执行器 (并发数: 2)
-- ✅ `sparkle_celery_beat` - 定时任务调度器
-- ✅ `sparkle_flower` - 监控面板 (http://localhost:5555)
+- ✅ `sparkle_proj_celery_worker` - 任务执行器 (并发数: 2)
+- ✅ `sparkle_proj_celery_beat` - 定时任务调度器
+- ✅ `sparkle_proj_flower` - 监控面板 (http://localhost:5555)
 
 ### 步骤 3: 验证系统
 
@@ -93,16 +93,16 @@ docker ps --filter "name=sparkle" --format "table {{.Names}}\t{{.Status}}\t{{.Po
 NAME                    STATUS          PORTS
 sparkle_proj_db              Up 5 minutes    0.0.0.0:5432->5432/tcp
 sparkle_proj_redis           Up 5 minutes    0.0.0.0:6379->6379/tcp
-sparkle_celery_worker   Up X seconds    (no ports)
-sparkle_celery_beat     Up X seconds    (no ports)
-sparkle_flower          Up X seconds    0.0.0.0:5555->5555/tcp
+sparkle_proj_celery_worker   Up X seconds    (no ports)
+sparkle_proj_celery_beat     Up X seconds    (no ports)
+sparkle_proj_flower          Up X seconds    0.0.0.0:5555->5555/tcp
 ```
 
 ### 2. 测试任务队列
 
 ```bash
 # 进入 Worker 容器
-docker exec -it sparkle_celery_worker bash
+docker exec -it sparkle_proj_celery_worker bash
 
 # 在容器内测试
 python -c "from app.core.celery_app import celery_app; print(list(celery_app.tasks.keys()))"
@@ -172,13 +172,13 @@ result.get()  # 应该返回健康检查结果
 
 ```bash
 # 检查 Redis 连接
-docker exec sparkle_redis redis-cli ping
+docker exec sparkle_proj_redis redis-cli ping
 
 # 检查 Backend 镜像是否存在
 docker images | grep sparkle_backend
 
 # 手动启动 Worker 查看详细错误
-docker run -it --rm --network sparkle-flutter_default \
+docker run -it --rm --network sparkle-project_default \
   -v $(pwd)/backend:/app \
   sparkle_backend celery -A app.core.celery_app worker -l info
 ```
@@ -190,7 +190,7 @@ docker run -it --rm --network sparkle-flutter_default \
 docker ps | grep flower
 
 # 查看 Flower 日志
-docker logs sparkle_flower
+docker logs sparkle_proj_flower
 
 # 检查端口占用
 lsof -i :5555
@@ -200,13 +200,13 @@ lsof -i :5555
 
 ```bash
 # 检查 Redis 队列
-docker exec sparkle_redis redis-cli -n 1 LLEN celery
+docker exec sparkle_proj_redis redis-cli -n 1 LLEN celery
 
 # 检查 Worker 是否在线
-docker exec sparkle_celery_worker celery -A app.core.celery_app status
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app status
 
 # 查看 Worker 活动
-docker exec sparkle_celery_worker celery -A app.core.celery_app inspect active
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app inspect active
 ```
 
 ---
@@ -227,10 +227,10 @@ docker exec sparkle_celery_worker celery -A app.core.celery_app inspect active
 
 ```bash
 # 查看 Redis 内存使用
-docker exec sparkle_redis redis-cli INFO memory
+docker exec sparkle_proj_redis redis-cli INFO memory
 
 # 查看 Celery 相关键
-docker exec sparkle_redis redis-cli -n 1 KEYS '*'
+docker exec sparkle_proj_redis redis-cli -n 1 KEYS '*'
 ```
 
 ---

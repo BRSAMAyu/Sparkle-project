@@ -390,28 +390,28 @@ celery-up:
 	@echo "   Starting services..."
 	@docker run -d --name sparkle_proj_celery_worker --network sparkle-project_default \
 		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
-		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
-		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
-		-e CELERY_RESULT_BACKEND=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/2 \
+		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@redis:6379/1 \
+		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@redis:6379/1 \
+		-e CELERY_RESULT_BACKEND=redis://:$(REDIS_PASSWORD)@redis:6379/2 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=4 2>/dev/null || echo "Worker may already be running"
 	@docker run -d --name sparkle_proj_celery_glm_batch_worker --network sparkle-project_default \
 		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
-		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
-		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
-		-e CELERY_RESULT_BACKEND=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/2 \
+		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@redis:6379/1 \
+		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@redis:6379/1 \
+		-e CELERY_RESULT_BACKEND=redis://:$(REDIS_PASSWORD)@redis:6379/2 \
 		-e GLM_BATCH_MAX_CONCURRENCY=2 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app worker -l info -Q glm_batch --concurrency=2 --hostname=glm-batch@%h 2>/dev/null || echo "GLM batch worker may already be running"
 	@docker run -d --name sparkle_proj_celery_beat --network sparkle-project_default \
 		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
-		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
-		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
+		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@redis:6379/1 \
+		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@redis:6379/1 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app beat -l info 2>/dev/null || echo "Beat may already be running"
 	@if [ "$(FLOWER_ENABLE)" = "1" ]; then \
 		docker run -d --name sparkle_proj_flower --network sparkle-project_default -p 5555:5555 \
-			$(FLOWER_IMAGE) celery --broker=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 flower --port=5555 2>/dev/null || echo "Flower may already be running"; \
+			$(FLOWER_IMAGE) celery --broker=redis://:$(REDIS_PASSWORD)@redis:6379/1 flower --port=5555 2>/dev/null || echo "Flower may already be running"; \
 	else \
 		echo "ℹ️  Flower disabled. Set FLOWER_ENABLE=1 to start it."; \
 	fi

@@ -255,7 +255,9 @@ func normalizeLocalDockerHost(host string) string {
 	if isRunningInDocker() {
 		return host
 	}
-	if host == "sparkle_db" || host == "sparkle_redis" {
+	// sparkle_db/sparkle_redis=FIX-563 后仍有效的服务名或旧容器名（存量 .env 兼容）；
+	// redis=FIX-563 redis 服务键（compose 网络内真名，FIX-578 起模板/compose 统一用它）
+	if host == "sparkle_db" || host == "sparkle_redis" || host == "redis" {
 		return "127.0.0.1"
 	}
 	return host

@@ -35,7 +35,7 @@ Sparkle 使用 Docker Compose 编排所有服务。本配置涵盖了基础设�
 
 - **Gateway -> Engine**: `grpc://sparkle_backend:50051`
 - **Engine -> DB**: `postgresql://.../sparkle_db:5432`
-- **Engine -> Redis**: `redis://sparkle_redis:6379`
+- **Engine -> Redis**: `redis://redis:6379`（服务名 `redis`；FIX-563 容器名已分化为 `sparkle_proj_redis`，旧 `sparkle_redis` 主机名在网络内不可解析——FIX-578 勘误）
 
 ## 4. 卷挂载 (Volumes)
 

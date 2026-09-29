@@ -137,10 +137,10 @@ services:
       # Override localhost URLs from .env with correct Docker service names
       - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - POSTGRES_HOST=sparkle_db
       - POSTGRES_PORT=5432
-      - REDIS_HOST=sparkle_redis
+      - REDIS_HOST=redis
       # OpenClaw runs on the host machine, not inside this container.
       - OPENCLAW_GATEWAY_URL=http://host.docker.internal:18789
       - OPENCLAW_WS_URL=ws://host.docker.internal:18789
@@ -193,7 +193,7 @@ services:
       - AURORA_STAGE40_CALENDAR_MODE=${AURORA_STAGE40_CALENDAR_MODE:-live}
       - AURORA_DUAL_CORE_ROUTER_MODE=${AURORA_DUAL_CORE_ROUTER_MODE:-live}
       - AURORA_PRIVACY_PII_REDACTION_MODE=${AURORA_PRIVACY_PII_REDACTION_MODE:-live}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
     volumes:
       - ./backend:/app
       - sparkle_backend_logs:/app/logs
@@ -239,10 +239,10 @@ services:
       # Override localhost URLs from .env with correct Docker service names
       - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - POSTGRES_HOST=sparkle_db
       - POSTGRES_PORT=5432
-      - REDIS_HOST=sparkle_redis
+      - REDIS_HOST=redis
       - OPENCLAW_GATEWAY_URL=http://host.docker.internal:18789
       - OPENCLAW_WS_URL=ws://host.docker.internal:18789
       - OPENCLAW_WS_DEVICE_IDENTITY_PATH=/app/.openclaw/device.json
@@ -337,12 +337,12 @@ services:
       # Override localhost URLs from .env with correct Docker service names
       - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
       - POSTGRES_HOST=sparkle_db
       - POSTGRES_PORT=5432
-      - REDIS_HOST=sparkle_redis
+      - REDIS_HOST=redis
       - SERVICE_ROLE=celery
     depends_on:
       sparkle_db:
@@ -381,12 +381,12 @@ services:
     environment:
       - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
       - POSTGRES_HOST=sparkle_db
       - POSTGRES_PORT=5432
-      - REDIS_HOST=sparkle_redis
+      - REDIS_HOST=redis
       - SERVICE_ROLE=celery-glm-batch
       - GLM_BATCH_MAX_CONCURRENCY=6
     depends_on:
@@ -428,12 +428,12 @@ services:
       # Override localhost URLs from .env with correct Docker service names
       - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
       - POSTGRES_HOST=sparkle_db
       - POSTGRES_PORT=5432
-      - REDIS_HOST=sparkle_redis
+      - REDIS_HOST=redis
       - SERVICE_ROLE=beat
     depends_on:
       redis:
@@ -472,8 +472,8 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - POSTGRES_HOST=sparkle_db
       - POSTGRES_PORT=5432
-      - REDIS_HOST=sparkle_redis
-      - REDIS_URL=sparkle_redis:6379
+      - REDIS_HOST=redis
+      - REDIS_URL=redis:6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - AGENT_ADDRESS=sparkle_agent:50051
       - BACKEND_URL=http://sparkle_api:8000

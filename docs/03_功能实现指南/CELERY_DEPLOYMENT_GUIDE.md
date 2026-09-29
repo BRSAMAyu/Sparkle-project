@@ -84,7 +84,7 @@ make dev-all
 
 ### Celery Worker
 
-**容器名**: `sparkle_celery_worker`
+**容器名**: `sparkle_proj_celery_worker`
 **副本数**: 2 (可配置)
 **内存限制**: 2GB
 **队列**: high_priority, default, low_priority
@@ -92,15 +92,15 @@ make dev-all
 **环境变量**:
 ```yaml
 DATABASE_URL=postgresql://user:pass@sparkle_db:5432/sparkle
-REDIS_URL=redis://:pass@sparkle_redis:6379/1
-CELERY_BROKER_URL=redis://:pass@sparkle_redis:6379/1
-CELERY_RESULT_BACKEND=redis://:pass@sparkle_redis:6379/2
-OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+REDIS_URL=redis://:pass@redis:6379/1
+CELERY_BROKER_URL=redis://:pass@redis:6379/1
+CELERY_RESULT_BACKEND=redis://:pass@redis:6379/2
+OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
 ```
 
 ### Celery Beat (定时任务调度器)
 
-**容器名**: `sparkle_celery_beat`
+**容器名**: `sparkle_proj_celery_beat`
 **功能**: 周期性任务调度
 
 **当前配置的定时任务**:
@@ -119,7 +119,7 @@ beat_schedule = {
 
 ### Flower (监控面板)
 
-**容器名**: `sparkle_flower`
+**容器名**: `sparkle_proj_flower`
 **端口**: 5555
 **访问地址**: http://localhost:5555
 
@@ -180,32 +180,32 @@ def batch_task(self, data):
 
 ```bash
 # 查看 Worker 状态
-docker exec sparkle_celery_worker celery -A app.core.celery_app status
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app status
 
 # 查看队列统计
-docker exec sparkle_celery_worker celery -A app.core.celery_app inspect active
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app inspect active
 
 # 查看定时任务
-docker exec sparkle_celery_beat celery -A app.core.celery_app inspect scheduled
+docker exec sparkle_proj_celery_beat celery -A app.core.celery_app inspect scheduled
 
 # 查看任务统计
-docker exec sparkle_celery_worker celery -A app.core.celery_app inspect stats
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app inspect stats
 ```
 
 ### 日志查看
 
 ```bash
 # 实时 Worker 日志
-docker logs -f sparkle_celery_worker
+docker logs -f sparkle_proj_celery_worker
 
 # 实时 Beat 日志
-docker logs -f sparkle_celery_beat
+docker logs -f sparkle_proj_celery_beat
 
 # 查看特定 Worker 日志 (副本 1)
-docker logs -f sparkle_celery_worker.1
+docker logs -f sparkle_proj_celery_worker.1
 
 # 查看历史日志 (最后 100 行)
-docker logs --tail 100 sparkle_celery_worker
+docker logs --tail 100 sparkle_proj_celery_worker
 ```
 
 ---
@@ -236,29 +236,29 @@ docker compose down celery_worker celery_beat flower
 make celery-flush
 
 # 或手动清空
-docker exec sparkle_redis redis-cli -n 1 FLUSHDB
+docker exec sparkle_proj_redis redis-cli -n 1 FLUSHDB
 
 # 查看队列长度
-docker exec sparkle_redis redis-cli -n 1 LLEN celery
+docker exec sparkle_proj_redis redis-cli -n 1 LLEN celery
 
 # 手动添加任务到队列 (测试用)
-docker exec sparkle_celery_worker celery -A app.core.celery_app call app.core.celery_tasks.health_check_task
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app call app.core.celery_tasks.health_check_task
 ```
 
 ### 任务管理
 
 ```bash
 # 查看活动任务
-docker exec sparkle_celery_worker celery -A app.core.celery_app inspect active
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app inspect active
 
 # 查看保留任务 (正在执行)
-docker exec sparkle_celery_worker celery -A app.core.celery_app inspect reserved
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app inspect reserved
 
 # 取消任务
-docker exec sparkle_celery_worker celery -A app.core.celery_app revoke <task_id> --terminate
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app revoke <task_id> --terminate
 
 # 重新执行失败任务
-docker exec sparkle_celery_worker celery -A app.core.celery_app retry <task_id>
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app retry <task_id>
 ```
 
 ---
@@ -300,10 +300,10 @@ celery_worker:
 **性能优化**:
 ```bash
 # 监控 Redis 内存使用
-docker exec sparkle_redis redis-cli INFO memory
+docker exec sparkle_proj_redis redis-cli INFO memory
 
 # 监控 Redis 键数量
-docker exec sparkle_redis redis-cli DBSIZE
+docker exec sparkle_proj_redis redis-cli DBSIZE
 ```
 
 ---
@@ -314,10 +314,10 @@ docker exec sparkle_redis redis-cli DBSIZE
 
 ```bash
 # 检查 Worker 是否健康
-docker exec sparkle_celery_worker celery -A app.core.celery_app inspect ping
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app inspect ping
 
 # 检查 Beat 是否健康
-docker exec sparkle_celery_beat ps aux | grep celery
+docker exec sparkle_proj_celery_beat ps aux | grep celery
 
 # 检查 Flower 是否健康
 curl -s http://localhost:5555/api/workers | jq .
@@ -368,20 +368,20 @@ groups:
 docker compose ps redis
 
 # 检查 Redis 连接
-docker exec sparkle_celery_worker celery -A app.core.celery_app inspect ping
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app inspect ping
 
 # 查看 Redis 日志
-docker logs sparkle_redis
+docker logs sparkle_proj_redis
 ```
 
 **2. 任务卡在队列中不执行**
 
 ```bash
 # 检查 Worker 是否在线
-docker exec sparkle_celery_worker celery -A app.core.celery_app status
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app status
 
 # 查看活动 Worker
-docker exec sparkle_celery_worker celery -A app.core.celery_app inspect active
+docker exec sparkle_proj_celery_worker celery -A app.core.celery_app inspect active
 
 # 重启 Worker
 docker compose restart celery_worker
@@ -391,10 +391,10 @@ docker compose restart celery_worker
 
 ```bash
 # 检查 Beat 日志
-docker logs sparkle_celery_beat
+docker logs sparkle_proj_celery_beat
 
 # 查看已注册的定时任务
-docker exec sparkle_celery_beat celery -A app.core.celery_app inspect scheduled
+docker exec sparkle_proj_celery_beat celery -A app.core.celery_app inspect scheduled
 
 # 重启 Beat
 docker compose restart celery_beat
@@ -407,7 +407,7 @@ docker compose restart celery_beat
 docker compose ps flower
 
 # 检查 Flower 日志
-docker logs sparkle_flower
+docker logs sparkle_proj_flower
 
 # 检查端口占用
 lsof -i :5555
@@ -464,11 +464,11 @@ DB_NAME=sparkle
 REDIS_PASSWORD=your_redis_password
 
 # Celery
-CELERY_BROKER_URL=redis://:your_redis_password@sparkle_redis:6379/1
-CELERY_RESULT_BACKEND=redis://:your_redis_password@sparkle_redis:6379/2
+CELERY_BROKER_URL=redis://:your_redis_password@redis:6379/1
+CELERY_RESULT_BACKEND=redis://:your_redis_password@redis:6379/2
 
 # Monitoring
-OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
 ```
 
 ---

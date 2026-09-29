@@ -84,8 +84,8 @@ def _ensure_beat_running() -> None:
         return
 
     database_url = f"postgresql://postgres:{POSTGRES_PASSWORD}@sparkle_db:5432/sparkle"
-    broker_url = f"redis://:{REDIS_PASSWORD}@sparkle_redis:6379/1"
-    result_backend = f"redis://:{REDIS_PASSWORD}@sparkle_redis:6379/2"
+    broker_url = f"redis://:{REDIS_PASSWORD}@redis:6379/1"
+    result_backend = f"redis://:{REDIS_PASSWORD}@redis:6379/2"
     _run(
         " ".join(
             [
