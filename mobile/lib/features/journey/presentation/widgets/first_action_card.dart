@@ -1,10 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_card.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/home/presentation/providers/episode_resume_provider.dart';
 import 'package:sparkle/features/journey/data/repositories/first_action_repository.dart';
+import 'package:sparkle/features/memory/presentation/providers/context_receipt_provider.dart';
 
 /// J-04 · First Meaningful Action 卡（链路六环的移动端确认面）.
 ///
@@ -105,10 +112,59 @@ class _FirstActionCardState extends ConsumerState<FirstActionCard> {
     try {
       await _repository.approve(proposalId, 'u04:$proposalId:approve');
       ref.invalidate(firstActionStateProvider);
+      // V4-U06 验收②：确认后真实 receipt 可见反馈——即时 toast + 落账面
+      // 的回执行（投影同一 GET 读面，非本地拼装）。
+      if (mounted) {
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
+        AppFeedback.success(context, context.l10n.firstActionApprovedToast);
+      }
+      await _bootstrapResumeReceipt();
     } finally {
       if (mounted) {
         setState(() => _mutating = false);
       }
+    }
+  }
+
+  /// V4-U06（FIX-567 触发链 W2 bootstrap）：首卡确认成功后的一次性 I01
+  /// 生产触发。
+  ///
+  /// 机理：服务端对 `context_receipt_ref` 只校验 scheme 不校验角色
+  /// （episode_resume_service.build_resume_view）——首条 I01 携带任一既有
+  /// `context_selection://` ref（当前实际只有 chat_context 角色）成功聚合，
+  /// 服务端即落账首条 resume_view 角色回执 → I06 latest 翻转 → U01 派生门
+  /// 自持。本触发是独立的一次性生产动作，**不放松 U01 的角色门**
+  /// （episode_resume_provider 的 resume_view 门与反例测试原样保留——
+  /// bootstrap 不是门的旁路）。
+  ///
+  /// 诚实语义：mode off / 无回执 → 零请求零反馈（接续条诚实缺席，不预造）；
+  /// 失败不重试不反馈（读面缺席是诚实态，不假成功）；零新端点零 proto
+  /// （复用 ApiEndpoints.episodeResumeTask 既有 I01 读面）。
+  Future<void> _bootstrapResumeReceipt() async {
+    final receipt = ref.read(contextReceiptProvider);
+    final receiptView =
+        receipt.phase == ContextReceiptPhase.ready ? receipt.view : null;
+    if (receiptView == null || receiptView.receiptId.isEmpty) {
+      return;
+    }
+    try {
+      final state = await ref.read(firstActionStateProvider.future);
+      final tasks = state?.tasks ?? const <FirstActionTaskRef>[];
+      final taskId = tasks.isEmpty ? null : tasks.first.id;
+      if (taskId == null || taskId.isEmpty) {
+        return;
+      }
+      await fetchEpisodeResumeView(
+        ref.read(apiClientProvider),
+        taskId: taskId,
+        receiptId: receiptView.receiptId,
+      );
+      if (!mounted) return;
+      // 服务端已落 resume_view 回执（latest 翻转）→ 刷新回执读面，
+      // U01 消费环（episodeResumeProvider）随之重算。
+      unawaited(ref.read(contextReceiptProvider.notifier).refresh());
+    } catch (_) {
+      // bootstrap 机会性：失败不重试不反馈（不把失败渲染成成功）。
     }
   }
 
@@ -393,6 +449,13 @@ class _FirstActionCardState extends ConsumerState<FirstActionCard> {
     // 已 commit → 任务已在账本（重开可见的持久化证据面）。
     if (state.hasCommittedProposal && state.tasks.isNotEmpty) {
       final task = state.tasks.first;
+      final proposalId = state.proposalId;
+      // V4-U06 验收②：确认反馈面必须可溯源同一次服务端 receipt——回执
+      // 身份（proposal_id）从同一 GET 读面（/journey/first-action）投影，
+      // 禁本地拼装；id 只做展示级截断，数据本体始终是服务端原值。
+      final receiptShort = (proposalId == null || proposalId.isEmpty)
+          ? null
+          : (proposalId.length <= 8 ? proposalId : proposalId.substring(0, 8));
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -414,6 +477,14 @@ class _FirstActionCardState extends ConsumerState<FirstActionCard> {
             l10n.firstActionTaskCreated(task.title),
             style: typo.bodySmall.copyWith(color: colors.textSecondary),
           ),
+          if (receiptShort != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              l10n.firstActionReceiptLine(receiptShort),
+              key: const ValueKey('first-action-receipt-line'),
+              style: typo.labelSmall.copyWith(color: colors.textTertiary),
+            ),
+          ],
         ],
       );
     }

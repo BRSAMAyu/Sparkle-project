@@ -16166,6 +16166,15 @@
   "firstActionModeHybrid": "Do it together",
   "firstActionCommittedTitle": "First step is in your task ledger",
   "firstActionTaskCreated": "Task created: {title}",
+  "firstActionApprovedToast": "Confirmed — your first step is underway",
+  "firstActionReceiptLine": "Committed · receipt {receiptId}",
+  "@firstActionReceiptLine": {
+    "placeholders": {
+      "receiptId": {
+        "type": "String"
+      }
+    }
+  },
   "firstActionErrorTitle": "Couldn't generate the first step",
   "firstActionErrorRetryHint": "This is temporary (the generation service is unavailable). We won't fake it — you can retry.",
   "firstActionRetryCta": "Retry",

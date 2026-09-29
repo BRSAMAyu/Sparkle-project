@@ -79,6 +79,33 @@ class EpisodeResumeState {
 
 enum EpisodeResumePhase { hidden, ready }
 
+/// I01 接续视图共享取数（V4-U06 抽取：U01 派生读面与 W2 bootstrap 共用，
+/// 禁平行解析器——同一 `EpisodeResumeViewData.tryParse`，同一 ref scheme 契约）。
+///
+/// 返回 null = 视图降级（reason_code）或结构损坏（fail-closed）；网络失败原样
+/// 上抛，由调用方决定缺席语义（读面降级是缺席，不是错误弹窗）。
+Future<EpisodeResumeViewData?> fetchEpisodeResumeView(
+  ApiClient apiClient, {
+  required String taskId,
+  required String receiptId,
+}) async {
+  final response = await apiClient.get<Map<String, dynamic>>(
+    ApiEndpoints.episodeResumeTask(taskId),
+    queryParameters: <String, dynamic>{
+      'context_receipt_ref': '$kContextSelectionRefScheme://$receiptId',
+    },
+  );
+  final data = response.data;
+  Object? viewRaw;
+  if (data != null) {
+    viewRaw = data['view'];
+  }
+  final view = viewRaw is Map
+      ? EpisodeResumeViewData.tryParse(Map<String, dynamic>.from(viewRaw))
+      : null;
+  return view;
+}
+
 /// 派生 FutureProvider：上游（回执读面 / today 选择流）任一变化即重算；
 /// 端点失败一律落 hidden（读面降级是诚实缺席，不是错误弹窗）。
 final episodeResumeProvider =
@@ -99,22 +126,11 @@ final episodeResumeProvider =
   }
 
   try {
-    final response =
-        await ref.read(apiClientProvider).get<Map<String, dynamic>>(
-              ApiEndpoints.episodeResumeTask(taskId),
-              queryParameters: <String, dynamic>{
-                'context_receipt_ref':
-                    '$kContextSelectionRefScheme://${receiptView.receiptId}',
-              },
-            );
-    final data = response.data;
-    Object? viewRaw;
-    if (data != null) {
-      viewRaw = data['view'];
-    }
-    final view = viewRaw is Map
-        ? EpisodeResumeViewData.tryParse(Map<String, dynamic>.from(viewRaw))
-        : null;
+    final view = await fetchEpisodeResumeView(
+      ref.read(apiClientProvider),
+      taskId: taskId,
+      receiptId: receiptView.receiptId,
+    );
     if (view == null) {
       // 视图降级（reason_code）或结构损坏 → 无接续上下文，零渲染。
       return const EpisodeResumeState.hidden();

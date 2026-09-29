@@ -34553,6 +34553,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get firstActionApprovedToast =>
+      'Confirmed — your first step is underway';
+
+  @override
+  String firstActionReceiptLine(String receiptId) {
+    return 'Committed · receipt $receiptId';
+  }
+
+  @override
   String get firstActionErrorTitle => 'Couldn\'t generate the first step';
 
   @override

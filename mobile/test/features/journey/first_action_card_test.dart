@@ -165,6 +165,11 @@ void main() {
 
     expect(repository.approvedProposalIds, ['p-approve']);
     expect(repository.approveKeys, ['u04:p-approve:approve']);
+
+    // V4-U06：approve 成功新增确认 toast（AppFeedback.success）——泵过其
+    // dismiss 计时器窗口，否则 teardown pending-timer 不变量误报。
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
   });
 
   testWidgets('拒绝：理由随 reject 下发（feedback 不静默丢弃）', (tester) async {

@@ -15898,6 +15898,15 @@
       }
     }
   },
+  "firstActionApprovedToast": "已确认，第一步已开始",
+  "firstActionReceiptLine": "已落账 · 回执 {receiptId}",
+  "@firstActionReceiptLine": {
+    "placeholders": {
+      "receiptId": {
+        "type": "String"
+      }
+    }
+  },
   "firstActionErrorTitle": "第一步生成失败",
   "firstActionErrorRetryHint": "这是暂时性问题（生成服务暂不可用），不会假装成功——可以直接重试。",
   "firstActionRetryCta": "重试",

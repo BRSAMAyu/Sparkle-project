@@ -60224,6 +60224,18 @@ abstract class AppLocalizations {
   /// **'已创建任务：{title}'**
   String firstActionTaskCreated(String title);
 
+  /// No description provided for @firstActionApprovedToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'已确认，第一步已开始'**
+  String get firstActionApprovedToast;
+
+  /// No description provided for @firstActionReceiptLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'已落账 · 回执 {receiptId}'**
+  String firstActionReceiptLine(String receiptId);
+
   /// No description provided for @firstActionErrorTitle.
   ///
   /// In zh, this message translates to:

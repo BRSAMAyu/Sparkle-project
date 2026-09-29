@@ -33098,6 +33098,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get firstActionApprovedToast => '已确认，第一步已开始';
+
+  @override
+  String firstActionReceiptLine(String receiptId) {
+    return '已落账 · 回执 $receiptId';
+  }
+
+  @override
   String get firstActionErrorTitle => '第一步生成失败';
 
   @override
