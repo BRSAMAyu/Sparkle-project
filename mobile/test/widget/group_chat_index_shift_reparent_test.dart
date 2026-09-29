@@ -18,6 +18,7 @@
 //     ensureVisible 全链路，第二次定位触发键替换）。
 // 判据：全程无框架异常 + 内容在场——内容断言在形态翻转当场做（reversed
 // 懒加载列表会回收离屏条目），收尾以状态层兜底。
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -243,6 +244,109 @@ class _FakeAuthRepository implements AuthRepository {
 
 class _FakeChatRepository extends Fake implements ChatRepository {}
 
+/// V3-FIX-549 内存版缓存替身：语义与 ChatCacheService 一致（最新 100 条、
+/// nonce 空忽略、pending 按 JSON 读写），仅去掉真实 Hive I/O——见
+/// _pumpHarness 内注释。本套件只触群聊面，private/pending 各法一并补齐
+/// 以保持 implements 完整。
+class _InMemoryChatCacheService implements ChatCacheService {
+  final Map<String, List<MessageInfo>> _groupBoxes = <String,
+      List<MessageInfo>>{};
+  final Map<String, List<PrivateMessageInfo>> _privateBoxes = <String,
+      List<PrivateMessageInfo>>{};
+  final Map<String, Map<String, String>> _pendingGroupBoxes = <String,
+      Map<String, String>>{};
+  final Map<String, Map<String, String>> _pendingPrivateBoxes = <String,
+      Map<String, String>>{};
+
+  @override
+  Future<void> saveGroupMessages(
+    String groupId,
+    List<MessageInfo> messages,
+  ) async {
+    _groupBoxes[groupId] = messages.take(100).toList();
+  }
+
+  @override
+  Future<List<MessageInfo>> getCachedGroupMessages(String groupId) async =>
+      List.of(_groupBoxes[groupId] ?? const <MessageInfo>[]);
+
+  @override
+  Future<void> savePrivateMessages(
+    String friendId,
+    List<PrivateMessageInfo> messages,
+  ) async {
+    _privateBoxes[friendId] = messages.take(100).toList();
+  }
+
+  @override
+  Future<List<PrivateMessageInfo>> getCachedPrivateMessages(
+    String friendId,
+  ) async =>
+      List.of(_privateBoxes[friendId] ?? const <PrivateMessageInfo>[]);
+
+  @override
+  Future<void> clearAllCache() async {
+    _groupBoxes.clear();
+    _privateBoxes.clear();
+    _pendingGroupBoxes.clear();
+    _pendingPrivateBoxes.clear();
+  }
+
+  @override
+  Future<void> enqueuePendingGroupMessage(
+    String groupId,
+    Map<String, dynamic> payload,
+  ) async {
+    final nonce = payload['nonce']?.toString();
+    if (nonce == null || nonce.isEmpty) return;
+    (_pendingGroupBoxes[groupId] ??= <String, String>{})[nonce] =
+        jsonEncode(payload);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getPendingGroupMessages(
+    String groupId,
+  ) async =>
+      (_pendingGroupBoxes[groupId] ?? const <String, String>{})
+          .values
+          .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
+          .toList();
+
+  @override
+  Future<void> removePendingGroupMessage(
+    String groupId,
+    String nonce,
+  ) async =>
+      _pendingGroupBoxes[groupId]?.remove(nonce);
+
+  @override
+  Future<void> enqueuePendingPrivateMessage(
+    String friendId,
+    Map<String, dynamic> payload,
+  ) async {
+    final nonce = payload['nonce']?.toString();
+    if (nonce == null || nonce.isEmpty) return;
+    (_pendingPrivateBoxes[friendId] ??= <String, String>{})[nonce] =
+        jsonEncode(payload);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getPendingPrivateMessages(
+    String friendId,
+  ) async =>
+      (_pendingPrivateBoxes[friendId] ?? const <String, String>{})
+          .values
+          .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
+          .toList();
+
+  @override
+  Future<void> removePendingPrivateMessage(
+    String friendId,
+    String nonce,
+  ) async =>
+      _pendingPrivateBoxes[friendId]?.remove(nonce);
+}
+
 /// 可控群聊 agent 通知器：测试按真机时序直种 AgentChatState
 ///（前缀行/流式/收尾三拍），不经网络链路。
 class _DriveGroupAgentNotifier extends GroupAgentChatNotifier {
@@ -329,6 +433,15 @@ Future<_DriveGroupAgentNotifier> _pumpHarness(
         authRepositoryProvider.overrideWithValue(_FakeAuthRepository()),
         sharedPreferencesProvider.overrideWithValue(prefs),
         chatRepositoryProvider.overrideWithValue(fakeChatRepo),
+        // V3-FIX-549：缓存依赖换内存实现。真 ChatCacheService 的群聊缓存写
+        // 是 provider 初始化链里的 fire-and-forget，跨 testWidgets FakeAsync
+        // 拆除后续延落在已废弃 fake zone 的微任务队列永不执行，在途 Hive 写
+        // 把 tearDownAll 的 Hive.close() 确定性挂死（3s 护栏每跑必触发）。
+        // 内存实现让域内不再产生在途真实 Hive I/O，收尾自然可等待；生产
+        // 默认路径不变（chatCacheServiceProvider 默认仍是同一单例）。
+        chatCacheServiceProvider.overrideWithValue(
+          _InMemoryChatCacheService(),
+        ),
         groupChatAgentProvider.overrideWith(
           (ref, groupId) =>
               _DriveGroupAgentNotifier(fakeChatRepo, ref, groupId),
@@ -341,8 +454,8 @@ Future<_DriveGroupAgentNotifier> _pumpHarness(
     ),
   );
   await tester.pump();
-  // 首帧数据经真实 Hive I/O（缓存读写）落地：runAsync 让真实异步走完，
-  // 再 pump 出帧——等待最新消息渲染即列表就绪。
+  // 首帧数据落地：provider 初始化链（缓存读 → fake 仓取数 → 状态置位）经
+  // _waitUntilFound 的 runAsync+帧泵交替有界等待渲染完成，即列表就绪。
   expect(
     await _waitUntilFound(tester, find.text('新消息 0')),
     isTrue,

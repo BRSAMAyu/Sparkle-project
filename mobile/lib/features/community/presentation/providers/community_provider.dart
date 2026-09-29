@@ -905,7 +905,13 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   final String _groupId;
   final Ref _ref;
   final WebSocketService _wsService = WebSocketService();
-  final ChatCacheService _cacheService = ChatCacheService();
+
+  /// V3-FIX-549：缓存依赖经 provider 缝隙读取（默认同一 ChatCacheService
+  /// 单例，生产零语义变化）；测试可 override 内存实现，避免在途 Hive 写
+  /// 跨 FakeAsync 拆除把 Hive.close 永久挂起。late 初始化以解 ref 依赖。
+  late final ChatCacheService _cacheService = _ref.read(
+    chatCacheServiceProvider,
+  );
 
   final Set<String> _pendingNonces = {};
   Set<String> get pendingNonces => _pendingNonces;
@@ -1803,7 +1809,12 @@ class PrivateChatNotifier
   }
   final CommunityRepository _repository;
   final String _friendId;
-  final ChatCacheService _cacheService = ChatCacheService();
+
+  /// V3-FIX-549：同 GroupChatNotifier，缓存依赖经 provider 缝隙读取，
+  /// 默认同一 ChatCacheService 单例，生产零语义变化。
+  late final ChatCacheService _cacheService = _ref.read(
+    chatCacheServiceProvider,
+  );
   final Ref _ref;
   String? _currentUserId;
   StreamSubscription<dynamic>? _eventsSubscription;

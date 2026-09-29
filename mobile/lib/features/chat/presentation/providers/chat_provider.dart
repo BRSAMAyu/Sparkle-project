@@ -28,6 +28,7 @@ import 'package:sparkle/features/chat/data/models/notification_interrupt_policy.
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/agent_session_store.dart';
+import 'package:sparkle/features/chat/data/services/chat_cache_service.dart';
 import 'package:sparkle/features/chat/data/services/plan_review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';

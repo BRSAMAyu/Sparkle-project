@@ -13,6 +13,21 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   );
 });
 
+/// 聊天缓存依赖缝隙（V3-FIX-549）。
+///
+/// 缺陷：GroupChatNotifier/PrivateChatNotifier 原先在字段初始化处直握
+/// `ChatCacheService()` 单例工厂，社区群聊加载/合并链的缓存写是
+/// fire-and-forget——testWidgets 的 FakeAsync 域拆除后，在途 Hive 写的
+/// 续延闭包仍登记在已废弃 fake zone 的微任务队列里，永不再执行，
+/// `StorageBackendVm.close()` 的 `_writeTask` 永不落定 → tearDownAll 的
+/// `Hive.close()` 确定性悬挂（测试只能靠 3s 超时护栏掩蔽）。
+///
+/// 修法：缓存依赖改经此 provider 读取。默认返回同一 `ChatCacheService()`
+/// 单例，生产路径零语义变化（缓存写保留）；测试可 override 为内存实现，
+/// 使 FakeAsync 域内不再产生在途真实 Hive 写，收尾可等待。
+final chatCacheServiceProvider =
+    Provider<ChatCacheService>((ref) => ChatCacheService());
+
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>(
   (ref) => ChatNotifier(ref.watch(chatRepositoryProvider), ref),
 );
