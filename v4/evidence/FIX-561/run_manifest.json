@@ -1,0 +1,120 @@
+{
+  "task": "FIX-561",
+  "title": "cancel×in-flight failed bucket 对账——build_evidence 把 in_progress 落 failed 桶且 first-wins 使误标终身驻留（P2 产品缺陷闭环）",
+  "kind": "fix",
+  "branch": "fix/v4/f561-cancel-inflight",
+  "worktree": "/Users/brsama/code/GitHub/wtF561",
+  "base_commit": "ce7ef08b（任务简报 main 最新；建 worktree 时即此）",
+  "source_sha": "bba0f4db（fix/v4/f561-cancel-inflight 头，含修复+测试；本 manifest 与台账行更新属其后的 evidence commit）",
+  "captured_at": "2026-09-29T09:20 ~ 2026-09-29T09:55 +0800",
+  "timezone": "Asia/Shanghai (+0800)",
+  "evidence_source": "v3/06_agent_fleet/DYNAMIC_ISSUES.md V3-FIX-561 行 + v4/evidence/V4-I08/review_r2.md 靶5（C-2 亲测构造）",
+  "environment": {
+    "platform": "darwin 25.6.0 arm64",
+    "python": "3.11.15 (/Users/brsama/code/GitHub/Sparkle-project/backend/.venv, shared venv)",
+    "pytest": "9.0.2",
+    "mypy": "1.20.2",
+    "note": "worktree 无 .env；SECRET_KEY=ci-test-key DATABASE_URL=sqlite://（与 I08 靶6 同口径）。worktree 缺 gitignored app/gen 生成产物（致 runs API 端点测 import 失败），自主检出拷入（不入库）后该测绿——环境既存问题非本修引入"
+  },
+  "defect": {
+    "name": "cancel×in-flight 写的 failed bucket 误标 + first-wins 驻留",
+    "review_r2_shape": "run 有 1 条 succeeded 写行 + 1 条 in_progress 写行（写工具在途）时取消 → result_ref 物化 succeeded=1, failed=1, interrupted=0；恢复 pass 收敛账本 interrupted（真值修正）后 run 面 first-wins 不重算，failed=1 终身驻留",
+    "root_cause_locations": [
+      "backend/app/services/tool_call_ledger_service.py::build_evidence 修前 L257-260 —— 桶化三分支 succeeded/interrupted/else，else 兜底把 in_progress（账本词表四态之一，取消/预算/unknown 终态化撞在飞工具的竞窗残留常态存在）吞进 failed 桶——『效果不可核实』被虚报为『确认失败』",
+      "backend/app/services/agent_run_service.py::_side_effect_reconciliation L1065-1066 —— first-wins（run.result_ref 已存在即返回 None 不重算）：设计意图是证据不重算，但误标一旦物化即终身驻留，放大 build_evidence 的标签错误"
+    ],
+    "fix_adjudication": "台账给两条修法：(A) _side_effect_reconciliation 物化前先跑 reconcile_stale_in_progress；(B) X-09 owner 修 build_evidence 桶化（涉契约面归 owner 裁决）。**选 (B)**，理由：(A) 受陈旧阈值约束——安全阈值 ≥max(300s, registry 最长超时×2+60)，而 cancel×in-flight 竞窗 ≤~120s tool timeout，窗内行不陈旧、(A) 根本关不了窗（亲核 reconcile_stale_in_progress 的 cutoff 判据 L155-163）；(A) 若强行传 0 阈值则违反其自身文档不变量『阈值永远大于最慢合法执行的 2 倍——任何合法长工具都不会被误判孤儿』且会全局改写**其他活跃 run** 的在飞账本行（账本真值外溢）。(B) 是纯函数改桶（同账本行集恒同证据，确定性不变）、不触账本行、与 X-09 崩溃语义（TOOL_CALL_STATUSES 注释：interrupted=执行中断且效果不可核实）对齐，并一致修正全部消费面（cancel/budget 的 result_ref + GET /runs/{id}/tool-calls 的 partial_completion 读面——后者修前对活跃 run 的在飞工具同样显示 failed）。本 fix agent 持 FIX-561 派单（台账行明列 (B) 为授权选项）代行 owner 裁决，裁决理由入本 manifest 供 owner 复核"
+  },
+  "fix": {
+    "fix_locations": [
+      "backend/app/services/tool_call_ledger_service.py::build_evidence —— elif 分支改 row.status in ('interrupted', 'in_progress')：in_progress 行物化 interrupted/outcome-unknown（附 FIX-561 缘由注释），else 只兜底 failed；durable_progress/compensation_hints 不变（只由 succeeded 写行贡献——在飞不构成已确认效果）"
+    ],
+    "semantics_preserved": [
+      "to_result_ref() scheme=x09.v1 键集零变更（仅计数在桶间按真值重分布）",
+      "账本行零改写（build_evidence 纯物化无 IO；reconcile_stale_in_progress 语义不动）",
+      "first-wins 不重算保留（幂等重放/已终态不重算契约测原样绿）——冻结的投影标签自此诚实，与账本权威面一致",
+      "PARTIAL 升格判据 durable_progress 不受影响（只认 succeeded）",
+      "executor 两阶段收敛/崩溃收敛路径零接触"
+    ]
+  },
+  "repro_chain": [
+    {
+      "step": "1 修前复现（临时探针 test_zz_fix561_probe_tmp.py，跑完即删）",
+      "construction": "RUNNING→AWAITING_USER run + 1 条 succeeded 写行（deep_task_write）+ 1 条 in_progress 写行 → service.cancel()",
+      "observed_prefix": {
+        "scheme": "partial_completion",
+        "succeeded_steps": 1,
+        "failed_steps": 1,
+        "interrupted_steps": 0,
+        "failed_entries": [
+          {
+            "tool": "deep_task_write",
+            "finished_at": null,
+            "error_type": null,
+            "note": "finished_at=None+error_type=None=从未完成过的调用被标失败——误标铁证"
+          }
+        ],
+        "interrupted_entries": [],
+        "run_status": "CANCELLED"
+      },
+      "matches_review_r2": "与靶5 亲测（succeeded=1, failed=1, interrupted=0）逐值一致"
+    },
+    {
+      "step": "2 修前契约测红（mutation 自验第一现场）",
+      "cmd": "pytest tests/unit/test_x09_failure_recovery.py::TestPartialCompletionSemantics::test_inflight_row_buckets_interrupted_not_failed tests/unit/test_v4_i08_deep_task_return_control.py::test_cancel_colliding_with_inflight_write_buckets_unknown_not_failed tests/unit/test_v4_i08_deep_task_return_control.py::test_cancel_with_failed_row_keeps_failed_bucket -q",
+      "result": "2 failed, 1 passed——正例两测红（interrupted=[] / interrupted_steps=0），反例锚（真 failed 照实落 failed 桶）绿=两态皆真的语义面"
+    },
+    {
+      "step": "3 mutation 自验（修后 git stash 修复文件 → 同三测）",
+      "result": "2 failed, 1 passed（与 step 2 同形：修复一撤误标即回）→ stash pop 恢复",
+      "mutation_verdict": "新测对修复变异必红"
+    },
+    {
+      "step": "4 修后绿",
+      "cmd": "同三测 + TestPartialCompletionSemantics 全类",
+      "result": "9 passed"
+    }
+  ],
+  "commands": [
+    {
+      "id": 1,
+      "cmd": "pytest tests/unit/test_x09_failure_recovery.py tests/unit/test_v4_i08_deep_task_return_control.py -q（合并态双文件全量）",
+      "cwd": "/Users/brsama/code/GitHub/wtF561/backend",
+      "env": "SECRET_KEY=ci-test-key DATABASE_URL=sqlite://",
+      "exit_code": 0,
+      "result": "见命令 2 的 12 文件面（双文件含于其中；单列见 repro_chain step 4）"
+    },
+    {
+      "id": 2,
+      "cmd": "pytest tests/unit/test_v4_i08_deep_task_return_control.py tests/unit/test_hybrid_run_steps.py tests/unit/test_hybrid_run_steps_api.py tests/unit/test_agent_run_service.py tests/unit/test_x06_run_budget.py tests/unit/test_x09_failure_recovery.py tests/unit/test_runs_api.py tests/unit/test_runs_api_hardening.py tests/unit/test_j06_hybrid_journey.py tests/unit/test_run_state_machine.py tests/unit/test_run_step_projection.py tests/unit/test_wt392_r2v3_review.py -q",
+      "cwd": "/Users/brsama/code/GitHub/wtF561/backend",
+      "exit_code": 0,
+      "result": "276 passed in 185.54s（I08 受影响面 12 文件同组：273 既有 + 3 新增，零回归、零削弱——既有测零改动仅新增）"
+    },
+    {
+      "id": 3,
+      "cmd": "mutation 自验：git stash push -- app/services/tool_call_ledger_service.py → 三新测 → git stash pop",
+      "exit_code": 1,
+      "result": "2 failed, 1 passed（正例必红；恢复后 9 passed）"
+    },
+    {
+      "id": 4,
+      "cmd": "mypy app --ignore-missing-imports --no-error-summary | grep 'error:' | wc -l",
+      "cwd": "/Users/brsama/code/GitHub/wtF561/backend",
+      "exit_code": 0,
+      "result": "59 ≤ baseline 77（quality/mypy_baseline.txt=77）；改动文件 tool_call_ledger_service.py 两态（主检出未修 58 vs worktree 已修 59 的 ±1 差异经逐条 diff 核实全部位于无关文件，系 mypy cache/环境噪声——aurora/policy_loader.py 同内容两检出 yaml stub 判定不同实证；本文件在两边错误集均为零条）"
+    },
+    {
+      "id": 5,
+      "cmd": "ruff check <3 改动文件> && black --check <3 改动文件>",
+      "exit_code": 0,
+      "result": "All checks passed! / 3 files would be left unchanged（零新增）"
+    }
+  ],
+  "api_gate": "未触 api/ 文件（git status 实证：仅 tool_call_ledger_service.py + 两测试文件）；to_result_ref 为 dict 无 OpenAPI schema 形变——OpenAPI 门不需要",
+  "limitations": [
+    "投影仍为物化时点快照（first-wins 契约不变）：若 executor 事后 finalize 在飞行为 succeeded，账本权威面（GET tool-calls items 行）显示 succeeded 而 run 面 result_ref 保持 interrupted/unknown——时点语义诚实（物化时确不可核实），账本恒可审计；本卡不改变该分工",
+    "(B) 修桶使 GET /runs/{id}/tool-calls 的 partial_completion 对**活跃 run** 的在飞工具从误标 failed 变为 interrupted/unknown——读面更诚实，属修复效果非行为回归；wire 消费面 grep 未发现对 failed_steps 计数有业务判断的消费方（仅 ux_envelope/transparency 的自有 steps 计数同名不同源）",
+    "评测面：无评测 FAIL 需要；本修为服务层确定性语义修正，未跑模型流程（与 I08 同性质）"
+  ]
+}
