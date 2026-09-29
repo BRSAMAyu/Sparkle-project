@@ -60,3 +60,9 @@ haptic-policy 锁面按「缺失面最小增量落地 + 既有满足面差量举
 ## 复跑清单（全绿实录见 run_manifest.json / test_results.json）
 
 `flutter analyze --no-pub`（No issues found!，全库）；新套 22/22；`flutter test test/core/design/` 261/261；`flutter test test/core/experience/` 19/19；`flutter test test/core/services/` 98/98；消费方 6 套 20/20；`flutter test test/goldens/q03_visual_qa/ test/features/home/` 139/139；`bash scripts/run_all_rule_guards.sh` 88 规则全过。
+
+
+## 一审勘误（receipt a3064325）
+- CH-1：G3 棘轮为**文件内范围**（仅扫 semantic_haptics.dart）——库头「第二处直调即违锁钉死」表述超出机制实际（他文件新增直调无守卫可捕）；订正为「锁面文件内唯一直引」，全仓白名单棘轮列为后续可选加固。
+- 观察计数勘误：「19 注入型用例」实为 15+4（注入 15+方法通道 mock 4）。
+- API<30 真机决策点、U14 默认开 consent 口径已记 receipt 观察节（归 Q06）。
