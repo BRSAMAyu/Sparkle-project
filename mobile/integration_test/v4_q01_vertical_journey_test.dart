@@ -1307,55 +1307,70 @@ Future<void> main() async {
         try {
           final navCtx = tester.element(find.byType(Navigator).first);
           clicks[0]++;
-          // push 的 Future 在 pop 时才完成（r4 死锁实证）——unawaited。
-          unawaited(navCtx.push('/tasks'));
-          await waitUntil(
+          // r6/r7 实证：零任务新用户的任务列表页确定性「哎呀，出错了」
+          // （网关 /tasks 三接口全 200，客户端错误态；重试无效——独立产品
+          // 缺陷登记 limitations）。改走产品任务创建路由 /tasks/new（chat
+          // 意图/日历/聊天动作同款入口，title query 预填——task_create_screen
+          // L109-113 亲证），列表页只在有任务后访问（error 门=
+          // error!=null && tasks.isEmpty，有行即渲染）。
+          unawaited(
+            navCtx.push(
+              '/tasks/new?title=${Uri.encodeComponent(_kTaskTitle)}',
+            ),
+          );
+          var createUp = await waitUntil(
             tester,
-            () => textAny(['待处理', '全部']) != null,
+            () => find.byType(TaskCreateScreen).evaluate().isNotEmpty,
             timeout: const Duration(seconds: 15),
           );
-          // 列表加载错误态（r6 实证：新注册用户首开偶发「哎呀，出错了」）
-          // → 真实用户点「重试」；至多 3 轮。
-          for (var r = 0; r < 3; r++) {
-            final retryBtn = textAny(['重试']);
-            if (retryBtn == null) break;
-            clicks[0]++;
-            await tester.tap(retryBtn, warnIfMissed: false);
+          if (!createUp) {
+            // 兜底：列表空态 CTA 路径（列表页可渲染时）
+            unawaited(navCtx.push('/tasks'));
             await waitUntil(
               tester,
-              () => textAny(['重试']) == null,
+              () => textAny(['待处理', '全部']) != null,
               timeout: const Duration(seconds: 15),
             );
-            await tester.pump(const Duration(milliseconds: 400));
-          }
-          await dumpTexts(tester, 'tasks-list-before-create');
-          Finder? createCta;
-          for (var r = 0; r < 3 && createCta == null; r++) {
-            createCta = textAny(['创建第一项任务', '创建任务', '新建任务']);
-            if (createCta == null) {
-              try {
-                await tester.drag(
-                  find.byType(Scrollable).first,
-                  const Offset(0, -220),
-                );
-                await tester.pump(const Duration(milliseconds: 450));
-              } catch (_) {
-                break;
+            for (var r = 0; r < 3; r++) {
+              final retryBtn = textAny(['重试']);
+              if (retryBtn == null) break;
+              clicks[0]++;
+              await tester.tap(retryBtn, warnIfMissed: false);
+              await waitUntil(
+                tester,
+                () => textAny(['重试']) == null,
+                timeout: const Duration(seconds: 15),
+              );
+              await tester.pump(const Duration(milliseconds: 400));
+            }
+            await dumpTexts(tester, 'tasks-list-before-create');
+            Finder? createCta;
+            for (var r = 0; r < 3 && createCta == null; r++) {
+              createCta = textAny(['创建第一项任务', '创建任务', '新建任务']);
+              if (createCta == null) {
+                try {
+                  await tester.drag(
+                    find.byType(Scrollable).first,
+                    const Offset(0, -220),
+                  );
+                  await tester.pump(const Duration(milliseconds: 450));
+                } catch (_) {
+                  break;
+                }
               }
             }
-          }
-          var createUp = false;
-          if (createCta != null) {
-            try {
-              await tester.ensureVisible(createCta!);
-            } catch (_) {}
-            clicks[0]++;
-            await tester.tap(createCta, warnIfMissed: false);
-            createUp = await waitUntil(
-              tester,
-              () => find.byType(TaskCreateScreen).evaluate().isNotEmpty,
-              timeout: const Duration(seconds: 15),
-            );
+            if (createCta != null) {
+              try {
+                await tester.ensureVisible(createCta!);
+              } catch (_) {}
+              clicks[0]++;
+              await tester.tap(createCta, warnIfMissed: false);
+              createUp = await waitUntil(
+                tester,
+                () => find.byType(TaskCreateScreen).evaluate().isNotEmpty,
+                timeout: const Duration(seconds: 15),
+              );
+            }
           }
           recordStep('task_create_opened', createUp,
               'tasks list empty-state CTA → create form '
@@ -1413,6 +1428,19 @@ Future<void> main() async {
                 timeout: const Duration(seconds: 10),
               );
             }
+            // 访问任务列表（创建路径已 refreshTasks；有任务后 error 门不再
+            // 拦截）→ 行可见 = 列表投影含新任务 = 校准「仅本次」锚点可解析
+            clicks[0]++;
+            unawaited(navCtx.push('/tasks'));
+            await waitUntil(
+              tester,
+              () =>
+                  find.byType(TaskCreateScreen).evaluate().isEmpty &&
+                  (textAny(['待处理', '全部']) != null ||
+                      find.textContaining(_kTaskTitle).evaluate().isNotEmpty),
+              timeout: const Duration(seconds: 15),
+            );
+            await tester.pump(const Duration(seconds: 1));
             // 行可见 = 列表投影含新任务（创建路径已 refreshTasks）
             final rowVisible = await waitUntil(
               tester,
