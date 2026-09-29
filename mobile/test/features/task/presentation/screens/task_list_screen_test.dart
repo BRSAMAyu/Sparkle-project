@@ -74,8 +74,11 @@ void main() {
       ],
     );
 
+    // FIX-587：全页错误门改认列表域 listError（loadTasks 独占写/清）——
+    // 本测试钉的语义是「列表自身失败 → 全页重试错误态 → 重试恢复」，
+    // fixture 相应从共享 error 位重指到 listError（断言不变）。
     final notifier = _RecoveryTaskNotifier(
-      TaskListState(error: UiErrorCategory.server),
+      TaskListState(listError: UiErrorCategory.server),
     );
 
     await tester.pumpWidget(

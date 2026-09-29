@@ -1,0 +1,745 @@
+00:00 +0: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/task_routes_fix570_gate_wiring_test.dart
+00:00 +0: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/task_routes_fix570_gate_wiring_test.dart: FIX-570①接线钉：/tasks/:id/execute 路由产物经深链闸，闸消费 :id 与 origin/intervention_id（删 gate 调用必红）
+[task] load failed: NoSuchMethodError: Class '_NotFoundTaskRepository' has no instance method 'getTodayTasksCached' with matching arguments.
+Receiver: Instance of '_NotFoundTaskRepository'
+Tried calling: getTodayTasksCached()
+Found: getTodayTasksCached() => Future<CacheAwareResult<List<TaskModel>>>
+[task] load failed: NoSuchMethodError: Class '_NotFoundTaskRepository' has no instance method 'getRecommendedTasks' with matching arguments.
+Receiver: Instance of '_NotFoundTaskRepository'
+Tried calling: getRecommendedTasks(limit: 5)
+Found: getRecommendedTasks({int limit}) => Future<List<TaskModel>>
+[task] load failed: NoSuchMethodError: Class '_NotFoundTaskRepository' has no instance method 'getTasksCached' with matching arguments.
+Receiver: Instance of '_NotFoundTaskRepository'
+Tried calling: getTasksCached(filters: _Map len:0, page: 1, pageSize: 50)
+Found: getTasksCached({Map<String, dynamic>? filters, int page, int pageSize}) => Future<CacheAwareResult<PaginatedResponse<TaskModel>>>
+00:00 +1: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_repository_test.dart
+00:01 +1: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_repository_test.dart: getTasks returns paginated tasks
+00:01 +2: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_repository_test.dart: getTask unwraps response payload
+00:01 +3: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_repository_test.dart: createTaskWithNudges parses nudges from wrapped task payloads
+00:01 +4: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_repository_test.dart: getTaskGuidance accepts camelCase guidance contracts
+00:01 +5: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart
+00:02 +5: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart: (setUpAll)
+00:02 +5: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart: N35 · task 生命周期离线入队（死代码接线令验收） pauseTask 离线 → 入队 pause 并抛 OfflineEnqueuedException
+00:02 +6: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart: N35 · task 生命周期离线入队（死代码接线令验收） resumeTask 离线 → 入队 resume
+00:02 +7: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart: N35 · task 生命周期离线入队（死代码接线令验收） startTask 离线 → 入队 start（原死代码接线）
+00:02 +8: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart: N35 · task 生命周期离线入队（死代码接线令验收） completeTask 离线 → 入队 complete（实测分钟进 completion 体）
+00:02 +9: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart: N35 · task 生命周期离线入队（死代码接线令验收） abandonTask 离线 → 入队 abandon（原死代码接线）
+00:02 +10: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart: N35 · task 生命周期离线入队（死代码接线令验收） SyncEngine 不可用时不入队、沿用旧错误通道
+00:02 +11: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart: N34 · 任务读路径本地快照 getTodayTasksCached 成功落快照；断网回读 fromCache+asOf
+00:02 +12: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart: N34 · 任务读路径本地快照 getTasksCached 断网回读分页快照
+00:02 +13: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/repositories/task_offline_wiring_test.dart: (tearDownAll)
+00:02 +13: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/services/task_offline_queue_p2_10_test.dart
+00:03 +13: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/services/task_offline_queue_p2_10_test.dart: (setUpAll)
+00:03 +13: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/services/task_offline_queue_p2_10_test.dart: enqueueStart records an idempotent task start operation
+00:03 +14: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/services/task_offline_queue_p2_10_test.dart: enqueuePause includes non-empty reasons only
+00:03 +15: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/services/task_offline_queue_p2_10_test.dart: enqueueComplete carries completion payload at higher priority
+00:03 +16: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/services/task_offline_queue_p2_10_test.dart: pendingTaskOpsCount includes pending waitingAck and failed task ops
+00:03 +17: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/services/task_offline_queue_p2_10_test.dart: providers build the queue and emit the pending task op count
+00:03 +18: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/data/services/task_offline_queue_p2_10_test.dart: (tearDownAll)
+00:03 +18: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_complete_sync_test.dart
+00:04 +18: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_complete_sync_test.dart: M6-03 task completion sync status server success keeps syncStatus synced when post-completion attribution throws
+[Task] post-completion steps failed for task-1 (server state kept): Bad state: ViewStorageService not initialized. Call ensureInitialized() first.
+00:04 +19: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_complete_sync_test.dart: M6-03 task completion sync status retryCompleteTask is idempotent for already-synced completions
+[Task] post-completion steps failed for task-1 (server state kept): Bad state: ViewStorageService not initialized. Call ensureInitialized() first.
+00:04 +20: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_complete_sync_test.dart: M6-03 task completion sync status does not cancel reminders when the server completion fails
+00:04 +21: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart
+00:05 +21: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart: V4-U08 验收1 · 重复点击一次写入（统一写入权威） 在飞完成写：并发双击合流为一次服务端写入，两次调用返回同一结果
+[Task] post-completion steps failed for task-1 (server state kept): Bad state: ViewStorageService not initialized. Call ensureInitialized() first.
+00:05 +22: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart: V4-U08 验收1 · 重复点击一次写入（统一写入权威） 反面：守卫只按「任务+操作」合流——不同任务的并发完成各自写入，在飞结束后再次点击也照常发起新写入
+[Task] post-completion steps failed for task-1 (server state kept): Bad state: ViewStorageService not initialized. Call ensureInitialized() first.
+[Task] post-completion steps failed for task-2 (server state kept): Bad state: ViewStorageService not initialized. Call ensureInitialized() first.
+[Task] post-completion steps failed for task-2 (server state kept): Bad state: ViewStorageService not initialized. Call ensureInitialized() first.
+00:05 +23: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart: V4-U08 验收1 · 重复点击一次写入（统一写入权威） 目标页完成写在飞：并发双击合流为一次 POST /complete
+[GoalDetail] completion trajectory hooks failed for task-g1 (server state kept): Bad state: ViewStorageService not initialized. Call ensureInitialized() first.
+00:05 +24: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart: V4-U08 验收2 · 改日程键盘/按钮路径与拖拽同链（一次写入） 按钮路径写入口 rescheduleTaskDueDate：经 updateTask 一次写入，读模型 dueDate 同步可见
+🔧 API Base URL (Android): http://10.0.2.2:8080
+⚠️ Auth status check failed (retryable, session kept): UnimplementedError: SharedPreferences must be overridden in main.dart
+00:05 +25: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart: V4-U08 验收2 · 改日程键盘/按钮路径与拖拽同链（一次写入） 反面：改期写在飞时重复触发合流为一次；结束后再次改期照常写入
+🔧 API Base URL (Android): http://10.0.2.2:8080
+⚠️ Auth status check failed (retryable, session kept): UnimplementedError: SharedPreferences must be overridden in main.dart
+00:05 +26: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart: V4-U08 验收3 · 估时不作为完成证据；删除/放弃不同语义 日历聚合专注时长只认实测：actualMinutes 计入
+00:05 +27: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart: V4-U08 验收3 · 估时不作为完成证据；删除/放弃不同语义 反面：无实测不造专注——估时 30 分钟不得顶替 actualMinutes 进聚合
+00:05 +28: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart: V4-U08 验收3 · 估时不作为完成证据；删除/放弃不同语义 放弃 ≠ 删除：放弃保留任务记录仅置终态
+🔧 API Base URL (Android): http://10.0.2.2:8080
+⚠️ Auth status check failed (retryable, session kept): UnimplementedError: SharedPreferences must be overridden in main.dart
+00:05 +29: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart: V4-U08 验收3 · 估时不作为完成证据；删除/放弃不同语义 删除 ≠ 放弃：删除把条目从读模型移除（可撤销删除是另一条路径）
+00:05 +29: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/unified_action_semantics_test.dart: V4-U08 验收3 · 估时不作为完成证据；删除/放弃不同语义 放弃 ≠ 删除：放弃保留任务记录仅置终态
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/exam-sprint/portfolio?page=1&page_size=20[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements?locale=zh&include_hidden=false&include_inactive=false[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/stats[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/streak[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/skins[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/titles[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/contracts[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/experience/growth-dashboard[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/exam-sprint/portfolio?page=1&page_size=20[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements?locale=zh&include_hidden=false&include_inactive=false[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/stats[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/streak[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/skins[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/titles[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/contracts[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/experience/growth-dashboard[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+Error loading achievement achievements: Exception: An unknown error occurred in getAchievements
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getAchievements (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:89:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+Error loading achievement stats: Exception: An unknown error occurred in getAchievementStats
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getAchievementStats (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:170:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+Error loading achievement streak: Exception: An unknown error occurred in getStreakStats
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getStreakStats (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:222:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+Error loading achievement skins: Exception: An unknown error occurred in getGalaxySkins
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getGalaxySkins (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:345:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+Error loading achievement titles: Exception: An unknown error occurred in getTitles
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getTitles (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:383:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+Error loading achievement contract: Exception: An unknown error occurred in getContractStatus
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getContractStatus (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:274:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+00:06 +30: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_offline_queued_test.dart
+00:06 +30: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_offline_queued_test.dart: N35 · 离线暂停/恢复的三态诚实 离线 pauseTask → UI 显示已暂停 + 待同步标记（非错误）
+00:06 +31: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_offline_queued_test.dart: N35 · 离线暂停/恢复的三态诚实 离线 resumeTask → UI 显示进行中 + 待同步标记（非错误）
+00:06 +32: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_offline_queued_test.dart: N35 · 离线暂停/恢复的三态诚实 离线 startTask → UI 显示进行中 + 待同步标记（非错误）
+00:06 +33: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_offline_queued_test.dart: N35 · 离线暂停/恢复的三态诚实 离线 abandonTask → UI 显示已放弃 + 待同步标记（非错误）
+🔧 API Base URL (Android): http://10.0.2.2:8080
+⚠️ Auth status check failed (retryable, session kept): UnimplementedError: SharedPreferences must be overridden in main.dart
+00:07 +34: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_offline_queued_test.dart: N35 · 离线暂停/恢复的三态诚实 离线 completeTask → 保持完成乐观态 + 排队信号，不标失败
+00:07 +34: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_offline_queued_test.dart: N35 · 离线暂停/恢复的三态诚实 离线 abandonTask → UI 显示已放弃 + 待同步标记（非错误）
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/exam-sprint/portfolio?page=1&page_size=20[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements?locale=zh&include_hidden=false&include_inactive=false[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/stats[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/streak[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/skins[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/titles[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/achievements/contracts[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ 💡 Request: GET http://10.0.2.2:8080/api/v1/experience/growth-dashboard[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/exam-sprint/portfolio?page=1&page_size=20[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements?locale=zh&include_hidden=false&include_inactive=false[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/stats[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/streak[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/skins[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/titles[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/achievements/contracts[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [bad response]: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.[0m
+[38;5;196m│ The status code of 400 has the following meaning: "Client error - the request contains bad syntax or cannot be fulfilled"[0m
+[38;5;196m│ Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status[0m
+[38;5;196m│ In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.[0m
+[38;5;196m│ [0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggingInterceptor.onError (package:sparkle/core/network/api_interceptor.dart:322:15)[0m
+[38;5;196m│ #1   DioMixin.fetch.errorInterceptorWrapper.<anonymous closure>.handleError (package:dio/src/dio_mixin.dart:443:13)[0m
+[38;5;196m│ #2   new Future.<anonymous closure> (dart:async/future.dart:260:40)[0m
+[38;5;196m│ #3   StackZoneSpecification._run (package:stack_trace/src/stack_zone_specification.dart:207:15)[0m
+[38;5;196m│ #4   StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:48)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ Error: 400 http://10.0.2.2:8080/api/v1/experience/growth-dashboard[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────[0m
+Error loading achievement achievements: Exception: An unknown error occurred in getAchievements
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getAchievements (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:89:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+Error loading achievement stats: Exception: An unknown error occurred in getAchievementStats
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getAchievementStats (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:170:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+Error loading achievement streak: Exception: An unknown error occurred in getStreakStats
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getStreakStats (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:222:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+Error loading achievement skins: Exception: An unknown error occurred in getGalaxySkins
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getGalaxySkins (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:345:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+Error loading achievement titles: Exception: An unknown error occurred in getTitles
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getTitles (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:383:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+Error loading achievement contract: Exception: An unknown error occurred in getContractStatus
+Stack trace: #0      AchievementRepository._handleDioError (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:24:5)
+#1      AchievementRepository.getContractStatus (package:sparkle/features/achievement/data/repositories/achievement_repository.dart:274:14)
+<asynchronous suspension>
+#2      AchievementNotifier._loadWithFallback (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:328:14)
+<asynchronous suspension>
+#3      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#4      AchievementNotifier.loadInitialData (package:sparkle/features/achievement/presentation/providers/achievement_provider.dart:352:23)
+<asynchronous suspension>
+
+00:07 +35: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_offline_queued_test.dart: N34 · 任务面快照溯源传导 断网快照读 → tasksFromCache/cachedAsOf 进状态（stale 徽标数据源）
+00:07 +36: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_offline_queued_test.dart: N34 · 任务面快照溯源传导 在线读（非快照）→ fromCache=false、asOf 为空
+00:07 +37: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_reminder_config_wiring_test.dart
+00:08 +37: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_reminder_config_wiring_test.dart: V3-FIX-385① taskReminderConfigProvider 单一事实源 设置面修改提醒配置后，执行面 task_provider 调度收到新配置
+Failed to sync task to calendar: type 'Null' is not a subtype of type 'Future<CalendarEventModel?>'
+00:09 +38: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart
+00:09 +38: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Initial State should start with default state
+00:09 +39: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Initial State should have empty task executions initially
+00:09 +40: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should update loading state
+00:09 +41: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should update tasks list
+00:09 +42: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should update today tasks
+00:09 +43: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should update error state
+00:09 +44: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should clear error state
+00:09 +45: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should update handoff in-flight state
+00:09 +46: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should update execution decision in-flight state
+00:09 +47: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should update task executions
+00:09 +48: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should update task execution records
+00:09 +49: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should update task execution templates
+00:09 +50: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests State Management should update selected execution template IDs
+00:09 +51: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Next Actions Model should create NextAction with all required fields
+00:09 +52: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Next Actions Model should support all NextActionType values
+00:09 +53: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Execution Record Model should create ExecutionRecordModel with required fields
+00:09 +54: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Execution Record Model should create ExecutionRecordModel with optional fields
+00:09 +55: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Execution Record Model should calculate trust label correctly
+00:09 +56: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Task Completion Result Model should create TaskCompletionResult with required fields
+00:09 +57: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Task Completion Result Model should create TaskCompletionResult with optional fields
+00:09 +58: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Task Completion Result Model should parse structured galaxy update payload
+00:09 +59: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Execution Template Model should create ExecutionTemplateModel with required fields
+00:09 +60: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Execution Template Model should support all ExecutionMode values
+00:09 +61: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Execution Intent Model should support all ExecutionIntentStatus values
+00:09 +62: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Execution Intent Model should support all ExecutionTrustLevel values
+00:09 +63: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Execution Intent Model should support all ExecutionMode values for intent
+00:09 +64: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Task Model Enums should support all TaskType values
+00:09 +65: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Task Model Enums should support all TaskStatus values
+00:09 +66: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_provider_test.dart: TaskProvider Tests Task Model Enums should support all TaskSyncStatus values
+00:09 +67: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart
+00:11 +67: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: TaskChatState should start with default values
+00:11 +68: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: TaskChatState should copy with loading state
+00:11 +69: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: TaskChatState should copy with error and clear error
+00:11 +70: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: TaskChatState should increment turn count
+00:11 +71: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: DormantInjectionState should start with default cold-start values
+00:11 +72: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: DormantInjectionState should copy with injection data
+00:11 +73: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: DormantInjectionState cold-start items are unavailable by default
+00:11 +74: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: TaskChatState with dormant injection should preserve dormant injection across state updates
+00:11 +75: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: TaskChatState with dormant injection should preserve turn count with dormant injection
+00:11 +76: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: parseDormantMeta — end-to-end metadata parsing returns null when metadata is null
+00:11 +77: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: parseDormantMeta — end-to-end metadata parsing returns null when metadata has no injection items or ux_intent
+00:11 +78: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: parseDormantMeta — end-to-end metadata parsing parses a real backend dormant_injection payload
+00:11 +79: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: parseDormantMeta — end-to-end metadata parsing cold-start (no items, only ux_intent) still produces injection
+00:11 +80: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart: parseDormantMeta — end-to-end metadata parsing state.copyWith with parsed injection preserves it
+00:11 +81: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_execution_hybrid_entry_mount_test.dart
+00:12 +81: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_execution_hybrid_entry_mount_test.dart: 整屏 pump：Hybrid 旅程入口区块真实上树于任务执行屏——无进行中 run 给启动入口（一审 C-1：挂载点永久断言，探针固化）
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:12 +82: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_execution_hybrid_entry_mount_test.dart: 整屏 pump：本任务有进行中旅程 run → 同一挂载点渲染续跑入口（读面数据流入挂载区块，runId 续跑同一段 run）
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:13 +83: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_list_screen_zero_task_error_gate_test.dart
+00:13 +83: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_list_screen_zero_task_error_gate_test.dart: T1 对照：三读全成功且空 = 空态引导，不是错误态
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:13 +84: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_list_screen_zero_task_error_gate_test.dart: T2 复现（败先序）：today 失败一次 + 列表成功为空 → 空态引导非全页错误
+🔧 API Base URL (Android): http://10.0.2.2:8080
+[task] load failed: Exception: getTodayTasks 500
+00:14 +85: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_list_screen_zero_task_error_gate_test.dart: T3 复现（败后序·粘滞竞态）：列表先成功后 today 失败 → 空态引导非全页错误
+🔧 API Base URL (Android): http://10.0.2.2:8080
+[task] load failed: Exception: getTodayTasks 500
+00:14 +86: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_list_screen_test.dart
+00:15 +86: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_list_screen_test.dart: task list shows guided empty state when there are no tasks
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:16 +87: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_list_screen_test.dart: task list shows retry state and recovers after retry
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:16 +88: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_execution_deep_link_gate_test.dart
+00:16 +88: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_execution_deep_link_gate_test.dart: 正·快路径：active 已是目标 id → 零仓储调用直进执行屏
+00:17 +89: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_execution_deep_link_gate_test.dart: 正·服务端确证命中：active 被设为目标任务（落真实对象）
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getTodayTasksCached' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getTodayTasksCached()
+Found: getTodayTasksCached() => Future<CacheAwareResult<List<TaskModel>>>
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getRecommendedTasks' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getRecommendedTasks(limit: 5)
+Found: getRecommendedTasks({int limit}) => Future<List<TaskModel>>
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getTasksCached' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getTasksCached(filters: _Map len:0, page: 1, pageSize: 50)
+Found: getTasksCached({Map<String, dynamic>? filters, int page, int pageSize}) => Future<CacheAwareResult<PaginatedResponse<TaskModel>>>
+00:17 +90: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_execution_deep_link_gate_test.dart: 反·已删对象：404 确证 → 已删除面；不渲染残留任务也不空白
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getTodayTasksCached' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getTodayTasksCached()
+Found: getTodayTasksCached() => Future<CacheAwareResult<List<TaskModel>>>
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getRecommendedTasks' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getRecommendedTasks(limit: 5)
+Found: getRecommendedTasks({int limit}) => Future<List<TaskModel>>
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getTasksCached' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getTasksCached(filters: _Map len:0, page: 1, pageSize: 50)
+Found: getTasksCached({Map<String, dynamic>? filters, int page, int pageSize}) => Future<CacheAwareResult<PaginatedResponse<TaskModel>>>
+00:17 +91: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_execution_deep_link_gate_test.dart: 反·无法确认：网络类异常 → 可重试面（不凭空宣布已删除）
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getTodayTasksCached' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getTodayTasksCached()
+Found: getTodayTasksCached() => Future<CacheAwareResult<List<TaskModel>>>
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getRecommendedTasks' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getRecommendedTasks(limit: 5)
+Found: getRecommendedTasks({int limit}) => Future<List<TaskModel>>
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getTasksCached' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getTasksCached(filters: _Map len:0, page: 1, pageSize: 50)
+Found: getTasksCached({Map<String, dynamic>? filters, int page, int pageSize}) => Future<CacheAwareResult<PaginatedResponse<TaskModel>>>
+00:17 +92: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_execution_deep_link_gate_test.dart: 已删面出口：列表出口与回首页按钮存在且语义可读
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getTodayTasksCached' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getTodayTasksCached()
+Found: getTodayTasksCached() => Future<CacheAwareResult<List<TaskModel>>>
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getRecommendedTasks' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getRecommendedTasks(limit: 5)
+Found: getRecommendedTasks({int limit}) => Future<List<TaskModel>>
+[task] load failed: NoSuchMethodError: Class 'FakeTaskRepository' has no instance method 'getTasksCached' with matching arguments.
+Receiver: Instance of 'FakeTaskRepository'
+Tried calling: getTasksCached(filters: _Map len:0, page: 1, pageSize: 50)
+Found: getTasksCached({Map<String, dynamic>? filters, int page, int pageSize}) => Future<CacheAwareResult<PaginatedResponse<TaskModel>>>
+00:17 +93: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_quick_action_silent_success_test.dart
+00:18 +93: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_quick_action_silent_success_test.dart: TaskCard 内联表达：在飞 → 角部 spinner；空闲 → 无
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:18 +94: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_quick_action_silent_success_test.dart: TaskCard 内联表达：其它任务在飞不影响本卡
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:18 +95: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_quick_action_silent_success_test.dart: N23 ratchet 机检（task_quick_action_menu 切片） quick action 菜单零 loading toast（内联 spinner 承接等待形状）
+00:18 +96: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_quick_action_silent_success_test.dart: N23 ratchet 机检（task_quick_action_menu 切片） quick action 菜单零 success toast（成功即状态变化）
+00:18 +97: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_quick_action_silent_success_test.dart: N23 ratchet 机检（task_quick_action_menu 切片） 错误路径禁洗 toString 直出，必须走 N16 单源映射
+00:18 +98: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_quick_action_silent_success_test.dart: N23 ratchet 机检（task_quick_action_menu 切片） 重入守卫与内联在飞 provider 在位
+00:18 +99: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_quick_action_silent_success_test.dart: N23 ratchet 机检（task_quick_action_menu 切片） TaskCard 消费内联在飞表达（等待必须有形状）
+00:18 +100: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/why_this_today_panel_test.dart
+00:19 +100: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/why_this_today_panel_test.dart: renders expanded priority reasoning with signals and skipped option
+00:19 +101: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/paused_task_banner_test.dart
+00:20 +101: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/paused_task_banner_test.dart: paused banner renders status, duration, and reason details
+00:21 +102: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/paused_task_banner_test.dart: paused banner resume button invokes callback
+00:21 +103: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_list_widget_chip_test.dart
+00:22 +103: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_list_widget_chip_test.dart: uppercase COMPLETED/LEARNING hits completed style (success color + l10n text), not default
+00:22 +104: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_list_widget_chip_test.dart: uppercase PAUSED renders localized paused chip with warning color
+00:22 +105: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/widgets/task_list_widget_chip_test.dart: uppercase STUCK renders localized stuck chip with warning color
+00:23 +106: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/err_canal_provider_error_category_test.dart
+00:23 +106: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/err_canal_provider_error_category_test.dart: N15 赋值面：五域 provider error 位 = UiErrorCategory subtask: load/add 异常 → error = network 类别
+[subtask] load failed: Exception: SocketException: fake connection refused
+[subtask] add failed: Exception: SocketException: fake connection refused
+00:23 +107: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/err_canal_provider_error_category_test.dart: N15 赋值面：五域 provider error 位 = UiErrorCategory seed_library: loadLibraries 异常 → error = network 类别
+[seed_library] loadLibraries failed: Exception: SocketException: fake connection refused
+00:23 +108: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/err_canal_provider_error_category_test.dart: N15 赋值面：五域 provider error 位 = UiErrorCategory seed_library/subscriptions: loadSubscriptions 异常 → 类别
+[seed_library] loadSubscriptions failed: Exception: SocketException: fake connection refused
+00:23 +109: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/err_canal_provider_error_category_test.dart: N15 赋值面：五域 provider error 位 = UiErrorCategory marketplace: 构造器自动 refresh 异常 → error = network 类别
+[marketplace] refresh failed: Exception: SocketException: fake connection refused
+00:23 +110: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/err_canal_provider_error_category_test.dart: N15 赋值面：五域 provider error 位 = UiErrorCategory shop: loadPurchaseHistory 异常 → error = network 类别
+[shop] loadPurchaseHistory failed: Exception: SocketException: fake connection refused
+00:23 +111: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/err_canal_provider_error_category_test.dart: N15 赋值面：五域 provider error 位 = UiErrorCategory sprint_actions: completeSprint 异常 → error = network 类别
+[sprint_actions] action failed: Exception: SocketException: archive failed
+00:23 +112: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/err_canal_provider_error_category_test.dart: N15 渲染面：类别 → 人话，无异常痕迹 uiErrorMessage(zh) 全类别不含 Exception:/Instance of 原文
+00:23 +113: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/err_canal_provider_error_category_test.dart: N15 渲染面：类别 → 人话，无异常痕迹 渲染产物落进 Text 的是人话（network 类别样本）
+00:24 +114: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart
+00:25 +114: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: (setUpAll)
+00:25 +114: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: GoRouter smoke redirects unauthenticated users to login
+00:26 +115: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: GoRouter smoke keeps authenticated users without onboarding on home (J-02 soft wall)
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🎭 Demo Mode: Using mock community data, WebSocket disabled
+🗑️  Disposing WebSocketChatServiceV2
+🔌 Closing connection
+00:26 +116: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: GoRouter smoke guest session never bounces into persona onboarding (J-02 three-session stability: guest)
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🎭 Demo Mode: Using mock community data, WebSocket disabled
+🗑️  Disposing WebSocketChatServiceV2
+🔌 Closing connection
+00:26 +117: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: GoRouter smoke upgraded guest (registered, onboarding pending) keeps persona onboarding reachable (J-02 three-session stability: upgrade)
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🎭 Demo Mode: Using mock community data, WebSocket disabled
+🗑️  Disposing WebSocketChatServiceV2
+🔌 Closing connection
+00:27 +118: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: GoRouter smoke loads dashboard for authenticated users with onboarding completed
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🎭 Demo Mode: Using mock community data, WebSocket disabled
+🗑️  Disposing WebSocketChatServiceV2
+🔌 Closing connection
+00:27 +119: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: GoRouter smoke navigates shell routes to the correct top-level screens
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🎭 Demo Mode: Using mock community data, WebSocket disabled
+🗑️  Disposing WebSocketChatServiceV2
+🔌 Closing connection
+00:28 +120: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: GoRouter smoke passes galaxy focus query parameters into GalaxyScreen
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🎭 Demo Mode: Using mock community data, WebSocket disabled
+PersistentStateNotifier: Loaded state for galaxy.view_state
+🗑️  Disposing WebSocketChatServiceV2
+🔌 Closing connection
+00:28 +121: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: GoRouter smoke loads critical secondary routes used by dashboard and community actions
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🎭 Demo Mode: Using mock community data, WebSocket disabled
+🎭 Demo Mode: Using mock community data, WebSocket disabled
+🗑️  Disposing WebSocketChatServiceV2
+🔌 Closing connection
+00:30 +122: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: GoRouter smoke redirects route-based tools to their canonical screens
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🎭 Demo Mode: Using mock community data, WebSocket disabled
+🗑️  Disposing WebSocketChatServiceV2
+🔌 Closing connection
+00:30 +123: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: GoRouter smoke profile logout returns users to login screen
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🎭 Demo Mode: Using mock community data, WebSocket disabled
+🗑️  Disposing WebSocketChatServiceV2
+🔌 Closing connection
+00:30 +124: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/app/router_smoke_test.dart: (tearDownAll)
+00:31 +124: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/h9_ui_sync_test.dart
+00:31 +124: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/h9_ui_sync_test.dart: (setUpAll)
+00:31 +124: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/h9_ui_sync_test.dart: A. task completion updates galaxy UI without manual refresh
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+[task] load failed: Exception: 服务器正在打盹，请稍后再试
+[task] load failed: Exception: 服务器正在打盹，请稍后再试
+00:32 +125: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/h9_ui_sync_test.dart: B. repair task insertion refreshes plan detail automatically
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🌌 Connecting to galaxy events stream (SSE)...
+00:32 +126: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/h9_ui_sync_test.dart: B2. error review bumps galaxy refresh trigger
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🌌 Connecting to galaxy events stream (SSE)...
+00:32 +127: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/h9_ui_sync_test.dart: C. sprint completion pop refreshes learning portfolio
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:32 +128: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/h9_ui_sync_test.dart: D. achievement unlock event refreshes achievement UI
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:32 +129: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/h9_ui_sync_test.dart: E. weekly narrative card refreshes after learning action
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🔧 API Base URL (Android): http://10.0.2.2:8080
+🌌 Connecting to galaxy events stream (SSE)...
+00:32 +130: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/h9_ui_sync_test.dart: (tearDownAll)
+00:32 +130: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/j2_frontend_closure_test.dart
+00:33 +130: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/j2_frontend_closure_test.dart: J2 frontend closure task list filters completed and in-progress tasks stably
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:34 +131: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/j2_frontend_closure_test.dart: J2 frontend closure tool shell sheet stays bottom aligned with close affordance
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:34 +132: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/j2_frontend_closure_test.dart: J2 frontend closure exit confirmation remains single-step and actionable
+00:34 +133: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/j2_frontend_closure_test.dart: J2 frontend closure daily detail routes task-linked events to existing task edit
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:34 +134: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/j2_frontend_closure_test.dart: J2 frontend closure daily detail keeps normal events in event edit flow
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:34 +135: /Users/brsama/code/GitHub/Sparkle-project/mobile/test/widget/j2_frontend_closure_test.dart: J2 frontend closure daily detail active plan card routes to plan detail
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:34 +136: All tests passed!

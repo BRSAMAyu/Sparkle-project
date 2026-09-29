@@ -57,6 +57,7 @@ class TaskListState {
     this.executionDecisionInFlight = const <String>{},
     this.currentFilter,
     this.error,
+    this.listError,
     this.executionQueued = false,
     this.recentlyDeletedTask,
     this.tasksFromCache = false,
@@ -82,6 +83,13 @@ class TaskListState {
   /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（经 error_lexicon owner
   /// 在渲染侧出人话）；原始异常细节只进 debugPrint 日志，不入 state。
   final UiErrorCategory? error;
+
+  /// FIX-587：列表域错误位——只由 loadTasks 自身写/清，不被兄弟读
+  /// （today/recommended）失败污染。全页错误门只认本位：列表加载失败
+  /// （listError != null 且 tasks 空）才渲染全页错误态；兄弟失败时列表
+  /// 为空仍走空态引导（空 ≠ 错误，创建路径不被阻断），兄弟失败信号仍
+  /// 留在共享 [error] 位供非阻断提示（SnackBar / 部分失败横幅）。
+  final UiErrorCategory? listError;
 
   /// 最近一次执行派发是否走了离线等待队列（排队不是失败；chat 侧
   /// queued 状态与任务列表排队提示以本显式信号判定，不再嗅探错误文案）。
@@ -115,6 +123,8 @@ class TaskListState {
     TaskFilter? currentFilter,
     UiErrorCategory? error,
     bool clearError = false,
+    UiErrorCategory? listError,
+    bool clearListError = false,
     bool? executionQueued,
     TaskModel? recentlyDeletedTask,
     bool clearRecentlyDeleted = false,
@@ -143,6 +153,8 @@ class TaskListState {
             executionDecisionInFlight ?? this.executionDecisionInFlight,
         currentFilter: currentFilter ?? this.currentFilter,
         error: clearError ? null : error ?? this.error,
+        listError:
+            clearListError ? null : listError ?? this.listError,
         executionQueued: executionQueued ?? this.executionQueued,
         recentlyDeletedTask: clearRecentlyDeleted
             ? null
@@ -195,32 +207,53 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     return future;
   }
 
-  Future<void> _runWithErrorHandling(Future<void> Function() action) async {
+  /// [listScoped]（FIX-587）：仅 loadTasks 传 true——失败写入列表域
+  /// [TaskListState.listError]，开始时清本域旧错；兄弟读（today/recommended）
+  /// 与各写操作不传，行为与修前完全一致（只动共享 error 位）。
+  Future<void> _runWithErrorHandling(
+    Future<void> Function() action, {
+    bool listScoped = false,
+  }) async {
     if (!mounted) return;
-    state = state.copyWith(isLoading: true, clearError: true);
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearListError: listScoped,
+    );
     try {
       await action();
     } catch (e) {
       if (!mounted) return;
       debugPrint('[task] load failed: $e');
-      state = state.copyWith(isLoading: false, error: categorizeUiError(e));
+      state = state.copyWith(
+        isLoading: false,
+        error: categorizeUiError(e),
+        listError: listScoped ? categorizeUiError(e) : null,
+      );
     }
   }
 
   Future<void> loadTasks({TaskFilter? filter}) async {
-    await _runWithErrorHandling(() async {
-      // N34：缓存感知读——离线回读本地快照，UI 据此挂「截至 X」标记。
-      final result = await _taskRepository.getTasksCached(filters: {});
-      if (!mounted) return;
-      state = state.copyWith(
-        isLoading: false,
-        tasks: result.data.items,
-        currentFilter: filter,
-        tasksFromCache: result.fromCache,
-        cachedAsOf: result.asOf,
-        clearCachedAsOf: !result.fromCache,
-      );
-    });
+    await _runWithErrorHandling(
+      () async {
+        // N34：缓存感知读——离线回读本地快照，UI 据此挂「截至 X」标记。
+        final result = await _taskRepository.getTasksCached(filters: {});
+        if (!mounted) return;
+        state = state.copyWith(
+          isLoading: false,
+          tasks: result.data.items,
+          currentFilter: filter,
+          tasksFromCache: result.fromCache,
+          cachedAsOf: result.asOf,
+          clearCachedAsOf: !result.fromCache,
+          // FIX-587：列表自身读成功即清列表域错误——修前兄弟失败置位的
+          // 共享 error 会在此粘滞（成功路径不写 error 位），把「合法空
+          // 列表」顶进全页错误门；listError 语义只归本读法管。
+          clearListError: true,
+        );
+      },
+      listScoped: true,
+    );
   }
 
   Future<void> loadTodayTasks() async {

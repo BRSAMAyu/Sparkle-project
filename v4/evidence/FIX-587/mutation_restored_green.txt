@@ -1,0 +1,10 @@
+00:00 +0: loading /Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/task/presentation/screens/task_list_screen_zero_task_error_gate_test.dart
+00:00 +0: T1 对照：三读全成功且空 = 空态引导，不是错误态
+🔧 API Base URL (Android): http://10.0.2.2:8080
+00:00 +1: T2 复现（败先序）：today 失败一次 + 列表成功为空 → 空态引导非全页错误
+🔧 API Base URL (Android): http://10.0.2.2:8080
+[task] load failed: Exception: getTodayTasks 500
+00:00 +2: T3 复现（败后序·粘滞竞态）：列表先成功后 today 失败 → 空态引导非全页错误
+🔧 API Base URL (Android): http://10.0.2.2:8080
+[task] load failed: Exception: getTodayTasks 500
+00:00 +3: All tests passed!

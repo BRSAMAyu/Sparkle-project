@@ -359,10 +359,16 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       return const SparkleListSkeleton(count: 5);
     }
 
-    if (state.error != null && state.tasks.isEmpty) {
+    // FIX-587：全页错误门只认列表自身失败（listError 由 loadTasks 独占
+    // 写/清）。修前门读共享 error 位——兄弟读（today/recommended）失败置
+    // 位后粘滞，把「列表成功但为空」的合法空态顶成全页错误态，阻断创建
+    // 路径（Q01 零任务新用户确定性复现）。语义分离：空 ≠ 错误——兄弟
+    // 失败时列表为空仍落下方空态引导（创建入口可达），失败信号经
+    // SnackBar/部分失败横幅非阻断呈现。
+    if (state.listError != null && state.tasks.isEmpty) {
       return CustomErrorWidget.page(
         context: context,
-        message: uiErrorMessage(context.l10n, state.error!),
+        message: uiErrorMessage(context.l10n, state.listError!),
         onRetry: () => ref.read(taskListProvider.notifier).refreshTasks(),
       );
     }
