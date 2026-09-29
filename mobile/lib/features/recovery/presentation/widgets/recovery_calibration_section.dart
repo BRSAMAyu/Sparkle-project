@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/pixel/pixel_state.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/semantic_motion_widgets.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/recovery/data/models/stuck_journey_models.dart';
 import 'package:sparkle/features/recovery/presentation/providers/recovery_calibration_provider.dart';
@@ -70,6 +71,16 @@ class _RecoveryCalibrationSectionState
         : context.l10n.recoveryCalibrationClaim(anchor);
   }
 
+  /// 回执替换锚（FIX-569）：一次回执一个 key（receipt_id 直调面等价于
+  /// 适配器 event_id 契约）。无回执 = 哨兵空串；有回执但缺 id（契约漂移）
+  /// = 稳定常量，不造 id、不冒充语义——同回执重投（重放/重建）恒同 key。
+  Object _receiptSwapKey(RecoveryCalibrationState state) {
+    final receipt = state.proposal?.receipt;
+    if (receipt == null || receipt.isEmpty) return '';
+    final id = (receipt['receipt_id'] ?? '').toString();
+    return id.isEmpty ? 'receipt' : id;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -100,7 +111,19 @@ class _RecoveryCalibrationSectionState
             ),
           ),
           const SizedBox(height: DS.spacing12),
-          ..._phaseBody(context, state, controller),
+          // V4-FIX-569 ·「写入提交成功：回执替换」乐谱行的产品消费点：
+          // 本区唯一的成功面孔面（committed 相 PixelStateBadge(success)）。
+          // 相体包在恒挂载的替换壳内——confirming→committed 回执落场 =
+          // replacementKey 变化 → 一次 160ms 淡入替换；同回执重建/恢复重放
+          // （直接挂载进 committed 相）同 key/首挂载 → 不重播；conflict/
+          // unknown/输入相树中无成功徽章载体（各相自带，门不放松）。
+          SparkleReceiptSwap(
+            replacementKey: _receiptSwapKey(state),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _phaseBody(context, state, controller),
+            ),
+          ),
         ],
       ),
     );

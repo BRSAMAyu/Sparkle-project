@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/semantic_motion_widgets.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/recovery/data/models/stuck_journey_models.dart';
 import 'package:sparkle/features/recovery/presentation/providers/stuck_journey_provider.dart';
@@ -201,9 +202,16 @@ class _ReadyPane extends ConsumerWidget {
           const SizedBox(height: DS.spacing20),
           _SectionHeader(label: l10n.stuckJourneyInterventionHeader),
           const SizedBox(height: DS.spacing8),
-          _InterventionCard(
-            intervention: data.mainIntervention!,
-            anchor: data.context.taskTitle ?? data.context.goalTitle,
+          // V4-FIX-569 ·「提案出现」乐谱行的产品消费点（SCREEN_FAMILIES L7
+          // 「一个决策问题和提案」）：intervention 提案卡挂载时一次性从纸面
+          // 抬起入场（200ms，预算单源）。同 payload 重建不重播；纠正换
+          // 载荷经 AnimatedSwitcher 换代 = 新提案播一次；sheet 关闭（取消）
+          // 即卸载，不残留在航动画；reduce-motion 直落终态（组件内置）。
+          SparkleProposalEnter(
+            child: _InterventionCard(
+              intervention: data.mainIntervention!,
+              anchor: data.context.taskTitle ?? data.context.goalTitle,
+            ),
           ),
           const SizedBox(height: DS.spacing12),
           SizedBox(

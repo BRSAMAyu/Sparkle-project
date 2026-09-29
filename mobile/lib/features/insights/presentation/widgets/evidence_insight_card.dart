@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/semantic_motion_widgets.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/insights/data/models/evidence_insight_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -33,19 +34,27 @@ class EvidenceInsightCardWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(_kindIcon, color: DS.brandPrimary, size: 20),
-              const SizedBox(width: DS.spacing8),
-              Expanded(
-                child: Text(
-                  _kindTitle(l10n),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+          // V4-FIX-569 ·「证据已登记：小印章 160ms」乐谱行的产品消费点
+          // （SCREEN_FAMILIES L16「像素印章标记类型，不给 AI 推断盖认证章」）：
+          // 封闭 kind 词表的类型印章（摩擦模式/有帮助的应对/目标进展）压印
+          // 入场，零粒子零声触；文字只标类型，无「已掌握/认证」措辞。
+          // 卡挂载（feed 就绪）播一次；同卡重建不重播；卡卸载（区隐藏）
+          // 即取消；reduce-motion 直落全尺寸终态（组件内置）。
+          SparkleEvidenceStamp(
+            child: Row(
+              children: [
+                Icon(_kindIcon, color: DS.brandPrimary, size: 20),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Text(
+                    _kindTitle(l10n),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: DS.spacing12),
           _ElementBlock(

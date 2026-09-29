@@ -1,0 +1,72 @@
+{
+  "card": "FIX-569",
+  "title": "S01 三 implicit 一次性组件产品接线（leader 2026-09-30 裁决：接线，F03 R1 低成本样本先行）",
+  "agent": "wtF569",
+  "branch": "fix/v4/f569-implicit-motion-wiring",
+  "base_sha": "8b03350b（main@派单提交「Q05 侦察归档；565 摘除执行 FIX 13 闭；569 接线小卡即派」）",
+  "generated_at_local": "2026-09-28",
+  "kind": "fix",
+  "product_code_changed": true,
+  "pushed": false,
+  "environment": {
+    "worktree": "wtF569（git worktree add ../wtF569 -b fix/v4/f569-implicit-motion-wiring main，exit 0）",
+    "flutter_analyze": "exit 0，No issues found（mobile 全包，--no-pub）",
+    "note": "worktree 首跑需 flutter pub get + make proto-gen（buf 1.66.0 host toolchain，docker 不可用自动回落；gen/ gitignored 不入库，与环境缺口同 FIX-575/576 判例）"
+  },
+  "wiring_sites": [
+    {
+      "component": "SparkleProposalEnter",
+      "file": "mobile/lib/features/recovery/presentation/widgets/stuck_journey_sheet.dart",
+      "line": 210,
+      "surface": "卡住 sheet ready pane 的 _InterventionCard（主 intervention 提案卡）",
+      "rationale": "SCREEN_FAMILIES L7「卡住sheet…一个决策问题和提案」——提案卡即乐谱「提案出现」行唯一自然载体；Q05 三-b 侦察实录「F03 R1 低成本样本=intervention 卡」同点位。leader 裁决点名，非装饰位",
+      "semantics_kept": "同 payload 重建不重播（纠正 ack 不重播入场）；纠正换载荷经 AnimatedSwitcher 换代 = 新提案播一次；sheet 关闭（取消）即卸载；reduce-motion 静态分支（组件内置）"
+    },
+    {
+      "component": "SparkleReceiptSwap",
+      "file": "mobile/lib/features/recovery/presentation/widgets/recovery_calibration_section.dart",
+      "line": 120,
+      "surface": "recovery 校准区相体（committed 相 = 全产品唯一成功面孔徽章面，PixelStateBadge(success)→PixelSuccessBadge 唯一产品消费）",
+      "rationale": "乐谱「写入提交成功：标题/状态 160ms 替换」行只在回执到场一刻成立；本区是 F02/F03 成功面孔封闭集纪律下的唯一既有成功徽章面（S01 移交令与派单指名的「成功面孔徽章换装处」）",
+      "replacement_key": "_receiptSwapKey（:77）= receipt_id 直调面锚（适配器 event_id 的直调面等价物）；无回执=空串哨兵，有回执缺 id=稳定常量（不造 id）",
+      "semantics_kept": "首挂载不播（恢复重放直接进 committed 相 = 直落终态，文本状态仍恢复）；同 key 重投（重建/重放）不重播；conflict/unknown/输入相树中零成功徽章（各相自带门零放松）；取消回输入相零回执零徽章"
+    },
+    {
+      "component": "SparkleEvidenceStamp",
+      "file": "mobile/lib/features/insights/presentation/widgets/evidence_insight_card.dart",
+      "line": 43,
+      "surface": "D-07 证据洞察卡类型印章行（封闭 kind 词表图标+标题：阻力模式/有帮助的应对/目标进展）",
+      "rationale": "SCREEN_FAMILIES L16「像素印章标记类型，不给 AI 推断盖认证章」——该行印章=类型标记本面；卡挂载（feed 就绪）播一次压印。备选面 U05 节点详情 _CapabilityEvidenceSection 被排除：该节 doc 明文呈现纪律「纯静态文本+图标，无动效承载」——既有门不放松（本卡硬约束），排除有据",
+      "semantics_kept": "零粒子零声触（组件内置）；文字只标类型，全卡无「已掌握/认证」措辞（测试钉）；洞察总览 SingleChildScrollView 常驻挂载 → 滚动不重播；区隐藏（契约不支持/出错）= 卡卸载即取消"
+    }
+  ],
+  "constraints_kept": {
+    "gates_not_relaxed": "零既有断言删除/放松：conflict/unknown/confirming 无成功徽章由既有 U02 套件继续钉死（recovery+insights 67/67 绿），本卡只增不改门",
+    "reduce_motion": "三接线均走组件内置静态分支；接线级 reduce-motion 等价由 P-1/R-4/E- 三微测钉（内容完整在场、零动画壳、零在航）",
+    "repeat_ratchet": "零新增 repeat（三组件 implicit 无控制器；U15 复跑数 48 ≤ 基线 49 只降不升——48 为 FIX-565 摘 typing_text 后合法清理值）",
+    "proto_ws_untouched": "零 proto/WS 面改动——事件源契约归 F03 后续卡；本次只挂既有直调面（receipt_id 直调锚，非适配器 event_id，如实区分）"
+  },
+  "ledger_row": {
+    "row": "V3-FIX-569",
+    "transition": "OPEN → FIXED@<本分支头 sha，见 head_sha 字段回填>",
+    "surface": "coordination 远端 sparkle-coordination-v2 state.json 本机未配置（fleet.py 不可达）——U15 判例同款：diff 自证，状态行变更随本证据与分支交付，由合并闭账方落 state"
+  },
+  "changed_files": [
+    {
+      "path": "mobile/lib/features/recovery/presentation/widgets/stuck_journey_sheet.dart",
+      "change": "+import semantic_motion_widgets；_InterventionCard 包 SparkleProposalEnter（+裁定注释）"
+    },
+    {
+      "path": "mobile/lib/features/recovery/presentation/widgets/recovery_calibration_section.dart",
+      "change": "+import semantic_motion_widgets；_receiptSwapKey()；相体包 SparkleReceiptSwap（+裁定注释）——结构变化仅一层壳，各相 widget 逐字节未动"
+    },
+    {
+      "path": "mobile/lib/features/insights/presentation/widgets/evidence_insight_card.dart",
+      "change": "+import semantic_motion_widgets；kind 印章行包 SparkleEvidenceStamp（+裁定注释）——行内容逐字节未动"
+    },
+    {
+      "path": "mobile/test/core/design/semantic_motion_wiring_f569_test.dart",
+      "change": "新套 10 用例（P×3/R×5/E×2，每接线一正一反+reduce-motion 三格）——FIX-565 同律：接线必须带覆盖"
+    }
+  ]
+}
