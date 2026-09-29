@@ -15,11 +15,11 @@ import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/auth/presentation/screens/register_screen.dart';
+import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
+import 'package:sparkle/features/task/presentation/screens/task_create_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/persona_onboarding_screen.dart';
-import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
-import 'package:sparkle/features/task/presentation/screens/task_create_screen.dart';
 import 'package:sparkle/main.dart' as app;
 
 /// V4-Q01 核心像素×AI 垂直旅程真端验收 driver（measurement infrastructure —
@@ -60,9 +60,9 @@ const _kShotDest = String.fromEnvironment(
   defaultValue: '/tmp/q01_shots',
 );
 const _kGoalTitle = String.fromEnvironment('Q01_GOAL_TITLE',
-    defaultValue: '数据结构期中冲刺');
+    defaultValue: '数据结构期中冲刺',);
 const _kTaskTitle = String.fromEnvironment('Q01_TASK_TITLE',
-    defaultValue: '二叉树遍历');
+    defaultValue: '二叉树遍历',);
 const _kMinutes = String.fromEnvironment('Q01_MINUTES', defaultValue: '15');
 const _kUser = String.fromEnvironment('Q01_USER');
 /// J-01 向导支线开关（v3 默认关）：r5 实证向导计划任务不落任务列表投影 →
@@ -78,7 +78,8 @@ const kRegPassword = 'Q01-Passw0rd!';
 /// 知识底料 fixture（披露：内容为本测试编写的真实学习笔记，非模型产物、
 /// 非用户私密材料；经真实上传→分块→嵌入管线落库，供 prep 真实检索命中）。
 const kFixtureFileName = '线性代数特征值与矩阵对角化学习笔记.md';
-const String kFixtureMarkdown = '''# 线性代数：特征值与矩阵对角化（期末复习笔记）
+const String kFixtureMarkdown = '''
+# 线性代数：特征值与矩阵对角化（期末复习笔记）
 
 ## 一、特征值与特征向量的定义
 
@@ -367,7 +368,7 @@ Future<void> main() async {
           'mime_type': 'text/markdown',
           'file_size': bytes.length,
           'visibility': 'private',
-        })),
+        }),),
       );
       final fileId = prepared['file_id']?.toString() ?? '';
       final presigned = prepared['presigned_url']?.toString() ?? '';
@@ -442,7 +443,7 @@ Future<void> main() async {
     if (!dialogOk) return false;
     clicks[0]++;
     await tester.tap(textAny(['确认', '确定'])!, warnIfMissed: false);
-    return await waitUntil(
+    return waitUntil(
       tester,
       () => find.text('以访客身份继续').evaluate().isNotEmpty,
       timeout: const Duration(seconds: 15),
@@ -624,10 +625,10 @@ Future<void> main() async {
       return false;
     }
     try {
-      await tester.ensureVisible(resumeCta!);
+      await tester.ensureVisible(resumeCta);
     } catch (_) {}
     clicks[0]++;
-    await tester.tap(resumeCta!, warnIfMissed: false);
+    await tester.tap(resumeCta, warnIfMissed: false);
     final personaUp = await waitUntil(
       tester,
       () => find.byType(PersonaOnboardingScreen).evaluate().isNotEmpty,
@@ -722,7 +723,7 @@ Future<void> main() async {
   }) async {
     for (var r = 0; r < rounds; r++) {
       final ok = await waitUntil(tester, () => locate() != null,
-          timeout: timeout);
+          timeout: timeout,);
       if (!ok) continue;
       final f = locate();
       if (f == null) continue;
@@ -738,7 +739,7 @@ Future<void> main() async {
 
   /// sheet 内折叠控件：滚动露出→点击（DraggableScrollableSheet 场景）
   Future<bool> revealAndTap(WidgetTester tester, Finder f,
-      {int rounds = 5}) async {
+      {int rounds = 5,}) async {
     for (var i = 0; i < rounds; i++) {
       if (f.evaluate().isNotEmpty) {
         try {
@@ -792,7 +793,7 @@ Future<void> main() async {
     await shot('$_kRun/$_kLeg/00-entry.png');
 
     // ── 身份入口（真实 UI 路径）──
-    var username = '';
+    const username = '';
     var enteredVia = 'session';
     if (_kLeg == 'part1' &&
         find.byType(DashboardScreen).evaluate().isNotEmpty &&
@@ -803,7 +804,7 @@ Future<void> main() async {
       recordStep('client_logout_clean_run', outOk,
           outOk
               ? 'UI logout (profile→退出登录→确认); app-own session cleared'
-              : 'UI logout FAILED');
+              : 'UI logout FAILED',);
       if (!outOk) {
         throw StateError(
             'session isolation failed: app-side session survived, '
@@ -824,9 +825,6 @@ Future<void> main() async {
         guestOk = await waitUntil(
           tester,
           () => find.byType(DashboardScreen).evaluate().isNotEmpty,
-          // auth 5.25s 实测 + 内存高压下 hydration 慢（r1 attempt3：12s 窗口
-          // 全部错过而 dashboard 其后已渲染）→ 30s
-          timeout: const Duration(seconds: 30),
         );
         if (guestOk) break;
         await safeSettle(tester);
@@ -844,7 +842,6 @@ Future<void> main() async {
         guestOk = await waitUntil(
           tester,
           () => find.byType(DashboardScreen).evaluate().isNotEmpty,
-          timeout: const Duration(seconds: 30),
         );
         if (guestOk) enteredVia = 'guest_late_render';
       }
@@ -853,18 +850,17 @@ Future<void> main() async {
       await safeSettle(tester);
     } else {
       recordStep('identity_entry', true,
-          'session persisted (no login screen) — real reopen continuation');
+          'session persisted (no login screen) — real reopen continuation',);
     }
 
     await waitUntil(
       tester,
       () => find.byType(DashboardScreen).evaluate().isNotEmpty,
-      timeout: const Duration(seconds: 30),
     );
     await safeSettle(tester);
     await shot('$_kRun/$_kLeg/01-dashboard.png');
     recordStep('app_launch', true,
-        'elapsedMs=${DateTime.now().difference(t0).inMilliseconds}');
+        'elapsedMs=${DateTime.now().difference(t0).inMilliseconds}',);
 
     if (_kLeg == 'part1') {
       // ── ① 接续面（冷启首页）：resume strip 状态 + 主 CTA ──
@@ -899,7 +895,7 @@ Future<void> main() async {
       if (!dashOk) {
         await dumpTexts(tester, 'dashboard-never-reached');
         recordStep('wizard_open', false,
-            'dashboard never reached; part1 downstream skipped');
+            'dashboard never reached; part1 downstream skipped',);
       }
       if (dashOk) {
 
@@ -914,7 +910,7 @@ Future<void> main() async {
           '${anchorOk ? 'ready' : 'NOT created (hybrid anchor will fail)'}');
       if (anchorOk) {
         final fixtureResult = await testTester.runAsync<String>(
-              () => uploadFixtureDocument(),
+              uploadFixtureDocument,
             ) ??
             'runAsync_null';
         // ignore: avoid_print
@@ -932,7 +928,6 @@ Future<void> main() async {
           await waitUntil(
             tester,
             () => find.byType(DashboardScreen).evaluate().isNotEmpty,
-            timeout: const Duration(seconds: 30),
           );
         }
       }
@@ -1003,7 +998,7 @@ Future<void> main() async {
         await dumpTexts(tester, 'start-ai-cta-missing');
       }
       recordStep('wizard_open', wizardUp,
-          '和 AI 定目标 CTA→J-01 wizard ${wizardUp ? 'opened' : 'NOT reached'}');
+          '和 AI 定目标 CTA→J-01 wizard ${wizardUp ? 'opened' : 'NOT reached'}',);
       if (wizardUp) {
         await safeSettle(tester);
         await shot('$_kRun/$_kLeg/09-wizard-intent.png');
@@ -1041,7 +1036,7 @@ Future<void> main() async {
           await shot('$_kRun/$_kLeg/10-wizard-intent-result.png');
           await dumpTexts(tester, 'wizard-intent-result');
           recordStep('wizard_intent_analyzed', analyzed,
-              'real LLM intent analysis returned=$analyzed');
+              'real LLM intent analysis returned=$analyzed',);
           if (analyzed) {
             if (find
                 .byKey(const ValueKey('goal-intent-confirm-step'))
@@ -1091,7 +1086,7 @@ Future<void> main() async {
                   matching: find.byType(TextField),
                 );
                 if (fields.evaluate().length >= 2) {
-                  final goalText = kIntentText;
+                  const goalText = kIntentText;
                   await tester.enterText(
                     fields.at(0),
                     goalText.length > 40 ? goalText.substring(0, 40) : goalText,
@@ -1361,7 +1356,7 @@ Future<void> main() async {
             }
             if (createCta != null) {
               try {
-                await tester.ensureVisible(createCta!);
+                await tester.ensureVisible(createCta);
               } catch (_) {}
               clicks[0]++;
               await tester.tap(createCta, warnIfMissed: false);
@@ -1450,7 +1445,7 @@ Future<void> main() async {
             await shot('$_kRun/$_kLeg/10b-task-list-with-row.png');
             await dumpTexts(tester, 'task-list-after-create');
             recordStep('task_created_via_ui', rowVisible,
-                'task "$_kTaskTitle" via list CTA form; row visible=$rowVisible');
+                'task "$_kTaskTitle" via list CTA form; row visible=$rowVisible',);
             if (rowVisible) {
               final row = find.textContaining(_kTaskTitle);
               try {
@@ -1509,7 +1504,7 @@ Future<void> main() async {
           .isNotEmpty;
       if (!execOk) {
         recordStep('execution_surface_not_reached', false,
-            'downstream stuck/correction/hybrid legs skipped');
+            'downstream stuck/correction/hybrid legs skipped',);
       }
       if (execOk) {
 
@@ -1589,7 +1584,7 @@ Future<void> main() async {
         await shot('$_kRun/$_kLeg/12-stuck-help-sheet.png');
         await dumpTexts(tester, 'stuck-help-sheet');
         recordStep('task_stuck', sheetOk,
-            'markTaskStuck via client FAB; help sheet visible=$sheetOk');
+            'markTaskStuck via client FAB; help sheet visible=$sheetOk',);
       } else {
         recordStep('task_stuck', false, 'stuck-help-fab not found');
       }
@@ -1599,7 +1594,7 @@ Future<void> main() async {
       var journeyTapped = false;
       for (var r = 0; r < 3 && !journeyTapped; r++) {
         final jBtn = find.byKey(const Key('stuck-help-journey-button'));
-        Finder? target = jBtn.evaluate().isNotEmpty ? jBtn : null;
+        var target = jBtn.evaluate().isNotEmpty ? jBtn : null;
         target ??= primaryButton(['让 Sparkle 一步步帮我理']);
         if (target == null) break;
         try {
@@ -1636,7 +1631,7 @@ Future<void> main() async {
         await dumpTexts(tester, 'stuck-journey');
         await dumpSemantics('stuck-journey');
         recordStep('stuck_journey_payload', ready,
-            'server-derived clarification payload ready=$ready');
+            'server-derived clarification payload ready=$ready',);
         // 澄清问点选即答（有选项时答第一项——真实用户操作）
         final qHeader = textAny(['先说清一件事']);
         if (qHeader != null) {
@@ -1680,13 +1675,12 @@ Future<void> main() async {
         final scopeOk = await waitUntil(
           tester,
           () => textAny(['仅本次', '保存为偏好']) != null,
-          timeout: const Duration(seconds: 30),
         );
         await safeSettle(tester);
         await shot('$_kRun/$_kLeg/16-scope-choice.png');
         await dumpTexts(tester, 'scope-choice');
         recordStep('correction_submitted', scopeOk,
-            'semantic correction accepted; scope cards visible=$scopeOk');
+            'semantic correction accepted; scope cards visible=$scopeOk',);
 
         // 仅本次：调整这次行动（不动长期偏好）
         final thisTimeOk = await revealAndTap(
@@ -1726,7 +1720,7 @@ Future<void> main() async {
         print('Q01_ADJUSTED_MINUTES $finalMinutes');
         await shot('$_kRun/$_kLeg/18-minutes-set.png');
         recordStep('minutes_adjusted', finalMinutes == 15,
-            'adjusted=$finalMinutes target=15');
+            'adjusted=$finalMinutes target=15',);
 
         // 生成调整对照（服务端 diff）
         final proposalOk = await revealAndTap(
@@ -1764,20 +1758,20 @@ Future<void> main() async {
           await dumpTexts(tester, 'committed');
           await dumpSemantics('committed');
           recordStep('calibration_committed', committed,
-              'receipt-gated success visible=$committed');
+              'receipt-gated success visible=$committed',);
         } else {
           recordStep('calibration_committed', false, 'confirm button missing');
         }
       } else {
         recordStep('correction_submitted', false,
-            'calibration input field not found (恒渲染违约?)');
+            'calibration input field not found (恒渲染违约?)',);
       }
 
       // 关 sheet：点 modal barrier（sheet 上方空白区）+ 下滑兜底
       await tester.tapAt(const Offset(30, 60));
       await tester.pump(const Duration(milliseconds: 600));
       await tester.drag(
-          find.byType(Scrollable).last, const Offset(0, 300));
+          find.byType(Scrollable).last, const Offset(0, 300),);
       await safeSettle(tester, const Duration(seconds: 4));
       final sheetGone = find
           .byKey(const Key('recovery-calibration-section'))
@@ -1827,7 +1821,6 @@ Future<void> main() async {
                     .byKey(const ValueKey('hybrid-journey-ready'))
                     .evaluate()
                     .isNotEmpty,
-            timeout: const Duration(seconds: 30),
           );
           if (attempt == 0) {
             await safeSettle(tester);
@@ -1861,7 +1854,7 @@ Future<void> main() async {
             // 可能是整行点选的自定义源行：点第一个列表项
             await revealAndTap(
               tester,
-              find.textContaining(RegExp(r'(来源|source)')),
+              find.textContaining(RegExp('(来源|source)')),
             );
           }
           await shot('$_kRun/$_kLeg/23-hybrid-source-selected.png');
@@ -1886,12 +1879,11 @@ Future<void> main() async {
           await dumpTexts(tester, 'hybrid-outcome');
           await dumpSemantics('hybrid-outcome');
           recordStep('hybrid_outcome_stage', outcomeReady,
-              'outcome stage visible=$outcomeReady');
+              'outcome stage visible=$outcomeReady',);
           if (outcomeReady) {
             final confirmBtn = await tapWhenVisible(
               tester,
               () => primaryButton(['确认交付', '完成', '确认']),
-              timeout: const Duration(seconds: 20),
             );
             final done = await waitUntil(
               tester,
@@ -1908,7 +1900,7 @@ Future<void> main() async {
             await dumpTexts(tester, 'hybrid-done');
             await dumpSemantics('hybrid-done');
             recordStep('hybrid_done', done || confirmBtn,
-                'delivery confirmed; done surface=$done');
+                'delivery confirmed; done surface=$done',);
           }
         }
       } // dashOk guard：上游身份入口失败时下游整体跳过
@@ -1951,7 +1943,7 @@ Future<void> main() async {
               : 'ready_or_other'}');
       // 纠正后的时长是否可见（预计时长 15 分钟）——首页/执行面任意出现即计数
       final minutesVisible =
-          find.textContaining(RegExp('15\\s*分钟')).evaluate().isNotEmpty;
+          find.textContaining(RegExp(r'15\s*分钟')).evaluate().isNotEmpty;
       final goalVisible =
           find.textContaining(_kGoalTitle).evaluate().isNotEmpty;
       // ignore: avoid_print
@@ -1973,11 +1965,11 @@ Future<void> main() async {
       await dumpTexts(tester, 'reopen-task-exec');
       await dumpSemantics('reopen-task-exec');
       final minutesOnTask =
-          find.textContaining(RegExp('15\\s*分钟')).evaluate().isNotEmpty;
+          find.textContaining(RegExp(r'15\s*分钟')).evaluate().isNotEmpty;
       // ignore: avoid_print
       print('Q01_REOPEN_TASKS minutes15Visible=$minutesOnTask');
       recordStep('reopen_minutes_persisted', minutesOnTask,
-          'estimated 15min visible after real restart=$minutesOnTask');
+          'estimated 15min visible after real restart=$minutesOnTask',);
     }
 
     File('$_kShotDest/q01_${_kRun}_${_kLeg}_steps.json')
@@ -1990,7 +1982,7 @@ Future<void> main() async {
         'steps': steps,
         'failures': failures,
         'clicks': clicks[0],
-      }, toEncodable: (o) => o.toString()));
+      }, toEncodable: (o) => o.toString(),),);
   });
 }
 
