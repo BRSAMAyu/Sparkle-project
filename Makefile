@@ -1,5 +1,17 @@
 .PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke openclaw-ready openclaw-smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance local-signoff-preflight local-final-signoff auth-test community-test file-pipeline-test worker-test china-mirrors-setup mobile-setup-china pip-install-china uv-install-china mobile-build-china mobile-build-intl mobile-build-china-ios mobile-build-intl-ios init-minio-buckets integration-test e2e-multiturn
 
+# FIX-577: pin the compose project name so every docker compose call made via
+# make (dev-up / celery-up / up.sh / supervisor restarts) lands volumes under
+# the same sparkle-project_ prefix regardless of checkout directory — a
+# worktree would otherwise default its project to its own dir name and drift
+# volumes off the prefix that scripts/dev/up.sh's ownership gate (FIX-557/563)
+# and scripts/ops/service_supervisor.py check for. `?=` keeps an explicit
+# external COMPOSE_PROJECT_NAME override working; a value set in .env (loaded
+# below) also wins. Red line: in the main checkout this is behavior-identical
+# to the pre-pin default (dir name Sparkle-project lowercases to
+# sparkle-project), so volume names are unchanged — data-plane zero-migration.
+export COMPOSE_PROJECT_NAME ?= sparkle-project
+
 # Load environment variables from .env (optional — won't error if missing)
 -include .env
 

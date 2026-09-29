@@ -5,7 +5,7 @@
 | 脚本 | 用途 |
 |---|---|
 | `setup_env.sh` | 一键安装本地开发环境依赖（支持 `--skip-flutter`） |
-| `start_celery.sh` | 快速拉起 Celery 服务组（worker/beat/flower） |
+| `start_celery.sh` | ⛔ 已弃用（FIX-577）：FIX-563 项目名/容器名分化后 `--network sparkle-flutter_default` 死债致全程 fail-loud，能力面为 `make celery-up` 严格子集（少 glm_batch、硬编码 change-me），标弃不修；改用 `make celery-up`（`FLOWER_ENABLE=1` 加 flower）或 `docker compose -f docker-compose.celery.yml up -d` |
 | `create_test_user.py` | 创建测试用户（真机联调用，见 `backend/docs/REAL_DEVICE_INTEGRATION_TEST.md`） |
 | `v4_u11_two_account_scenario.py` | V4-U11：双真实账号场景驱动（分享/撤回/重连 + 单人完整行动 + 单/多实例实时边界，对真实引擎进程跑 HTTP+WS；结果 JSON → `--out`；证据副本见 `v4/evidence/V4-U11/two_account_scenario.json`） |
 | `check_settings.py` | 检查 backend 配置项完整性 |

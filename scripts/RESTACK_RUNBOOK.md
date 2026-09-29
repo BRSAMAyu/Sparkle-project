@@ -2,7 +2,7 @@
 
 > 适用面：本机 dev 栈（`docker-compose.yml`）因 Docker Desktop 重启、容器灭失后的重建。
 > 不覆盖云端生产部署——那条路走 `scripts/deploy/bootstrap.sh` 与 `deploy/ROLLBACK.md`。
-> 来源：FIX-557（2026-09-28 事故复盘，wt815 落册）+ FIX-563（2026-09-29 容器名单侧分化落实施工）。
+> 来源：FIX-557（2026-09-28 事故复盘，wt815 落册）+ FIX-563（2026-09-29 容器名单侧分化落实施工）+ FIX-577（2026-09-28 COMPOSE_PROJECT_NAME 钉死与 -p 纪律落地）。
 > 登记见 `scripts/README.md`。
 
 ## FIX-563 后的两仓容器名对照表（权威）
@@ -25,6 +25,7 @@
 ## 铁律（任何重建前必读）
 
 - **永远先显式 project 名**：跨仓/脚本化操作一律带 `-p`（本仓默认 project=目录名 `sparkle-project`，sparkle-cosmos 同理为 `sparkle-cosmos`）。`docker compose -p <project> ps|up|down|logs` 永远只在声明的项目内动作；裸 `docker <动词> <容器名>` 是全局命名空间操作，跨仓误击的根源，脚本里禁止裸调他仓名称。
+- **FIX-577 注记（钉死已落地）**：`COMPOSE_PROJECT_NAME` 已由 Makefile 顶部 `export COMPOSE_PROJECT_NAME ?= sparkle-project` 钉死（`scripts/dev/up.sh` 自身同样导出）——**直接 `make` 目标（`make dev-up` / `make celery-up` 等）即安全**：任何 checkout/worktree 下卷前缀恒为 `sparkle-project_`，up.sh 门与 supervisor 预检同读该变量。**手工 compose 命令仍须 `-p sparkle-project` 或先 `export COMPOSE_PROJECT_NAME=sparkle-project`**——worktree 目录名 ≠ `sparkle-project` 时，裸 `docker compose …` 仍会按目录名漂移出 `wtf577_*` 之类的异前缀卷。
 - **分岭检查**（本仓栈健康自证）：
 
   ```bash

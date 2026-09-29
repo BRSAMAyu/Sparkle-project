@@ -21,7 +21,9 @@ into the repo, self-anchoring, testable, limited-retry:
   the volume prefix is not ``sparkle-project_`` — i.e. our uniquely-named
   container (FIX-563) is mounted on a foreign (sparkle-cosmos_*) volume. A
   missing container is NOT a violation: post-FIX-563 names are repo-unique, so
-  absence cannot shadow anyone's data.
+  absence cannot shadow anyone's data. FIX-577: the expected prefix follows
+  ``COMPOSE_PROJECT_NAME`` (default ``sparkle-project``, the value the Makefile
+  pins), so the precheck stays correct in worktree checkouts too.
 - **Alerts** append JSONL to ``artifacts/ops/supervisor_alerts.jsonl``.
 
 Modes:
@@ -47,7 +49,12 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "ops"))
 from supervisor_probe import ProbeState, ServicePolicy, probe_service  # noqa: E402
 
 ALERT_LOG = REPO_ROOT / "artifacts" / "ops" / "supervisor_alerts.jsonl"
-DATA_VOLUME_OWNER_PREFIX = "sparkle-project_"  # FIX-563: this repo's own volumes
+# FIX-577: the expected volume owner prefix follows the pinned compose project
+# name. The Makefile and scripts/dev/up.sh export COMPOSE_PROJECT_NAME
+# (default sparkle-project), so restart actions they drive always manage the
+# project this prefix names; reading the env here keeps the precheck and the
+# actual compose project in agreement in any checkout/worktree.
+DATA_VOLUME_OWNER_PREFIX = os.environ.get("COMPOSE_PROJECT_NAME", "sparkle-project") + "_"
 DATA_CONTAINER = "sparkle_proj_db"  # FIX-563: repo-unique name (was sparkle_db)
 
 

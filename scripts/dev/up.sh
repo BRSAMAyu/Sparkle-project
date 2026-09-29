@@ -8,6 +8,15 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOG_DIR="$ROOT_DIR/artifacts/e2e/logs"
 mkdir -p "$LOG_DIR"
 
+# FIX-577: pin the compose project name (same pin as the Makefile's
+# `export COMPOSE_PROJECT_NAME ?= sparkle-project`). Both the ownership gate
+# below and this script's own `docker compose up` must agree on the project —
+# without the pin a worktree checkout defaults its project to the directory
+# name and drifts volumes off the sparkle-project_* prefix (fail-loud gate
+# die / wrong data plane). Override only if you deliberately restack elsewhere.
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-sparkle-project}"
+COMPOSE_VOLUME_PREFIX="${COMPOSE_PROJECT_NAME}_"
+
 log() { echo "[$(date '+%H:%M:%S')] [up] $*"; }
 die() { echo "[$(date '+%H:%M:%S')] [up] FATAL: $*" >&2; exit 1; }
 
@@ -41,8 +50,8 @@ for dp in "sparkle_proj_db:postgres" "sparkle_proj_redis:redis" "sparkle_proj_mi
     *sparkle-cosmos_*)
       die "$ctr is mounted on a sparkle-cosmos_* volume (cross-repo misownership). Do NOT proceed from this repo — follow scripts/RESTACK_RUNBOOK.md corrective steps."
       ;;
-    *sparkle-project_*)
-      log "$ctr present, volume owned by this repo ($kind) — ownership precheck OK (FIX-563)."
+    *"$COMPOSE_VOLUME_PREFIX"*)
+      log "$ctr present, volume owned by this repo ($kind, prefix ${COMPOSE_VOLUME_PREFIX}) — ownership precheck OK (FIX-563; prefix follows COMPOSE_PROJECT_NAME since FIX-577)."
       ;;
     "")
       # Container absent: with repo-unique names (FIX-563) creating it is always

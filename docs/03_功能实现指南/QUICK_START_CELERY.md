@@ -69,14 +69,13 @@ make celery-status
 open http://localhost:5555
 ```
 
-### 方式 B: 使用启动脚本
+### 方式 B: 使用启动脚本（⛔ 已弃用，FIX-577）
+
+`scripts/devtools/start_celery.sh` 自 FIX-563（项目名/容器名分化）后不可用：`--network sparkle-flutter_default` 为已消亡项目名，全程 fail-loud；其能力面是方式 A `make celery-up` 的严格子集（少 glm_batch worker、硬编码 change-me 凭据），故标弃用不再修复。请使用方式 A。
 
 ```bash
-# 1. 启动基础设施
-make dev-up
-
-# 2. 使用脚本启动 Celery
-bash scripts/devtools/start_celery.sh
+# 弃用写法（仅史录，勿用）：
+# bash scripts/devtools/start_celery.sh
 ```
 
 ---

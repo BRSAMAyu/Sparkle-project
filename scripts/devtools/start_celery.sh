@@ -1,4 +1,27 @@
 #!/bin/bash
+# ⛔ DEPRECATED (FIX-577, 2026-09-28) — DO NOT USE. File kept as history, body
+# intentionally NOT repaired.
+#
+# Dead-debt adjudication (FIX-563R1 发现1 尾巴): since FIX-563 (containers
+# renamed sparkle_*→sparkle_proj_*, compose project finalized as
+# sparkle-project) every `docker run` below fails loud — `--network
+# sparkle-flutter_default` is a project name that no longer exists, and the
+# env URLs reference `sparkle_redis:6379`, which resolves to nothing on this
+# repo's network (service name is `redis`, container `sparkle_proj_redis`).
+#
+# Why deprecate instead of repair: this script's capability face is a strict
+# subset of `make celery-up` — that target additionally starts the glm_batch
+# worker, takes real credentials from .env (this script hardcodes
+# change-me), and runs on the pinned sparkle-project_default network; the
+# declarative equivalent is `docker compose -f docker-compose.celery.yml up
+# -d`. Repairing a third divergent celery entry point would recreate exactly
+# the Makefile/script drift FIX-563R1 flagged.
+#
+# ➜ Use instead:
+#     make celery-up          # worker + glm_batch + beat (FLOWER_ENABLE=1 adds flower)
+#     make celery-status / make celery-stop / make celery-logs-worker
+#     docker compose -f docker-compose.celery.yml up -d   # compose path
+
 # Quick start script for Celery services
 
 echo "🚀 Starting Celery Task Queue System..."
