@@ -30,6 +30,7 @@ from app.models.user_memory_settings import UserMemorySettings
 from app.services.commitment_parser import parse_commitment_due_at, resolve_weekday_anchor
 from app.services.conflict_resolver_service import ConflictCandidate, ConflictResolverService
 from app.services.memory_service import MemoryService
+from app.services.paste_form_gate import PASTE_DEMOTED_CONFIDENCE, detect_paste_form
 from app.services.scene_consolidation_service import SceneConsolidationService
 
 
@@ -482,8 +483,24 @@ class MemoryInferredWriteLaneService:
         与 ``extract_candidate``（只挑最佳一句）互补：明示事实按句独立成
         候选，覆盖 Day0 onboarding「一句一事实」的多句声明形态。置信固定
         0.92 直写档（与显式记忆口令同级）；同一句多信号只取最高优先一类。
+
+        FIX-575 (F2 同修面)：消息呈粘贴/转发形态时（``paste_form_gate``），
+        候选整体降 HYPOTHESIS 档——``declared_fact=False`` + 置信
+        0.62（< MEMORY_INFERRED_MIN_CONFIDENCE），进不了 0.92 直写/即时固化
+        通道（fallback 直写与 working-memory ``promote_entry_now`` 都由
+        ``declared_fact``/置信门拦截），类级边界从「守得住但写入」升级为
+        「不直写」；候选仍留 session 级工作记忆可被用户确认语境观察。外部
+        材料断言（学霸贴自称薄弱/每天30分钟）不得借道明示事实通道固化。
         """
         del user_id  # 保留签名对称；抽取为纯函数，不触库。
+        # FIX-575：粘贴形态门先于逐句扫描（单点，两个消费方共享同一降档）。
+        paste_signal = detect_paste_form(str(user_message or ""))
+        paste_demoted = paste_signal.paste_form
+        if paste_demoted:
+            logger.warning(
+                "FIX-575 paste-form gate: declared-fact candidates demoted to HYPOTHESIS ({}) — " "外部材料断言不直写",
+                paste_signal.describe(),
+            )
         candidates: list[InferredEpisodicCandidate] = []
         seen_keys: set[str] = set()
         for raw_sentence in re.split(r"[。！？!?\n]+", str(user_message or "")):
@@ -511,11 +528,16 @@ class MemoryInferredWriteLaneService:
             if semantic_key in seen_keys:
                 continue
             seen_keys.add(semantic_key)
+            # FIX-575：粘贴形态整批降 HYPOTHESIS——不直写、不即时固化；
+            # evidence_refs schema_version 打降档标记（审计可追）。
+            declared = not paste_demoted
+            confidence = 0.92 if declared else PASTE_DEMOTED_CONFIDENCE
+            schema_version = "stage16.declared_fact.v1" if declared else "stage16.declared_fact.paste_demoted.v1"
             candidates.append(
                 InferredEpisodicCandidate(
                     candidate_text=sentence,
                     subject_type=subject_type,
-                    confidence=0.92,
+                    confidence=confidence,
                     evidence_token=evidence_token,
                     decay_policy=decay_policy,
                     source_lane=self.SOURCE_LANE,
@@ -524,14 +546,14 @@ class MemoryInferredWriteLaneService:
                         {
                             "type": "chat_turn",
                             "id": evidence_token,
-                            "schema_version": "stage16.declared_fact.v1",
+                            "schema_version": schema_version,
                         }
                     ],
                     occurred_at=ensure_naive_utc(occurred_at) or occurred_at,
                     due_at=ensure_naive_utc(due_at),
                     mentioned_entity_hash=None,
                     mentioned_entity_owner_user_id=None,
-                    declared_fact=True,
+                    declared_fact=declared,
                 )
             )
         return candidates

@@ -17,6 +17,7 @@ from app.core.cache import cache_service
 from app.core.redis_utils import ensure_awaitable
 from app.db.session import AsyncSessionLocal
 from app.services.cognitive_service import CognitiveService
+from app.services.paste_form_gate import detect_paste_form, sentence_has_first_person
 from app.services.profile_write_service import ProfileWriteService
 from app.services.signal_adaptation import recency_weight, weighted_average
 
@@ -523,6 +524,21 @@ class ChatSignalCollector:
         if not message:
             return {}, {}
 
+        # FIX-575 (b) 粘贴形态门（R13）：外部材料（转发/引用/结构化计划文档/
+        # 第二三人称指令）里的偏好指令不得洗成 explicit 用户偏好——P02 红队
+        # F1 实证逐字转发写入三键 conf 0.86-0.92 EXPLICIT 链头。命中即整条
+        # 跳过 explicit 抽取（fail-safe：宁可漏捕获，不可洗白）；用户重述
+        # （第一人称短句）或走 user_state/API 通道不受影响。HYPOTHESIS 候选
+        # 车道：明示事实通道同款降档见 memory_inferred_write_lane。
+        paste_signal = detect_paste_form(message)
+        if paste_signal.paste_form:
+            logger.warning(
+                "FIX-575 paste-form gate: explicit preference extraction suppressed ({}) — "
+                "R13 外部材料不提升为用户偏好",
+                paste_signal.describe(),
+            )
+            return {}, {}
+
         lowered = message.lower()
         updates: dict[str, Any] = {}
         confidence: dict[str, float] = {}
@@ -578,8 +594,14 @@ class ChatSignalCollector:
             updates["feedback_style"] = "step_by_step"
             confidence["feedback_style"] = 0.86 if has_explicit_intent else 0.74
 
-        focus_match = re.search(r"(\d{1,3})\s*(?:minute|min|分钟)", lowered)
-        if has_explicit_intent and focus_match:
+        # FIX-575 (d)：数值偏好必须与第一人称同句共现才可 explicit 化（必要
+        # 条件），且第一人称共现本身即构成数值自述的显式意图（充分条件——
+        # 「我每天只能投入 165 分钟」无 请/希望 等意图词也必须照常捕获，
+        # 铁律回归钉）。「每天只安排15分钟复习」（P02 F1 载荷，文档对读者
+        # 的安排、整句无第一人称）不得落 explicit 档。在原始消息上以
+        # IGNORECASE 重跑（lower() 对个别 Unicode 会变长，偏移须与原文对齐）。
+        focus_match = re.search(r"(\d{1,3})\s*(?:minute|min|分钟)", message, re.IGNORECASE)
+        if focus_match is not None and sentence_has_first_person(message, focus_match.start()):
             minutes = max(5, min(180, int(focus_match.group(1))))
             updates["focus_duration_preference"] = minutes
             confidence["focus_duration_preference"] = 0.88

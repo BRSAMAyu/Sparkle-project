@@ -1,0 +1,54 @@
+SECRET_KEY is only 27 characters. Recommended minimum: 32 characters for production.
+2026-09-29 09:54:24.995 | INFO     | app.core.llm_router:_load_model_configs:931 - XIAOMI_MIMO_API_KEY not configured: xiaomi mimo entries kept out of registry (无 key 不注册); explicit selection falls back to default lane
+2026-09-29 09:54:24.995 | INFO     | app.core.llm_router:_load_model_configs:1088 - LLMRouter initialized with 27 model configs
+2026-09-29 09:54:25.429 | INFO     | app.services.circuit_breaker:__init__:39 - Circuit Breaker initialized: threshold=5, recovery=30s, window=60s
+2026-09-29 09:54:25.600 | INFO     | app.services.llm.concurrency:_get_zhipu_concurrent_limit:92 - ZHIPU concurrent limit: 5 (user_level=0)
+2026-09-29 09:54:25.601 | INFO     | app.services.llm.concurrency:_initialize_runtime:165 - LLMConcurrencyManager initialized with 7 providers
+2026-09-29 09:54:25.602 | ERROR    | app.services.llm.providers:__init__:45 - LLM Provider Initialization Error: api_key is empty for base_url=https://dashscope.aliyuncs.com/compatible-mode/v1
+2026-09-29 09:54:25.629 | WARNING  | app.services.llm_service:_init_with_router:431 - LLM API key not configured, activating demo mode. Set LLM_API_KEY in environment for production.
+2026-09-29 09:54:25.629 | INFO     | app.services.llm_service:_init_with_router:433 - [LLMRouter] generation → qwen3.8-flash (Agent策略路由: generation -> dashscope_standard_thinking [$0.0003/1k, tier=standard])
+2026-09-29 09:54:25.629 | INFO     | app.services.llm_service:_init_with_router:438 - [LLMRouter] GLM extra_body: {'enable_thinking': False}
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+TEST-DBGUARD 警告: 测试进程的 DATABASE_URL 指向演示库形状的串 （无显式 DB 配置，默认构造串）
+TEST-DBGUARD：测试进程拒绝连接演示库
+  位置: backend/tests 会话门 (pytest_configure)
+  DATABASE_URL = postgresql+asyncpg://postgres@127.0.0.1:5432/sparkle
+  判定: postgres 系 URL 且库名恰为 'sparkle'（演示/开发库）。
+  事故背景: pytest 曾经由该 URL 向演示库写入占位数据
+  （journey_milestone_* 账号 / node-* 节点 / r2g2_p101_* 用户）。
+  修复（三选一）:
+    1. 把 DATABASE_URL 指向测试库（约定命名 *_test，如 sparkle_test）；
+    2. 在隔离 worktree 中运行（无 .env，测试自然落在 sqlite/跳过）；
+    3. 仅限 CI 一次性容器栈: 设置 SPARKLE_TEST_DB_ALLOW_NAMED_SPARKLE=1。
+  注意: 迁移测试/集成测试需要真库时，请自建专属测试库，绝不复用演示库。
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+============================= test session starts ==============================
+platform darwin -- Python 3.11.15, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/brsama/code/GitHub/wtF575/backend
+configfile: pyproject.toml
+plugins: locust-2.43.3, cov-7.1.0, timeout-2.4.0, langsmith-0.7.23, asyncio-1.3.0, anyio-4.13.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 2 items
+
+tests/unit/test_f575_p02_probe_before_after.py 2026-09-29 09:54:26.424 | INFO     | app.services.memory_evolution_service:track_memory_change:120 - Tracked memory evolution: e4a9d4d8-ba56-4ced-a663-1cc561b5355e (system_update), confidence_delta=0.900, impact=0.540
+2026-09-29 09:54:26.427 | INFO     | app.services.memory_evolution_service:track_memory_change:120 - Tracked memory evolution: 3e3745d2-7974-47ff-84da-cb0eabfe8f74 (system_update), confidence_delta=0.860, impact=0.516
+2026-09-29 09:54:26.429 | INFO     | app.services.memory_evolution_service:track_memory_change:120 - Tracked memory evolution: 3db8041b-509d-4992-99fe-eccfbda6cc17 (system_update), confidence_delta=0.880, impact=0.528
+2026-09-29 09:54:26.432 | ERROR    | app.core.event_bus:connect:1043 - Failed to connect to Redis: Authentication required.
+2026-09-29 09:54:26.432 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=profile.preference.updated stream=sparkle_events attempt=1/3 delay_ms=200 error=redis_not_connected
+2026-09-29 09:54:26.634 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=profile.preference.updated stream=sparkle_events attempt=2/3 delay_ms=400 error=redis_connect_cooldown (0.2s < 5.0s)
+2026-09-29 09:54:27.036 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=profile.preference.updated stream=sparkle_events attempt=3/3 delay_ms=800 error=redis_connect_cooldown (0.6s < 5.0s)
+2026-09-29 09:54:27.838 | ERROR    | app.core.event_bus:publish:1113 - Failed to publish event profile.preference.updated: redis_connect_cooldown (1.4s < 5.0s)
+2026-09-29 09:54:27.852 | ERROR    | app.core.event_bus:publish:1128 - Failed to persist publish failure DLQ entry for profile.preference.updated: password authentication failed for user "postgres"
+2026-09-29 09:54:27.854 | INFO     | app.services.cognitive_service:create_fragment:205 - Creating fragment 0a046ca5-38a9-4e54-a2a2-ca8908d1e15d for user f7a40e63-5b22-43f9-a83e-028aa34a005e: 【转发】高效备考计划（来自学习... [len=95]
+2026-09-29 09:54:27.855 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=cognitive.fragment.created stream=sparkle_events attempt=1/3 delay_ms=200 error=redis_connect_cooldown (1.4s < 5.0s)
+2026-09-29 09:54:28.055 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=cognitive.fragment.created stream=sparkle_events attempt=2/3 delay_ms=400 error=redis_connect_cooldown (1.6s < 5.0s)
+2026-09-29 09:54:28.457 | WARNING  | app.core.event_bus:publish:1102 - Retrying event publish: event_type=cognitive.fragment.created stream=sparkle_events attempt=3/3 delay_ms=800 error=redis_connect_cooldown (2.0s < 5.0s)
+2026-09-29 09:54:29.259 | ERROR    | app.core.event_bus:publish:1113 - Failed to publish event cognitive.fragment.created: redis_connect_cooldown (2.8s < 5.0s)
+2026-09-29 09:54:29.273 | ERROR    | app.core.event_bus:publish:1128 - Failed to persist publish failure DLQ entry for cognitive.fragment.created: password authentication failed for user "postgres"
+[BEFORE-STATE] explicit three keys written: ai_verbosity=detailed feedback_style=step_by_step focus_duration_preference=15
+.2026-09-29 09:54:29.634 | WARNING  | app.services.chat_signal_collector:_extract_explicit_preferences:535 - FIX-575 paste-form gate: explicit preference extraction suppressed (forward=True structure=False second_person=True long_text=False fp_dominant=False paste_form=True) — R13 外部材料不提升为用户偏好
+[AFTER-STATE] defaults intact: ai_verbosity=balanced feedback_style=balanced focus_duration_preference=25
+.
+
+============================== 2 passed in 4.49s ===============================

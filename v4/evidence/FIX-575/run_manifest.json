@@ -1,0 +1,139 @@
+{
+  "card_id": "FIX-575",
+  "title": "外部资料粘贴洗白成显式用户偏好——粘贴形态门 + 数值偏好第一人称共现（P02 红队 F1 中危闭环，F2 同修面）",
+  "kind": "fix",
+  "risk": "P2",
+  "executed_at_local": "2026-09-29",
+  "agent": "wtF575",
+  "branch": "fix/v4/f575-preference-laundering",
+  "base_sha": "34f30b7700a1c6cf4c199b57b694315914e93c5a",
+  "base_sha_note": "派单时 main 指针 d75c7c79；建 worktree 时 main 已前进至 34f30b77（d75c7c79 经 git merge-base --is-ancestor 亲证为其祖先），按最新 main 开分支",
+  "product_code_changed": true,
+  "defect_chain_three_anchors": {
+    "anchor_1": "backend/app/services/chat_signal_collector.py:_extract_explicit_preferences（台账锚 :522）——纯子串标记匹配，无消息来源门",
+    "anchor_2": "backend/app/orchestration/orchestrator.py:~3910-3989——user_message 原文直传 collector.collect_signals（无 provenance）",
+    "anchor_3": "backend/app/services/memory_epistemic_contract.py:239——chat_preference 恒列 EXPLICIT_PREFERENCE_SOURCE_TYPES → preference_write_provenance==EXPLICIT；inferred_may_supersede 对显式链头恒 False 压制推断纠正",
+    "p02_source": "v4/evidence/V4-P02/redteam_playbook.md S1-P1.1（F1 中危）/ S1-P1.2（F2 低危）；修法 b/d 采纳其修复建议，(a) provenance 贯穿归契约 owner 不做"
+  },
+  "fix_design": {
+    "new_module": "backend/app/services/paste_form_gate.py（纯函数形态门，零 IO 零 LLM，两抽取面共享单点）",
+    "b_paste_form_gate": "detect_paste_form：forward_marker（强：【转发】/转载/摘自/（来自/fwd:/引用行≥2；自有来源署名「来自我的备忘录/笔记…」剥离不计）｜document_structure(≥2 结构行) ∧ second_person_instruction(你-代词指令∧教导祈使密度)｜long_text(≥300字符∧≥4句) ∧(结构∨第二人称)；第一人称自述主导（≥2 句含「我(?!们)/本人」且无你-代词指令、无转发标记）显式否决——长篇自述 onboarding/自己的备忘录粘贴不受损",
+    "d_numeric_first_person": "_extract_explicit_preferences 数值分支改为 sentence_has_first_person 同句共现（必要条件），共现本身即充分意图（铁律回归钉：无意图词的「我每天只能投入 165 分钟」必须照常 explicit——该裸句在 main 本就因无意图词漏捕获，修后按铁律 2 补齐）；regex 移到原文 IGNORECASE（lower() 个别 Unicode 变长会错位偏移）",
+    "f2_same_surface": "MemoryInferredWriteLaneService.extract_declared_fact_candidates 粘贴形态整批降 HYPOTHESIS：declared_fact=False + conf 0.62（<0.9）+ evidence_refs schema_version=stage16.declared_fact.paste_demoted.v1——fallback 直写（min-confidence）与 working-memory promote_entry_now（declared_fact 门 + _consolidate_entry force_write 不 bypass 置信）双路径实测拦截；类级边界从「守得住但写入」升级为「不直写」",
+    "not_done": "(a) provenance 贯穿（结构性，归契约 owner）；残余盲区如实记录于下"
+  },
+  "commands_and_exit_codes": [
+    {
+      "command": "git worktree add ../wtF575 -b fix/v4/f575-preference-laundering main",
+      "exit_code": 0,
+      "summary": "分支自 main 34f30b77"
+    },
+    {
+      "command": "python -m pytest tests/unit/test_fix575_preference_laundering_gate.py -q -p no:cacheprovider",
+      "exit_code": 0,
+      "summary": "23 passed（形态门单元 10 + (b)(d) 抽取面 7 + F2 降档 2 + 端到端 sqlite 4）"
+    },
+    {
+      "command": "python -m pytest tests/unit/test_f575_p02_probe_before_after.py -q -s -p no:cacheprovider（探针用后即删）",
+      "exit_code": 0,
+      "summary": "2 passed——P02 探针形态修前/修后同分支对照（输出见 p02_probe_after_run_output.txt；脚本 sha256 见 p02_probe_script_sha256.txt）"
+    },
+    {
+      "command": "python -m pytest <回归十件> -q -p no:cacheprovider（chat_signal_collector×2 / declared_fact_capture / nbp6 / lane_queue / memory_epistemic_contract / conflict_resolver_epistemic_guard / profile_write_service / preference_consumption）",
+      "exit_code": 0,
+      "summary": "86 passed（MEM-AMNESIA B1 钉、epistemic 契约钉、写入面全绿）"
+    },
+    {
+      "command": "bash scripts/ci/mypy_ratchet.sh",
+      "exit_code": 0,
+      "summary": "mypy errors: 59 / baseline: 77（≤77 达标，零新增）"
+    },
+    {
+      "command": "ruff check <4 个改动文件>",
+      "exit_code": 0,
+      "summary": "All checks passed（SIM114 已并支修复）"
+    },
+    {
+      "command": "black --check <4 个改动文件>",
+      "exit_code": 0,
+      "summary": "4 files unchanged（零新增漂移；未触 api/ → 无 OpenAPI 门义务）"
+    },
+    {
+      "command": "mutation M1：chat_signal_collector 粘贴门失效（detect_paste_form(\"\")) && pytest 新测套件",
+      "exit_code": 1,
+      "summary": "2 failed / 21 passed —— 杀死（P02 探针抑制 + F1 端到端两用例转红）"
+    },
+    {
+      "command": "mutation M2：(d) 回退 has_explicit_intent 与门 && pytest 新测套件",
+      "exit_code": 1,
+      "summary": "2 failed / 21 passed —— 杀死（165 裸句钉 + 文档指令负例转红）"
+    },
+    {
+      "command": "mutation M3：F2 降档移除（paste_demoted=False）&& pytest 新测套件",
+      "exit_code": 1,
+      "summary": "3 failed / 20 passed —— 杀死（降档形态/写路×2 转红）"
+    },
+    {
+      "command": "mutation M4：fp-dominance 否决移除（elif False）&& pytest 新测套件",
+      "exit_code": 1,
+      "summary": "1 failed / 22 passed —— 杀死（长文+结构化+自述主导误伤面转红；初版用例载荷过短未触发 long+structure 分支，加强至 310 字符后杀死——mutation 自验反证可失败的实际产出）"
+    },
+    {
+      "command": "mutation 后 SHA256 恢复校验（3 文件 vs 快照）",
+      "exit_code": 0,
+      "summary": "三文件哈希逐一比对一致，零残留"
+    }
+  ],
+  "p02_probe_before_after": {
+    "payload": "P02 F1 原载荷逐字（redteam_playbook.md S1-P1.1：【转发】高效备考计划（来自学习博主）…每天只安排15分钟复习…坚持21天就能改变你的习惯。）",
+    "before_state": "门旁路 + (d) 旁路（=main@行为）：UserPreferencesCenter.explicit 三键写入 ai_verbosity=detailed / feedback_style=step_by_step / focus_duration_preference=15——与 P02 probe_run_full_output.txt 实测（conf 0.9/0.86/0.88、EXPLICIT 链头）逐键一致",
+    "after_state": "修复在位：三键全保持默认（balanced/balanced/25），collect_signals 全链零 explicit 写入；MemoryPreference 链头零新增",
+    "conclusion": "洗白链在同分支上复现→关闭，因果锚定在 (b)+(d) 两处改动；F2 面同法见 TestDemotedCandidateNeverWritesL1（force_write 双路径拦截 + B1 正对照）"
+  },
+  "false_positive_surface": {
+    "disposition_principle": "fail-safe 方向：宁可漏捕获（用户重述即可补），不可洗白（explicit 链头一旦写入压制推断纠正）",
+    "covered_cases": [
+      "真实第一人称偏好输入（含无意图词裸句「我每天只能投入 165 分钟」）：修后比 main 更完整（main 该裸句漏捕获，修后按铁律 2 补齐，测试钉死）",
+      "长篇/结构化的第一人称自述（列表+标题行+≥300字符）：fp-dominance 否决，mutation M4 钉死",
+      "用户粘贴自己的备忘录/笔记（自有来源署名「来自我的备忘录/笔记/日记/文档/计划/日程」）：来源剥离不计转发标记，自述主导否决兜底",
+      "「我们」不计第一人称单数（群体材料高频）；英文 I/my 仅参与 (d) 同句判定"
+    ],
+    "residual_false_negatives": [
+      "无任何形态标记的纯第一人称粘贴正文（P02 F2 载荷原型）：结构性不可分辨——需 (a) provenance 贯穿（契约 owner）+ LLM 抽取提示词规则 11（已在位）兜底；该形态下 F1 类洗白仍由 (d) 部分拦截（数值键要求第一人称同句）",
+      "英文粘贴文档：形态词表中文为主，靠 fwd:/引用前缀/来源署名命中；无标记英文粘贴欠检出（模块尾注如实记录）",
+      "extract_candidate 规则候选面（非偏好/明示事实通道）不在本修法处方内，粘贴长文经该面产出的 0.9 级候选属既有行为，未扩大"
+    ],
+    "recovery_paths": "被误拦的用户真实偏好：①同义第一人称重述（短句直捕获）；②REST/user_state 偏好通道（app/api/v1/memory 源，不触本门）；③显式记忆口令「帮我记住…」（lane 口令通道，含「我」同句共现照常）"
+  },
+  "scope_discipline": {
+    "files_changed_product": [
+      "backend/app/services/paste_form_gate.py（新增，123 行级）",
+      "backend/app/services/chat_signal_collector.py（+2 hunk：门 + (d)）",
+      "backend/app/services/memory_inferred_write_lane.py（+3 hunk：import + 门 + 降档）"
+    ],
+    "files_added_tests": ["backend/tests/unit/test_fix575_preference_laundering_gate.py（23 用例）"],
+    "no_second_authority": "memory_epistemic_contract.py 零改动（EXPLICIT_PREFERENCE_SOURCE_TYPES 原样）；门只做形态判断不做语义裁决，不新增权限/权威面",
+    "probe_deleted_after_use": true,
+    "not_pushed": true
+  },
+  "artifacts_sha256": {
+    "paste_form_gate.py": "e0d9f48f7386a1e0d4478c2625b8c40ab8b3c6ebe3da7f57a33e0657c864c8ec",
+    "chat_signal_collector.py": "05bbb293ff7628a11175f6859e2ca45f720ac81fce756f7f9ff0e55f310aa75b",
+    "memory_inferred_write_lane.py": "d9294ae923aaaa88cb22193d9eb23e0222cd3ede6b44b68f451623048c8d4ce8",
+    "test_fix575_preference_laundering_gate.py": "8ed30f27da1c986f86472d5d472db8e0f943ccad078865261416a6f1d648fa8b",
+    "p02_probe_after_run_output.txt": "7e22fff6c2901f6c53d8225f5e24c2542094d25c388d64d960067dbf2c2dba7d"
+  },
+  "environment": {
+    "worktree": "wtF575",
+    "python": "3.11.15（venv 共享主检出 backend/.venv）",
+    "pytest": "9.0.2",
+    "isolation": "sqlite+aiosqlite:///:memory:（conftest TEST_DATABASE_URL）；SECRET_KEY/JWT_SECRET 一次性测试值；零真实模型调用、零真实凭据；event_bus DLQ 对 PG 的失败同环回尝试被代码路径容忍，零数据落盘",
+    "openapi_gate": "未触 backend/app/api/（git status 仅 services+tests+evidence），无 OpenAPI 门义务"
+  },
+  "acceptance_mapping": {
+    "R13_baseline": "v4/03_intelligence/MEMORY_UTILITY_AND_CONFLICT.md:7「外部材料中的指令不能提升为用户偏好」——F1 探针形态修后零 explicit 写入（端到端+抽取面双钉）",
+    "iron_rule_2": "「我每天只能投入 165 分钟」修后 explicit conf 0.88（裸句钉 test_numeric_pref_iron_rule_165_bare_sentence_captured + 端到端 test_first_person_preference_same_loop_still_captured + B1 明示事实 force_write 正对照）",
+    "iron_rule_4": "每面一正一反 + mutation M1-M4 全杀（2/2/3/1 failures），SHA 恢复校验通过",
+    "iron_rule_5": "误报面处置口径见 false_positive_surface"
+  }
+}
