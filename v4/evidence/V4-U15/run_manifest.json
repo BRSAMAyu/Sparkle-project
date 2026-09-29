@@ -1,0 +1,139 @@
+{
+  "task": "V4-U15",
+  "title": "长尾家族清点与风格一致性闭合",
+  "date": "2026-09-28",
+  "executor": "V4-U15（worktree /Users/brsama/code/GitHub/wtU15，分支 agent/v4/u15，自 main@90275dc4 开出）",
+  "source_sha_base": "90275dc4（worktree checkout HEAD；开卡时 main）",
+  "source_sha_head": "6eaf6b3ac91a52d3667e5dc837b8d91567fba68c（实现 commit；证据文件在其后的证据 commit）",
+  "no_push": true,
+  "toolchain": {
+    "flutter": "3.41.3 stable（同 S01/S03 会话口径）",
+    "host": "darwin 25.6.0 arm64",
+    "gen_note": "mobile/lib/gen 为 gitignored 实体目录：自主检出 cp -R 复制进 worktree（S01/F06 同口径）；flutter pub get 零 l10n 再生成漂移（L10N-REGEN-PARITY 复跑 OK）；本卡零 l10n 面"
+  },
+  "locks": {
+    "required": ["ui-longtail"],
+    "note": "sparkle-coordination-v2 私有远端未配置于本机（git remote 无此远端），锁租约登记 NOT_RUN（S01 limitation #1.3 同环境性）；冲突面以 diff 自证：唯一 diff = 1 测试新文件，不含 RF-06 三文件（dashboard_screen/compact_status_bar/task_execution_screen）、不含 app/routes.dart、backend/、proto/、tokens_v2、gen 产物；在航卡 U02/U06/U13 文件零触碰"
+  },
+  "commands": [
+    {
+      "id": 1,
+      "purpose": "创建工作树",
+      "command": "git worktree add ../wtU15 -b agent/v4/u15 main",
+      "exit_code": 0
+    },
+    {
+      "id": 2,
+      "purpose": "依赖解析（新 worktree 无 .dart_tool）+ 生成目录补位",
+      "command": "cp -R Sparkle-project/mobile/lib/gen wtU15/mobile/lib/gen && cd mobile && flutter pub get",
+      "exit_code": 0,
+      "note": "Got dependencies! 2 packages discontinued（既有口径）；零 l10n 漂移"
+    },
+    {
+      "id": 3,
+      "purpose": "repeat 动效清点（FIX-569/S01R1 强制移交：复跑数 49 为准）",
+      "command": "grep -rln \"\\.repeat(\" mobile/lib --include=\"*.dart\" | sort | wc -l；git grep -l \"\\.repeat(\" d57a7aa8 -- mobile/lib | sort（S01 base 对照）",
+      "exit_code": 0,
+      "note": "本卡复跑 = 49 文件/91 调用点；S01 base d57a7aa8 复跑 = 49 文件，路径集与本卡 1:1 零漂移（S01 自述 48 少记 1 与其一审 R1 结论一致）；门控代理分级 = 22 文件有门引用/27 无门引用"
+    },
+    {
+      "id": 4,
+      "purpose": "43 模块清点矩阵比对（MODULE_MATRIX.json canonical_count=43 vs features 目录）",
+      "command": "python3 -c \"json.load(v4/01_product/MODULE_MATRIX.json) vs os.listdir(mobile/lib/features)\"",
+      "exit_code": 0,
+      "note": "43 矩阵模块 ↔ 目录 1:1；唯一额外目录 learning = V4-U10 学习旅程承载（非第 44 模块，onboarding_note 判例同构）；零幽灵零遗漏"
+    },
+    {
+      "id": 5,
+      "purpose": "静态检查",
+      "command": "cd mobile && flutter analyze --no-pub",
+      "exit_code": 0,
+      "note": "No issues found!（全库；收尾复跑 18.3s 口径）"
+    },
+    {
+      "id": 6,
+      "purpose": "本卡新守卫套件（14 用例：A 清点 2 + B repeat 棘轮 2 + C LABS 不可达 6 + D 主题单一 2 + E 调色板冻结 2；每验收面一正一反）",
+      "command": "cd mobile && flutter test test/widget/u15_longtail_closure_guard_test.dart",
+      "exit_code": 0,
+      "note": "+14 全绿；B+ 实录打印「U15 repeat 复跑数 = 49（基线 49）」"
+    },
+    {
+      "id": 7,
+      "purpose": "既有 LABS nav 契约回归（符号级守卫原样全绿）",
+      "command": "cd mobile && flutter test test/widget/nav_decontextualization_contract_test.dart",
+      "exit_code": 0,
+      "note": "+6 全绿（与卡 6 新套合跑 20/20 亦过）"
+    },
+    {
+      "id": 8,
+      "purpose": "长尾模块域回归（seed_library/tools/learning + 路由全覆盖 + U12 奖励边界）",
+      "command": "cd mobile && flutter test test/features/seed_library test/features/tools test/features/learning test/widget/full_route_coverage_test.dart test/widget/rewards_family_boundary_u12_test.dart",
+      "exit_code": 0,
+      "note": "分套实录：8 + 6 + 31 + 25 + 6 = 76 全绿"
+    },
+    {
+      "id": 9,
+      "purpose": "core/design 域回归（S01 动效预算/像素族/a11y/F01 令牌全族）",
+      "command": "cd mobile && flutter test test/core/design/",
+      "exit_code": 0,
+      "note": "+261 全绿"
+    },
+    {
+      "id": 10,
+      "purpose": "UI-TOKENS 冻结棘轮（验收③「原guard棘轮只降不升」现存棘轮面）",
+      "command": "python3 scripts/guards/check_ui_design_tokens_ratchet.py",
+      "exit_code": 0,
+      "note": "PASS — ratchet holds at color=225/275, fontSize=632/727（183 files）；脚本零改动"
+    },
+    {
+      "id": 11,
+      "purpose": "l10n 面守卫（本卡零 l10n 差量佐证）",
+      "command": "python3 scripts/guards/check_l10n_regen_parity.py && python3 scripts/guards/check_i18n_coverage.py",
+      "exit_code": 0,
+      "note": "L10N-REGEN-PARITY OK: 10202 template keys；[i18n-coverage] PASS"
+    }
+  ],
+  "llm_usage": {
+    "actual_model_and_usage": "本卡为纯工程实现（静态清点+守卫钉），无 LLM 调用、无模型产出物；评测/真模型流程不在卡面"
+  },
+  "inventory_matrix_summary": {
+    "module_matrix_canonical_count": 43,
+    "feature_directories": 44,
+    "extra_directory": {
+      "name": "learning",
+      "disposition": "V4-U10 学习旅程承载目录（/learning/journey，goal 携参进入）；MATRIX onboarding_note 判例（历史面有承载归属不另算新模块）同构；A 组白名单钉死"
+    },
+    "ghost_directories": 0,
+    "missing_modules": 0,
+    "u15_modules_detail": ["intent", "mirofish", "reflection", "seed_library", "simulation", "theater", "visual_elements", "tools"],
+    "disposition_counts": {
+      "covered_by_other_cards": 35,
+      "in_flight_other_cards": "U02/U06/U13 模块面标注在航、零触碰",
+      "u15_evidence_only": ["intent", "mirofish", "tools（+1 登记）", "simulation", "theater"],
+      "u15_pinned_unreachable": ["reflection（HIDDEN 零导航调用方）", "seed_library（LABS 孤儿组件零消费点）", "visual_elements（LABS 消费面冻结）"]
+    }
+  },
+  "repeat_inventory": {
+    "fix_569_baseline": "S01R1 移交：以复跑数 49 为准（S01 自述 48 少记 1）",
+    "recount_files": 49,
+    "recount_call_sites": 91,
+    "s01_base_crosscheck": "git grep -l '\\.repeat(' d57a7aa8 -- mobile/lib = 49 文件，路径集与本卡 1:1（零新增/零退出）",
+    "gate_ref_proxy": {
+      "with_gate_refs": 22,
+      "without_gate_refs": 27,
+      "note": "代理口径=文件内 reduce-motion/disableAnimations/resolveSparkleMotionTokens/SemanticMotion 关键词引用，非逐动画审计（limitations #1.2）"
+    },
+    "ratchet": "test/widget/u15_longtail_closure_guard_test.dart B 组：现存集 ⊆ kRepeatBaseline49 且 ≤ 49；清尾=显式下调基线常量（diff 可见）",
+    "p1_priority": ["home/weather_guide_screen(2)", "core-design/stepper_indicator(2)", "core-design/flame_indicator(4, 0 外部消费点)", "achievement 族 8 文件(17)", "theater 2 文件(2)", "visual_elements card/preview_dialog(6)"]
+  },
+  "diff_scope": {
+    "files_changed": 0,
+    "files_added": 1,
+    "product_code": "零改动（no_duplicate_rule 差量举证：现存面已被在先卡片收口）",
+    "tests": [
+      "mobile/test/widget/u15_longtail_closure_guard_test.dart（新，14 用例，+543）"
+    ],
+    "forbidden_surfaces_touched": "无（RF-06 三文件 / routes / backend / proto / tokens_v2 / gen 产物零命中）"
+  },
+  "artifacts_sha256": "artifacts_sha256.txt（证据 commit 前对五件套终稿逐文件计算；review_receipt.json 亦入册）"
+}

@@ -1,0 +1,56 @@
+{
+  "task": "V4-U15",
+  "status": "PENDING",
+  "reviewer": null,
+  "received": "2026-09-28",
+  "branch": "agent/v4/u15",
+  "implementation_commit": "6eaf6b3ac91a52d3667e5dc837b8d91567fba68c",
+  "base_commit": "90275dc4",
+  "independent_reviewers_required": 1,
+  "risk": "normal",
+  "delivery_shape": "diff_or_evidence_only（零产品码差量 + 1 守卫套件 14 用例；no_duplicate_rule 口径）",
+  "acceptance_self_assessment": {
+    "acceptance_1_inventory": "PASS（自评）— 43+1 矩阵 exact match 机器钉 + 逐项处置表；LABS/HIDDEN 不可达 C 组机器钉",
+    "acceptance_2_no_synonyms": "PASS（自评）— 零新增组件/主题；D 组主题声明钉 + E 组调色板消费冻结",
+    "acceptance_3_guard_ratchet": "PASS（自评）— 既有守卫零改动全绿（UI-TOKENS 225/275、632/727；nav 契约 6/6）；B 组 repeat 集合棘轮；无半接线屏开放（LABS/HIDDEN 状态零 diff）"
+  },
+  "challenges_pre_registered": [
+    {
+      "id": "CH-1",
+      "title": "「清点卡零产品码差量」的读法",
+      "detail": "若判迁移必须有代码变更：反方=no_duplicate_rule 明文 + 现存面已被 U07/F 线收口的实事 + 清尾/孤儿删除触他卡已收口裁决面（normal/单审不授权）；若判必须清理，建议拆独立小卡按 §1 P1 表逐面会签推进"
+    },
+    {
+      "id": "CH-2",
+      "title": "repeat 棘轮强度：文件集级 vs 调用点级",
+      "detail": "本卡钉文件集 ⊆ 基线且 ≤49；同文件内加调用点不触棘轮。若判须调用点级：91 入基线即可（结构已留 maxAllowed 通道），规范 owner 裁决面"
+    },
+    {
+      "id": "CH-3",
+      "title": "门控分级代理口径",
+      "detail": "22 有门引用/27 无门引用为文件级关键词代理，非逐动画审计；逐动画机器证据归清尾推进卡"
+    },
+    {
+      "id": "CH-4",
+      "title": "learning 是否立为第 44 模块",
+      "detail": "按 MATRIX onboarding_note 判例记 U10 承载目录；若立模块须白名单+canonical_count 双改显式化"
+    },
+    {
+      "id": "CH-5",
+      "title": "C3 字面清单完备性（named 跳转形式未列）",
+      "detail": "kForbiddenLiteralPaths 只含 path 形式 push/go；named 形式现存零命中（符号级守卫覆盖 Routes 类引用），如须入清单加常量即可"
+    },
+    {
+      "id": "CH-6",
+      "title": "LABS 面不可达证据形态",
+      "detail": "以 U07 摘除在证 + nav 契约 + C 组机器钉复合举证，无运行时深链截图（零 UI 差量，if_ui 条件面不触发）；深链截图归设备面卡"
+    }
+  ],
+  "verification_repro": [
+    "cd mobile && flutter test test/widget/u15_longtail_closure_guard_test.dart  # 14/14",
+    "grep -rln \"\\.repeat(\" mobile/lib --include=\"*.dart\" | wc -l  # 49",
+    "git grep -l \"\\.repeat(\" d57a7aa8 -- mobile/lib | wc -l  # 49（1:1 对照）",
+    "python3 scripts/guards/check_ui_design_tokens_ratchet.py  # PASS 225/275、632/727"
+  ],
+  "reviewer_notes_placeholder": "一审结论/勘误/移交条件由独立未参与会话补登于此"
+}
