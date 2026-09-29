@@ -190,6 +190,15 @@ class TestExplicitPreferencePasteGate:
         updates, _ = ChatSignalCollector._extract_explicit_preferences("我们建议每天复习15分钟。")
         assert "focus_duration_preference" not in updates
 
+    def test_numeric_pref_first_person_in_other_sentence_not_captured(self):
+        """R1 发现1 补钉：第一人称在别的句子时，数值句不得借用其意图（句界隔离钉）。
+
+        句界匹配若退化为全消息搜索本用例必红——「我今天状态不好」的我，
+        不能给「每天15分钟就够了」这句无主语安排当第一人称口令。
+        """
+        updates, _ = ChatSignalCollector._extract_explicit_preferences("我今天状态不好。每天15分钟就够了。")
+        assert "focus_duration_preference" not in updates
+
     def test_numeric_pref_english_minute_first_person_captured(self):
         updates, _ = ChatSignalCollector._extract_explicit_preferences("I prefer 25 min focus sessions")
         assert updates.get("focus_duration_preference") == 25
