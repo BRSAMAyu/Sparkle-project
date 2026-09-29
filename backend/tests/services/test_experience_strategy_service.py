@@ -766,3 +766,31 @@ class TestWithdrawalSweepCandidateClosure:
         )
         assert audit["affected_patch_ids"] == [result.record.patch_id]
         assert audit["affected_states"][result.record.patch_id] == "candidate"
+
+    async def test_withdrawal_gate_bypasses_stale_projection_cache(self, db_session, strategy_mode):
+        """FIX-564 C1 补钉（R1-C 存活面）：验证门 fresh 读绕投影类级缓存。
+
+        毒化条目 = 撤回后 watermark + 撤回前内容（记录在场且带 outcome 证据）
+        ——watermark 失效被刻意短路，只剩 ``use_cache=False`` 一道防线。真撤回
+        报告必须照常成功；若 ``_source_withdrawal_visible`` 的 fresh 读回退为
+        走缓存（R1-C mutation），毒化条目命中 → visible=False → ValueError
+        拒绝真实报告，本用例必红。
+        """
+        strategy_mode("off")
+        user = await _make_user(db_session)
+        svc, candidate, record_id = await self._candidate_on_practice(db_session, user, n_positive=2)
+
+        projector = ExperienceMemoryProjector(db_session)
+        stale_projection = await projector.project(user_id=user.id, now=_NOW, use_cache=False)
+        assert any(r.record_id == record_id and r.has_outcome_evidence for r in stale_projection.records)
+
+        await _withdraw_experience_source(db_session, user, intervention_type="practice")
+
+        watermark = await InterventionLifecycleService(db_session).watermark(user_id=user.id)
+        cache_key = f"{InterventionLifecycleService.summary_cache_key(user_id=user.id)}|demo=0"
+        ExperienceMemoryProjector._cache_put(cache_key, watermark, stale_projection)
+
+        audit = await svc.invalidate_on_source_withdrawal(
+            user.id, kind="material_deleted", source_ref=f"memory://experience/{record_id}", now=_NOW
+        )
+        assert audit["affected_patch_ids"] == [candidate.patch_id]
