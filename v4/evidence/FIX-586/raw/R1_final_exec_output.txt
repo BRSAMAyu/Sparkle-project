@@ -1,0 +1,19 @@
+[final] gateway/.env 凭据指纹 9c sha256:e2186dbdb1bb（零回显）
+[final] 单事务（DROP x3 + ALTER gateway PASSWORD）执行：
+BEGIN
+SET
+DROP ROLE
+DROP ROLE
+DROP ROLE
+ALTER ROLE
+COMMIT
+[final] EXIT=0
+BEGIN
+SET
+DROP ROLE
+DROP ROLE
+DROP ROLE
+ALTER ROLE
+COMMIT
+
+

@@ -83,3 +83,8 @@
 
 - **plan_context ↔ prompts 循环 import（含 context_pack 本体）**：环 = plan_context:27 → models.__init__:103 → aurora runtime → chat_adapter:20 → prompts:44 → 回 plan_context；单独 import `app.core.plan_context` / `app.orchestration.prompts` / `app.core.context_pack` 皆炸（双 worktree 复现）。正常入口（conftest/main 先载 app.models）不触发；但 C-01 把 context_pack 变成会被直接 import 的契约模块后，新脚本/Celery 入口/健康检查首 import 即炸的概率上升。处置：接线卡前做一次 import 拓扑整理（把 prompts 对 models 的传递依赖打断或延迟导入）。
 - **✅ 已闭合（CLOSED WITH EVIDENCE，2026-09-25，wt364 卡 R2-B）**：prompts.py 的 `from app.core.plan_context import merge_plan_context` 下沉为 `build_system_prompt` 内延迟导入（唯一调用点，环中唯一模块级边），打破上述环；无 try/except 掩盖、无 API 签名变更。冒烟判据 `backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py`（三入口 subprocess 干净进程 import，修复前 3/3 红、修复后 3/3 绿）。
+
+
+## 2026-09-30 c17 最小权限债登记（FIX-586）
+
+- **最小权限服务 role 未接线（全栈 superuser 直连）**：迁移 `backend/alembic/versions/c17_20260502_create_service_roles.py` 设计的四服务 role（gateway/engine/celery/readonly）从未投入。现状（FIX-586 R-1 热修后，2026-09-29，证据 `v4/evidence/FIX-586/`）：三无密码 role（engine/celery/readonly，rolpassword NULL 任何密码不可登录）已 DROP（全簇 ACL 依赖 4634→0，零对象归属零活跃连接查证后执行）；sparkle_gateway 保留（c17 GRANT 面 288 条完整），密码已对齐 Sparkle-project `backend/gateway/.env` 现行 POSTGRES 凭据（宿主侧 scram AUTH_OK 实证）。**残余债三件**：①现行栈全部组件仍以 postgres（cosmos 面）或 brsama（Sparkle-project 面）双 superuser 直连，越权面未收敛（F582 诊断 R-2③ 同源）；②sparkle_gateway 现与 brsama 共用同一 .env 密码值（gateway/.env 持有者本就持 brsama 密码，暴露面无增量，但非 c17 专用密码设计）；③专用 `SPARKLE_GATEWAY_DB_PASSWORD`（c17 ROLE_PASSWORD_ENVS 声明）在任何 .env 均缺位，且 c17 迁移链未动——新库/重建卷上迁移仍会重建出无密码三 role。**处置（方案 B）**：为 gateway 发专用密码入 .env + 网关/引擎/celery 按 c17 GRANT 面逐服务切换最小权限身份 + POSTGRES 双 superuser 身份收敛——涉及两仓 .env 属主与服务重启窗口，**留待授权窗口**（F583 后协调窗）。双向指针 ↔ `v3/06_agent_fleet/DYNAMIC_ISSUES.md` FIX-586 行。

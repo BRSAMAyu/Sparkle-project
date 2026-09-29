@@ -1,0 +1,13 @@
+diff --git a/v4/evidence/V4-Q04/limitations.md b/v4/evidence/V4-Q04/limitations.md
+index d5125595..865c063d 100644
+--- a/v4/evidence/V4-Q04/limitations.md
++++ b/v4/evidence/V4-Q04/limitations.md
+@@ -15,6 +15,8 @@
+ - **共享计费队列竞争消费者**：驻留栈 worker（坏凭据）与本卡 worker 同抢 queue:billing。后果三件：①152 行计量记录被吞（成本已由流内 usage 帧补齐，模型归因丢失如实标注）；②恢复 RPUSH 被抢占不收敛，最终以 BillingWorker 同列映射直插恢复 58 行（恢复产品自身已产出计量，非造数；一审 C-7 勘误：原记 59，库内恢复批实测 58——差额 1 为 duplicate 跳过行，已经正常流落库）；③**驻留栈自身 09-28 以来的全部计费皆进死信或丢失**——fleet 级计费完整性事故，已留证（dead_letter 114 条目可见），需另卡处置。
+ - **MinIO/Redis 凭据跨仓漂移**：gateway/.env 与 backend/.env、cosmos compose 三方 MINIO/REDIS/POSTGRES 凭据互有出入；本卡按容器实际 env 对齐解决自身栈，未改任何文件。
+ 
++- **[2026-09-30 勘误回注（FIX-586）]**：本节上列三联环境偏离——共享 Postgres host 侧鉴权损坏 / 共享计费队列竞争消费者与死信 / MinIO·Redis·Postgres 凭据跨仓漂移——**已经 FIX-571@6110b6a5 修复**（2026-09-29 09:03–09:40 +0800 执行窗口，证据 `v4/evidence/FIX-571/`），并经 FIX-582 独立复测逐项成立（host 侧 postgres/brsama 双路 AUTH_OK；queue:billing 空、DLQ 仅 1 条 FK 留档；token_usage 持续流动；REDIS/MINIO 四方指纹一致；证据 `v4/evidence/FIX-582/diagnosis.md` §1）。上文各条系 09-28 时点静态事实，**fleet 立卡/取证引用本节时以本注记为准，勿再据原文重复立卡**（FIX-582 即此因对 571 重复登记）。三联残余面（孤儿 service role 清理/漂移探针守卫/本回注）已由 FIX-586 热修收口（证据 `v4/evidence/FIX-586/`）。
++
+ ## 3. 测量口径边界
+ 
+ - **四时刻为客户端口径**（WS 帧到达时刻）：含 gateway 排队/转发与引擎全链，不含 Flutter 渲染。ack=gateway 回执帧，非引擎内部时刻。

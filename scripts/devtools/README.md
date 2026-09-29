@@ -37,6 +37,7 @@
 | `apply_wt685_confidence_qualitative.py` | wt685/V3-FIX-361 实施批：8 键置信度定性化 + 新键 confidenceWithBand 的 arb 值/占位符 schema 一次性应用（幂等；select 语法经 gen-l10n 生成） |
 | `q01_db_evidence.py` | V4-Q01：只读 DB 三证对齐采集器（按 guest/注册用户名拉旅程六环节 SELECT-only 证据：user/memory_goals/tasks/corrections/calibration_runs/agent_runs/hybrid_artifacts/tool_calls/stored_files/chunks/token_usage/event_store → `<prefix>_db_evidence.json/.txt`；不写库） |
 | `q01_synth_video.py` | V4-Q01：验收录像合成（integration_test 引擎 RepaintBoundary 真帧按文件 mtime 真实墙钟 ffmpeg concat 合成 mp4 + 每帧 sha256/停留时长 manifest；出处披露制，不加工帧内容；物理录屏黑帧 probe 实证见 evidence） |
+| `pg_env_drift_probe.sh` | FIX-586 R-2：PG 环境凭据漂移只读探针（cosmos/Sparkle-project 两侧四 .env 的 POSTGRES 凭据指纹 vs 容器 env vs 卷内 pg_authid hash——SCRAM 加盐不可直接比对，一致性经 host 侧 scram 鉴权探针实证；全指纹化零明文；exit 0=全一致/1=漂移/2=环境不完整；`--quiet` 单行供守卫）。接入 `disk_swap_guard.sh` 尾部（launchd `com.sparkle.disk-swap-guard` 每 900s，日志 RESOURCE_GUARD.log）。FIX-571/Q04 三联事故（.env 轮换与数据面无同步点）的检测面固化 |
 | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |
 | `demo_start.sh` | Demo 演示启动脚本（历史演示用途） |
 | `TEST_INSTRUCTIONS.sh` | 全功能验收测试操作说明（历史） |

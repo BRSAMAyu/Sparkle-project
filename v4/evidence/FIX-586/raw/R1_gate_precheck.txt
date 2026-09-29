@@ -1,0 +1,63 @@
+=== [1] pg_authid 四 role 属性 + hash 指纹 ===
+     rolname      | rolcanlogin | rolsuper | pwd_null |          pwd_fp          
+------------------+-------------+----------+----------+--------------------------
+ sparkle_celery   | t           | f        | t        | NULL
+ sparkle_engine   | t           | f        | t        | NULL
+ sparkle_gateway  | t           | f        | f        | 133c sha256:5faa8c266d2a
+ sparkle_readonly | t           | f        | t        | NULL
+(4 rows)
+
+=== [2] pg_stat_activity 四 role 连接 ===
+ usename | conns 
+---------+-------
+(0 rows)
+
+=== [3] pg_shdepend 依赖面（o=对象归属=阻塞项 / a=ACL 授权=DROP 时自动撤销）===
+     rolname      | deptype |         db         |  n  
+------------------+---------+--------------------+-----
+ sparkle_celery   | a       | sparkle_repro_t42  | 162
+ sparkle_celery   | a       | wt395_g05          | 165
+ sparkle_celery   | a       | sparkle            | 162
+ sparkle_celery   | a       | sr8r2_mig          | 165
+ sparkle_celery   | a       | sparkle_test_wt426 | 165
+ sparkle_celery   | a       | sparkle_test       | 165
+ sparkle_celery   | a       | sr8r2_ct8_mig      | 165
+ sparkle_celery   | a       | sparkle_rt02_probe | 165
+ sparkle_engine   | a       | sparkle_test       | 158
+ sparkle_engine   | a       | sr8r2_ct8_mig      | 158
+ sparkle_engine   | a       | sparkle_repro_t42  | 155
+ sparkle_engine   | a       | sparkle_rt02_probe | 158
+ sparkle_engine   | a       | wt395_g05          | 158
+ sparkle_engine   | a       | sr8r2_mig          | 158
+ sparkle_engine   | a       | sparkle_test_wt426 | 158
+ sparkle_engine   | a       | sparkle            | 155
+ sparkle_gateway  | a       | sparkle_rt02_probe |  36
+ sparkle_gateway  | a       | sparkle_test_wt426 |  36
+ sparkle_gateway  | a       | sr8r2_mig          |  36
+ sparkle_gateway  | a       | wt395_g05          |  36
+ sparkle_gateway  | a       | sparkle_test       |  36
+ sparkle_gateway  | a       | sparkle_repro_t42  |  36
+ sparkle_gateway  | a       | sparkle            |  36
+ sparkle_gateway  | a       | sr8r2_ct8_mig      |  36
+ sparkle_readonly | a       | wt395_g05          | 262
+ sparkle_readonly | a       | sparkle_test_wt426 | 262
+ sparkle_readonly | a       | sparkle            | 261
+ sparkle_readonly | a       | sr8r2_ct8_mig      | 245
+ sparkle_readonly | a       | sparkle_repro_t42  | 267
+ sparkle_readonly | a       | sr8r2_mig          | 245
+ sparkle_readonly | a       | sparkle_rt02_probe | 258
+ sparkle_readonly | a       | sparkle_test       | 262
+(32 rows)
+
+=== [4] pg_auth_members 成员关系（任一方向，空=零依赖）===
+ granted_role | member 
+--------------+--------
+(0 rows)
+
+=== [5] 全库连接面按 usename（背景对照）===
+ usename  | count 
+----------+-------
+ postgres |    48
+          |     4
+(2 rows)
+

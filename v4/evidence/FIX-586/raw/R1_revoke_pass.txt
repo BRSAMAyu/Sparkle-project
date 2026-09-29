@@ -1,0 +1,11 @@
+[sparkle] DROP OWNED OK (attempt 1) :: BEGIN | SET | DROP OWNED | COMMIT
+[sparkle_repro_t42] DROP OWNED OK (attempt 1) :: BEGIN | SET | DROP OWNED | COMMIT
+[sparkle_rt02_probe] DROP OWNED OK (attempt 1) :: BEGIN | SET | DROP OWNED | COMMIT
+[sparkle_test] DROP OWNED OK (attempt 1) :: BEGIN | SET | DROP OWNED | COMMIT
+[sparkle_test_wt426] DROP OWNED OK (attempt 1) :: BEGIN | SET | DROP OWNED | COMMIT
+[sr8r2_ct8_mig] DROP OWNED OK (attempt 1) :: BEGIN | SET | DROP OWNED | COMMIT
+[sr8r2_mig] DROP OWNED OK (attempt 1) :: BEGIN | SET | DROP OWNED | COMMIT
+[wt395_g05] DROP OWNED OK (attempt 1) :: BEGIN | SET | DROP OWNED | COMMIT
+REMAINING-ACL-CHECK:
+
+CLEANUP-PASS ALL-OK

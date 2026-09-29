@@ -1,0 +1,87 @@
+=== A. 全部非系统 role（属性 + hash 指纹 sha256 前 12 位，零 hash 原文）===
+     rolname      | login | super | createrole | pwd_null |          pwd_fp          
+------------------+-------+-------+------------+----------+--------------------------
+ brsama           | t     | t     | f          | f        | 133c sha256:85005bcd1f04
+ postgres         | t     | t     | t          | f        | 133c sha256:2f6e743f26cf
+ sparkle_celery   | t     | f     | f          | t        | NULL
+ sparkle_engine   | t     | f     | f          | t        | NULL
+ sparkle_gateway  | t     | f     | f          | f        | 133c sha256:5faa8c266d2a
+ sparkle_readonly | t     | f     | f          | t        | NULL
+ wt719_scratch    | t     | f     | f          | f        | 133c sha256:52aa4f9f310d
+ wt737_scratch    | t     | f     | f          | f        | 133c sha256:c622e3d9c201
+ wt742_scratch    | t     | f     | f          | f        | 133c sha256:bf5db292de87
+(9 rows)
+
+=== B. 目标四 role 在全簇各库的 ACL 依赖计数（pg_shdepend deptype=a）===
+      datname       |     rolname      | acl_refs 
+--------------------+------------------+----------
+ sparkle            | sparkle_celery   |      162
+ sparkle            | sparkle_engine   |      155
+ sparkle            | sparkle_gateway  |       36
+ sparkle            | sparkle_readonly |      261
+ sparkle_repro_t42  | sparkle_celery   |      162
+ sparkle_repro_t42  | sparkle_engine   |      155
+ sparkle_repro_t42  | sparkle_gateway  |       36
+ sparkle_repro_t42  | sparkle_readonly |      267
+ sparkle_rt02_probe | sparkle_celery   |      165
+ sparkle_rt02_probe | sparkle_engine   |      158
+ sparkle_rt02_probe | sparkle_gateway  |       36
+ sparkle_rt02_probe | sparkle_readonly |      258
+ sparkle_test       | sparkle_celery   |      165
+ sparkle_test       | sparkle_engine   |      158
+ sparkle_test       | sparkle_gateway  |       36
+ sparkle_test       | sparkle_readonly |      262
+ sparkle_test_wt426 | sparkle_celery   |      165
+ sparkle_test_wt426 | sparkle_engine   |      158
+ sparkle_test_wt426 | sparkle_gateway  |       36
+ sparkle_test_wt426 | sparkle_readonly |      262
+ sr8r2_ct8_mig      | sparkle_celery   |      165
+ sr8r2_ct8_mig      | sparkle_engine   |      158
+ sr8r2_ct8_mig      | sparkle_gateway  |       36
+ sr8r2_ct8_mig      | sparkle_readonly |      245
+ sr8r2_mig          | sparkle_celery   |      165
+ sr8r2_mig          | sparkle_engine   |      158
+ sr8r2_mig          | sparkle_gateway  |       36
+ sr8r2_mig          | sparkle_readonly |      245
+ wt395_g05          | sparkle_celery   |      165
+ wt395_g05          | sparkle_engine   |      158
+ wt395_g05          | sparkle_gateway  |       36
+ wt395_g05          | sparkle_readonly |      262
+(32 rows)
+
+=== C. 目标四 role 的 pg_shdepend deptype 汇总（o=归属阻塞 / a=ACL）===
+     rolname      | deptype |  n   
+------------------+---------+------
+ sparkle_celery   | a       | 1314
+ sparkle_engine   | a       | 1258
+ sparkle_gateway  | a       |  288
+ sparkle_readonly | a       | 2062
+(4 rows)
+
+=== D. pg_stat_activity 按 usename ===
+ usename  | conns 
+----------+-------
+ postgres |    48
+ (null)   |     4
+(2 rows)
+
+=== E. 簇内数据库清单 ===
+       datname        |     owner     | datallowconn 
+----------------------+---------------+--------------
+ postgres             | postgres      | t
+ sparkle              | postgres      | t
+ sparkle_repro_t42    | postgres      | t
+ sparkle_rt02_probe   | postgres      | t
+ sparkle_syncdb_fresh | postgres      | t
+ sparkle_test         | postgres      | t
+ sparkle_test_wt426   | postgres      | t
+ sr8r2_ct8_mig        | postgres      | t
+ sr8r2_mig            | postgres      | t
+ template0            | postgres      | f
+ template1            | postgres      | t
+ wt395_g05            | postgres      | t
+ wt719_race           | wt719_scratch | t
+ wt737_race           | wt737_scratch | t
+ wt742_race           | postgres      | t
+(15 rows)
+

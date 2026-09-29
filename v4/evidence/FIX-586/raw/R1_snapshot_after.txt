@@ -1,0 +1,57 @@
+=== A. 全部非系统 role（属性 + hash 指纹 sha256 前 12 位，零 hash 原文）===
+     rolname     | login | super | createrole | pwd_null |          pwd_fp          
+-----------------+-------+-------+------------+----------+--------------------------
+ brsama          | t     | t     | f          | f        | 133c sha256:85005bcd1f04
+ postgres        | t     | t     | t          | f        | 133c sha256:2f6e743f26cf
+ sparkle_gateway | t     | f     | f          | f        | 133c sha256:3ab7ba2145b1
+ wt719_scratch   | t     | f     | f          | f        | 133c sha256:52aa4f9f310d
+ wt737_scratch   | t     | f     | f          | f        | 133c sha256:c622e3d9c201
+ wt742_scratch   | t     | f     | f          | f        | 133c sha256:bf5db292de87
+(6 rows)
+
+=== B. 目标四 role 在全簇各库的 ACL 依赖计数（pg_shdepend deptype=a）===
+      datname       |     rolname     | acl_refs 
+--------------------+-----------------+----------
+ sparkle            | sparkle_gateway |       36
+ sparkle_repro_t42  | sparkle_gateway |       36
+ sparkle_rt02_probe | sparkle_gateway |       36
+ sparkle_test       | sparkle_gateway |       36
+ sparkle_test_wt426 | sparkle_gateway |       36
+ sr8r2_ct8_mig      | sparkle_gateway |       36
+ sr8r2_mig          | sparkle_gateway |       36
+ wt395_g05          | sparkle_gateway |       36
+(8 rows)
+
+=== C. 目标四 role 的 pg_shdepend deptype 汇总（o=归属阻塞 / a=ACL）===
+     rolname     | deptype |  n  
+-----------------+---------+-----
+ sparkle_gateway | a       | 288
+(1 row)
+
+=== D. pg_stat_activity 按 usename ===
+ usename  | conns 
+----------+-------
+ postgres |    48
+ (null)   |     4
+(2 rows)
+
+=== E. 簇内数据库清单 ===
+       datname        |     owner     | datallowconn 
+----------------------+---------------+--------------
+ postgres             | postgres      | t
+ sparkle              | postgres      | t
+ sparkle_repro_t42    | postgres      | t
+ sparkle_rt02_probe   | postgres      | t
+ sparkle_syncdb_fresh | postgres      | t
+ sparkle_test         | postgres      | t
+ sparkle_test_wt426   | postgres      | t
+ sr8r2_ct8_mig        | postgres      | t
+ sr8r2_mig            | postgres      | t
+ template0            | postgres      | f
+ template1            | postgres      | t
+ wt395_g05            | postgres      | t
+ wt719_race           | wt719_scratch | t
+ wt737_race           | wt737_scratch | t
+ wt742_race           | postgres      | t
+(15 rows)
+

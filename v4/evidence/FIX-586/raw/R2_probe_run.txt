@@ -1,0 +1,16 @@
+=== PG 环境凭据漂移探针（只读；全指纹化零明文）2026-09-29T12:45:37Z ===
+[.env 源] cosmos 根 .env                USER=postgres PW=19c sha256:3601f490715a
+[.env 源] cosmos backend/.env            USER=postgres PW=19c sha256:3601f490715a
+[.env 源] Sparkle-project backend/.env   USER=brsama PW=9c sha256:e2186dbdb1bb
+[.env 源] Sparkle-project gateway/.env   USER=brsama PW=9c sha256:e2186dbdb1bb
+[容器env] sparkle_db                     USER=postgres PW=19c sha256:3601f490715a
+[卷内hash] role=brsama           133c sha256:85005bcd1f04
+[卷内hash] role=postgres         133c sha256:2f6e743f26cf
+[卷内hash] role=sparkle_gateway  133c sha256:3ab7ba2145b1
+（SCRAM 加盐 hash 不可与密码指纹直接比对；hash↔凭据一致性由下方鉴权探针实证）
+[鉴权探针] cosmos 根 .env                → postgres@127.0.0.1:5432 AUTH_OK（卷内 hash 与该凭据一致）
+[鉴权探针] cosmos backend/.env            → postgres@127.0.0.1:5432 AUTH_OK（卷内 hash 与该凭据一致）
+[鉴权探针] Sparkle-project backend/.env   → brsama@127.0.0.1:5432 AUTH_OK（卷内 hash 与该凭据一致）
+[鉴权探针] Sparkle-project gateway/.env   → brsama@127.0.0.1:5432 AUTH_OK（卷内 hash 与该凭据一致）
+[鉴权探针] sparkle_gateway + gateway/.env 凭据    → AUTH_OK（FIX-586 对齐保持）
+RESULT: CONSISTENT — V1:PASS V2:PASS(4源) V3:PASS (.env↔容器env↔卷内hash 全一致)

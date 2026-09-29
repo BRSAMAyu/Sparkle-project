@@ -1,0 +1,4 @@
+=== R-1 后鉴权探针（宿主 127.0.0.1:5432 → docker 网桥 → scram 路径）===
+[1] sparkle_gateway + gateway/.env 凭据 → exit=0 :: AUTH_OK|sparkle_gateway|2026-09-29 12:39:24.478579+00  (期望 AUTH_OK)
+[2] sparkle_gateway + 错误探针密码 → exit=2 :: psql: error: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "sparkle_gateway"  (期望 FAIL 28P01)
+[3] sparkle_engine（已 DROP）→ exit=2 :: psql: error: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "sparkle_engine"  (期望 FAIL)
