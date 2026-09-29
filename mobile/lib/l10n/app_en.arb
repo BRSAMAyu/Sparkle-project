@@ -540,6 +540,28 @@
   "focusExitTitleStep1": "Exit mindfulness mode?",
   "focusExitMessageStep2": "You've focused for {minutes} minutes. Are you sure you want to leave?",
   "focusExitConfirmStep3": "Confirm exit",
+  "focusOutcomeActualMinutes": "Focused {minutes} min (actual)",
+  "@focusOutcomeActualMinutes": {
+    "description": "V4-U09 outcome headline: actual minutes only; estimates never substitute (same ledger as U08 actualMinutes)",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "focusOutcomePlanMinutes": "Planned: {minutes} min",
+  "@focusOutcomePlanMinutes": {
+    "description": "V4-U09 outcome footnote: task estimate shown separately for comparison only",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "focusOutcomeHint": "Jot down one outcome, or skip — both are first-class.",
+  "focusOutcomeFieldLabel": "Outcome of this session (optional)",
+  "focusOutcomeFieldHint": "One line is enough; leaving it empty means skip",
+  "focusOutcomeRecord": "Save outcome",
   "streakTitle": "Learning Streak",
   "streakDays": "{count, plural, =1{1 day} other{{count} days}}",
   "streakMaxLabel": "Best",

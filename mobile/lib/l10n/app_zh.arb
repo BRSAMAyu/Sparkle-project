@@ -540,6 +540,28 @@
   "focusExitTitleStep1": "确定要退出正念模式吗？",
   "focusExitMessageStep2": "你已经专注了 {minutes} 分钟，确定要离开吗？",
   "focusExitConfirmStep3": "确定退出",
+  "focusOutcomeActualMinutes": "实际专注 {minutes} 分钟",
+  "@focusOutcomeActualMinutes": {
+    "description": "V4-U09 结束面主行：只报实测分钟，估时不得顶替（U08 actualMinutes 同口径）",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "focusOutcomePlanMinutes": "计划 {minutes} 分钟",
+  "@focusOutcomePlanMinutes": {
+    "description": "V4-U09 结束面注脚：任务估时仅作对照，与实测分列",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "focusOutcomeHint": "记一句成果，或直接跳过——两条路都成立。",
+  "focusOutcomeFieldLabel": "这次专注的成果（可选）",
+  "focusOutcomeFieldHint": "一句话即可；留空视同跳过",
+  "focusOutcomeRecord": "记录成果",
   "streakTitle": "连续学习",
   "streakDays": "{count, plural, =1{1天} other{{count}天}}",
   "streakMaxLabel": "最高",

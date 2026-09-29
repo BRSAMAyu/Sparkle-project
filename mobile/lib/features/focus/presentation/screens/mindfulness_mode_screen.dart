@@ -5,14 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/features/focus/presentation/widgets/exit_confirmation_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/flip_clock.dart';
+import 'package:sparkle/features/focus/presentation/widgets/focus_session_outcome_sheet.dart';
 import 'package:sparkle/features/focus/presentation/widgets/focus_session_summary_dialog.dart';
-import 'package:sparkle/features/focus/presentation/widgets/reflection_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/star_background.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -185,53 +187,77 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     );
     _isExitDialogOpen = false;
 
-    if (confirmed && mounted) {
-      _isExiting = true;
+    if (!confirmed || !mounted) return;
+    _isExiting = true;
+    try {
+      final session = ref.read(mindfulnessProvider);
       final elapsedMinutes =
           ref.read(mindfulnessProvider.notifier).elapsedMinutes;
+      // 估时/实测分列口径（U08 actualMinutes 同源）：结果面展示的分钟数
+      // 只来自计时器实测；估时仅作为结果面上的对照注脚，不参与结算。
+      final plannedMinutes = session.currentTask?.estimatedMinutes ?? 0;
       final result = await ref.read(mindfulnessProvider.notifier).stop();
 
-      if (mounted) {
-        if (widget.interventionId != null &&
-            widget.interventionId!.isNotEmpty &&
-            elapsedMinutes > 0) {
-          unawaited(
-            ref.read(interventionActionServiceProvider).reportAction(
-              recordId: widget.interventionId!,
-              action: 'acted',
-              actionPayload: {
-                'surface': 'focus_mode',
-                'source': 'mindfulness_complete',
-                'task_id': widget.taskId,
-                'duration_minutes': elapsedMinutes,
-              },
-            ),
-          );
-        }
-        if (result.masteryUpdates.isNotEmpty) {
-          await showFocusSessionSummaryDialog(
-            context,
-            durationMinutes: elapsedMinutes,
-            flameEarned: result.flameEarned,
-            masteryUpdates: result.masteryUpdates,
-          );
-          if (!mounted) return;
-        } else if (result.message != null) {
-          AppFeedback.info(context, result.message!);
-        }
+      if (!mounted) return;
 
-        // Show reflection dialog for meaningful sessions
-        if (elapsedMinutes >= 5 && mounted) {
-          await showDialog<bool>(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => const ReflectionDialog(),
-          );
+      // V4-U09 中断/失败不假保存：saveSession 未落库（R2-03 快照保留、
+      // 可重开续结）时按失败如实呈现——无庆祝、无成果表单、无「已记录」
+      // 语义；intervention 的 acted 回执只在真实落库后上报（F03：无
+      // committed 回执不触发成功面）。
+      if (!result.savedLocally && result.masteryUpdates.isEmpty) {
+        if (result.message != null) {
+          AppFeedback.error(context, result.message!);
         }
-
-        if (!mounted) return;
         context.pop();
+        return;
       }
+
+      if (widget.interventionId != null &&
+          widget.interventionId!.isNotEmpty &&
+          elapsedMinutes > 0) {
+        unawaited(
+          ref.read(interventionActionServiceProvider).reportAction(
+                recordId: widget.interventionId!,
+                action: 'acted',
+                actionPayload: {
+                  'surface': 'focus_mode',
+                  'source': 'mindfulness_complete',
+                  'task_id': widget.taskId,
+                  'duration_minutes': elapsedMinutes,
+                },
+              ),
+        );
+      }
+      if (result.masteryUpdates.isNotEmpty) {
+        await showFocusSessionSummaryDialog(
+          context,
+          durationMinutes: elapsedMinutes,
+          flameEarned: result.flameEarned,
+          masteryUpdates: result.masteryUpdates,
+        );
+        if (!mounted) return;
+      } else if (result.message != null) {
+        // 离线已保存等诚实中间态提示（响应为空但本地已落账）。
+        AppFeedback.info(context, result.message!);
+      }
+
+      // V4-U09 结束可记录成果或跳过：两个一等路径，永不强制长反思
+      // （≥1 分钟才有已结算的账可 attaching 成果；不足 1 分钟本就未落账，
+      // 静默退出，与既有行为一致）。保存失败路径已在上方返回，绝不走到
+      // 这里的成果面——失败不显示庆祝。
+      if (elapsedMinutes >= 1) {
+        await showFocusSessionOutcomeSheet(
+          context,
+          taskId: widget.taskId,
+          taskTitle: session.currentTask?.title,
+          actualMinutes: elapsedMinutes,
+          plannedMinutes: plannedMinutes,
+        );
+        if (!mounted) return;
+      }
+
+      context.pop();
+    } finally {
       _isExiting = false;
     }
   }
@@ -449,14 +475,33 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
               onPressed: () {
                 if (state.isPaused) {
                   ref.read(mindfulnessProvider.notifier).resume();
+                  unawaited(_syncAmbientOnPause(resumed: true));
                 } else {
                   ref.read(mindfulnessProvider.notifier).pause();
+                  unawaited(_syncAmbientOnPause(resumed: false));
                 }
               },
             ),
           ],
         ),
       );
+
+  /// V4-U09 接可选声音状态（U14 ambient_enabled 偏好面）：只消费既有
+  /// SensoryFeedbackService 状态与 API，不做新音频机制——会话暂停时背景
+  /// 声如实暂停；恢复仅在偏好开启且场景非「无」时续播（默认不自动播放）。
+  /// 背景声关/资产缺失时本方法为零操作，页面功能不受影响。
+  Future<void> _syncAmbientOnPause({required bool resumed}) async {
+    if (SensoryFeedbackService.currentScene == AmbientScene.none) {
+      return;
+    }
+    if (!resumed) {
+      unawaited(SensoryFeedbackService.pauseAmbient());
+      return;
+    }
+    if (await SensoryFeedbackService.isAmbientEnabled()) {
+      unawaited(SensoryFeedbackService.resumeAmbient());
+    }
+  }
 
   Widget _buildBackToTaskButton() => SparkleIconButton(
         variant: ButtonVariant.ghost,
@@ -519,47 +564,57 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         ),
       );
 
-  Widget _buildFlameAnimation() => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.985, end: 1.025),
-        duration: const Duration(milliseconds: 1400),
-        curve: Curves.easeInOut,
-        builder: (context, scale, child) => Transform.scale(
-          scale: scale,
-          child: child,
-        ),
-        onEnd: () {
-          // 循环动画
-          if (mounted) {
-            setState(() {});
-          }
-        },
-        child: Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                DS.brandPrimary.withValues(alpha: 0.22),
-                DS.brandSecondary.withValues(alpha: 0.16),
-              ],
-            ),
-            shape: BoxShape.circle,
-            border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.18)),
-            boxShadow: [
-              BoxShadow(
-                color: DS.brandPrimary.withValues(alpha: 0.12),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
+  Widget _buildFlameAnimation() {
+    // V4-U09 无声无动效仍完整可用（N33/S01 同口径）：减弱动效下保持静态
+    // 终态——画面仍在（火苗印记），只是不循环呼吸；计时/退出功能零依赖
+    // 该动效。
+    if (context.reduceMotion) {
+      return _buildFlameMark();
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.985, end: 1.025),
+      duration: const Duration(milliseconds: 1400),
+      curve: Curves.easeInOut,
+      builder: (context, scale, child) => Transform.scale(
+        scale: scale,
+        child: child,
+      ),
+      onEnd: () {
+        // 循环动画
+        if (mounted) {
+          setState(() {});
+        }
+      },
+      child: _buildFlameMark(),
+    );
+  }
+
+  Widget _buildFlameMark() => Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.brandPrimary.withValues(alpha: 0.22),
+              DS.brandSecondary.withValues(alpha: 0.16),
             ],
           ),
-          child: Icon(
-            Icons.local_fire_department_rounded,
-            color: DS.primaryBase,
-            size: 32,
-          ),
+          shape: BoxShape.circle,
+          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.18)),
+          boxShadow: [
+            BoxShadow(
+              color: DS.brandPrimary.withValues(alpha: 0.12),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.local_fire_department_rounded,
+          color: DS.primaryBase,
+          size: 32,
         ),
       );
 

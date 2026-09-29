@@ -1,0 +1,134 @@
+{
+  "card": "V4-U09",
+  "title": "专注：低刺激与真实成果收口",
+  "generated_at": "2026-09-29T08:20:00+08:00",
+  "executor": "V4 fleet implementation agent (U09)",
+  "branch": "agent/v4/u09",
+  "worktree": "wtU09",
+  "base_commit": "4152266c448b80188ac1482414f324bebf2907f5",
+  "base_note": "开工时 main=4152266c（含 Q03/D 线/S01/U 线收口）；执行期间 main 前进 24 commit（fleet 状态 + U02/U11/U12/P01/S02 收口，与本卡触碰面零交集——focus 三文件/backend/proto 零改动），HEAD 为 main 祖先，集成复验随合并跑",
+  "design_approval": "卡面 + SCREEN_FAMILIES（账号/设置/通知/异常/长尾家族：动效、配乐、提示音、触觉分别开关，默认不自动播放）+ MASTER_DESIGN §4（ExperienceEvent 统一投影、模型不能直接发成功音效）+ V4_DONE Q7（音震动效全关价值仍成立）——无视觉新审批面（标准 DS 组件，参考图未充当批准）",
+  "environment": {
+    "flutter": "3.41.3 stable (revision 48c32af034)",
+    "os": "darwin 25.6.0 arm64",
+    "note": "macOS 实体机；gitignored 生成物（mobile/lib/gen、backend/app/gen、backend/gateway/gen）从主检出自同源复制（未入库、未手改），lib/l10n dart 由 gen-l10n 在本卡再生后随分支入库（仓库现行约定）"
+  },
+  "model_usage": {
+    "llm_calls": 0,
+    "note": "本卡零模型调用（纯本地实现/测试/守卫；无真模型流程触达）"
+  },
+  "commands": [
+    {
+      "purpose": "worktree 建立与基线",
+      "command": "git worktree add ../wtU09 -b agent/v4/u09 main",
+      "cwd": "/Users/brsama/code/GitHub/Sparkle-project",
+      "exit_code": 0,
+      "note": "基线=main@4152266c"
+    },
+    {
+      "purpose": "依赖解析",
+      "command": "flutter pub get",
+      "cwd": "mobile",
+      "exit_code": 0
+    },
+    {
+      "purpose": "l10n 再生成（arb 双语 +6 键 focusOutcome* → 生成 dart ×3）",
+      "command": "flutter gen-l10n",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "note": "仅追加本卡新键，零既有键改动；L10N-REGEN-PARITY 10195 键 PASS"
+    },
+    {
+      "purpose": "静态分析全量（lib+test）",
+      "command": "flutter analyze --no-pub lib test",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "No issues found!"
+    },
+    {
+      "purpose": "本卡验收测试（结算 5 + 结束动线 5 + 证据 1）+ 既有 focus 套件回归",
+      "command": "flutter test test/features/focus/",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+19 All tests passed!（含既有 mindfulness_provider 5 + R2-03 2 + agent_sheet 1 skip + 本卡 11）"
+    },
+    {
+      "purpose": "突变自证 M1（可失败性）：摘除 stop() isLoggingSession 重复结算守卫",
+      "command": "flutter test test/features/focus/presentation/providers/u09_focus_settlement_test.dart",
+      "cwd": "mobile",
+      "exit_code": 1,
+      "result": "+4 -1（面2 反例「结算窗口重入不产生第二条保存」变红）；还原后 +5 全绿"
+    },
+    {
+      "purpose": "突变自证 M2（可失败性）：结算时长改回任务估时顶替实测",
+      "command": "flutter test test/features/focus/presentation/providers/u09_focus_settlement_test.dart",
+      "cwd": "mobile",
+      "exit_code": 1,
+      "result": "+4 -1（面1 正例「只写实测分钟」变红）；还原后 +5 全绿"
+    },
+    {
+      "purpose": "突变自证 M3（可失败性）：砍掉保存失败分支（失败也进成果面=失败庆祝）",
+      "command": "flutter test test/features/focus/presentation/screens/u09_focus_outcome_flow_test.dart",
+      "cwd": "mobile",
+      "exit_code": 1,
+      "result": "+4 -1（失败不庆祝钉变红）；还原后 +5 全绿"
+    },
+    {
+      "purpose": "证据采集（截图+语义 dump 落盘）",
+      "command": "U09_EVIDENCE_DIR=../v4/evidence/V4-U09/screenshots flutter test test/features/focus/presentation/screens/u09_evidence_test.dart",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "u09_focus_outcome_sheet.png + u09_focus_outcome_sheet_semantics.txt（正例断言先行：实测/估时分列 + 双一等按钮 + 结算恰好一次=6 分钟实测）"
+    },
+    {
+      "purpose": "mobile 全量回归",
+      "command": "flutter test",
+      "cwd": "mobile",
+      "exit_code": 0,
+      "result": "+3087 ~23 All tests passed!（23 skip 为既有豁免集，含 widget_bench 负载项；0 failed）"
+    },
+    {
+      "purpose": "l10n/覆盖守卫",
+      "command": "python3 scripts/guards/check_l10n_regen_parity.py && python3 scripts/guards/check_i18n_coverage.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "result": "L10N-REGEN-PARITY OK: 10195 template keys；[i18n-coverage] PASS"
+    },
+    {
+      "purpose": "治理守卫全量（提交前基线）",
+      "command": "bash scripts/run_all_rule_guards.sh",
+      "cwd": ".",
+      "exit_code": 0,
+      "result": "全 PASS（过程修正两处新增违规：N9 原始异常入 l10n 参数 → 人话模板+debugPrint；spacingHalfStep 6 → 4pt 基格；AQ/BG 为 worktree 缺 gitignored 生成物所致，自主检出自同源复制后 PASS）",
+      "note": "最终运行无 'rule guards failed' 输出"
+    }
+  ],
+  "scope_and_denominator": {
+    "changed_product_files": [
+      "mobile/lib/features/focus/presentation/providers/mindfulness_provider.dart（+重复结算守卫）",
+      "mobile/lib/features/focus/presentation/screens/mindfulness_mode_screen.dart（退出动线重构/失败不庆祝/成果-跳过/火苗减动效静态支/ambient 接状态）",
+      "mobile/lib/features/focus/presentation/widgets/focus_session_outcome_sheet.dart（新增）",
+      "mobile/lib/features/focus/presentation/widgets/reflection_dialog.dart（删除——强制长反思载体，唯一调用点已替换）",
+      "mobile/lib/l10n/app_zh.arb / app_en.arb（+6 键）+ gen-l10n 再生 dart ×3"
+    ],
+    "new_test_files": [
+      "mobile/test/features/focus/presentation/providers/u09_focus_settlement_test.dart（5）",
+      "mobile/test/features/focus/presentation/screens/u09_focus_outcome_flow_test.dart（5）",
+      "mobile/test/features/focus/presentation/screens/u09_evidence_test.dart（1）"
+    ],
+    "regression_denominator": "mobile 全量 flutter test：3087 passed / 23 skipped（既有豁免集）/ 0 failed；flutter analyze --no-pub lib test 零 issue；rule guards 全 PASS",
+    "untouched_conflict_surfaces": "RF-06 三冲突面（dashboard_screen / compact_status_bar / task_execution_screen）、五 Tab 路由、classic 通道、backend、proto、迁移：零 diff"
+  },
+  "artifacts_sha256": {
+    "screenshots/u09_focus_outcome_sheet.png": "90a39edc8fc0f10fd3d3c3c30fc6f9c87d412a9ae7919ee5697a58b9e26d8b33",
+    "screenshots/u09_focus_outcome_sheet_semantics.txt": "6e026320a7d509315e591cac1eab516d7f964c50a657ad02ec6aea661055268c"
+  },
+  "screenshots_note": "CJK 字形为测试环境 Ahem 方块（F04/U01/U05/U08 同先例）；截图为结束面叠于专注页之上的最上层实际画面（非栈底 RepaintBoundary 复用），文本级语义与几何以同测落盘的 dump 为准，交互闭环（确认退出→结算→跳过/记录→返回）由 u09_focus_outcome_flow_test 按 key 真实点击承载",
+  "lifecycle_scenarios": [
+    "切后台（appSwitch 中断事件记录）→ 返回：计时延续（墙钟续算），零写入（provider 面1反例）",
+    "杀进程重开：SharedPreferences 快照恢复同一 startTime，elapsed 按墙钟延续不重置（provider 面2正例，600s→≥600 且起点毫秒一致）",
+    "保存失败→快照保留→重开专注页续结→重试退出→恰好一次成功写入（widget 失败不庆祝钉的完整生命周期场景）",
+    "结算窗口并发重入（弹层确认+返回键双路径同时 stop()）：恰好一次保存（provider 面2反例）"
+  ],
+  "physical_device_scope_if_sensory": "NOT_RUN：本卡零音频/触觉真机验证——ambient 只接状态（pauseAmbient/resumeAmbient/isAmbientEnabled 消费既有 API），播放链路真扬声器行为沿用 U14/S02 口径（模拟器只认调用与录制证据）；S02 音频焦点在航，真机验证归其证据面"
+}
